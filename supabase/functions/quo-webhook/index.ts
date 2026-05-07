@@ -295,6 +295,22 @@ serve(async (req) => {
       }
     }
 
+    // ---- Deletes (sync removals from Quo/OpenPhone) ----
+    else if (eventType === "message.deleted" || eventType === "message.removed") {
+      const id = data?.id || data?.messageId;
+      if (id) {
+        await admin.from("quo_messages").delete().eq("quo_message_id", id);
+        console.log(`[quo-webhook] deleted message ${id}`);
+      }
+    }
+    else if (eventType === "call.deleted" || eventType === "call.removed") {
+      const id = data?.id || data?.callId;
+      if (id) {
+        await admin.from("quo_calls").delete().eq("quo_call_id", id);
+        console.log(`[quo-webhook] deleted call ${id}`);
+      }
+    }
+
     // ---- Contacts (two-way sync from Quo) ----
     else if (eventType === "contact.created" || eventType === "contact.updated") {
       const quoContactId = data?.id;
