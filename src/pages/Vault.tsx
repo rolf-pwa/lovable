@@ -698,31 +698,33 @@ export function VaultView({ forcedHouseholdId, embedded = false }: { forcedHouse
         </div>
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Vault root folder</CardTitle>
-        </CardHeader>
-        <CardContent className="flex gap-2 items-center">
-          <Input
-            placeholder="Drive folder URL or ID"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-          />
-          <Button
-            onClick={() => {
-              const m = input.match(/\/folders\/([a-zA-Z0-9_-]+)/);
-              setRootId(m ? m[1] : input.trim());
-            }}
-          >
-            Load
-          </Button>
-          {householdId && (
-            <Button variant="outline" onClick={provision}>
-              Provision
+      {!rootId && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Vault root folder</CardTitle>
+          </CardHeader>
+          <CardContent className="flex gap-2 items-center">
+            <Input
+              placeholder="Drive folder URL or ID"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+            />
+            <Button
+              onClick={() => {
+                const m = input.match(/\/folders\/([a-zA-Z0-9_-]+)/);
+                setRootId(m ? m[1] : input.trim());
+              }}
+            >
+              Load
             </Button>
-          )}
-        </CardContent>
-      </Card>
+            {householdId && (
+              <Button variant="outline" onClick={provision}>
+                Provision
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {rootId && (
         <Card>

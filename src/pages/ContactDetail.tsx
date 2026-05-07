@@ -129,6 +129,7 @@ const ContactDetail = () => {
   const [householdMembers, setHouseholdMembers] = useState<HouseholdMember[]>([]);
   const [familyName, setFamilyName] = useState<string | null>(null);
   const [householdLabel, setHouseholdLabel] = useState<string | null>(null);
+  const [householdVaultRootId, setHouseholdVaultRootId] = useState<string | null>(null);
   const [vineyardAccounts, setVineyardAccounts] = useState<VineyardAccount[]>([]);
   const [professionalContacts, setProfessionalContacts] = useState<Record<string, { id: string; full_name: string } | null>>({});
   const [newAccountName, setNewAccountName] = useState("");
@@ -192,8 +193,9 @@ const ContactDetail = () => {
       setFamilyName(fam?.name || null);
     }
     if (contactRes.data?.household_id) {
-      const { data: hh } = await supabase.from("households").select("label").eq("id", contactRes.data.household_id).maybeSingle();
+      const { data: hh } = await supabase.from("households").select("label, vault_root_folder_id").eq("id", contactRes.data.household_id).maybeSingle();
       setHouseholdLabel(hh?.label || null);
+      setHouseholdVaultRootId((hh as any)?.vault_root_folder_id || null);
     }
 
     const names = [contactRes.data?.lawyer_name, contactRes.data?.accountant_name, contactRes.data?.executor_name, contactRes.data?.poa_name].filter(Boolean) as string[];
@@ -531,12 +533,25 @@ const ContactDetail = () => {
                     <ShieldCheck className="h-4 w-4 text-accent" />
                     Household document vault — manage visibility and share with collaborators.
                   </div>
-                  <Button asChild size="sm" variant="outline">
-                    <Link to={`/vault/${contact.id}`}>
-                      <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
-                      Open Full Page
-                    </Link>
-                  </Button>
+                  {householdVaultRootId ? (
+                    <Button asChild size="sm" variant="outline">
+                      <a
+                        href={`https://drive.google.com/drive/folders/${householdVaultRootId}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
+                        Open in Drive
+                      </a>
+                    </Button>
+                  ) : (
+                    <Button asChild size="sm" variant="outline">
+                      <Link to={`/vault/${contact.id}`}>
+                        <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
+                        Open Full Page
+                      </Link>
+                    </Button>
+                  )}
                 </div>
                 {contact.household_id ? (
                   <VaultView forcedHouseholdId={contact.household_id} embedded />

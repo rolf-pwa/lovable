@@ -72,7 +72,9 @@ const ContactForm = () => {
     just_wealth_url: "",
     google_drive_url: "",
     charter_url: "",
+    vault_root_folder_id: "",
   });
+  const [householdId, setHouseholdId] = useState<string | null>(null);
 
   // Household member linking
   const [householdMembers, setHouseholdMembers] = useState<LinkedMember[]>([]);
@@ -138,7 +140,18 @@ const ContactForm = () => {
         just_wealth_url: (data as any).just_wealth_url || "",
         google_drive_url: data.google_drive_url || "",
         charter_url: (data as any).charter_url || "",
+        vault_root_folder_id: "",
       });
+      const hhId = (data as any).household_id || null;
+      setHouseholdId(hhId);
+      if (hhId) {
+        const { data: hh } = await supabase
+          .from("households")
+          .select("vault_root_folder_id")
+          .eq("id", hhId)
+          .maybeSingle();
+        if (hh) setForm((prev) => ({ ...prev, vault_root_folder_id: (hh as any).vault_root_folder_id || "" }));
+      }
       setEmailNotifEnabled(data.email_notifications_enabled !== false);
       setHouseholdMembers(
         (householdRes.data || []).map((r: any) => ({
@@ -282,6 +295,16 @@ const ContactForm = () => {
 
     // Save household relationships
     await saveHouseholdMembers(contactId!);
+
+    // Persist vault root folder on the household
+    if (householdId) {
+      const raw = form.vault_root_folder_id.trim();
+      const folderId = raw ? (raw.match(/\/folders\/([a-zA-Z0-9_-]+)/)?.[1] ?? raw) : null;
+      await supabase
+        .from("households")
+        .update({ vault_root_folder_id: folderId } as any)
+        .eq("id", householdId);
+    }
 
     // Upload statements and trigger ingestion for each file
     if (statementFiles.length > 0 && contactId) {
@@ -546,6 +569,20 @@ const ContactForm = () => {
             <div>
               <Label>Google Drive Folder URL</Label>
               <Input value={form.google_drive_url} onChange={(e) => update("google_drive_url", e.target.value)} placeholder="https://drive.google.com/..." />
+            </div>
+            <div>
+              <Label>Vault Root Folder URL or ID</Label>
+              <Input
+                value={form.vault_root_folder_id}
+                onChange={(e) => update("vault_root_folder_id", e.target.value)}
+                placeholder="https://drive.google.com/drive/folders/... or folder ID"
+                disabled={!householdId}
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                {householdId
+                  ? "Saved on the household. Used as the provisioned Vault root."
+                  : "Assign this contact to a household to set the Vault root."}
+              </p>
             </div>
             <div>
               <Label>Charter Document URL</Label>
