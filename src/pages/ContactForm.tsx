@@ -561,6 +561,20 @@ const ContactForm = () => {
               <Input value={form.google_drive_url} onChange={(e) => update("google_drive_url", e.target.value)} placeholder="https://drive.google.com/..." />
             </div>
             <div>
+              <Label>Vault Root Folder URL or ID</Label>
+              <Input
+                value={form.vault_root_folder_id}
+                onChange={(e) => update("vault_root_folder_id", e.target.value)}
+                placeholder="https://drive.google.com/drive/folders/... or folder ID"
+                disabled={!householdId}
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                {householdId
+                  ? "Saved on the household. Used as the provisioned Vault root."
+                  : "Assign this contact to a household to set the Vault root."}
+              </p>
+            </div>
+            <div>
               <Label>Charter Document URL</Label>
               <Input value={form.charter_url} onChange={(e) => update("charter_url", e.target.value)} placeholder="https://drive.google.com/..." />
             </div>
