@@ -66,7 +66,7 @@ const ContactForm = () => {
     vineyard_operating_income: "",
     vineyard_balance_sheet_summary: "",
     quiet_period_start_date: "",
-    sidedrawer_url: "",
+    
     asana_url: "",
     ia_financial_url: "",
     just_wealth_url: "",
