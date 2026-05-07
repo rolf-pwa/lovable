@@ -232,7 +232,6 @@ export type Database = {
           poa_firm: string | null
           poa_name: string | null
           quiet_period_start_date: string | null
-          sidedrawer_url: string | null
           updated_at: string
           vault_root_folder_id: string | null
           vineyard_balance_sheet_summary: string | null
@@ -271,7 +270,6 @@ export type Database = {
           poa_firm?: string | null
           poa_name?: string | null
           quiet_period_start_date?: string | null
-          sidedrawer_url?: string | null
           updated_at?: string
           vault_root_folder_id?: string | null
           vineyard_balance_sheet_summary?: string | null
@@ -310,7 +308,6 @@ export type Database = {
           poa_firm?: string | null
           poa_name?: string | null
           quiet_period_start_date?: string | null
-          sidedrawer_url?: string | null
           updated_at?: string
           vault_root_folder_id?: string | null
           vineyard_balance_sheet_summary?: string | null
@@ -1309,6 +1306,7 @@ export type Database = {
           created_at: string
           email: string
           expires_at: string
+          failed_attempts: number
           id: string
           verified: boolean
         }
@@ -1318,6 +1316,7 @@ export type Database = {
           created_at?: string
           email: string
           expires_at: string
+          failed_attempts?: number
           id?: string
           verified?: boolean
         }
@@ -1327,6 +1326,7 @@ export type Database = {
           created_at?: string
           email?: string
           expires_at?: string
+          failed_attempts?: number
           id?: string
           verified?: boolean
         }

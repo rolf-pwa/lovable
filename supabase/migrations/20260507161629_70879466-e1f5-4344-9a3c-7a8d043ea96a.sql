@@ -1,0 +1,1 @@
+ALTER TABLE public.portal_otps ADD COLUMN IF NOT EXISTS failed_attempts INTEGER NOT NULL DEFAULT 0;

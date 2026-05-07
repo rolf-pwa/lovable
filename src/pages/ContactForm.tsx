@@ -66,13 +66,15 @@ const ContactForm = () => {
     vineyard_operating_income: "",
     vineyard_balance_sheet_summary: "",
     quiet_period_start_date: "",
-    sidedrawer_url: "",
+    
     asana_url: "",
     ia_financial_url: "",
     just_wealth_url: "",
     google_drive_url: "",
     charter_url: "",
+    vault_root_folder_id: "",
   });
+  const [householdId, setHouseholdId] = useState<string | null>(null);
 
   // Household member linking
   const [householdMembers, setHouseholdMembers] = useState<LinkedMember[]>([]);
@@ -132,13 +134,24 @@ const ContactForm = () => {
         vineyard_operating_income: data.vineyard_operating_income?.toString() || "",
         vineyard_balance_sheet_summary: data.vineyard_balance_sheet_summary || "",
         quiet_period_start_date: data.quiet_period_start_date || "",
-        sidedrawer_url: data.sidedrawer_url || "",
+        
         asana_url: data.asana_url || "",
         ia_financial_url: data.ia_financial_url || "",
         just_wealth_url: (data as any).just_wealth_url || "",
         google_drive_url: data.google_drive_url || "",
         charter_url: (data as any).charter_url || "",
+        vault_root_folder_id: "",
       });
+      const hhId = (data as any).household_id || null;
+      setHouseholdId(hhId);
+      if (hhId) {
+        const { data: hh } = await supabase
+          .from("households")
+          .select("vault_root_folder_id")
+          .eq("id", hhId)
+          .maybeSingle();
+        if (hh) setForm((prev) => ({ ...prev, vault_root_folder_id: (hh as any).vault_root_folder_id || "" }));
+      }
       setEmailNotifEnabled(data.email_notifications_enabled !== false);
       setHouseholdMembers(
         (householdRes.data || []).map((r: any) => ({
@@ -246,7 +259,7 @@ const ContactForm = () => {
       vineyard_balance_sheet_summary:
         form.vineyard_balance_sheet_summary || null,
       quiet_period_start_date: form.quiet_period_start_date || null,
-      sidedrawer_url: form.sidedrawer_url || null,
+      
       asana_url: form.asana_url || null,
       ia_financial_url: form.ia_financial_url || null,
       just_wealth_url: form.just_wealth_url || null,
@@ -282,6 +295,16 @@ const ContactForm = () => {
 
     // Save household relationships
     await saveHouseholdMembers(contactId!);
+
+    // Persist vault root folder on the household
+    if (householdId) {
+      const raw = form.vault_root_folder_id.trim();
+      const folderId = raw ? (raw.match(/\/folders\/([a-zA-Z0-9_-]+)/)?.[1] ?? raw) : null;
+      await supabase
+        .from("households")
+        .update({ vault_root_folder_id: folderId } as any)
+        .eq("id", householdId);
+    }
 
     // Upload statements and trigger ingestion for each file
     if (statementFiles.length > 0 && contactId) {
@@ -532,10 +555,6 @@ const ContactForm = () => {
           </CardHeader>
           <CardContent className="grid gap-4 sm:grid-cols-2">
             <div>
-              <Label>SideDrawer URL</Label>
-              <Input value={form.sidedrawer_url} onChange={(e) => update("sidedrawer_url", e.target.value)} placeholder="https://..." />
-            </div>
-            <div>
               <Label>Asana URL</Label>
               <Input value={form.asana_url} onChange={(e) => update("asana_url", e.target.value)} placeholder="https://..." />
             </div>
@@ -552,8 +571,22 @@ const ContactForm = () => {
               <Input value={form.google_drive_url} onChange={(e) => update("google_drive_url", e.target.value)} placeholder="https://drive.google.com/..." />
             </div>
             <div>
+              <Label>Vault Root Folder URL or ID</Label>
+              <Input
+                value={form.vault_root_folder_id}
+                onChange={(e) => update("vault_root_folder_id", e.target.value)}
+                placeholder="https://drive.google.com/drive/folders/... or folder ID"
+                disabled={!householdId}
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                {householdId
+                  ? "Saved on the household. Used as the provisioned Vault root."
+                  : "Assign this contact to a household to set the Vault root."}
+              </p>
+            </div>
+            <div>
               <Label>Charter Document URL</Label>
-              <Input value={form.charter_url} onChange={(e) => update("charter_url", e.target.value)} placeholder="https://drive.google.com/... or future SideDrawer link" />
+              <Input value={form.charter_url} onChange={(e) => update("charter_url", e.target.value)} placeholder="https://drive.google.com/..." />
             </div>
           </CardContent>
         </Card>

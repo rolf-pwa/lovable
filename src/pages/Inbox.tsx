@@ -14,8 +14,12 @@ import {
 import {
   Loader2, MessageSquare, Phone, RefreshCw, Eye, EyeOff,
   Inbox as InboxIcon, UserPlus, Link2, Send, AlertCircle, ChevronRight, ChevronDown,
-  Archive, ArchiveRestore,
+  Archive, ArchiveRestore, Trash2,
 } from "lucide-react";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 
 interface QuoMessage {
@@ -134,7 +138,7 @@ export default function Inbox() {
       if (error) throw error;
       if (data?.blocked) {
         toast.error(`PII Shield blocked: ${data.reason}`, {
-          description: "Use the portal or SideDrawer for sensitive details.",
+          description: "Use the portal for sensitive details.",
         });
       } else {
         toast.success("Reply sent");
@@ -259,6 +263,27 @@ export default function Inbox() {
     }
   };
 
+  const deleteThread = async (t: ThreadGroup) => {
+    try {
+      const phoneDigits = t.key.startsWith("phone:") ? t.key.slice(6) : null;
+      const { data, error } = await supabase.functions.invoke("quo-service", {
+        body: {
+          action: "deleteThread",
+          threadKey: t.key,
+          contactId: t.contactId,
+          phoneDigits,
+        },
+      });
+      if (error) throw error;
+      toast.success(
+        `Thread deleted · ${data?.deletedMessages || 0} messages, ${data?.deletedCalls || 0} calls removed`,
+      );
+      load();
+    } catch (err: any) {
+      toast.error(`Delete failed: ${err.message}`);
+    }
+  };
+
   const archivedThreads = useMemo(() => threads.filter(isArchived), [threads, archive]);
   const activeThreads = useMemo(() => threads.filter((t) => !isArchived(t)), [threads, archive]);
 
@@ -283,6 +308,7 @@ export default function Inbox() {
     onResolve: openResolve,
     onArchive: archiveThread,
     onUnarchive: unarchiveThread,
+    onDelete: deleteThread,
     replyTo, replyBody, setReplyBody, sending,
     sendReply,
   };
@@ -355,6 +381,7 @@ interface CardSharedProps {
   onResolve: (phone: string) => void;
   onArchive: (t: ThreadGroup) => void;
   onUnarchive: (t: ThreadGroup) => void;
+  onDelete: (t: ThreadGroup) => void;
   replyTo: string | null;
   replyBody: string;
   setReplyBody: (v: string) => void;
@@ -397,10 +424,11 @@ function ThreadList({
 
 function ThreadCard({
   thread, defaultOpen, archivedView, contactName, onToggle, onReplyOpen, onResolve,
-  onArchive, onUnarchive,
+  onArchive, onUnarchive, onDelete,
   replyTo, replyBody, setReplyBody, sending, sendReply,
 }: { thread: ThreadGroup; defaultOpen?: boolean; archivedView?: boolean } & CardSharedProps) {
   const [open, setOpen] = useState(!!defaultOpen || (thread.unread > 0 && !archivedView));
+  const [confirmDelete, setConfirmDelete] = useState(false);
   // Newest-first for the collapsed preview
   const sortedEntries = useMemo(
     () => [...thread.entries].sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime()),
@@ -485,7 +513,39 @@ function ThreadCard({
             </>
           )}
         </button>
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); setConfirmDelete(true); }}
+          className="px-4 flex items-center justify-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/10 border-l border-border transition-colors"
+          title="Permanently delete this thread (messages + calls)"
+        >
+          <Trash2 className="h-4 w-4" />
+          <span className="hidden sm:inline">Delete</span>
+        </button>
       </div>
+
+      <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this thread?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete <strong>{thread.entries.length}</strong>{" "}
+              {thread.entries.length === 1 ? "record" : "records"} ({name}) from the database.
+              This action cannot be undone, and the thread will also disappear from the
+              contact page and the client portal.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => { setConfirmDelete(false); onDelete(thread); }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete permanently
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {open && (
         <div className="border-t border-border bg-background/40">

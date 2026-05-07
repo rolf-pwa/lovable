@@ -11,8 +11,9 @@ Routes:
 - `/vault/household/:householdId` — canonical, staff entry from `/households` row.
 - `/vault/:contactId` — legacy; auto-redirects to `/vault/household/{contact.household_id}`.
 - `/vault/guest/:token` — collaborator landing.
+- Sovereign Portal: `<PortalVault>` tab inside `/portal` — read-only, uses `vault-service` `getRoot` + `listFolder` + `streamFile` with `x-portal-token`. Files filtered by `client_visible=true` server-side.
 
-`vault-service` actions all run `ensureAccess(actor, driveId)` which walks ancestors and confirms an allowed root appears.
+`vault-service` actions all run `ensureAccess(actor, driveId)` which walks ancestors and confirms an allowed root appears. `getRoot` action returns `{rootFolderId, rootName}` for client portal entry.
 
 **Actor types:**
 - `staff` — Bearer JWT (`auth.getUser()`); no firewall.

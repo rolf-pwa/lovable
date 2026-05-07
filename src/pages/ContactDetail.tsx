@@ -36,6 +36,7 @@ import { StabilizationMapButton } from "@/components/StabilizationMapButton";
 import { QuarterlySystemReviewButton } from "@/components/QuarterlySystemReviewButton";
 import { SovereigntyCharterButton } from "@/components/SovereigntyCharterButton";
 import { GenerateCharterDraftButton } from "@/components/GenerateCharterDraftButton";
+import { VaultView } from "@/pages/Vault";
 import { dialViaQuo } from "@/lib/quo-dial";
 import { 
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
@@ -128,6 +129,7 @@ const ContactDetail = () => {
   const [householdMembers, setHouseholdMembers] = useState<HouseholdMember[]>([]);
   const [familyName, setFamilyName] = useState<string | null>(null);
   const [householdLabel, setHouseholdLabel] = useState<string | null>(null);
+  const [householdVaultRootId, setHouseholdVaultRootId] = useState<string | null>(null);
   const [vineyardAccounts, setVineyardAccounts] = useState<VineyardAccount[]>([]);
   const [professionalContacts, setProfessionalContacts] = useState<Record<string, { id: string; full_name: string } | null>>({});
   const [newAccountName, setNewAccountName] = useState("");
@@ -191,8 +193,9 @@ const ContactDetail = () => {
       setFamilyName(fam?.name || null);
     }
     if (contactRes.data?.household_id) {
-      const { data: hh } = await supabase.from("households").select("label").eq("id", contactRes.data.household_id).maybeSingle();
+      const { data: hh } = await supabase.from("households").select("label, vault_root_folder_id").eq("id", contactRes.data.household_id).maybeSingle();
       setHouseholdLabel(hh?.label || null);
+      setHouseholdVaultRootId((hh as any)?.vault_root_folder_id || null);
     }
 
     const names = [contactRes.data?.lawyer_name, contactRes.data?.accountant_name, contactRes.data?.executor_name, contactRes.data?.poa_name].filter(Boolean) as string[];
@@ -405,7 +408,6 @@ const ContactDetail = () => {
   const progressPct = quietStart ? Math.min((daysElapsed / 90) * 100, 100) : 0;
 
   const resourceLinks = [
-    { label: "SideDrawer", url: contact.sidedrawer_url, icon: Folder },
     { label: "Google Drive", url: contact.google_drive_url, icon: FolderOpen },
     { label: "Asana", url: contact.asana_url, icon: CheckSquare },
     { label: "IA Financial", url: contact.ia_financial_url, icon: ShieldCheck },
@@ -500,9 +502,9 @@ const ContactDetail = () => {
             <Tabs defaultValue="comms" className="w-full">
               <TabsList className="w-full">
                 <TabsTrigger value="comms" className="flex-1">Communications</TabsTrigger>
-                <TabsTrigger value="meetings" className="flex-1">
-                  <Calendar className="mr-1.5 h-3.5 w-3.5" />
-                  Meetings
+                <TabsTrigger value="vault" className="flex-1">
+                  <ShieldCheck className="mr-1.5 h-3.5 w-3.5" />
+                  Vault
                 </TabsTrigger>
                 <TabsTrigger value="actions" className="flex-1">
                   <ListChecks className="mr-1.5 h-3.5 w-3.5" />
@@ -524,9 +526,47 @@ const ContactDetail = () => {
                 <ContactEmails contactEmail={contact.email} />
               </TabsContent>
 
-              {/* Meetings Tab */}
-              <TabsContent value="meetings" className="space-y-6 mt-4">
-                <ContactCalendar contactEmail={contact.email} contactName={contact.full_name} />
+              {/* Vault Tab */}
+              <TabsContent value="vault" className="space-y-4 mt-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <ShieldCheck className="h-4 w-4 text-accent" />
+                    Household document vault — manage visibility and share with collaborators.
+                  </div>
+                  {householdVaultRootId ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        const url = `https://drive.google.com/drive/folders/${householdVaultRootId}`;
+                        const w = window.open(url, "_blank", "noopener,noreferrer");
+                        if (!w) {
+                          navigator.clipboard?.writeText(url);
+                          toast.success("Drive link copied — paste in a new tab");
+                        }
+                      }}
+                    >
+                      <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
+                      Open in Drive
+                    </Button>
+                  ) : (
+                    <Button asChild size="sm" variant="outline">
+                      <Link to={`/vault/${contact.id}`}>
+                        <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
+                        Open Full Page
+                      </Link>
+                    </Button>
+                  )}
+                </div>
+                {contact.household_id ? (
+                  <VaultView forcedHouseholdId={contact.household_id} embedded />
+                ) : (
+                  <Card>
+                    <CardContent className="py-8 text-center text-sm text-muted-foreground">
+                      This contact is not assigned to a household yet.
+                    </CardContent>
+                  </Card>
+                )}
               </TabsContent>
 
               {/* Action Items Tab */}
@@ -543,6 +583,7 @@ const ContactDetail = () => {
                   </CardContent>
                 </Card>
                 <ContactTaskList asanaUrl={contact.asana_url} contactId={contact.id} householdMembers={householdMembers} />
+                <ContactCalendar contactEmail={contact.email} contactName={contact.full_name} />
                 <ContactRequests contactId={id!} />
                 <AuditTrail contactId={id!} />
               </TabsContent>
@@ -977,34 +1018,34 @@ const ContactDetail = () => {
                 <CardContent className="space-y-2">
                   {familyName && contact.family_id ? (
                     <Collapsible defaultOpen={false}>
-                      <div className="flex items-center gap-1">
-                        <CollapsibleTrigger className="group flex flex-1 items-center gap-2 rounded-md bg-muted/50 px-3 py-2 text-sm font-medium transition-colors hover:bg-muted">
+                      <div className="group/fam flex items-center gap-2 rounded-md bg-muted/50 pr-1 transition-colors hover:bg-muted">
+                        <CollapsibleTrigger className="group flex flex-1 items-center gap-2 px-3 py-2 text-sm font-medium text-left">
                           <ChevronDown className="h-3.5 w-3.5 text-muted-foreground transition-transform group-data-[state=closed]:-rotate-90" />
-                          <span className="flex-1 text-left">{familyName}</span>
+                          <span className="flex-1">{familyName}</span>
                         </CollapsibleTrigger>
                         <Link
                           to="/families"
-                          className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                          className="rounded-md p-1.5 text-muted-foreground hover:text-foreground transition-colors"
                           title="Open Families"
                         >
-                          <ExternalLink className="h-3 w-3" />
+                          <ExternalLink className="h-3.5 w-3.5" />
                         </Link>
                       </div>
                       <CollapsibleContent className="pl-4 pt-2 space-y-2">
                         {householdLabel && contact.household_id ? (
                           <Collapsible defaultOpen={false}>
-                            <div className="flex items-center gap-1">
-                              <CollapsibleTrigger className="group flex flex-1 items-center gap-2 rounded-md bg-muted/50 px-3 py-2 text-sm font-medium transition-colors hover:bg-muted">
+                            <div className="group/hh flex items-center gap-2 rounded-md bg-muted/50 pr-1 transition-colors hover:bg-muted">
+                              <CollapsibleTrigger className="group flex flex-1 items-center gap-2 px-3 py-2 text-sm font-medium text-left">
                                 <ChevronDown className="h-3.5 w-3.5 text-muted-foreground transition-transform group-data-[state=closed]:-rotate-90" />
                                 <Home className="h-3.5 w-3.5 text-muted-foreground" />
-                                <span className="flex-1 text-left">{householdLabel}</span>
+                                <span className="flex-1">{householdLabel}</span>
                               </CollapsibleTrigger>
                               <Link
                                 to={`/households/${contact.household_id}`}
-                                className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                                className="rounded-md p-1.5 text-muted-foreground hover:text-foreground transition-colors"
                                 title="Open Household"
                               >
-                                <ExternalLink className="h-3 w-3" />
+                                <ExternalLink className="h-3.5 w-3.5" />
                               </Link>
                             </div>
                             <CollapsibleContent className="pl-4 pt-2">

@@ -292,31 +292,25 @@ serve(async (req) => {
       const WIX_OTP_SECRET = Deno.env.get("WIX_OTP_SECRET");
 
       if (WIX_SITE_URL && WIX_OTP_SECRET) {
-        console.log(`[OTP] Wix relay URL: ${WIX_SITE_URL}`);
-        console.log(`[OTP] Sending OTP to Wix for ${cleanEmail}, code length: ${otp.length}`);
         try {
           const wixPayload = JSON.stringify({
             email: cleanEmail,
             code: otp,
             secret: WIX_OTP_SECRET,
           });
-          console.log(`[OTP] Wix payload: ${wixPayload}`);
           const wixRes = await fetch(WIX_SITE_URL, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: wixPayload,
           });
-          const wixBody = await wixRes.text();
-          console.log(`[OTP] Wix response status: ${wixRes.status}, body: ${wixBody}`);
           if (!wixRes.ok) {
-            console.error("[WixRelay] Failed to send OTP:", wixRes.status, wixBody);
+            console.error("[WixRelay] Failed to send OTP. Status:", wixRes.status);
           }
         } catch (wixErr) {
           console.error("[WixRelay] Error calling Wix endpoint:", wixErr);
         }
       } else {
         console.warn(`[OTP] Wix secrets missing! WIX_SITE_URL=${!!WIX_SITE_URL}, WIX_OTP_SECRET=${!!WIX_OTP_SECRET}`);
-        console.log(`[DEV] OTP for ${cleanEmail}: ${otp}`);
       }
 
       return new Response(JSON.stringify({ sent: true }), {
@@ -333,20 +327,26 @@ serve(async (req) => {
 
       const cleanEmail = email.trim().toLowerCase();
 
-      // Brute-force protection: max 5 failed verify attempts per email per 10 min
+      // Brute-force protection: lock out after 5 failed verify attempts
+      // across any active OTPs for this email in the last 10 minutes.
       const tenMinAgo = new Date(Date.now() - 600000).toISOString();
-      const { count: recentUnverified } = await supabase
+      const { data: recentOtps } = await supabase
         .from("portal_otps")
-        .select("*", { count: "exact", head: true })
+        .select("id, failed_attempts")
         .eq("email", cleanEmail)
-        .eq("verified", false)
         .gte("created_at", tenMinAgo);
+      const totalFailed = (recentOtps || []).reduce(
+        (sum: number, r: any) => sum + (r.failed_attempts || 0),
+        0,
+      );
+      if (totalFailed >= 5) {
+        await new Promise((r) => setTimeout(r, 1000));
+        return new Response(
+          JSON.stringify({ error: "Too many failed attempts. Please request a new code." }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
 
-      // Count is of unverified OTPs — if many exist and none verified, likely brute-force
-      // We track by checking recent failed attempts via a simple heuristic:
-      // If there are active (unverified, unexpired) OTPs but the user keeps guessing wrong codes,
-      // we limit based on the OTP send rate (already 3/hr) plus this timing gate.
-      
       const { data: otp } = await supabase
         .from("portal_otps")
         .select("*")
@@ -359,7 +359,14 @@ serve(async (req) => {
         .maybeSingle();
 
       if (!otp) {
-        // Add a progressive delay on failures to slow brute-force
+        // Increment failed_attempts on the most recent active OTP (if any)
+        const newest = (recentOtps || [])[0];
+        if (newest) {
+          await supabase
+            .from("portal_otps")
+            .update({ failed_attempts: (newest.failed_attempts || 0) + 1 })
+            .eq("id", newest.id);
+        }
         await new Promise((r) => setTimeout(r, 1000));
         return new Response(JSON.stringify({ error: "Invalid or expired code" }), {
           status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -386,7 +393,7 @@ serve(async (req) => {
 
       // Now load portal data
       const [contactRes, accountsRes, storehousesRes, auditRes, requestsRes] = await Promise.all([
-        supabase.from("contacts").select("id, first_name, last_name, full_name, email, email_notifications_enabled, governance_status, fiduciary_entity, quiet_period_start_date, google_drive_url, charter_url, sidedrawer_url, asana_url, ia_financial_url, vineyard_ebitda, vineyard_operating_income, vineyard_balance_sheet_summary, family_id, household_id, family_role, is_minor").eq("id", contactId).maybeSingle(),
+        supabase.from("contacts").select("id, first_name, last_name, full_name, email, email_notifications_enabled, governance_status, fiduciary_entity, quiet_period_start_date, google_drive_url, charter_url, asana_url, ia_financial_url, vineyard_ebitda, vineyard_operating_income, vineyard_balance_sheet_summary, family_id, household_id, family_role, is_minor").eq("id", contactId).maybeSingle(),
         supabase.from("vineyard_accounts").select("*").eq("contact_id", contactId).order("created_at"),
         supabase.from("storehouses").select("*").eq("contact_id", contactId).order("storehouse_number"),
         supabase.from("sovereignty_audit_trail").select("*").eq("contact_id", contactId).order("created_at", { ascending: false }).limit(50),
@@ -475,7 +482,7 @@ serve(async (req) => {
     }
 
     if (action === "google-auth") {
-      // Google OAuth portal login — look up contact by email
+      // Google OAuth portal login — verify the caller's Supabase session matches the requested email.
       if (!email || typeof email !== "string") {
         return new Response(JSON.stringify({ error: "Email is required" }), {
           status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -484,9 +491,31 @@ serve(async (req) => {
 
       const cleanEmail = email.trim().toLowerCase();
 
+      // Require a Supabase access token in the Authorization header and verify it server-side.
+      const authHeader = req.headers.get("Authorization") || "";
+      const accessToken = authHeader.replace(/^Bearer\s+/i, "").trim();
+      if (!accessToken) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+      const supabaseUserClient = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        anonKey,
+        { global: { headers: { Authorization: `Bearer ${accessToken}` } } }
+      );
+      const { data: userData, error: userErr } = await supabaseUserClient.auth.getUser();
+      const verifiedEmail = userData?.user?.email?.toLowerCase() || "";
+      if (userErr || !userData?.user || verifiedEmail !== cleanEmail) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       const { data: contact } = await supabase
         .from("contacts")
-        .select("id, first_name, last_name, full_name, email, email_notifications_enabled, governance_status, fiduciary_entity, quiet_period_start_date, google_drive_url, charter_url, sidedrawer_url, asana_url, ia_financial_url, vineyard_ebitda, vineyard_operating_income, vineyard_balance_sheet_summary, family_id, household_id, family_role, is_minor")
+        .select("id, first_name, last_name, full_name, email, email_notifications_enabled, governance_status, fiduciary_entity, quiet_period_start_date, google_drive_url, charter_url, asana_url, ia_financial_url, vineyard_ebitda, vineyard_operating_income, vineyard_balance_sheet_summary, family_id, household_id, family_role, is_minor")
         .ilike("email", cleanEmail)
         .maybeSingle();
 

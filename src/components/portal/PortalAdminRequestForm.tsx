@@ -106,6 +106,7 @@ export function PortalAdminRequestForm({
             action: "submit_request",
             requestData: {
               contact_id: contactId,
+              portal_token: portalToken,
               request_type: requestType,
               request_description: description.trim(),
               file_urls: fileUrls,

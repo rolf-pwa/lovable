@@ -329,6 +329,21 @@ serve(async (req) => {
   }
 
   try {
+    // ─── GET ROOT (client portal entry-point) ───
+    if (action === "getRoot") {
+      if (actor.kind !== "client")
+        return new Response(JSON.stringify({ error: "client_only" }), { status: 403, headers: { ...cors, "Content-Type": "application/json" } });
+      const r = await fetch(
+        `https://www.googleapis.com/drive/v3/files/${actor.vaultRootId}?fields=id,name`,
+        { headers: { Authorization: `Bearer ${accessToken}` } },
+      );
+      if (!r.ok) {
+        return new Response(JSON.stringify({ error: "drive_meta_error" }), { status: 502, headers: { ...cors, "Content-Type": "application/json" } });
+      }
+      const j = await r.json();
+      return new Response(JSON.stringify({ rootFolderId: j.id, rootName: j.name }), { headers: { ...cors, "Content-Type": "application/json" } });
+    }
+
     // ─── PROVISION VAULT (staff only) ───
     if (action === "provisionVault") {
       if (actor.kind !== "staff")
@@ -373,6 +388,47 @@ serve(async (req) => {
       await audit(actor, "provision", contactId ?? null, root.id, root.name, req, { household_id: hhId });
 
       return new Response(JSON.stringify({ ok: true, folderId: root.id, householdId: hhId }), { headers: { ...cors, "Content-Type": "application/json" } });
+    }
+
+    // ─── ENSURE SHOEBOX (client or staff) ───
+    // Finds-or-creates the "00 Shoebox (Client Uploads)" folder under the
+    // household's vault root. Used by the portal uploader and by staff
+    // backfill of already-provisioned vaults.
+    if (action === "ensureShoebox") {
+      let rootFolderId: string | null = null;
+      if (actor.kind === "client") {
+        rootFolderId = actor.vaultRootId;
+      } else if (actor.kind === "staff") {
+        const { householdId } = body;
+        if (!householdId) {
+          return new Response(JSON.stringify({ error: "householdId required" }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
+        }
+        const { data: hh } = await supabaseAdmin
+          .from("households")
+          .select("vault_root_folder_id")
+          .eq("id", householdId)
+          .maybeSingle();
+        rootFolderId = hh?.vault_root_folder_id ?? null;
+      } else {
+        return new Response(JSON.stringify({ error: "forbidden" }), { status: 403, headers: { ...cors, "Content-Type": "application/json" } });
+      }
+      if (!rootFolderId) {
+        return new Response(JSON.stringify({ error: "vault_not_provisioned" }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
+      }
+      const SHOEBOX_NAME = "00 Shoebox (Client Uploads)";
+      const children = await driveListChildren(rootFolderId, accessToken);
+      let shoebox = children.find(
+        (c: any) =>
+          c.mimeType === "application/vnd.google-apps.folder" &&
+          (c.name === SHOEBOX_NAME || c.name?.toLowerCase().includes("shoebox")),
+      );
+      if (!shoebox) {
+        shoebox = await driveCreateFolder(SHOEBOX_NAME, rootFolderId, accessToken);
+      }
+      return new Response(
+        JSON.stringify({ folderId: shoebox.id, name: shoebox.name }),
+        { headers: { ...cors, "Content-Type": "application/json" } },
+      );
     }
 
     // ─── COLLABORATOR: list own grant roots (post-unlock) ───
@@ -585,14 +641,30 @@ serve(async (req) => {
       return new Response(JSON.stringify({ ok: true }), { headers: { ...cors, "Content-Type": "application/json" } });
     }
 
-    // ─── UPLOAD (staff or collaborator with upload permission) ───
+    // ─── UPLOAD (staff, collaborator-with-upload, or client → shoebox only) ───
     if (action === "uploadFile") {
       const { folderId, fileName, mimeType, base64, contactId } = body;
-      const access = await ensureAccess(actor, folderId, accessToken, true);
-      if (!access.ok) {
-        await audit(actor, "firewall_block", contactId ?? null, folderId, fileName, req, { reason: access.reason });
-        return new Response(JSON.stringify({ error: "forbidden", reason: access.reason }), { status: 403, headers: { ...cors, "Content-Type": "application/json" } });
+
+      // Clients may only upload into their household shoebox.
+      if (actor.kind === "client") {
+        const children = await driveListChildren(actor.vaultRootId, accessToken);
+        const shoebox = children.find(
+          (c: any) =>
+            c.mimeType === "application/vnd.google-apps.folder" &&
+            (c.name?.toLowerCase().includes("shoebox")),
+        );
+        if (!shoebox || shoebox.id !== folderId) {
+          await audit(actor, "firewall_block", null, folderId, fileName, req, { reason: "client_upload_outside_shoebox" });
+          return new Response(JSON.stringify({ error: "forbidden", reason: "client_upload_outside_shoebox" }), { status: 403, headers: { ...cors, "Content-Type": "application/json" } });
+        }
+      } else {
+        const access = await ensureAccess(actor, folderId, accessToken, true);
+        if (!access.ok) {
+          await audit(actor, "firewall_block", contactId ?? null, folderId, fileName, req, { reason: access.reason });
+          return new Response(JSON.stringify({ error: "forbidden", reason: access.reason }), { status: 403, headers: { ...cors, "Content-Type": "application/json" } });
+        }
       }
+
       // Decode base64 in chunks (avoid stack-limit on large files)
       const binary = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
       const boundary = "----vault" + Math.random().toString(36).slice(2);
@@ -612,7 +684,7 @@ serve(async (req) => {
       const created = await r.json();
       await supabaseAdmin.from("vault_files").insert({
         drive_id: created.id,
-        contact_id: contactId ?? (actor.kind === "collaborator" ? actor.contactId : null),
+        contact_id: contactId ?? (actor.kind === "client" ? actor.contactId : actor.kind === "collaborator" ? actor.contactId : null),
         parent_folder_id: folderId,
         ancestor_folder_ids: [folderId, ...(await getAncestors(folderId, accessToken))],
         name: fileName,
@@ -622,7 +694,7 @@ serve(async (req) => {
         uploaded_by_collaborator_id: actor.kind === "collaborator" ? actor.collaboratorId : null,
         staff_reviewed: actor.kind === "staff",
       });
-      await audit(actor, "upload", contactId ?? null, created.id, fileName, req);
+      await audit(actor, "upload", contactId ?? null, created.id, fileName, req, { uploader: actor.kind });
       return new Response(JSON.stringify({ ok: true, fileId: created.id }), { headers: { ...cors, "Content-Type": "application/json" } });
     }
 

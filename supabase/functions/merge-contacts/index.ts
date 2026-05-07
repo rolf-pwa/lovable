@@ -58,7 +58,7 @@ Deno.serve(async (req) => {
     const fieldsToMerge = [
       "email", "phone", "address", "lawyer_name", "lawyer_firm",
       "accountant_name", "accountant_firm", "executor_name", "executor_firm",
-      "poa_name", "poa_firm", "sidedrawer_url", "asana_url",
+      "poa_name", "poa_firm", "asana_url",
       "ia_financial_url", "google_drive_url", "just_wealth_url", "charter_url",
       "last_name",
     ];

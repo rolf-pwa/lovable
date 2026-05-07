@@ -122,16 +122,28 @@ function FolderNode({
     }
   };
 
+  const isShoebox =
+    depth > 0 && (name?.toLowerCase().includes("shoebox") ?? false);
+
   return (
     <div style={{ paddingLeft: depth === 0 ? 0 : 16 }}>
-      <div className="flex items-center gap-2 py-1.5 group">
+      <div
+        className={`flex items-center gap-2 py-1.5 group ${
+          isShoebox ? "bg-accent/10 border-l-2 border-accent pl-1.5 rounded-sm" : ""
+        }`}
+      >
         <button
           onClick={() => setOpen((v) => !v)}
-          className="flex items-center gap-2 text-left hover:text-amber-500 flex-1"
+          className="flex items-center gap-2 text-left hover:text-accent flex-1"
         >
           {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-          <Folder className="h-4 w-4 text-amber-500" />
-          <span className="font-serif">{name}</span>
+          <Folder className={`h-4 w-4 ${isShoebox ? "text-accent" : "text-accent"}`} />
+          <span className={`font-serif ${isShoebox ? "text-accent font-semibold" : ""}`}>{name}</span>
+          {isShoebox && (
+            <Badge variant="outline" className="ml-1 text-[10px] border-accent/50 text-accent">
+              Client Uploads
+            </Badge>
+          )}
           {loading && <Loader2 className="h-3 w-3 animate-spin ml-1" />}
         </button>
         {householdId && (
@@ -167,7 +179,7 @@ function FolderNode({
                 <span className="flex-1 truncate">{f.name}</span>
                 {householdId && (
                   <span className="flex items-center gap-1.5 mr-2" title="Visible to client">
-                    <ShieldCheck className={`h-3.5 w-3.5 ${visible ? "text-amber-500" : "text-muted-foreground/40"}`} />
+                    <ShieldCheck className={`h-3.5 w-3.5 ${visible ? "text-accent" : "text-muted-foreground/40"}`} />
                     <Switch checked={visible} onCheckedChange={(v) => toggleVisibility(f, v)} />
                   </span>
                 )}
@@ -554,7 +566,7 @@ function CollaboratorsPanel({
   );
 }
 
-export default function Vault() {
+export function VaultView({ forcedHouseholdId, embedded = false }: { forcedHouseholdId?: string; embedded?: boolean }) {
   const params = useParams<{ householdId?: string; contactId?: string }>();
   const [householdId, setHouseholdId] = useState<string | null>(null);
   const [householdLabel, setHouseholdLabel] = useState<string>("");
@@ -566,11 +578,12 @@ export default function Vault() {
   const [previewLoading, setPreviewLoading] = useState(false);
   const [shareTarget, setShareTarget] = useState<ShareTarget | null>(null);
   const [redirectTo, setRedirectTo] = useState<string | null>(null);
+  const [provisioning, setProvisioning] = useState(false);
 
   // Resolve household: from URL, or from a contactId (legacy URL → redirect)
   useEffect(() => {
     (async () => {
-      const hh = params.householdId;
+      const hh = forcedHouseholdId ?? params.householdId;
       if (!hh && params.contactId) {
         const { data: c } = await supabase
           .from("contacts")
@@ -595,7 +608,7 @@ export default function Vault() {
         .maybeSingle();
       const { data: members } = await supabase
         .from("contacts")
-        .select("first_name, last_name")
+        .select("first_name, last_name, google_drive_url")
         .eq("household_id", hh)
         .order("family_role");
 
@@ -604,27 +617,41 @@ export default function Vault() {
       setFamilyName((row as any)?.families?.name ?? "");
       setMemberNames((members ?? []).map((m: any) => `${m.first_name} ${m.last_name ?? ""}`.trim()));
       const id = row?.vault_root_folder_id ?? "";
-      if (id) { setRootId(id); setInput(id); }
+      if (id) {
+        setRootId(id);
+        setInput(id);
+      } else {
+        // Pre-populate from any household member's Google Drive URL
+        const driveUrl = (members ?? [])
+          .map((m: any) => m.google_drive_url)
+          .find((u: string | null) => !!u);
+        if (driveUrl) setInput(driveUrl);
+      }
     })();
-  }, [params.householdId, params.contactId]);
+  }, [params.householdId, params.contactId, forcedHouseholdId]);
 
-  if (redirectTo) return <Navigate to={redirectTo} replace />;
+  
 
   const provision = async () => {
     if (!householdId) {
       toast.error("Open this vault from a household.");
       return;
     }
-    const parentFolderId = window.prompt(
-      "Drive parent folder ID where the new household vault root should be created:",
-    );
-    if (!parentFolderId) return;
+    const raw = input.trim();
+    const parentFolderId = raw.match(/\/folders\/([a-zA-Z0-9_-]+)/)?.[1] ?? raw;
+    if (!parentFolderId) {
+      toast.error("Enter a Drive folder URL or ID first.");
+      return;
+    }
+    setProvisioning(true);
     try {
-      const res = await callVault("provisionVault", { householdId, parentFolderId: parentFolderId.trim() });
+      const res = await callVault("provisionVault", { householdId, parentFolderId });
       toast.success("Vault provisioned");
       setRootId(res.folderId);
     } catch (e: any) {
       toast.error(e.message);
+    } finally {
+      setProvisioning(false);
     }
   };
 
@@ -659,43 +686,53 @@ export default function Vault() {
     ? `${familyName}${householdLabel && householdLabel !== "Primary" ? ` — ${householdLabel}` : ""}`
     : "Household Vault";
 
-  return (
-    <div className="container max-w-5xl mx-auto py-8 space-y-6">
-      <div>
-        <h1 className="text-3xl font-serif">The Vault</h1>
-        <p className="text-muted-foreground">
-          {heading}
-          {memberNames.length > 0 && (
-            <span className="block text-xs mt-1">Shared by: {memberNames.join(" • ")}</span>
-          )}
-        </p>
-      </div>
+  if (redirectTo) return <Navigate to={redirectTo} replace />;
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Vault root folder</CardTitle>
-        </CardHeader>
-        <CardContent className="flex gap-2 items-center">
-          <Input
-            placeholder="Drive folder URL or ID"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-          />
-          <Button
-            onClick={() => {
-              const m = input.match(/\/folders\/([a-zA-Z0-9_-]+)/);
-              setRootId(m ? m[1] : input.trim());
-            }}
-          >
-            Load
-          </Button>
-          {householdId && (
-            <Button variant="outline" onClick={provision}>
-              Provision
+  const body = (
+    <div className={embedded ? "space-y-6" : "container max-w-5xl mx-auto py-8 space-y-6"}>
+      {!embedded && (
+        <div>
+          <h1 className="text-3xl font-serif">The Vault</h1>
+          <p className="text-muted-foreground">
+            {heading}
+            {memberNames.length > 0 && (
+              <span className="block text-xs mt-1">Shared by: {memberNames.join(" • ")}</span>
+            )}
+          </p>
+        </div>
+      )}
+
+      {!rootId && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Vault root folder</CardTitle>
+          </CardHeader>
+          <CardContent className="flex gap-2 items-center">
+            <Input
+              placeholder="Drive folder URL or ID"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+            />
+            <Button
+              onClick={() => {
+                const m = input.match(/\/folders\/([a-zA-Z0-9_-]+)/);
+                setRootId(m ? m[1] : input.trim());
+              }}
+            >
+              Load
             </Button>
-          )}
-        </CardContent>
-      </Card>
+            {householdId && (
+              <Button variant="outline" onClick={provision} disabled={provisioning}>
+                {provisioning ? (
+                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Provisioning…</>
+                ) : (
+                  "Provision"
+                )}
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {rootId && (
         <Card>
@@ -762,4 +799,10 @@ export default function Vault() {
       </Dialog>
     </div>
   );
+
+  return body;
+}
+
+export default function Vault() {
+  return <VaultView />;
 }

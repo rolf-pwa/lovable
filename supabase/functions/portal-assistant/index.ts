@@ -104,7 +104,7 @@ When you detect an admin request:
 - Explaining fee structures and billing questions at a high level
 
 ## Portal Features You Can Reference
-- **My Documents**: Access your document vault (SideDrawer) from the sidebar
+- **My Documents**: Access your document vault from the sidebar
 - **My Accounts**: View your IA Financial accounts from the sidebar
 - **Book a Meeting**: Schedule in-person or video meetings using the links above the Upcoming Meetings section
 - **Action Items**: View and track tasks assigned by your Personal CFO
@@ -170,6 +170,28 @@ serve(async (req) => {
         return new Response(
           JSON.stringify({ error: "Missing required fields" }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Require a valid portal_token bound to the requested contact_id.
+      const portalToken = requestData.portal_token;
+      if (!portalToken || typeof portalToken !== "string") {
+        return new Response(
+          JSON.stringify({ error: "portal_token is required" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      const { data: tokenRow } = await supabase
+        .from("portal_tokens")
+        .select("contact_id")
+        .eq("token", portalToken)
+        .eq("revoked", false)
+        .gte("expires_at", new Date().toISOString())
+        .maybeSingle();
+      if (!tokenRow || tokenRow.contact_id !== requestData.contact_id) {
+        return new Response(
+          JSON.stringify({ error: "Unauthorized" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
@@ -243,8 +265,9 @@ serve(async (req) => {
       );
     }
 
-    // Chat flow
-    const { messages } = body;
+    // Chat flow — require a valid portal_token to prevent unauth Vertex AI abuse
+    // and KB exfiltration.
+    const { messages, portal_token: chatPortalToken } = body;
     if (!messages || !Array.isArray(messages)) {
       return new Response(
         JSON.stringify({ error: "messages array is required" }),
@@ -252,11 +275,32 @@ serve(async (req) => {
       );
     }
 
-    // Fetch active knowledge base entries scoped to portal
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
+
+    if (!chatPortalToken || typeof chatPortalToken !== "string") {
+      return new Response(
+        JSON.stringify({ error: "portal_token is required" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    const { data: chatTokenRow } = await supabaseAdmin
+      .from("portal_tokens")
+      .select("contact_id")
+      .eq("token", chatPortalToken)
+      .eq("revoked", false)
+      .gte("expires_at", new Date().toISOString())
+      .maybeSingle();
+    if (!chatTokenRow) {
+      return new Response(
+        JSON.stringify({ error: "Invalid or expired portal token" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Fetch active knowledge base entries scoped to portal
     const { data: kbEntries } = await supabaseAdmin
       .from("knowledge_base")
       .select("title, content, category")

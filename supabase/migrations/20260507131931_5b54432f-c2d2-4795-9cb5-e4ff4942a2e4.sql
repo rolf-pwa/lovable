@@ -1,0 +1,13 @@
+DROP POLICY IF EXISTS "Anon can read knowledge files" ON storage.objects;
+DROP POLICY IF EXISTS "Authenticated users can upload cashflow files" ON storage.objects;
+DROP POLICY IF EXISTS "Authenticated users can read cashflow files" ON storage.objects;
+DROP POLICY IF EXISTS "Authenticated users can delete cashflow files" ON storage.objects;
+CREATE POLICY "Staff can upload cashflow files" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'cashflow-uploads' AND lower(COALESCE((auth.jwt() ->> 'email'), '')) LIKE '%@prosperwise.ca');
+CREATE POLICY "Staff can read cashflow files" ON storage.objects FOR SELECT USING (bucket_id = 'cashflow-uploads' AND lower(COALESCE((auth.jwt() ->> 'email'), '')) LIKE '%@prosperwise.ca');
+CREATE POLICY "Staff can delete cashflow files" ON storage.objects FOR DELETE USING (bucket_id = 'cashflow-uploads' AND lower(COALESCE((auth.jwt() ->> 'email'), '')) LIKE '%@prosperwise.ca');
+DROP POLICY IF EXISTS "Authenticated users can upload statements" ON storage.objects;
+DROP POLICY IF EXISTS "Authenticated users can read statements" ON storage.objects;
+DROP POLICY IF EXISTS "Authenticated users can delete statements" ON storage.objects;
+CREATE POLICY "Staff can upload statements" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'statement-uploads' AND lower(COALESCE((auth.jwt() ->> 'email'), '')) LIKE '%@prosperwise.ca');
+CREATE POLICY "Staff can read statements" ON storage.objects FOR SELECT USING (bucket_id = 'statement-uploads' AND lower(COALESCE((auth.jwt() ->> 'email'), '')) LIKE '%@prosperwise.ca');
+CREATE POLICY "Staff can delete statements" ON storage.objects FOR DELETE USING (bucket_id = 'statement-uploads' AND lower(COALESCE((auth.jwt() ->> 'email'), '')) LIKE '%@prosperwise.ca');
