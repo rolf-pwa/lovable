@@ -100,7 +100,7 @@ function guessMapping(header: string): string {
   if (h.includes("executorfirm")) return "executor_firm";
   if (h.includes("poaname") || h.includes("powerofattorneyname")) return "poa_name";
   if (h.includes("poafirm") || h.includes("powerofattorneyfirm")) return "poa_firm";
-  if (h.includes("sidedrawer")) return "sidedrawer_url";
+  
   if (h.includes("googledrive") || h.includes("gdrive")) return "google_drive_url";
   if (h.includes("asana")) return "asana_url";
   if (h.includes("iafinancial")) return "ia_financial_url";
