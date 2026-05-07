@@ -533,12 +533,25 @@ const ContactDetail = () => {
                     <ShieldCheck className="h-4 w-4 text-accent" />
                     Household document vault — manage visibility and share with collaborators.
                   </div>
-                  <Button asChild size="sm" variant="outline">
-                    <Link to={`/vault/${contact.id}`}>
-                      <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
-                      Open Full Page
-                    </Link>
-                  </Button>
+                  {householdVaultRootId ? (
+                    <Button asChild size="sm" variant="outline">
+                      <a
+                        href={`https://drive.google.com/drive/folders/${householdVaultRootId}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
+                        Open in Drive
+                      </a>
+                    </Button>
+                  ) : (
+                    <Button asChild size="sm" variant="outline">
+                      <Link to={`/vault/${contact.id}`}>
+                        <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
+                        Open Full Page
+                      </Link>
+                    </Button>
+                  )}
                 </div>
                 {contact.household_id ? (
                   <VaultView forcedHouseholdId={contact.household_id} embedded />
