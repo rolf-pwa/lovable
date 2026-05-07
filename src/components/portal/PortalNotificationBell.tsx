@@ -60,11 +60,12 @@ const SOURCE_ICONS: Record<string, string> = {
 interface Props {
   requests: PortalRequest[];
   contactId: string;
+  portalToken: string;
   onNavigateToRequests: () => void;
   onNavigateToTasks?: () => void;
 }
 
-export function PortalNotificationBell({ requests, contactId, onNavigateToRequests, onNavigateToTasks }: Props) {
+export function PortalNotificationBell({ requests, contactId, portalToken, onNavigateToRequests, onNavigateToTasks }: Props) {
   const [open, setOpen] = useState(false);
   const [seenIds, setSeenIds] = useState<Set<string>>(new Set());
   const [clientNotifs, setClientNotifs] = useState<ClientNotification[]>([]);
