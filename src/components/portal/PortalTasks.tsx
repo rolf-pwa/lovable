@@ -108,7 +108,7 @@ export function PortalTasks({ portalToken, clientName, contactId }: Props) {
           }),
           contactId
             ? supabase.functions.invoke("portal-track", {
-                body: { action: "get_interactions", contact_id: contactId },
+                body: { action: "get_interactions", contact_id: contactId, portal_token: portalToken },
               }).then(r => ({ data: r.data?.data || [] }))
             : Promise.resolve({ data: [] }),
         ]);
