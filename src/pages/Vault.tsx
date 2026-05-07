@@ -659,6 +659,8 @@ export default function Vault() {
     ? `${familyName}${householdLabel && householdLabel !== "Primary" ? ` — ${householdLabel}` : ""}`
     : "Household Vault";
 
+  if (redirectTo) return <Navigate to={redirectTo} replace />;
+
   return (
     <div className="container max-w-5xl mx-auto py-8 space-y-6">
       <div>
