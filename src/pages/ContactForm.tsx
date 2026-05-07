@@ -549,7 +549,7 @@ const ContactForm = () => {
             </div>
             <div>
               <Label>Charter Document URL</Label>
-              <Input value={form.charter_url} onChange={(e) => update("charter_url", e.target.value)} placeholder="https://drive.google.com/... or future SideDrawer link" />
+              <Input value={form.charter_url} onChange={(e) => update("charter_url", e.target.value)} placeholder="https://drive.google.com/..." />
             </div>
           </CardContent>
         </Card>
