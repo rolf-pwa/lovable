@@ -28,7 +28,7 @@ import CorporationDetail from "./pages/CorporationDetail";
 import MarketingUpdates from "./pages/MarketingUpdates";
 import Workbench from "./pages/Workbench";
 import Pipeline from "./pages/Pipeline";
-import SideDrawer from "./pages/SideDrawer";
+
 import Vault from "./pages/Vault";
 import VaultGuest from "./pages/VaultGuest";
 import KnowledgeBase from "./pages/KnowledgeBase";
