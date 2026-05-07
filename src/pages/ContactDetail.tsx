@@ -36,6 +36,7 @@ import { StabilizationMapButton } from "@/components/StabilizationMapButton";
 import { QuarterlySystemReviewButton } from "@/components/QuarterlySystemReviewButton";
 import { SovereigntyCharterButton } from "@/components/SovereigntyCharterButton";
 import { GenerateCharterDraftButton } from "@/components/GenerateCharterDraftButton";
+import { VaultView } from "@/pages/Vault";
 import { dialViaQuo } from "@/lib/quo-dial";
 import { 
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
