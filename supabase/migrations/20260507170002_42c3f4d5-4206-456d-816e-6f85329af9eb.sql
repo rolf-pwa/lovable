@@ -1,0 +1,1 @@
+COMMENT ON TABLE public.contacts IS 'Contacts directory'; NOTIFY pgrst, 'reload schema';
