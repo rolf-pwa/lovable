@@ -570,7 +570,7 @@ export function VaultView({ forcedHouseholdId, embedded = false }: { forcedHouse
   // Resolve household: from URL, or from a contactId (legacy URL → redirect)
   useEffect(() => {
     (async () => {
-      const hh = params.householdId;
+      const hh = forcedHouseholdId ?? params.householdId;
       if (!hh && params.contactId) {
         const { data: c } = await supabase
           .from("contacts")
