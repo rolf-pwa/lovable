@@ -595,7 +595,7 @@ export function VaultView({ forcedHouseholdId, embedded = false }: { forcedHouse
         .maybeSingle();
       const { data: members } = await supabase
         .from("contacts")
-        .select("first_name, last_name")
+        .select("first_name, last_name, google_drive_url")
         .eq("household_id", hh)
         .order("family_role");
 
@@ -604,7 +604,16 @@ export function VaultView({ forcedHouseholdId, embedded = false }: { forcedHouse
       setFamilyName((row as any)?.families?.name ?? "");
       setMemberNames((members ?? []).map((m: any) => `${m.first_name} ${m.last_name ?? ""}`.trim()));
       const id = row?.vault_root_folder_id ?? "";
-      if (id) { setRootId(id); setInput(id); }
+      if (id) {
+        setRootId(id);
+        setInput(id);
+      } else {
+        // Pre-populate from any household member's Google Drive URL
+        const driveUrl = (members ?? [])
+          .map((m: any) => m.google_drive_url)
+          .find((u: string | null) => !!u);
+        if (driveUrl) setInput(driveUrl);
+      }
     })();
   }, [params.householdId, params.contactId, forcedHouseholdId]);
 
