@@ -76,7 +76,7 @@ export function PortalNotificationBell({ requests, contactId, portalToken, onNav
     // Fetch portal client notifications via secure edge function
     (async () => {
       const resp = await supabase.functions.invoke("portal-notifications", {
-        body: { action: "list", contact_id: contactId },
+        body: { action: "list", contact_id: contactId, portal_token: portalToken },
       });
       if (!resp.error && resp.data?.data) {
         setClientNotifs(resp.data.data as ClientNotification[]);
