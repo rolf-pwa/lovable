@@ -578,6 +578,7 @@ export function VaultView({ forcedHouseholdId, embedded = false }: { forcedHouse
   const [previewLoading, setPreviewLoading] = useState(false);
   const [shareTarget, setShareTarget] = useState<ShareTarget | null>(null);
   const [redirectTo, setRedirectTo] = useState<string | null>(null);
+  const [provisioning, setProvisioning] = useState(false);
 
   // Resolve household: from URL, or from a contactId (legacy URL → redirect)
   useEffect(() => {
@@ -642,12 +643,15 @@ export function VaultView({ forcedHouseholdId, embedded = false }: { forcedHouse
       toast.error("Enter a Drive folder URL or ID first.");
       return;
     }
+    setProvisioning(true);
     try {
       const res = await callVault("provisionVault", { householdId, parentFolderId });
       toast.success("Vault provisioned");
       setRootId(res.folderId);
     } catch (e: any) {
       toast.error(e.message);
+    } finally {
+      setProvisioning(false);
     }
   };
 
@@ -718,8 +722,12 @@ export function VaultView({ forcedHouseholdId, embedded = false }: { forcedHouse
               Load
             </Button>
             {householdId && (
-              <Button variant="outline" onClick={provision}>
-                Provision
+              <Button variant="outline" onClick={provision} disabled={provisioning}>
+                {provisioning ? (
+                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Provisioning…</>
+                ) : (
+                  "Provision"
+                )}
               </Button>
             )}
           </CardContent>
