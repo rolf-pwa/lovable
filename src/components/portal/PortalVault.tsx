@@ -183,6 +183,72 @@ export function PortalVault({ portalToken, householdId }: Props) {
     }
   };
 
+  const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
+
+  const handleFiles = async (fileList: FileList | null) => {
+    if (!fileList || fileList.length === 0) return;
+    if (!shoeboxId) {
+      toast({
+        title: "Upload unavailable",
+        description: "Your Shoebox isn't ready yet. Please refresh in a moment.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setUploading(true);
+    let okCount = 0;
+    try {
+      for (const file of Array.from(fileList)) {
+        if (file.size > MAX_UPLOAD_BYTES) {
+          toast({
+            title: `${file.name} is too large`,
+            description: "Please keep uploads under 25 MB.",
+            variant: "destructive",
+          });
+          continue;
+        }
+        // base64 encode in a worker-friendly chunked manner
+        const buf = new Uint8Array(await file.arrayBuffer());
+        let binary = "";
+        const chunk = 0x8000;
+        for (let i = 0; i < buf.length; i += chunk) {
+          binary += String.fromCharCode.apply(null, Array.from(buf.subarray(i, i + chunk)) as any);
+        }
+        const base64 = btoa(binary);
+        const res = await callVault("uploadFile", {
+          folderId: shoeboxId,
+          fileName: file.name,
+          mimeType: file.type || "application/octet-stream",
+          base64,
+        });
+        if (!res.ok) {
+          const j = await res.json().catch(() => ({}));
+          throw new Error(j.error || `Upload failed: ${file.name}`);
+        }
+        okCount += 1;
+      }
+      if (okCount > 0) {
+        toast({
+          title: okCount === 1 ? "File sent to your Shoebox" : `${okCount} files sent to your Shoebox`,
+          description: "Your Personal CFO will review and file it for you.",
+        });
+        // Refresh current view if we're at root
+        if (crumbs.length === 1) {
+          await loadFolder(crumbs[0], crumbs);
+        }
+      }
+    } catch (e: any) {
+      toast({
+        title: "Upload failed",
+        description: e.message || "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
   if (!householdId) {
     return (
       <Card>
