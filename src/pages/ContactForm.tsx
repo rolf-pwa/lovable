@@ -132,7 +132,7 @@ const ContactForm = () => {
         vineyard_operating_income: data.vineyard_operating_income?.toString() || "",
         vineyard_balance_sheet_summary: data.vineyard_balance_sheet_summary || "",
         quiet_period_start_date: data.quiet_period_start_date || "",
-        sidedrawer_url: data.sidedrawer_url || "",
+        
         asana_url: data.asana_url || "",
         ia_financial_url: data.ia_financial_url || "",
         just_wealth_url: (data as any).just_wealth_url || "",
