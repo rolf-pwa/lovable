@@ -36,6 +36,7 @@ import { StabilizationMapButton } from "@/components/StabilizationMapButton";
 import { QuarterlySystemReviewButton } from "@/components/QuarterlySystemReviewButton";
 import { SovereigntyCharterButton } from "@/components/SovereigntyCharterButton";
 import { GenerateCharterDraftButton } from "@/components/GenerateCharterDraftButton";
+import { VaultView } from "@/pages/Vault";
 import { dialViaQuo } from "@/lib/quo-dial";
 import { 
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
@@ -524,26 +525,28 @@ const ContactDetail = () => {
               </TabsContent>
 
               {/* Vault Tab */}
-              <TabsContent value="vault" className="space-y-6 mt-4">
-                <Card>
-                  <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0">
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <ShieldCheck className="h-4 w-4 text-accent" />
-                      Document Vault
-                    </CardTitle>
-                    <Button asChild size="sm" variant="outline">
-                      <Link to={`/vault/${contact.id}`}>
-                        <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
-                        Open Full Vault
-                      </Link>
-                    </Button>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground">
-                      Manage secure documents, control household visibility, and share folders or files with collaborators (lawyer, accountant, executor).
-                    </p>
-                  </CardContent>
-                </Card>
+              <TabsContent value="vault" className="space-y-4 mt-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <ShieldCheck className="h-4 w-4 text-accent" />
+                    Household document vault — manage visibility and share with collaborators.
+                  </div>
+                  <Button asChild size="sm" variant="outline">
+                    <Link to={`/vault/${contact.id}`}>
+                      <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
+                      Open Full Page
+                    </Link>
+                  </Button>
+                </div>
+                {contact.household_id ? (
+                  <VaultView forcedHouseholdId={contact.household_id} embedded />
+                ) : (
+                  <Card>
+                    <CardContent className="py-8 text-center text-sm text-muted-foreground">
+                      This contact is not assigned to a household yet.
+                    </CardContent>
+                  </Card>
+                )}
               </TabsContent>
 
               {/* Action Items Tab */}

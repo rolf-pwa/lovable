@@ -554,7 +554,7 @@ function CollaboratorsPanel({
   );
 }
 
-export default function Vault() {
+export function VaultView({ forcedHouseholdId, embedded = false }: { forcedHouseholdId?: string; embedded?: boolean }) {
   const params = useParams<{ householdId?: string; contactId?: string }>();
   const [householdId, setHouseholdId] = useState<string | null>(null);
   const [householdLabel, setHouseholdLabel] = useState<string>("");
@@ -570,7 +570,7 @@ export default function Vault() {
   // Resolve household: from URL, or from a contactId (legacy URL → redirect)
   useEffect(() => {
     (async () => {
-      const hh = params.householdId;
+      const hh = forcedHouseholdId ?? params.householdId;
       if (!hh && params.contactId) {
         const { data: c } = await supabase
           .from("contacts")
@@ -606,7 +606,7 @@ export default function Vault() {
       const id = row?.vault_root_folder_id ?? "";
       if (id) { setRootId(id); setInput(id); }
     })();
-  }, [params.householdId, params.contactId]);
+  }, [params.householdId, params.contactId, forcedHouseholdId]);
 
   
 
@@ -661,17 +661,19 @@ export default function Vault() {
 
   if (redirectTo) return <Navigate to={redirectTo} replace />;
 
-  return (
-    <div className="container max-w-5xl mx-auto py-8 space-y-6">
-      <div>
-        <h1 className="text-3xl font-serif">The Vault</h1>
-        <p className="text-muted-foreground">
-          {heading}
-          {memberNames.length > 0 && (
-            <span className="block text-xs mt-1">Shared by: {memberNames.join(" • ")}</span>
-          )}
-        </p>
-      </div>
+  const body = (
+    <div className={embedded ? "space-y-6" : "container max-w-5xl mx-auto py-8 space-y-6"}>
+      {!embedded && (
+        <div>
+          <h1 className="text-3xl font-serif">The Vault</h1>
+          <p className="text-muted-foreground">
+            {heading}
+            {memberNames.length > 0 && (
+              <span className="block text-xs mt-1">Shared by: {memberNames.join(" • ")}</span>
+            )}
+          </p>
+        </div>
+      )}
 
       <Card>
         <CardHeader>
@@ -764,4 +766,10 @@ export default function Vault() {
       </Dialog>
     </div>
   );
+
+  return body;
+}
+
+export default function Vault() {
+  return <VaultView />;
 }
