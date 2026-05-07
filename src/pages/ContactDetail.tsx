@@ -534,15 +534,20 @@ const ContactDetail = () => {
                     Household document vault — manage visibility and share with collaborators.
                   </div>
                   {householdVaultRootId ? (
-                    <Button asChild size="sm" variant="outline">
-                      <a
-                        href={`https://drive.google.com/drive/folders/${householdVaultRootId}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
-                        Open in Drive
-                      </a>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        const url = `https://drive.google.com/drive/folders/${householdVaultRootId}`;
+                        const w = window.open(url, "_blank", "noopener,noreferrer");
+                        if (!w) {
+                          navigator.clipboard?.writeText(url);
+                          toast.success("Drive link copied — paste in a new tab");
+                        }
+                      }}
+                    >
+                      <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
+                      Open in Drive
                     </Button>
                   ) : (
                     <Button asChild size="sm" variant="outline">
