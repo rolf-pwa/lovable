@@ -52,6 +52,9 @@ export function PortalVault({ portalToken, householdId }: Props) {
   const [files, setFiles] = useState<VaultEntry[]>([]);
   const [crumbs, setCrumbs] = useState<Crumb[]>([]);
   const [busyFileId, setBusyFileId] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [shoeboxId, setShoeboxId] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const callVault = useCallback(
     async (action: string, payload: Record<string, any> = {}) => {
