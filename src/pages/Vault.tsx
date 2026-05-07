@@ -122,16 +122,28 @@ function FolderNode({
     }
   };
 
+  const isShoebox =
+    depth > 0 && (name?.toLowerCase().includes("shoebox") ?? false);
+
   return (
     <div style={{ paddingLeft: depth === 0 ? 0 : 16 }}>
-      <div className="flex items-center gap-2 py-1.5 group">
+      <div
+        className={`flex items-center gap-2 py-1.5 group ${
+          isShoebox ? "bg-amber-500/10 border-l-2 border-amber-500 pl-1.5 rounded-sm" : ""
+        }`}
+      >
         <button
           onClick={() => setOpen((v) => !v)}
           className="flex items-center gap-2 text-left hover:text-amber-500 flex-1"
         >
           {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-          <Folder className="h-4 w-4 text-amber-500" />
-          <span className="font-serif">{name}</span>
+          <Folder className={`h-4 w-4 ${isShoebox ? "text-amber-400" : "text-amber-500"}`} />
+          <span className={`font-serif ${isShoebox ? "text-amber-400 font-semibold" : ""}`}>{name}</span>
+          {isShoebox && (
+            <Badge variant="outline" className="ml-1 text-[10px] border-amber-500/50 text-amber-500">
+              Client Uploads
+            </Badge>
+          )}
           {loading && <Loader2 className="h-3 w-3 animate-spin ml-1" />}
         </button>
         {householdId && (
