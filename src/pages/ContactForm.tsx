@@ -140,7 +140,18 @@ const ContactForm = () => {
         just_wealth_url: (data as any).just_wealth_url || "",
         google_drive_url: data.google_drive_url || "",
         charter_url: (data as any).charter_url || "",
+        vault_root_folder_id: "",
       });
+      const hhId = (data as any).household_id || null;
+      setHouseholdId(hhId);
+      if (hhId) {
+        const { data: hh } = await supabase
+          .from("households")
+          .select("vault_root_folder_id")
+          .eq("id", hhId)
+          .maybeSingle();
+        if (hh) setForm((prev) => ({ ...prev, vault_root_folder_id: (hh as any).vault_root_folder_id || "" }));
+      }
       setEmailNotifEnabled(data.email_notifications_enabled !== false);
       setHouseholdMembers(
         (householdRes.data || []).map((r: any) => ({
