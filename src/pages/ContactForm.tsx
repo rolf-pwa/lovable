@@ -66,7 +66,7 @@ const ContactForm = () => {
     vineyard_operating_income: "",
     vineyard_balance_sheet_summary: "",
     quiet_period_start_date: "",
-    sidedrawer_url: "",
+    
     asana_url: "",
     ia_financial_url: "",
     just_wealth_url: "",
@@ -132,7 +132,7 @@ const ContactForm = () => {
         vineyard_operating_income: data.vineyard_operating_income?.toString() || "",
         vineyard_balance_sheet_summary: data.vineyard_balance_sheet_summary || "",
         quiet_period_start_date: data.quiet_period_start_date || "",
-        sidedrawer_url: data.sidedrawer_url || "",
+        
         asana_url: data.asana_url || "",
         ia_financial_url: data.ia_financial_url || "",
         just_wealth_url: (data as any).just_wealth_url || "",
@@ -246,7 +246,7 @@ const ContactForm = () => {
       vineyard_balance_sheet_summary:
         form.vineyard_balance_sheet_summary || null,
       quiet_period_start_date: form.quiet_period_start_date || null,
-      sidedrawer_url: form.sidedrawer_url || null,
+      
       asana_url: form.asana_url || null,
       ia_financial_url: form.ia_financial_url || null,
       just_wealth_url: form.just_wealth_url || null,
@@ -532,10 +532,6 @@ const ContactForm = () => {
           </CardHeader>
           <CardContent className="grid gap-4 sm:grid-cols-2">
             <div>
-              <Label>SideDrawer URL</Label>
-              <Input value={form.sidedrawer_url} onChange={(e) => update("sidedrawer_url", e.target.value)} placeholder="https://..." />
-            </div>
-            <div>
               <Label>Asana URL</Label>
               <Input value={form.asana_url} onChange={(e) => update("asana_url", e.target.value)} placeholder="https://..." />
             </div>
@@ -553,7 +549,7 @@ const ContactForm = () => {
             </div>
             <div>
               <Label>Charter Document URL</Label>
-              <Input value={form.charter_url} onChange={(e) => update("charter_url", e.target.value)} placeholder="https://drive.google.com/... or future SideDrawer link" />
+              <Input value={form.charter_url} onChange={(e) => update("charter_url", e.target.value)} placeholder="https://drive.google.com/..." />
             </div>
           </CardContent>
         </Card>

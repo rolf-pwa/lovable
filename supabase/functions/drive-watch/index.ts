@@ -325,7 +325,7 @@ Document: ${fileUrl}
 
 Next steps:
 - Review the document
-- File to SideDrawer (when ready)
+- File to the Vault (when ready)
 - Confirm with client`;
 
   try {

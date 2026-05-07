@@ -405,7 +405,6 @@ const ContactDetail = () => {
   const progressPct = quietStart ? Math.min((daysElapsed / 90) * 100, 100) : 0;
 
   const resourceLinks = [
-    { label: "SideDrawer", url: contact.sidedrawer_url, icon: Folder },
     { label: "Google Drive", url: contact.google_drive_url, icon: FolderOpen },
     { label: "Asana", url: contact.asana_url, icon: CheckSquare },
     { label: "IA Financial", url: contact.ia_financial_url, icon: ShieldCheck },

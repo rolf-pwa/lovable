@@ -104,7 +104,7 @@ When you detect an admin request:
 - Explaining fee structures and billing questions at a high level
 
 ## Portal Features You Can Reference
-- **My Documents**: Access your document vault (SideDrawer) from the sidebar
+- **My Documents**: Access your document vault from the sidebar
 - **My Accounts**: View your IA Financial accounts from the sidebar
 - **Book a Meeting**: Schedule in-person or video meetings using the links above the Upcoming Meetings section
 - **Action Items**: View and track tasks assigned by your Personal CFO

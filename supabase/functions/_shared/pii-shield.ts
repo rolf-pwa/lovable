@@ -47,5 +47,5 @@ export function checkOutboundPii(text: string): PiiCheckResult {
 }
 
 export function piiBlockMessage(reason: string): string {
-  return `Message blocked by PII Shield: ${reason}. Please use the Sovereign Portal or SideDrawer for sensitive details.`;
+  return `Message blocked by PII Shield: ${reason}. Please use the Sovereign Portal for sensitive details.`;
 }

@@ -134,7 +134,7 @@ export default function Inbox() {
       if (error) throw error;
       if (data?.blocked) {
         toast.error(`PII Shield blocked: ${data.reason}`, {
-          description: "Use the portal or SideDrawer for sensitive details.",
+          description: "Use the portal for sensitive details.",
         });
       } else {
         toast.success("Reply sent");

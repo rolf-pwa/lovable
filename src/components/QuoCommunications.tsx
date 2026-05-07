@@ -94,7 +94,7 @@ export default function QuoCommunications({ contactId, contactPhone, contactName
       if (error) throw error;
       if (data?.blocked) {
         toast.error(`PII Shield blocked: ${data.reason}`, {
-          description: "Use the Sovereign Portal or SideDrawer for sensitive details.",
+          description: "Use the Sovereign Portal for sensitive details.",
         });
       } else {
         toast.success("SMS sent");

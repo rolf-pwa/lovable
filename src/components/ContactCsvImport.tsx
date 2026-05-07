@@ -38,7 +38,7 @@ const CONTACT_FIELDS = [
   { value: "executor_firm", label: "Executor Firm" },
   { value: "poa_name", label: "POA Name" },
   { value: "poa_firm", label: "POA Firm" },
-  { value: "sidedrawer_url", label: "SideDrawer URL" },
+  
   { value: "google_drive_url", label: "Google Drive URL" },
   { value: "asana_url", label: "Asana URL" },
   { value: "ia_financial_url", label: "IA Financial URL" },
@@ -100,7 +100,7 @@ function guessMapping(header: string): string {
   if (h.includes("executorfirm")) return "executor_firm";
   if (h.includes("poaname") || h.includes("powerofattorneyname")) return "poa_name";
   if (h.includes("poafirm") || h.includes("powerofattorneyfirm")) return "poa_firm";
-  if (h.includes("sidedrawer")) return "sidedrawer_url";
+  
   if (h.includes("googledrive") || h.includes("gdrive")) return "google_drive_url";
   if (h.includes("asana")) return "asana_url";
   if (h.includes("iafinancial")) return "ia_financial_url";
