@@ -265,8 +265,9 @@ serve(async (req) => {
       );
     }
 
-    // Chat flow
-    const { messages } = body;
+    // Chat flow — require a valid portal_token to prevent unauth Vertex AI abuse
+    // and KB exfiltration.
+    const { messages, portal_token: chatPortalToken } = body;
     if (!messages || !Array.isArray(messages)) {
       return new Response(
         JSON.stringify({ error: "messages array is required" }),
@@ -274,11 +275,32 @@ serve(async (req) => {
       );
     }
 
-    // Fetch active knowledge base entries scoped to portal
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
+
+    if (!chatPortalToken || typeof chatPortalToken !== "string") {
+      return new Response(
+        JSON.stringify({ error: "portal_token is required" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    const { data: chatTokenRow } = await supabaseAdmin
+      .from("portal_tokens")
+      .select("contact_id")
+      .eq("token", chatPortalToken)
+      .eq("revoked", false)
+      .gte("expires_at", new Date().toISOString())
+      .maybeSingle();
+    if (!chatTokenRow) {
+      return new Response(
+        JSON.stringify({ error: "Invalid or expired portal token" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Fetch active knowledge base entries scoped to portal
     const { data: kbEntries } = await supabaseAdmin
       .from("knowledge_base")
       .select("title, content, category")

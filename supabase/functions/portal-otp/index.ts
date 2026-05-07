@@ -327,20 +327,26 @@ serve(async (req) => {
 
       const cleanEmail = email.trim().toLowerCase();
 
-      // Brute-force protection: max 5 failed verify attempts per email per 10 min
+      // Brute-force protection: lock out after 5 failed verify attempts
+      // across any active OTPs for this email in the last 10 minutes.
       const tenMinAgo = new Date(Date.now() - 600000).toISOString();
-      const { count: recentUnverified } = await supabase
+      const { data: recentOtps } = await supabase
         .from("portal_otps")
-        .select("*", { count: "exact", head: true })
+        .select("id, failed_attempts")
         .eq("email", cleanEmail)
-        .eq("verified", false)
         .gte("created_at", tenMinAgo);
+      const totalFailed = (recentOtps || []).reduce(
+        (sum: number, r: any) => sum + (r.failed_attempts || 0),
+        0,
+      );
+      if (totalFailed >= 5) {
+        await new Promise((r) => setTimeout(r, 1000));
+        return new Response(
+          JSON.stringify({ error: "Too many failed attempts. Please request a new code." }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
 
-      // Count is of unverified OTPs — if many exist and none verified, likely brute-force
-      // We track by checking recent failed attempts via a simple heuristic:
-      // If there are active (unverified, unexpired) OTPs but the user keeps guessing wrong codes,
-      // we limit based on the OTP send rate (already 3/hr) plus this timing gate.
-      
       const { data: otp } = await supabase
         .from("portal_otps")
         .select("*")
@@ -353,7 +359,14 @@ serve(async (req) => {
         .maybeSingle();
 
       if (!otp) {
-        // Add a progressive delay on failures to slow brute-force
+        // Increment failed_attempts on the most recent active OTP (if any)
+        const newest = (recentOtps || [])[0];
+        if (newest) {
+          await supabase
+            .from("portal_otps")
+            .update({ failed_attempts: (newest.failed_attempts || 0) + 1 })
+            .eq("id", newest.id);
+        }
         await new Promise((r) => setTimeout(r, 1000));
         return new Response(JSON.stringify({ error: "Invalid or expired code" }), {
           status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },

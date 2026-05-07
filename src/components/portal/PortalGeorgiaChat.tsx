@@ -64,6 +64,7 @@ export function PortalGeorgiaChat({ open, onOpenChange, contactName, contactId, 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           messages: updated.map((m) => ({ role: m.role, content: m.content })),
+          portal_token: portalToken,
         }),
       });
       const data = await res.json();
