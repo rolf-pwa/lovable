@@ -129,6 +129,7 @@ const ContactDetail = () => {
   const [householdMembers, setHouseholdMembers] = useState<HouseholdMember[]>([]);
   const [familyName, setFamilyName] = useState<string | null>(null);
   const [householdLabel, setHouseholdLabel] = useState<string | null>(null);
+  const [householdVaultRootId, setHouseholdVaultRootId] = useState<string | null>(null);
   const [vineyardAccounts, setVineyardAccounts] = useState<VineyardAccount[]>([]);
   const [professionalContacts, setProfessionalContacts] = useState<Record<string, { id: string; full_name: string } | null>>({});
   const [newAccountName, setNewAccountName] = useState("");
