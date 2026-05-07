@@ -263,6 +263,9 @@ if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders }
       supabase.from("sovereignty_charters").select("id, title, draft_status, ratified_at, last_generated_at").eq("contact_id", contactId).maybeSingle(),
     ]);
 
+    if (contactRes.error) console.error("[portal-validate] contacts query error:", contactRes.error);
+    if (!contactRes.data) console.error("[portal-validate] contact not found for id", contactId);
+
     // Fetch family, household, and household members if available
     let family = null;
     let household = null;
