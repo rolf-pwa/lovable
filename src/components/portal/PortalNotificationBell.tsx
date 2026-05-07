@@ -138,7 +138,7 @@ export function PortalNotificationBell({ requests, contactId, portalToken, onNav
     if (clientNotifs.length > 0) {
       const ids = clientNotifs.map((n) => n.id);
       await supabase.functions.invoke("portal-notifications", {
-        body: { action: "mark_read", contact_id: contactId, notification_ids: ids },
+        body: { action: "mark_read", contact_id: contactId, notification_ids: ids, portal_token: portalToken },
       });
       setClientNotifs([]);
     }
