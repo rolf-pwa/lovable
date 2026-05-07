@@ -263,6 +263,27 @@ export default function Inbox() {
     }
   };
 
+  const deleteThread = async (t: ThreadGroup) => {
+    try {
+      const phoneDigits = t.key.startsWith("phone:") ? t.key.slice(6) : null;
+      const { data, error } = await supabase.functions.invoke("quo-service", {
+        body: {
+          action: "deleteThread",
+          threadKey: t.key,
+          contactId: t.contactId,
+          phoneDigits,
+        },
+      });
+      if (error) throw error;
+      toast.success(
+        `Thread deleted · ${data?.deletedMessages || 0} messages, ${data?.deletedCalls || 0} calls removed`,
+      );
+      load();
+    } catch (err: any) {
+      toast.error(`Delete failed: ${err.message}`);
+    }
+  };
+
   const archivedThreads = useMemo(() => threads.filter(isArchived), [threads, archive]);
   const activeThreads = useMemo(() => threads.filter((t) => !isArchived(t)), [threads, archive]);
 
