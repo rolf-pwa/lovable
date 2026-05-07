@@ -641,14 +641,30 @@ serve(async (req) => {
       return new Response(JSON.stringify({ ok: true }), { headers: { ...cors, "Content-Type": "application/json" } });
     }
 
-    // ─── UPLOAD (staff or collaborator with upload permission) ───
+    // ─── UPLOAD (staff, collaborator-with-upload, or client → shoebox only) ───
     if (action === "uploadFile") {
       const { folderId, fileName, mimeType, base64, contactId } = body;
-      const access = await ensureAccess(actor, folderId, accessToken, true);
-      if (!access.ok) {
-        await audit(actor, "firewall_block", contactId ?? null, folderId, fileName, req, { reason: access.reason });
-        return new Response(JSON.stringify({ error: "forbidden", reason: access.reason }), { status: 403, headers: { ...cors, "Content-Type": "application/json" } });
+
+      // Clients may only upload into their household shoebox.
+      if (actor.kind === "client") {
+        const children = await driveListChildren(actor.vaultRootId, accessToken);
+        const shoebox = children.find(
+          (c: any) =>
+            c.mimeType === "application/vnd.google-apps.folder" &&
+            (c.name?.toLowerCase().includes("shoebox")),
+        );
+        if (!shoebox || shoebox.id !== folderId) {
+          await audit(actor, "firewall_block", null, folderId, fileName, req, { reason: "client_upload_outside_shoebox" });
+          return new Response(JSON.stringify({ error: "forbidden", reason: "client_upload_outside_shoebox" }), { status: 403, headers: { ...cors, "Content-Type": "application/json" } });
+        }
+      } else {
+        const access = await ensureAccess(actor, folderId, accessToken, true);
+        if (!access.ok) {
+          await audit(actor, "firewall_block", contactId ?? null, folderId, fileName, req, { reason: access.reason });
+          return new Response(JSON.stringify({ error: "forbidden", reason: access.reason }), { status: 403, headers: { ...cors, "Content-Type": "application/json" } });
+        }
       }
+
       // Decode base64 in chunks (avoid stack-limit on large files)
       const binary = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
       const boundary = "----vault" + Math.random().toString(36).slice(2);
@@ -668,7 +684,7 @@ serve(async (req) => {
       const created = await r.json();
       await supabaseAdmin.from("vault_files").insert({
         drive_id: created.id,
-        contact_id: contactId ?? (actor.kind === "collaborator" ? actor.contactId : null),
+        contact_id: contactId ?? (actor.kind === "client" ? actor.contactId : actor.kind === "collaborator" ? actor.contactId : null),
         parent_folder_id: folderId,
         ancestor_folder_ids: [folderId, ...(await getAncestors(folderId, accessToken))],
         name: fileName,
@@ -678,7 +694,7 @@ serve(async (req) => {
         uploaded_by_collaborator_id: actor.kind === "collaborator" ? actor.collaboratorId : null,
         staff_reviewed: actor.kind === "staff",
       });
-      await audit(actor, "upload", contactId ?? null, created.id, fileName, req);
+      await audit(actor, "upload", contactId ?? null, created.id, fileName, req, { uploader: actor.kind });
       return new Response(JSON.stringify({ ok: true, fileId: created.id }), { headers: { ...cors, "Content-Type": "application/json" } });
     }
 
