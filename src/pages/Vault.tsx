@@ -554,7 +554,7 @@ function CollaboratorsPanel({
   );
 }
 
-export default function Vault() {
+export function VaultView({ forcedHouseholdId, embedded = false }: { forcedHouseholdId?: string; embedded?: boolean }) {
   const params = useParams<{ householdId?: string; contactId?: string }>();
   const [householdId, setHouseholdId] = useState<string | null>(null);
   const [householdLabel, setHouseholdLabel] = useState<string>("");
