@@ -98,7 +98,6 @@ const adminItems = [
 ];
 
 const externalLinks = [
-  { href: "https://prosperwise.sidedrawer.com", label: "SideDrawer", icon: Folder },
   { href: "https://app.asana.com", label: "Asana", icon: CheckSquare },
   { href: "https://iaa.secureweb.inalco.com/MKMWPN23/home", label: "IA Financial", icon: ShieldCheck },
   { href: "https://calendar.google.com", label: "Google Calendar", icon: Calendar },
