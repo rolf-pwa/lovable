@@ -72,7 +72,9 @@ const ContactForm = () => {
     just_wealth_url: "",
     google_drive_url: "",
     charter_url: "",
+    vault_root_folder_id: "",
   });
+  const [householdId, setHouseholdId] = useState<string | null>(null);
 
   // Household member linking
   const [householdMembers, setHouseholdMembers] = useState<LinkedMember[]>([]);
