@@ -608,7 +608,7 @@ export default function Vault() {
     })();
   }, [params.householdId, params.contactId]);
 
-  if (redirectTo) return <Navigate to={redirectTo} replace />;
+  
 
   const provision = async () => {
     if (!householdId) {
@@ -658,6 +658,8 @@ export default function Vault() {
   const heading = familyName
     ? `${familyName}${householdLabel && householdLabel !== "Primary" ? ` — ${householdLabel}` : ""}`
     : "Household Vault";
+
+  if (redirectTo) return <Navigate to={redirectTo} replace />;
 
   return (
     <div className="container max-w-5xl mx-auto py-8 space-y-6">
