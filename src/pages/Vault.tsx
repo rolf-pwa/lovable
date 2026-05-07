@@ -643,12 +643,15 @@ export function VaultView({ forcedHouseholdId, embedded = false }: { forcedHouse
       toast.error("Enter a Drive folder URL or ID first.");
       return;
     }
+    setProvisioning(true);
     try {
       const res = await callVault("provisionVault", { householdId, parentFolderId });
       toast.success("Vault provisioned");
       setRootId(res.folderId);
     } catch (e: any) {
       toast.error(e.message);
+    } finally {
+      setProvisioning(false);
     }
   };
 
