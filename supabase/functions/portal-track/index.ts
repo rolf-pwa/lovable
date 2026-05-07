@@ -31,14 +31,20 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+    if (!portal_token) {
+      return new Response(JSON.stringify({ error: "portal_token is required" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Validate portal_token if provided
-    if (portal_token) {
+    // Validate portal_token (always required) — must belong to requested contact
+    {
       const { data: tokenData } = await supabase
         .from("portal_tokens")
         .select("contact_id")
