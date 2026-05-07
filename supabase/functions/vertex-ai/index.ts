@@ -251,7 +251,7 @@ const TOOLS = [
             governance_status: { type: "STRING", description: "Updated governance status: stabilization or sovereign" },
             google_drive_url: { type: "STRING", description: "Updated Google Drive URL" },
             asana_url: { type: "STRING", description: "Updated Asana URL" },
-            sidedrawer_url: { type: "STRING", description: "Updated Sidedrawer URL" },
+            
             ia_financial_url: { type: "STRING", description: "Updated IA Financial URL" },
             lawyer_name: { type: "STRING", description: "Updated lawyer name" },
             lawyer_firm: { type: "STRING", description: "Updated lawyer firm" },
