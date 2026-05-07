@@ -143,7 +143,7 @@ export function PortalUpdates({ governanceStatus, contactId, householdId, portal
 }
 
 /** Returns count of unread updates for badge use */
-export function useUnreadUpdateCount(governanceStatus: string, contactId: string, householdId?: string | null) {
+export function useUnreadUpdateCount(governanceStatus: string, contactId: string, householdId?: string | null, portalToken?: string) {
   const [count, setCount] = useState(0);
 
   useEffect(() => {
@@ -151,10 +151,10 @@ export function useUnreadUpdateCount(governanceStatus: string, contactId: string
     (async () => {
       const [updatesRes, readsRes] = await Promise.all([
         supabase.functions.invoke("portal-track", {
-          body: { action: "get_updates", contact_id: contactId },
+          body: { action: "get_updates", contact_id: contactId, portal_token: portalToken },
         }).then(r => ({ data: r.data?.data || [] })),
         supabase.functions.invoke("portal-track", {
-          body: { action: "get_reads", contact_id: contactId },
+          body: { action: "get_reads", contact_id: contactId, portal_token: portalToken },
         }).then(r => ({ data: r.data?.data || [] })),
       ]);
 
