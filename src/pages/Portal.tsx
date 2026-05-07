@@ -1269,6 +1269,7 @@ const Portal = () => {
               <PortalNotificationBell
                 requests={portal_requests || []}
                 contactId={contact.id}
+                portalToken={portalToken}
                 onNavigateToRequests={() => setActiveTab("requests")}
                 onNavigateToTasks={() => setActiveTab("tasks")}
               />

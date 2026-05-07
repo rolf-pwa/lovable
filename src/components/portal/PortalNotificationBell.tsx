@@ -158,7 +158,7 @@ export function PortalNotificationBell({ requests, contactId, portalToken, onNav
     } else {
       // Mark this client notification as read via secure edge function
       await supabase.functions.invoke("portal-notifications", {
-        body: { action: "mark_read", contact_id: contactId, notification_ids: [notif.id] },
+        body: { action: "mark_read", contact_id: contactId, notification_ids: [notif.id], portal_token: portalToken },
       });
       setClientNotifs((prev) => prev.filter((n) => n.id !== notif.id));
       setOpen(false);
