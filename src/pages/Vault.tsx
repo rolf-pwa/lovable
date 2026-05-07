@@ -624,12 +624,13 @@ export function VaultView({ forcedHouseholdId, embedded = false }: { forcedHouse
       toast.error("Open this vault from a household.");
       return;
     }
-    const parentFolderId = window.prompt(
-      "Drive parent folder ID where the new household vault root should be created:",
-    );
-    if (!parentFolderId) return;
+    const parentFolderId = extractFolderId(input.trim());
+    if (!parentFolderId) {
+      toast.error("Enter a Drive folder URL or ID first.");
+      return;
+    }
     try {
-      const res = await callVault("provisionVault", { householdId, parentFolderId: parentFolderId.trim() });
+      const res = await callVault("provisionVault", { householdId, parentFolderId });
       toast.success("Vault provisioned");
       setRootId(res.folderId);
     } catch (e: any) {
