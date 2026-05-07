@@ -390,6 +390,47 @@ serve(async (req) => {
       return new Response(JSON.stringify({ ok: true, folderId: root.id, householdId: hhId }), { headers: { ...cors, "Content-Type": "application/json" } });
     }
 
+    // ─── ENSURE SHOEBOX (client or staff) ───
+    // Finds-or-creates the "00 Shoebox (Client Uploads)" folder under the
+    // household's vault root. Used by the portal uploader and by staff
+    // backfill of already-provisioned vaults.
+    if (action === "ensureShoebox") {
+      let rootFolderId: string | null = null;
+      if (actor.kind === "client") {
+        rootFolderId = actor.vaultRootId;
+      } else if (actor.kind === "staff") {
+        const { householdId } = body;
+        if (!householdId) {
+          return new Response(JSON.stringify({ error: "householdId required" }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
+        }
+        const { data: hh } = await supabaseAdmin
+          .from("households")
+          .select("vault_root_folder_id")
+          .eq("id", householdId)
+          .maybeSingle();
+        rootFolderId = hh?.vault_root_folder_id ?? null;
+      } else {
+        return new Response(JSON.stringify({ error: "forbidden" }), { status: 403, headers: { ...cors, "Content-Type": "application/json" } });
+      }
+      if (!rootFolderId) {
+        return new Response(JSON.stringify({ error: "vault_not_provisioned" }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
+      }
+      const SHOEBOX_NAME = "00 Shoebox (Client Uploads)";
+      const children = await driveListChildren(rootFolderId, accessToken);
+      let shoebox = children.find(
+        (c: any) =>
+          c.mimeType === "application/vnd.google-apps.folder" &&
+          (c.name === SHOEBOX_NAME || c.name?.toLowerCase().includes("shoebox")),
+      );
+      if (!shoebox) {
+        shoebox = await driveCreateFolder(SHOEBOX_NAME, rootFolderId, accessToken);
+      }
+      return new Response(
+        JSON.stringify({ folderId: shoebox.id, name: shoebox.name }),
+        { headers: { ...cors, "Content-Type": "application/json" } },
+      );
+    }
+
     // ─── COLLABORATOR: list own grant roots (post-unlock) ───
     if (action === "myGrants") {
       if (actor.kind !== "collaborator")
