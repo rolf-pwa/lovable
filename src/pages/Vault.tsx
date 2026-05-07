@@ -608,7 +608,7 @@ export default function Vault() {
     })();
   }, [params.householdId, params.contactId]);
 
-  if (redirectTo) return <Navigate to={redirectTo} replace />;
+  
 
   const provision = async () => {
     if (!householdId) {
