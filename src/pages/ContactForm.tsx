@@ -532,10 +532,6 @@ const ContactForm = () => {
           </CardHeader>
           <CardContent className="grid gap-4 sm:grid-cols-2">
             <div>
-              <Label>SideDrawer URL</Label>
-              <Input value={form.sidedrawer_url} onChange={(e) => update("sidedrawer_url", e.target.value)} placeholder="https://..." />
-            </div>
-            <div>
               <Label>Asana URL</Label>
               <Input value={form.asana_url} onChange={(e) => update("asana_url", e.target.value)} placeholder="https://..." />
             </div>
