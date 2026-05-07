@@ -38,7 +38,7 @@ const CONTACT_FIELDS = [
   { value: "executor_firm", label: "Executor Firm" },
   { value: "poa_name", label: "POA Name" },
   { value: "poa_firm", label: "POA Firm" },
-  { value: "sidedrawer_url", label: "SideDrawer URL" },
+  
   { value: "google_drive_url", label: "Google Drive URL" },
   { value: "asana_url", label: "Asana URL" },
   { value: "ia_financial_url", label: "IA Financial URL" },
