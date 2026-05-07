@@ -292,31 +292,25 @@ serve(async (req) => {
       const WIX_OTP_SECRET = Deno.env.get("WIX_OTP_SECRET");
 
       if (WIX_SITE_URL && WIX_OTP_SECRET) {
-        console.log(`[OTP] Wix relay URL: ${WIX_SITE_URL}`);
-        console.log(`[OTP] Sending OTP to Wix for ${cleanEmail}, code length: ${otp.length}`);
         try {
           const wixPayload = JSON.stringify({
             email: cleanEmail,
             code: otp,
             secret: WIX_OTP_SECRET,
           });
-          console.log(`[OTP] Wix payload: ${wixPayload}`);
           const wixRes = await fetch(WIX_SITE_URL, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: wixPayload,
           });
-          const wixBody = await wixRes.text();
-          console.log(`[OTP] Wix response status: ${wixRes.status}, body: ${wixBody}`);
           if (!wixRes.ok) {
-            console.error("[WixRelay] Failed to send OTP:", wixRes.status, wixBody);
+            console.error("[WixRelay] Failed to send OTP. Status:", wixRes.status);
           }
         } catch (wixErr) {
           console.error("[WixRelay] Error calling Wix endpoint:", wixErr);
         }
       } else {
         console.warn(`[OTP] Wix secrets missing! WIX_SITE_URL=${!!WIX_SITE_URL}, WIX_OTP_SECRET=${!!WIX_OTP_SECRET}`);
-        console.log(`[DEV] OTP for ${cleanEmail}: ${otp}`);
       }
 
       return new Response(JSON.stringify({ sent: true }), {
