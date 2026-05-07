@@ -1018,34 +1018,34 @@ const ContactDetail = () => {
                 <CardContent className="space-y-2">
                   {familyName && contact.family_id ? (
                     <Collapsible defaultOpen={false}>
-                      <div className="flex items-center gap-1">
-                        <CollapsibleTrigger className="group flex flex-1 items-center gap-2 rounded-md bg-muted/50 px-3 py-2 text-sm font-medium transition-colors hover:bg-muted">
+                      <div className="group/fam flex items-center gap-2 rounded-md bg-muted/50 pr-1 transition-colors hover:bg-muted">
+                        <CollapsibleTrigger className="group flex flex-1 items-center gap-2 px-3 py-2 text-sm font-medium text-left">
                           <ChevronDown className="h-3.5 w-3.5 text-muted-foreground transition-transform group-data-[state=closed]:-rotate-90" />
-                          <span className="flex-1 text-left">{familyName}</span>
+                          <span className="flex-1">{familyName}</span>
                         </CollapsibleTrigger>
                         <Link
                           to="/families"
-                          className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                          className="rounded-md p-1.5 text-muted-foreground hover:text-foreground transition-colors"
                           title="Open Families"
                         >
-                          <ExternalLink className="h-3 w-3" />
+                          <ExternalLink className="h-3.5 w-3.5" />
                         </Link>
                       </div>
                       <CollapsibleContent className="pl-4 pt-2 space-y-2">
                         {householdLabel && contact.household_id ? (
                           <Collapsible defaultOpen={false}>
-                            <div className="flex items-center gap-1">
-                              <CollapsibleTrigger className="group flex flex-1 items-center gap-2 rounded-md bg-muted/50 px-3 py-2 text-sm font-medium transition-colors hover:bg-muted">
+                            <div className="group/hh flex items-center gap-2 rounded-md bg-muted/50 pr-1 transition-colors hover:bg-muted">
+                              <CollapsibleTrigger className="group flex flex-1 items-center gap-2 px-3 py-2 text-sm font-medium text-left">
                                 <ChevronDown className="h-3.5 w-3.5 text-muted-foreground transition-transform group-data-[state=closed]:-rotate-90" />
                                 <Home className="h-3.5 w-3.5 text-muted-foreground" />
-                                <span className="flex-1 text-left">{householdLabel}</span>
+                                <span className="flex-1">{householdLabel}</span>
                               </CollapsibleTrigger>
                               <Link
                                 to={`/households/${contact.household_id}`}
-                                className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                                className="rounded-md p-1.5 text-muted-foreground hover:text-foreground transition-colors"
                                 title="Open Household"
                               >
-                                <ExternalLink className="h-3 w-3" />
+                                <ExternalLink className="h-3.5 w-3.5" />
                               </Link>
                             </div>
                             <CollapsibleContent className="pl-4 pt-2">
