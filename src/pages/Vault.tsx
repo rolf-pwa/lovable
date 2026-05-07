@@ -606,7 +606,7 @@ export function VaultView({ forcedHouseholdId, embedded = false }: { forcedHouse
       const id = row?.vault_root_folder_id ?? "";
       if (id) { setRootId(id); setInput(id); }
     })();
-  }, [params.householdId, params.contactId]);
+  }, [params.householdId, params.contactId, forcedHouseholdId]);
 
   
 
