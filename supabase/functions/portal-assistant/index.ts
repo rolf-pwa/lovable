@@ -173,6 +173,28 @@ serve(async (req) => {
         );
       }
 
+      // Require a valid portal_token bound to the requested contact_id.
+      const portalToken = requestData.portal_token;
+      if (!portalToken || typeof portalToken !== "string") {
+        return new Response(
+          JSON.stringify({ error: "portal_token is required" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      const { data: tokenRow } = await supabase
+        .from("portal_tokens")
+        .select("contact_id")
+        .eq("token", portalToken)
+        .eq("revoked", false)
+        .gte("expires_at", new Date().toISOString())
+        .maybeSingle();
+      if (!tokenRow || tokenRow.contact_id !== requestData.contact_id) {
+        return new Response(
+          JSON.stringify({ error: "Unauthorized" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
       if (requestData.request_description.length > 2000) {
         return new Response(
           JSON.stringify({ error: "Description too long (max 2000 characters)" }),

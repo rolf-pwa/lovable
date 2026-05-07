@@ -245,7 +245,7 @@ const Portal = () => {
   const [accountsOpen, setAccountsOpen] = useState(false);
 
   // Unread update count — must be called unconditionally (Rules of Hooks)
-  const unreadUpdateCount = useUnreadUpdateCount(data?.contact?.governance_status ?? "", data?.contact?.id ?? "", data?.contact?.household_id ?? null);
+  const unreadUpdateCount = useUnreadUpdateCount(data?.contact?.governance_status ?? "", data?.contact?.id ?? "", data?.contact?.household_id ?? null, token || data?.portal_token || "");
 
   // OTP login state
   const [email, setEmail] = useState("");
@@ -1269,6 +1269,7 @@ const Portal = () => {
               <PortalNotificationBell
                 requests={portal_requests || []}
                 contactId={contact.id}
+                portalToken={portalToken}
                 onNavigateToRequests={() => setActiveTab("requests")}
                 onNavigateToTasks={() => setActiveTab("tasks")}
               />

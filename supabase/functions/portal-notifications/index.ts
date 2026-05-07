@@ -1,23 +1,40 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
+const ALLOWED_ORIGINS = [
+  "https://prosperwise.lovable.app",
+  "https://app.prosperwise.ca",
+  "https://id-preview--339dfc8f-3e82-4b05-8a36-a9f66fc58449.lovable.app",
+];
+
+function getCorsHeaders(req: Request) {
+  const origin = req.headers.get("Origin") || "";
+  const allowed = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  return {
+    "Access-Control-Allow-Origin": allowed,
+    "Access-Control-Allow-Headers":
+      "authorization, x-client-info, apikey, content-type",
+  };
+}
 
 Deno.serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req);
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
   try {
-    const { action, contact_id, notification_ids } = await req.json();
+    const { action, contact_id, notification_ids, portal_token } = await req.json();
 
     if (!contact_id || typeof contact_id !== "string") {
       return new Response(
         JSON.stringify({ error: "contact_id is required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    if (!portal_token || typeof portal_token !== "string") {
+      return new Response(
+        JSON.stringify({ error: "portal_token is required" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -26,16 +43,18 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Validate contact_id exists
-    const { data: contact } = await supabase
-      .from("contacts")
-      .select("id")
-      .eq("id", contact_id)
+    // Validate portal token belongs to this contact
+    const { data: tokenData } = await supabase
+      .from("portal_tokens")
+      .select("contact_id")
+      .eq("token", portal_token)
+      .eq("revoked", false)
+      .gte("expires_at", new Date().toISOString())
       .maybeSingle();
 
-    if (!contact) {
+    if (!tokenData || tokenData.contact_id !== contact_id) {
       return new Response(
-        JSON.stringify({ error: "Invalid contact" }),
+        JSON.stringify({ error: "Unauthorized" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }

@@ -60,11 +60,12 @@ const SOURCE_ICONS: Record<string, string> = {
 interface Props {
   requests: PortalRequest[];
   contactId: string;
+  portalToken: string;
   onNavigateToRequests: () => void;
   onNavigateToTasks?: () => void;
 }
 
-export function PortalNotificationBell({ requests, contactId, onNavigateToRequests, onNavigateToTasks }: Props) {
+export function PortalNotificationBell({ requests, contactId, portalToken, onNavigateToRequests, onNavigateToTasks }: Props) {
   const [open, setOpen] = useState(false);
   const [seenIds, setSeenIds] = useState<Set<string>>(new Set());
   const [clientNotifs, setClientNotifs] = useState<ClientNotification[]>([]);
@@ -75,7 +76,7 @@ export function PortalNotificationBell({ requests, contactId, onNavigateToReques
     // Fetch portal client notifications via secure edge function
     (async () => {
       const resp = await supabase.functions.invoke("portal-notifications", {
-        body: { action: "list", contact_id: contactId },
+        body: { action: "list", contact_id: contactId, portal_token: portalToken },
       });
       if (!resp.error && resp.data?.data) {
         setClientNotifs(resp.data.data as ClientNotification[]);
@@ -137,7 +138,7 @@ export function PortalNotificationBell({ requests, contactId, onNavigateToReques
     if (clientNotifs.length > 0) {
       const ids = clientNotifs.map((n) => n.id);
       await supabase.functions.invoke("portal-notifications", {
-        body: { action: "mark_read", contact_id: contactId, notification_ids: ids },
+        body: { action: "mark_read", contact_id: contactId, notification_ids: ids, portal_token: portalToken },
       });
       setClientNotifs([]);
     }
@@ -157,7 +158,7 @@ export function PortalNotificationBell({ requests, contactId, onNavigateToReques
     } else {
       // Mark this client notification as read via secure edge function
       await supabase.functions.invoke("portal-notifications", {
-        body: { action: "mark_read", contact_id: contactId, notification_ids: [notif.id] },
+        body: { action: "mark_read", contact_id: contactId, notification_ids: [notif.id], portal_token: portalToken },
       });
       setClientNotifs((prev) => prev.filter((n) => n.id !== notif.id));
       setOpen(false);

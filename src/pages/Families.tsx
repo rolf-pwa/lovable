@@ -282,12 +282,8 @@ const Families = () => {
 
   const recalcTier = async (familyId: string) => {
     try {
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-      await fetch(`${supabaseUrl}/functions/v1/calculate-family-fee-tier`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${anonKey}`, apikey: anonKey },
-        body: JSON.stringify({ familyId }),
+      await supabase.functions.invoke("calculate-family-fee-tier", {
+        body: { familyId },
       });
     } catch { /* silent */ }
   };

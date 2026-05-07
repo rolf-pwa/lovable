@@ -292,31 +292,25 @@ serve(async (req) => {
       const WIX_OTP_SECRET = Deno.env.get("WIX_OTP_SECRET");
 
       if (WIX_SITE_URL && WIX_OTP_SECRET) {
-        console.log(`[OTP] Wix relay URL: ${WIX_SITE_URL}`);
-        console.log(`[OTP] Sending OTP to Wix for ${cleanEmail}, code length: ${otp.length}`);
         try {
           const wixPayload = JSON.stringify({
             email: cleanEmail,
             code: otp,
             secret: WIX_OTP_SECRET,
           });
-          console.log(`[OTP] Wix payload: ${wixPayload}`);
           const wixRes = await fetch(WIX_SITE_URL, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: wixPayload,
           });
-          const wixBody = await wixRes.text();
-          console.log(`[OTP] Wix response status: ${wixRes.status}, body: ${wixBody}`);
           if (!wixRes.ok) {
-            console.error("[WixRelay] Failed to send OTP:", wixRes.status, wixBody);
+            console.error("[WixRelay] Failed to send OTP. Status:", wixRes.status);
           }
         } catch (wixErr) {
           console.error("[WixRelay] Error calling Wix endpoint:", wixErr);
         }
       } else {
         console.warn(`[OTP] Wix secrets missing! WIX_SITE_URL=${!!WIX_SITE_URL}, WIX_OTP_SECRET=${!!WIX_OTP_SECRET}`);
-        console.log(`[DEV] OTP for ${cleanEmail}: ${otp}`);
       }
 
       return new Response(JSON.stringify({ sent: true }), {
@@ -475,7 +469,7 @@ serve(async (req) => {
     }
 
     if (action === "google-auth") {
-      // Google OAuth portal login — look up contact by email
+      // Google OAuth portal login — verify the caller's Supabase session matches the requested email.
       if (!email || typeof email !== "string") {
         return new Response(JSON.stringify({ error: "Email is required" }), {
           status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -483,6 +477,28 @@ serve(async (req) => {
       }
 
       const cleanEmail = email.trim().toLowerCase();
+
+      // Require a Supabase access token in the Authorization header and verify it server-side.
+      const authHeader = req.headers.get("Authorization") || "";
+      const accessToken = authHeader.replace(/^Bearer\s+/i, "").trim();
+      if (!accessToken) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+      const supabaseUserClient = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        anonKey,
+        { global: { headers: { Authorization: `Bearer ${accessToken}` } } }
+      );
+      const { data: userData, error: userErr } = await supabaseUserClient.auth.getUser();
+      const verifiedEmail = userData?.user?.email?.toLowerCase() || "";
+      if (userErr || !userData?.user || verifiedEmail !== cleanEmail) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
 
       const { data: contact } = await supabase
         .from("contacts")

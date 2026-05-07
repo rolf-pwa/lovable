@@ -136,20 +136,10 @@ export const FamilyRollup = ({
   const recalculateFeeTier = async () => {
     setRecalculating(true);
     try {
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-
-      const res = await fetch(`${supabaseUrl}/functions/v1/calculate-family-fee-tier`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${anonKey}`,
-          apikey: anonKey,
-        },
-        body: JSON.stringify({ familyId }),
+      const { error } = await supabase.functions.invoke("calculate-family-fee-tier", {
+        body: { familyId },
       });
-
-      if (!res.ok) throw new Error("Recalculation failed");
+      if (error) throw error;
 
       toast.success("Fee tier recalculated.");
       onRecalculated();
