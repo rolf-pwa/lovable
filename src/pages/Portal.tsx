@@ -124,28 +124,19 @@ function PortalDynamicLinks({ contact }: { contact: any }) {
 
   const renderLink = (link: any) => {
     const IconComp = LINK_ICONS[link.icon] || ExternalLink;
-    // Special case: if label is "My Documents", use contact's sidedrawer_url
-    const isSidedrawer = link.link_type === "sidedrawer";
-    const href = isSidedrawer && contact.sidedrawer_url
-      ? contact.sidedrawer_url
-      : link.url;
-    const isDisabled = isSidedrawer && !contact.sidedrawer_url;
+    const href = link.url;
 
     return (
       <a
         key={link.id}
-        href={isDisabled ? "#" : href}
+        href={href}
         target="_blank"
         rel="noopener noreferrer"
-        className={`flex items-center gap-2 rounded px-3 py-2 text-sm transition-colors ${
-          isDisabled
-            ? "pointer-events-none text-muted-foreground/40"
-            : "text-foreground hover:bg-muted/50"
-        }`}
+        className="flex items-center gap-2 rounded px-3 py-2 text-sm transition-colors text-foreground hover:bg-muted/50"
       >
         <IconComp className="h-3.5 w-3.5" />
         {link.label}
-        {!isDisabled && <ExternalLink className="ml-auto h-3 w-3 opacity-40" />}
+        <ExternalLink className="ml-auto h-3 w-3 opacity-40" />
       </a>
     );
   };
