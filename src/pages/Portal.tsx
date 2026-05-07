@@ -988,6 +988,12 @@ const Portal = () => {
                 <Calendar className="h-4 w-4" />
                 Meetings
               </TabsTrigger>
+              {isSelf && (
+                <TabsTrigger value="vault" className="flex-1 gap-1.5">
+                  <FolderLock className="h-4 w-4" />
+                  Vault
+                </TabsTrigger>
+              )}
               {isSelf &&
                 contact.governance_status === "sovereign" &&
                 contact.fiduciary_entity === "pwa" && (
