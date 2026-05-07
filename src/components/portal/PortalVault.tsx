@@ -326,6 +326,36 @@ export function PortalVault({ portalToken, householdId }: Props) {
         </CardContent>
       </Card>
 
+      {/* Upload bar — files always land in the household Shoebox for staff triage */}
+      <Card className="border-accent/40 bg-accent/5">
+        <CardContent className="p-4 flex items-center gap-3 flex-wrap">
+          <Inbox className="h-5 w-5 text-accent shrink-0" />
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-serif">Send a document to your Shoebox</div>
+            <div className="text-[11px] text-muted-foreground">
+              Anything you upload here is delivered to your Personal CFO for review and filing. PDF, images, Word, Excel — up to 25 MB each.
+            </div>
+          </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            className="hidden"
+            onChange={(e) => handleFiles(e.target.files)}
+            accept=".pdf,.jpg,.jpeg,.png,.webp,.heic,.doc,.docx,.xls,.xlsx,.txt,.csv"
+          />
+          <Button
+            size="sm"
+            disabled={uploading || !shoeboxId}
+            onClick={() => fileInputRef.current?.click()}
+            className="gap-1.5"
+          >
+            {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+            {uploading ? "Uploading…" : "Upload"}
+          </Button>
+        </CardContent>
+      </Card>
+
       {isEmpty ? (
         <Card>
           <CardContent className="py-10 text-center">
