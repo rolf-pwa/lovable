@@ -179,7 +179,7 @@ function FolderNode({
                 <span className="flex-1 truncate">{f.name}</span>
                 {householdId && (
                   <span className="flex items-center gap-1.5 mr-2" title="Visible to client">
-                    <ShieldCheck className={`h-3.5 w-3.5 ${visible ? "text-amber-500" : "text-muted-foreground/40"}`} />
+                    <ShieldCheck className={`h-3.5 w-3.5 ${visible ? "text-accent" : "text-muted-foreground/40"}`} />
                     <Switch checked={visible} onCheckedChange={(v) => toggleVisibility(f, v)} />
                   </span>
                 )}
