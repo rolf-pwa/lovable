@@ -499,9 +499,9 @@ const ContactDetail = () => {
             <Tabs defaultValue="comms" className="w-full">
               <TabsList className="w-full">
                 <TabsTrigger value="comms" className="flex-1">Communications</TabsTrigger>
-                <TabsTrigger value="meetings" className="flex-1">
-                  <Calendar className="mr-1.5 h-3.5 w-3.5" />
-                  Meetings
+                <TabsTrigger value="vault" className="flex-1">
+                  <ShieldCheck className="mr-1.5 h-3.5 w-3.5" />
+                  Vault
                 </TabsTrigger>
                 <TabsTrigger value="actions" className="flex-1">
                   <ListChecks className="mr-1.5 h-3.5 w-3.5" />
@@ -523,9 +523,27 @@ const ContactDetail = () => {
                 <ContactEmails contactEmail={contact.email} />
               </TabsContent>
 
-              {/* Meetings Tab */}
-              <TabsContent value="meetings" className="space-y-6 mt-4">
-                <ContactCalendar contactEmail={contact.email} contactName={contact.full_name} />
+              {/* Vault Tab */}
+              <TabsContent value="vault" className="space-y-6 mt-4">
+                <Card>
+                  <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <ShieldCheck className="h-4 w-4 text-accent" />
+                      Document Vault
+                    </CardTitle>
+                    <Button asChild size="sm" variant="outline">
+                      <Link to={`/vault/${contact.id}`}>
+                        <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
+                        Open Full Vault
+                      </Link>
+                    </Button>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground">
+                      Manage secure documents, control household visibility, and share folders or files with collaborators (lawyer, accountant, executor).
+                    </p>
+                  </CardContent>
+                </Card>
               </TabsContent>
 
               {/* Action Items Tab */}
@@ -542,6 +560,7 @@ const ContactDetail = () => {
                   </CardContent>
                 </Card>
                 <ContactTaskList asanaUrl={contact.asana_url} contactId={contact.id} householdMembers={householdMembers} />
+                <ContactCalendar contactEmail={contact.email} contactName={contact.full_name} />
                 <ContactRequests contactId={id!} />
                 <AuditTrail contactId={id!} />
               </TabsContent>
