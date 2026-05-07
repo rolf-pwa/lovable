@@ -193,7 +193,7 @@ export function ProposedUpdateCard({ functionCall, contactId, isApproved, onAppr
           const fieldsToCopy = [
             "first_name", "last_name", "email", "phone", "address",
             "fiduciary_entity", "governance_status", "google_drive_url",
-            "asana_url", "sidedrawer_url", "ia_financial_url",
+            "asana_url", "ia_financial_url",
             "lawyer_name", "lawyer_firm", "accountant_name", "accountant_firm",
           ];
           for (const field of fieldsToCopy) {
