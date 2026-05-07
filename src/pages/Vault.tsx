@@ -624,7 +624,8 @@ export function VaultView({ forcedHouseholdId, embedded = false }: { forcedHouse
       toast.error("Open this vault from a household.");
       return;
     }
-    const parentFolderId = extractFolderId(input.trim());
+    const raw = input.trim();
+    const parentFolderId = raw.match(/\/folders\/([a-zA-Z0-9_-]+)/)?.[1] ?? raw;
     if (!parentFolderId) {
       toast.error("Enter a Drive folder URL or ID first.");
       return;
