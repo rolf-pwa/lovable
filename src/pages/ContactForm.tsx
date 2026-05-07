@@ -296,6 +296,16 @@ const ContactForm = () => {
     // Save household relationships
     await saveHouseholdMembers(contactId!);
 
+    // Persist vault root folder on the household
+    if (householdId) {
+      const raw = form.vault_root_folder_id.trim();
+      const folderId = raw ? (raw.match(/\/folders\/([a-zA-Z0-9_-]+)/)?.[1] ?? raw) : null;
+      await supabase
+        .from("households")
+        .update({ vault_root_folder_id: folderId } as any)
+        .eq("id", householdId);
+    }
+
     // Upload statements and trigger ingestion for each file
     if (statementFiles.length > 0 && contactId) {
       setIsIngesting(true);
