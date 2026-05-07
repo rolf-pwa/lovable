@@ -329,6 +329,21 @@ serve(async (req) => {
   }
 
   try {
+    // ─── GET ROOT (client portal entry-point) ───
+    if (action === "getRoot") {
+      if (actor.kind !== "client")
+        return new Response(JSON.stringify({ error: "client_only" }), { status: 403, headers: { ...cors, "Content-Type": "application/json" } });
+      const r = await fetch(
+        `https://www.googleapis.com/drive/v3/files/${actor.vaultRootId}?fields=id,name`,
+        { headers: { Authorization: `Bearer ${accessToken}` } },
+      );
+      if (!r.ok) {
+        return new Response(JSON.stringify({ error: "drive_meta_error" }), { status: 502, headers: { ...cors, "Content-Type": "application/json" } });
+      }
+      const j = await r.json();
+      return new Response(JSON.stringify({ rootFolderId: j.id, rootName: j.name }), { headers: { ...cors, "Content-Type": "application/json" } });
+    }
+
     // ─── PROVISION VAULT (staff only) ───
     if (action === "provisionVault") {
       if (actor.kind !== "staff")
