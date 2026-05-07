@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,6 +10,8 @@ import {
   Loader2,
   ShieldCheck,
   Home,
+  Upload,
+  Inbox,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -50,6 +52,9 @@ export function PortalVault({ portalToken, householdId }: Props) {
   const [files, setFiles] = useState<VaultEntry[]>([]);
   const [crumbs, setCrumbs] = useState<Crumb[]>([]);
   const [busyFileId, setBusyFileId] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [shoeboxId, setShoeboxId] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const callVault = useCallback(
     async (action: string, payload: Record<string, any> = {}) => {
@@ -106,6 +111,16 @@ export function PortalVault({ portalToken, householdId }: Props) {
         if (cancelled) return;
         const rootCrumb: Crumb = { id: root.rootFolderId, name: root.rootName || "Vault" };
         await loadFolder(rootCrumb, [rootCrumb]);
+        // Resolve (or create) the shoebox so uploads always have a target
+        try {
+          const sbRes = await callVault("ensureShoebox");
+          if (sbRes.ok) {
+            const sb = await sbRes.json();
+            if (!cancelled) setShoeboxId(sb.folderId);
+          }
+        } catch {
+          /* shoebox best-effort */
+        }
       } catch (e: any) {
         if (cancelled) return;
         setError(e.message || "Failed to open vault");
@@ -165,6 +180,72 @@ export function PortalVault({ portalToken, householdId }: Props) {
       });
     } finally {
       setBusyFileId(null);
+    }
+  };
+
+  const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
+
+  const handleFiles = async (fileList: FileList | null) => {
+    if (!fileList || fileList.length === 0) return;
+    if (!shoeboxId) {
+      toast({
+        title: "Upload unavailable",
+        description: "Your Shoebox isn't ready yet. Please refresh in a moment.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setUploading(true);
+    let okCount = 0;
+    try {
+      for (const file of Array.from(fileList)) {
+        if (file.size > MAX_UPLOAD_BYTES) {
+          toast({
+            title: `${file.name} is too large`,
+            description: "Please keep uploads under 25 MB.",
+            variant: "destructive",
+          });
+          continue;
+        }
+        // base64 encode in a worker-friendly chunked manner
+        const buf = new Uint8Array(await file.arrayBuffer());
+        let binary = "";
+        const chunk = 0x8000;
+        for (let i = 0; i < buf.length; i += chunk) {
+          binary += String.fromCharCode.apply(null, Array.from(buf.subarray(i, i + chunk)) as any);
+        }
+        const base64 = btoa(binary);
+        const res = await callVault("uploadFile", {
+          folderId: shoeboxId,
+          fileName: file.name,
+          mimeType: file.type || "application/octet-stream",
+          base64,
+        });
+        if (!res.ok) {
+          const j = await res.json().catch(() => ({}));
+          throw new Error(j.error || `Upload failed: ${file.name}`);
+        }
+        okCount += 1;
+      }
+      if (okCount > 0) {
+        toast({
+          title: okCount === 1 ? "File sent to your Shoebox" : `${okCount} files sent to your Shoebox`,
+          description: "Your Personal CFO will review and file it for you.",
+        });
+        // Refresh current view if we're at root
+        if (crumbs.length === 1) {
+          await loadFolder(crumbs[0], crumbs);
+        }
+      }
+    } catch (e: any) {
+      toast({
+        title: "Upload failed",
+        description: e.message || "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
@@ -245,6 +326,36 @@ export function PortalVault({ portalToken, householdId }: Props) {
         </CardContent>
       </Card>
 
+      {/* Upload bar — files always land in the household Shoebox for staff triage */}
+      <Card className="border-accent/40 bg-accent/5">
+        <CardContent className="p-4 flex items-center gap-3 flex-wrap">
+          <Inbox className="h-5 w-5 text-accent shrink-0" />
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-serif">Send a document to your Shoebox</div>
+            <div className="text-[11px] text-muted-foreground">
+              Anything you upload here is delivered to your Personal CFO for review and filing. PDF, images, Word, Excel — up to 25 MB each.
+            </div>
+          </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            className="hidden"
+            onChange={(e) => handleFiles(e.target.files)}
+            accept=".pdf,.jpg,.jpeg,.png,.webp,.heic,.doc,.docx,.xls,.xlsx,.txt,.csv"
+          />
+          <Button
+            size="sm"
+            disabled={uploading || !shoeboxId}
+            onClick={() => fileInputRef.current?.click()}
+            className="gap-1.5"
+          >
+            {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+            {uploading ? "Uploading…" : "Upload"}
+          </Button>
+        </CardContent>
+      </Card>
+
       {isEmpty ? (
         <Card>
           <CardContent className="py-10 text-center">
@@ -259,17 +370,28 @@ export function PortalVault({ portalToken, householdId }: Props) {
       ) : (
         <Card>
           <CardContent className="p-0 divide-y divide-border">
-            {folders.map((f) => (
-              <button
-                key={f.id}
-                onClick={() => enterFolder(f)}
-                className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-muted/40 transition-colors"
-              >
-                <Folder className="h-4 w-4 text-accent shrink-0" />
-                <span className="text-sm flex-1 truncate">{f.name}</span>
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
-              </button>
-            ))}
+            {folders.map((f) => {
+              const isShoebox = f.id === shoeboxId || f.name?.toLowerCase().includes("shoebox");
+              return (
+                <button
+                  key={f.id}
+                  onClick={() => enterFolder(f)}
+                  className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${
+                    isShoebox ? "bg-accent/10 hover:bg-accent/15" : "hover:bg-muted/40"
+                  }`}
+                >
+                  {isShoebox ? (
+                    <Inbox className="h-4 w-4 text-accent shrink-0" />
+                  ) : (
+                    <Folder className="h-4 w-4 text-accent shrink-0" />
+                  )}
+                  <span className={`text-sm flex-1 truncate ${isShoebox ? "font-serif text-accent" : ""}`}>
+                    {f.name}
+                  </span>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                </button>
+              );
+            })}
             {files.map((f) => {
               const canPreview = PDF_MIMES.has(f.mimeType || "") || (f.mimeType || "").startsWith("image/");
               const isBusy = busyFileId === f.id;
