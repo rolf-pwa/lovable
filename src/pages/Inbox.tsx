@@ -381,6 +381,7 @@ interface CardSharedProps {
   onResolve: (phone: string) => void;
   onArchive: (t: ThreadGroup) => void;
   onUnarchive: (t: ThreadGroup) => void;
+  onDelete: (t: ThreadGroup) => void;
   replyTo: string | null;
   replyBody: string;
   setReplyBody: (v: string) => void;
