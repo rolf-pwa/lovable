@@ -82,7 +82,7 @@ const App = () => (
             <Route path="/contacts/new" element={<ProtectedRoute><ContactForm /></ProtectedRoute>} />
             <Route path="/contacts/:id" element={<ProtectedRoute><ContactDetail /></ProtectedRoute>} />
             <Route path="/contacts/:id/edit" element={<ProtectedRoute><ContactForm /></ProtectedRoute>} />
-            <Route path="/sidedrawer/:contactId" element={<ProtectedRoute><SideDrawer /></ProtectedRoute>} />
+            
             <Route path="/vault" element={<ProtectedRoute><Vault /></ProtectedRoute>} />
             <Route path="/vault/household/:householdId" element={<ProtectedRoute><Vault /></ProtectedRoute>} />
             <Route path="/vault/:contactId" element={<ProtectedRoute><Vault /></ProtectedRoute>} />
