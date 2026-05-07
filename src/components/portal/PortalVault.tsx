@@ -111,6 +111,16 @@ export function PortalVault({ portalToken, householdId }: Props) {
         if (cancelled) return;
         const rootCrumb: Crumb = { id: root.rootFolderId, name: root.rootName || "Vault" };
         await loadFolder(rootCrumb, [rootCrumb]);
+        // Resolve (or create) the shoebox so uploads always have a target
+        try {
+          const sbRes = await callVault("ensureShoebox");
+          if (sbRes.ok) {
+            const sb = await sbRes.json();
+            if (!cancelled) setShoeboxId(sb.folderId);
+          }
+        } catch {
+          /* shoebox best-effort */
+        }
       } catch (e: any) {
         if (cancelled) return;
         setError(e.message || "Failed to open vault");
