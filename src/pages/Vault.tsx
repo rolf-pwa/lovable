@@ -766,4 +766,10 @@ export function VaultView({ forcedHouseholdId, embedded = false }: { forcedHouse
       </Dialog>
     </div>
   );
+
+  return body;
+}
+
+export default function Vault() {
+  return <VaultView />;
 }
