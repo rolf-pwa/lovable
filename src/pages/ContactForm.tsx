@@ -246,7 +246,7 @@ const ContactForm = () => {
       vineyard_balance_sheet_summary:
         form.vineyard_balance_sheet_summary || null,
       quiet_period_start_date: form.quiet_period_start_date || null,
-      sidedrawer_url: form.sidedrawer_url || null,
+      
       asana_url: form.asana_url || null,
       ia_financial_url: form.ia_financial_url || null,
       just_wealth_url: form.just_wealth_url || null,
