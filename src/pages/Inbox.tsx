@@ -424,10 +424,11 @@ function ThreadList({
 
 function ThreadCard({
   thread, defaultOpen, archivedView, contactName, onToggle, onReplyOpen, onResolve,
-  onArchive, onUnarchive,
+  onArchive, onUnarchive, onDelete,
   replyTo, replyBody, setReplyBody, sending, sendReply,
 }: { thread: ThreadGroup; defaultOpen?: boolean; archivedView?: boolean } & CardSharedProps) {
   const [open, setOpen] = useState(!!defaultOpen || (thread.unread > 0 && !archivedView));
+  const [confirmDelete, setConfirmDelete] = useState(false);
   // Newest-first for the collapsed preview
   const sortedEntries = useMemo(
     () => [...thread.entries].sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime()),
