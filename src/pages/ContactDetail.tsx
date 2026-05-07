@@ -192,8 +192,9 @@ const ContactDetail = () => {
       setFamilyName(fam?.name || null);
     }
     if (contactRes.data?.household_id) {
-      const { data: hh } = await supabase.from("households").select("label").eq("id", contactRes.data.household_id).maybeSingle();
+      const { data: hh } = await supabase.from("households").select("label, vault_root_folder_id").eq("id", contactRes.data.household_id).maybeSingle();
       setHouseholdLabel(hh?.label || null);
+      setHouseholdVaultRootId((hh as any)?.vault_root_folder_id || null);
     }
 
     const names = [contactRes.data?.lawyer_name, contactRes.data?.accountant_name, contactRes.data?.executor_name, contactRes.data?.poa_name].filter(Boolean) as string[];
