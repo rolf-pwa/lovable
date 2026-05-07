@@ -30,20 +30,18 @@ export function PortalUpdates({ governanceStatus, contactId, householdId, portal
     (async () => {
       const [updatesRes, readsRes] = await Promise.all([
         supabase.functions.invoke("portal-track", {
-          body: { action: "get_updates", contact_id: contactId },
+          body: { action: "get_updates", contact_id: contactId, portal_token: portalToken },
         }).then(r => ({ data: r.data?.data || [] })),
         supabase.functions.invoke("portal-track", {
-          body: { action: "get_reads", contact_id: contactId },
+          body: { action: "get_reads", contact_id: contactId, portal_token: portalToken },
         }).then(r => ({ data: r.data?.data || [] })),
       ]);
 
       const allUpdates = ((updatesRes.data as any[]) || []).filter((u) => {
         const tContactIds: string[] = u.target_contact_ids || [];
         const tHouseholdIds: string[] = u.target_household_ids || [];
-        // If targeted to specific contacts or households, check membership
         if (tContactIds.length > 0) return tContactIds.includes(contactId);
         if (tHouseholdIds.length > 0) return householdId ? tHouseholdIds.includes(householdId) : false;
-        // Otherwise fall back to governance status filter
         return u.target_governance_status === "all" || u.target_governance_status === governanceStatus;
       });
       setUpdates(allUpdates);
@@ -54,13 +52,13 @@ export function PortalUpdates({ governanceStatus, contactId, householdId, portal
       setReadIds(readSet);
       setLoading(false);
     })();
-  }, [governanceStatus, contactId]);
+  }, [governanceStatus, contactId, portalToken]);
 
   const markAsRead = async (updateId: string) => {
     if (readIds.has(updateId)) return;
     setReadIds((prev) => new Set(prev).add(updateId));
     await supabase.functions.invoke("portal-track", {
-      body: { action: "record_update_read", contact_id: contactId, update_id: updateId },
+      body: { action: "record_update_read", contact_id: contactId, update_id: updateId, portal_token: portalToken },
     });
   };
 
