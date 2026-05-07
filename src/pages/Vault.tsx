@@ -661,17 +661,19 @@ export function VaultView({ forcedHouseholdId, embedded = false }: { forcedHouse
 
   if (redirectTo) return <Navigate to={redirectTo} replace />;
 
-  return (
-    <div className="container max-w-5xl mx-auto py-8 space-y-6">
-      <div>
-        <h1 className="text-3xl font-serif">The Vault</h1>
-        <p className="text-muted-foreground">
-          {heading}
-          {memberNames.length > 0 && (
-            <span className="block text-xs mt-1">Shared by: {memberNames.join(" • ")}</span>
-          )}
-        </p>
-      </div>
+  const body = (
+    <div className={embedded ? "space-y-6" : "container max-w-5xl mx-auto py-8 space-y-6"}>
+      {!embedded && (
+        <div>
+          <h1 className="text-3xl font-serif">The Vault</h1>
+          <p className="text-muted-foreground">
+            {heading}
+            {memberNames.length > 0 && (
+              <span className="block text-xs mt-1">Shared by: {memberNames.join(" • ")}</span>
+            )}
+          </p>
+        </div>
+      )}
 
       <Card>
         <CardHeader>
