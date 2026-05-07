@@ -1080,7 +1080,13 @@ const Portal = () => {
               )}
             </TabsContent>
 
-            {/* Messages Tab — Sovereign + PWA only */}
+            {/* Vault Tab */}
+            {isSelf && (
+              <TabsContent value="vault" className="mt-4">
+                <PortalVault portalToken={portalToken} householdId={contact.household_id ?? null} />
+              </TabsContent>
+            )}
+
             {isSelf &&
               contact.governance_status === "sovereign" &&
               contact.fiduciary_entity === "pwa" && (
