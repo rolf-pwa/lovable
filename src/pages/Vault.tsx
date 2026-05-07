@@ -578,6 +578,7 @@ export function VaultView({ forcedHouseholdId, embedded = false }: { forcedHouse
   const [previewLoading, setPreviewLoading] = useState(false);
   const [shareTarget, setShareTarget] = useState<ShareTarget | null>(null);
   const [redirectTo, setRedirectTo] = useState<string | null>(null);
+  const [provisioning, setProvisioning] = useState(false);
 
   // Resolve household: from URL, or from a contactId (legacy URL → redirect)
   useEffect(() => {
