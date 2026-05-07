@@ -191,6 +191,7 @@ export function PortalTasks({ portalToken, clientName, contactId }: Props) {
           contact_id: contactId,
           task_gid: task.gid,
           client_name: displayName,
+          portal_token: portalToken,
         },
       });
     }
