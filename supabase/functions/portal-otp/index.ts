@@ -469,7 +469,7 @@ serve(async (req) => {
     }
 
     if (action === "google-auth") {
-      // Google OAuth portal login — look up contact by email
+      // Google OAuth portal login — verify the caller's Supabase session matches the requested email.
       if (!email || typeof email !== "string") {
         return new Response(JSON.stringify({ error: "Email is required" }), {
           status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -477,6 +477,28 @@ serve(async (req) => {
       }
 
       const cleanEmail = email.trim().toLowerCase();
+
+      // Require a Supabase access token in the Authorization header and verify it server-side.
+      const authHeader = req.headers.get("Authorization") || "";
+      const accessToken = authHeader.replace(/^Bearer\s+/i, "").trim();
+      if (!accessToken) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+      const supabaseUserClient = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        anonKey,
+        { global: { headers: { Authorization: `Bearer ${accessToken}` } } }
+      );
+      const { data: userData, error: userErr } = await supabaseUserClient.auth.getUser();
+      const verifiedEmail = userData?.user?.email?.toLowerCase() || "";
+      if (userErr || !userData?.user || verifiedEmail !== cleanEmail) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
 
       const { data: contact } = await supabase
         .from("contacts")
