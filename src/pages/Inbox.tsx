@@ -308,6 +308,7 @@ export default function Inbox() {
     onResolve: openResolve,
     onArchive: archiveThread,
     onUnarchive: unarchiveThread,
+    onDelete: deleteThread,
     replyTo, replyBody, setReplyBody, sending,
     sendReply,
   };
