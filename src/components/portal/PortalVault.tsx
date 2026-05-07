@@ -370,17 +370,28 @@ export function PortalVault({ portalToken, householdId }: Props) {
       ) : (
         <Card>
           <CardContent className="p-0 divide-y divide-border">
-            {folders.map((f) => (
-              <button
-                key={f.id}
-                onClick={() => enterFolder(f)}
-                className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-muted/40 transition-colors"
-              >
-                <Folder className="h-4 w-4 text-accent shrink-0" />
-                <span className="text-sm flex-1 truncate">{f.name}</span>
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
-              </button>
-            ))}
+            {folders.map((f) => {
+              const isShoebox = f.id === shoeboxId || f.name?.toLowerCase().includes("shoebox");
+              return (
+                <button
+                  key={f.id}
+                  onClick={() => enterFolder(f)}
+                  className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${
+                    isShoebox ? "bg-accent/10 hover:bg-accent/15" : "hover:bg-muted/40"
+                  }`}
+                >
+                  {isShoebox ? (
+                    <Inbox className="h-4 w-4 text-accent shrink-0" />
+                  ) : (
+                    <Folder className="h-4 w-4 text-accent shrink-0" />
+                  )}
+                  <span className={`text-sm flex-1 truncate ${isShoebox ? "font-serif text-accent" : ""}`}>
+                    {f.name}
+                  </span>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                </button>
+              );
+            })}
             {files.map((f) => {
               const canPreview = PDF_MIMES.has(f.mimeType || "") || (f.mimeType || "").startsWith("image/");
               const isBusy = busyFileId === f.id;
