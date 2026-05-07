@@ -14,12 +14,13 @@ import { PortalUpdates, useUnreadUpdateCount } from "@/components/portal/PortalU
 import { PortalGeorgiaChat } from "@/components/portal/PortalGeorgiaChat";
 import { PortalNotificationBell } from "@/components/portal/PortalNotificationBell";
 import { PortalMessages } from "@/components/portal/PortalMessages";
+import { PortalVault } from "@/components/portal/PortalVault";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
-import { Grape, ScrollText, Clock, Calendar, FolderOpen, CheckSquare, ShieldCheck, ExternalLink, FileBarChart, Mail, MailX, Loader2, Home, Users, ChevronLeft, ChevronDown, ChevronRight, ArrowRight, Landmark, MessageCircle, Video, MapPin, ClipboardList, LogOut, Megaphone, Building2 } from "lucide-react";
+import { Grape, ScrollText, Clock, Calendar, FolderOpen, CheckSquare, ShieldCheck, ExternalLink, FileBarChart, Mail, MailX, Loader2, Home, Users, ChevronLeft, ChevronDown, ChevronRight, ArrowRight, Landmark, MessageCircle, Video, MapPin, ClipboardList, LogOut, Megaphone, Building2, FolderLock } from "lucide-react";
 import prosperwiseLogo from "@/assets/prosperwise-logo.png";
 
 interface PortalData {
@@ -987,6 +988,12 @@ const Portal = () => {
                 <Calendar className="h-4 w-4" />
                 Meetings
               </TabsTrigger>
+              {isSelf && (
+                <TabsTrigger value="vault" className="flex-1 gap-1.5">
+                  <FolderLock className="h-4 w-4" />
+                  Vault
+                </TabsTrigger>
+              )}
               {isSelf &&
                 contact.governance_status === "sovereign" &&
                 contact.fiduciary_entity === "pwa" && (
@@ -1073,7 +1080,13 @@ const Portal = () => {
               )}
             </TabsContent>
 
-            {/* Messages Tab — Sovereign + PWA only */}
+            {/* Vault Tab */}
+            {isSelf && (
+              <TabsContent value="vault" className="mt-4">
+                <PortalVault portalToken={portalToken} householdId={contact.household_id ?? null} />
+              </TabsContent>
+            )}
+
             {isSelf &&
               contact.governance_status === "sovereign" &&
               contact.fiduciary_entity === "pwa" && (
