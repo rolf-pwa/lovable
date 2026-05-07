@@ -178,6 +178,30 @@ serve(async (req) => {
   }
 
   try {
+    // Auth: require either service-role bearer (internal calls) or @prosperwise.ca staff JWT.
+    const authHeader = req.headers.get("Authorization") || "";
+    const token = authHeader.replace(/^Bearer\s+/i, "").trim();
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    if (!token) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (token !== serviceKey) {
+      const supabaseUserClient = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_ANON_KEY")!,
+        { global: { headers: { Authorization: `Bearer ${token}` } } }
+      );
+      const { data: userData, error: userErr } = await supabaseUserClient.auth.getUser();
+      const email = userData?.user?.email?.toLowerCase() || "";
+      if (userErr || !userData?.user || !email.endsWith("@prosperwise.ca")) {
+        return new Response(JSON.stringify({ error: "Forbidden" }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
     const body = await req.json();
     const { leadId, mapId, contactId } = body as { leadId?: string; mapId?: string; contactId?: string };
 
@@ -190,7 +214,7 @@ serve(async (req) => {
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+      serviceKey,
     );
 
     // Resolve the lead (from either leadId, mapId, or contactId)
