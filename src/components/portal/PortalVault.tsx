@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,6 +10,8 @@ import {
   Loader2,
   ShieldCheck,
   Home,
+  Upload,
+  Inbox,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
