@@ -264,6 +264,55 @@ serve(async (req) => {
       });
     }
 
+    // ---- deleteThread (permanent — removes all messages + calls in thread) ----
+    if (action === "deleteThread") {
+      const { threadKey, contactId, phoneDigits } = body;
+      if (!threadKey) {
+        return new Response(JSON.stringify({ error: "Missing threadKey" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      let deletedMessages = 0;
+      let deletedCalls = 0;
+
+      const deleteByMatch = async (table: "quo_messages" | "quo_calls") => {
+        if (contactId) {
+          const { data, error } = await adminClient.from(table)
+            .delete().eq("contact_id", contactId).select("id");
+          if (error) throw error;
+          return data?.length || 0;
+        }
+        if (phoneDigits) {
+          // Match orphan records by last 10 digits of from_number or to_number
+          const { data: rows, error } = await adminClient.from(table)
+            .select("id, from_number, to_number")
+            .is("contact_id", null);
+          if (error) throw error;
+          const last10 = (p: string | null) => (p || "").replace(/\D/g, "").slice(-10);
+          const ids = (rows || [])
+            .filter((r: any) => last10(r.from_number) === phoneDigits || last10(r.to_number) === phoneDigits)
+            .map((r: any) => r.id);
+          if (ids.length > 0) {
+            const { error: delErr } = await adminClient.from(table).delete().in("id", ids);
+            if (delErr) throw delErr;
+          }
+          return ids.length;
+        }
+        return 0;
+      };
+
+      deletedMessages = await deleteByMatch("quo_messages");
+      deletedCalls = await deleteByMatch("quo_calls");
+
+      // Clean up archive entry too
+      await adminClient.from("quo_inbox_archive").delete().eq("thread_key", threadKey);
+
+      return new Response(JSON.stringify({
+        success: true, deletedMessages, deletedCalls,
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     // ---- unreadCount (lightweight badge query) ----
     if (action === "unreadCount") {
       const [{ count: msgCount }, { count: callCount }] = await Promise.all([
