@@ -986,6 +986,9 @@ export function VaultView({ forcedHouseholdId, embedded = false }: { forcedHouse
         />
       )}
 
+      {householdId && rootId && <MemberRolesPanel householdId={householdId} />}
+      {householdId && rootId && <VaultLinksPanel householdId={householdId} />}
+
       <Dialog
         open={!!preview}
         onOpenChange={(o) => {
