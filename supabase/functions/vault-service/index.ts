@@ -662,6 +662,10 @@ serve(async (req) => {
         await audit(actor, "firewall_block", null, fileId, null, req, { reason: access.reason });
         return new Response(JSON.stringify({ error: "forbidden", reason: access.reason }), { status: 403, headers: { ...cors, "Content-Type": "application/json" } });
       }
+      // Share-link disposition rules: 'view' permits inline preview only (no attachment download)
+      if (actor.kind === "share_link" && disposition === "attachment" && actor.permission === "view") {
+        return new Response(JSON.stringify({ error: "forbidden", reason: "share_link_no_download" }), { status: 403, headers: { ...cors, "Content-Type": "application/json" } });
+      }
 
       const metaRes = await fetch(
         `https://www.googleapis.com/drive/v3/files/${fileId}?fields=id,name,mimeType,size`,
