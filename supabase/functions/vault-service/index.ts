@@ -445,6 +445,37 @@ serve(async (req) => {
     }
   }
 
+  // Anonymous endpoint: resolveShareLink runs before any actor exists,
+  // because the caller is trying to redeem a token to *become* a share_link actor.
+  if (action === "resolveShareLink") {
+    const { token, unlock_code } = body;
+    if (!token)
+      return new Response(JSON.stringify({ error: "token required" }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
+    const { data: link } = await supabaseAdmin.from("vault_share_links").select("*").eq("token", token).maybeSingle();
+    if (!link || link.revoked_at)
+      return new Response(JSON.stringify({ error: "invalid_or_revoked" }), { status: 404, headers: { ...cors, "Content-Type": "application/json" } });
+    if (link.expires_at && new Date(link.expires_at) <= new Date())
+      return new Response(JSON.stringify({ error: "expired" }), { status: 410, headers: { ...cors, "Content-Type": "application/json" } });
+    if (typeof link.max_uses === "number" && link.use_count >= link.max_uses)
+      return new Response(JSON.stringify({ error: "use_limit_reached" }), { status: 410, headers: { ...cors, "Content-Type": "application/json" } });
+    const needsCode = link.link_type === "guest" && !!link.unlock_code;
+    if (needsCode && unlock_code !== link.unlock_code)
+      return new Response(JSON.stringify({ needs_unlock_code: true }), { status: 200, headers: { ...cors, "Content-Type": "application/json" } });
+    const accessTokenForMeta = await getValidGoogleToken();
+    let meta: any = {};
+    if (accessTokenForMeta) {
+      const r = await fetch(`https://www.googleapis.com/drive/v3/files/${link.drive_id}?fields=id,name,mimeType`, { headers: { Authorization: `Bearer ${accessTokenForMeta}` } });
+      meta = r.ok ? await r.json() : {};
+    }
+    await audit(null, "share_link_redeemed", null, link.drive_id, meta.name ?? null, req, { link_id: link.id });
+    return new Response(JSON.stringify({
+      ok: true,
+      scope: { drive_id: link.drive_id, name: meta.name ?? null, mime_type: meta.mimeType ?? null, scope_type: link.scope_type },
+      permission: link.permission,
+      link_type: link.link_type,
+    }), { headers: { ...cors, "Content-Type": "application/json" } });
+  }
+
   const actor = await resolveActor(req);
   if (!actor) {
     return new Response(JSON.stringify({ error: "unauthorized" }), {
