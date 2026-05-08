@@ -57,7 +57,9 @@ export function PortalVault({ portalToken, householdId }: Props) {
   const [busyFileId, setBusyFileId] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [shoeboxId, setShoeboxId] = useState<string | null>(null);
+  const [currentPerm, setCurrentPerm] = useState<"none" | "view" | "upload" | "manage">("view");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const folderUploadRef = useRef<HTMLInputElement | null>(null);
 
   const callVault = useCallback(
     async (action: string, payload: Record<string, any> = {}) => {
