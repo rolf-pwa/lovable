@@ -87,6 +87,7 @@ const App = () => (
             <Route path="/vault/household/:householdId" element={<ProtectedRoute><Vault /></ProtectedRoute>} />
             <Route path="/vault/:contactId" element={<ProtectedRoute><Vault /></ProtectedRoute>} />
             <Route path="/vault/guest/:token" element={<VaultGuest />} />
+            <Route path="/vault/share/:token" element={<VaultGuest />} />
             <Route path="/knowledge-base" element={<ProtectedRoute><KnowledgeBase /></ProtectedRoute>} />
             <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
             <Route path="/stabilization-map/lead/:leadId" element={<ProtectedRoute><StabilizationMapResolver /></ProtectedRoute>} />
