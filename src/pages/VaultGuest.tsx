@@ -17,6 +17,18 @@ import {
   Upload,
 } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+
+// Build auth headers if a staff session exists — lets logged-in staff
+// bypass the guest unlock-code prompt for share links.
+async function buildAuthHeaders(): Promise<Record<string, string>> {
+  const headers: Record<string, string> = {};
+  try {
+    const { data } = await supabase.auth.getSession();
+    if (data.session?.access_token) headers["Authorization"] = `Bearer ${data.session.access_token}`;
+  } catch { /* ignore */ }
+  return headers;
+}
 
 type DriveFolder = { id: string; name: string };
 type DriveFile = { id: string; name: string; mimeType: string; size: number | null };
