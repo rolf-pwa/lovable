@@ -103,6 +103,32 @@ type Actor =
       permission: "view" | "view_upload" | "view_upload_download";
     };
 
+// Returns true if the request carries either a valid staff JWT or a valid
+// portal client token. Used to bypass guest unlock-code prompts when the
+// recipient is already authenticated inside the app.
+async function isAuthenticatedPrincipal(req: Request): Promise<boolean> {
+  const portalToken = req.headers.get("x-portal-token");
+  if (portalToken) {
+    const { data: tok } = await supabaseAdmin
+      .from("portal_tokens")
+      .select("expires_at, revoked")
+      .eq("token", portalToken)
+      .maybeSingle();
+    if (tok && !tok.revoked && new Date(tok.expires_at) > new Date()) return true;
+  }
+  const authHeader = req.headers.get("Authorization") ?? "";
+  if (authHeader.startsWith("Bearer ")) {
+    try {
+      const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        global: { headers: { Authorization: authHeader } },
+      });
+      const { data } = await userClient.auth.getUser();
+      if (data?.user) return true;
+    } catch { /* ignore */ }
+  }
+  return false;
+}
+
 async function resolveActor(req: Request): Promise<Actor | null> {
   // 1. Collaborator guest token (highest specificity — checked first)
   const guestToken = req.headers.get("x-vault-guest-token");
