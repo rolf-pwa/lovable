@@ -793,6 +793,8 @@ function VaultLinksPanel({ householdId }: { householdId: string }) {
     </Card>
   );
 }
+
+export function VaultView({ forcedHouseholdId, embedded = false }: { forcedHouseholdId?: string; embedded?: boolean }) {
   const params = useParams<{ householdId?: string; contactId?: string }>();
   const [householdId, setHouseholdId] = useState<string | null>(null);
   const [householdLabel, setHouseholdLabel] = useState<string>("");
