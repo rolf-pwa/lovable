@@ -621,6 +621,18 @@ serve(async (req) => {
         docs = (await Promise.all(docs.map(async (f: any) => ((await filterByGrant(f)) ? f : null)))).filter(Boolean);
       }
 
+      // Share-link view: only files/folders inside the link's scope
+      if (actor.kind === "share_link") {
+        const scope = actor.scopeDriveId;
+        const filterByScope = async (item: any) => {
+          if (item.id === scope) return true;
+          const anc = await getAncestors(item.id, accessToken);
+          return [item.id, ...anc].includes(scope);
+        };
+        folders = (await Promise.all(folders.map(async (f: any) => ((await filterByScope(f)) ? f : null)))).filter(Boolean);
+        docs = (await Promise.all(docs.map(async (f: any) => ((await filterByScope(f)) ? f : null)))).filter(Boolean);
+      }
+
       await audit(actor, "list", null, folderId, null, req, { count: folders.length + docs.length });
 
       return new Response(
