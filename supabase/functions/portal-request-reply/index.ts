@@ -165,14 +165,19 @@ serve(async (req) => {
           .eq("id", request_id);
       }
 
-      fetch(`${supabaseUrl}/functions/v1/notify-portal-request`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${serviceKey}`,
-        },
-        body: JSON.stringify({ request_id, event_type: "message" }),
-      }).catch((e) => console.error("[Notify] Fire-and-forget error:", e));
+      // @ts-ignore EdgeRuntime is provided by Supabase Edge Functions runtime
+      EdgeRuntime.waitUntil(
+        fetch(`${supabaseUrl}/functions/v1/notify-portal-request`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${serviceKey}`,
+          },
+          body: JSON.stringify({ request_id, event_type: "message" }),
+        })
+          .then((r) => r.text().then((t) => console.log(`[Notify] notify-portal-request responded ${r.status}: ${t}`)))
+          .catch((e) => console.error("[Notify] Background error:", e))
+      );
     }
 
     return new Response(JSON.stringify({ success: true }), {
