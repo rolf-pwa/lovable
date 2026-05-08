@@ -12,6 +12,9 @@ import {
   Home,
   Upload,
   Inbox,
+  FolderPlus,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
