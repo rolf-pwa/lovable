@@ -512,6 +512,16 @@ export function PortalVault({ portalToken, householdId }: Props) {
                     {isBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
                     <span className="hidden sm:inline">Download</span>
                   </Button>
+                  {currentPerm === "manage" && (
+                    <>
+                      <Button size="sm" variant="ghost" className="h-8 px-2" onClick={() => renameItem(f.id, f.name, false)} title="Rename">
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button size="sm" variant="ghost" className="h-8 px-2 text-destructive" onClick={() => deleteItem(f.id, false)} title="Delete">
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </>
+                  )}
                 </div>
               );
             })}
