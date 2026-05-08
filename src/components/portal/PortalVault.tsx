@@ -12,6 +12,9 @@ import {
   Home,
   Upload,
   Inbox,
+  FolderPlus,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -54,7 +57,9 @@ export function PortalVault({ portalToken, householdId }: Props) {
   const [busyFileId, setBusyFileId] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [shoeboxId, setShoeboxId] = useState<string | null>(null);
+  const [currentPerm, setCurrentPerm] = useState<"none" | "view" | "upload" | "manage">("view");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const folderUploadRef = useRef<HTMLInputElement | null>(null);
 
   const callVault = useCallback(
     async (action: string, payload: Record<string, any> = {}) => {
@@ -85,6 +90,14 @@ export function PortalVault({ portalToken, householdId }: Props) {
         setFolders(data.folders || []);
         setFiles(data.files || []);
         if (replaceCrumbs) setCrumbs(replaceCrumbs);
+        // Fetch effective permission for this folder
+        try {
+          const pRes = await callVault("getEffectivePermission", { driveId: folder.id });
+          if (pRes.ok) {
+            const pj = await pRes.json();
+            setCurrentPerm(pj.cap || "view");
+          }
+        } catch { setCurrentPerm("view"); }
       } catch (e: any) {
         setError(e.message || "Failed to load vault");
       } finally {
@@ -185,29 +198,16 @@ export function PortalVault({ portalToken, householdId }: Props) {
 
   const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
 
-  const handleFiles = async (fileList: FileList | null) => {
+  const uploadToFolder = async (fileList: FileList | null, targetFolderId: string, isShoebox: boolean) => {
     if (!fileList || fileList.length === 0) return;
-    if (!shoeboxId) {
-      toast({
-        title: "Upload unavailable",
-        description: "Your Shoebox isn't ready yet. Please refresh in a moment.",
-        variant: "destructive",
-      });
-      return;
-    }
     setUploading(true);
     let okCount = 0;
     try {
       for (const file of Array.from(fileList)) {
         if (file.size > MAX_UPLOAD_BYTES) {
-          toast({
-            title: `${file.name} is too large`,
-            description: "Please keep uploads under 25 MB.",
-            variant: "destructive",
-          });
+          toast({ title: `${file.name} is too large`, description: "Please keep uploads under 25 MB.", variant: "destructive" });
           continue;
         }
-        // base64 encode in a worker-friendly chunked manner
         const buf = new Uint8Array(await file.arrayBuffer());
         let binary = "";
         const chunk = 0x8000;
@@ -216,7 +216,7 @@ export function PortalVault({ portalToken, householdId }: Props) {
         }
         const base64 = btoa(binary);
         const res = await callVault("uploadFile", {
-          folderId: shoeboxId,
+          folderId: targetFolderId,
           fileName: file.name,
           mimeType: file.type || "application/octet-stream",
           base64,
@@ -229,23 +229,80 @@ export function PortalVault({ portalToken, householdId }: Props) {
       }
       if (okCount > 0) {
         toast({
-          title: okCount === 1 ? "File sent to your Shoebox" : `${okCount} files sent to your Shoebox`,
-          description: "Your Personal CFO will review and file it for you.",
+          title: okCount === 1 ? (isShoebox ? "Sent to your Shoebox" : "File uploaded") : (isShoebox ? `${okCount} files sent to Shoebox` : `${okCount} files uploaded`),
+          description: isShoebox ? "Your Personal CFO will review and file it for you." : undefined,
         });
-        // Refresh current view if we're at root
-        if (crumbs.length === 1) {
-          await loadFolder(crumbs[0], crumbs);
-        }
+        await loadFolder(crumbs[crumbs.length - 1], crumbs);
       }
     } catch (e: any) {
-      toast({
-        title: "Upload failed",
-        description: e.message || "Please try again.",
-        variant: "destructive",
-      });
+      toast({ title: "Upload failed", description: e.message || "Please try again.", variant: "destructive" });
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
+      if (folderUploadRef.current) folderUploadRef.current.value = "";
+    }
+  };
+
+  const handleFiles = (fileList: FileList | null) => {
+    if (!shoeboxId) {
+      toast({ title: "Upload unavailable", description: "Your Shoebox isn't ready yet.", variant: "destructive" });
+      return;
+    }
+    return uploadToFolder(fileList, shoeboxId, true);
+  };
+
+  const handleHereUpload = (fileList: FileList | null) => {
+    const target = crumbs[crumbs.length - 1]?.id;
+    if (!target) return;
+    return uploadToFolder(fileList, target, false);
+  };
+
+  const newSubfolder = async () => {
+    const target = crumbs[crumbs.length - 1]?.id;
+    if (!target) return;
+    const name = window.prompt("New folder name");
+    if (!name) return;
+    try {
+      const res = await callVault("createFolder", { parentFolderId: target, name });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error(j.error || "Failed");
+      }
+      toast({ title: "Folder created" });
+      await loadFolder(crumbs[crumbs.length - 1], crumbs);
+    } catch (e: any) {
+      toast({ title: "Could not create folder", description: e.message, variant: "destructive" });
+    }
+  };
+
+  const renameItem = async (driveId: string, currentName: string, isFolder: boolean) => {
+    const next = window.prompt(`Rename ${isFolder ? "folder" : "file"}`, currentName);
+    if (!next || next === currentName) return;
+    try {
+      const res = await callVault("renameItem", { driveId, newName: next });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error(j.error || "Rename failed");
+      }
+      toast({ title: "Renamed" });
+      await loadFolder(crumbs[crumbs.length - 1], crumbs);
+    } catch (e: any) {
+      toast({ title: "Could not rename", description: e.message, variant: "destructive" });
+    }
+  };
+
+  const deleteItem = async (driveId: string, isFolder: boolean) => {
+    if (!window.confirm(`Move this ${isFolder ? "folder" : "file"} to the trash?`)) return;
+    try {
+      const res = await callVault("deleteItem", { driveId });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error(j.error || "Delete failed");
+      }
+      toast({ title: "Moved to trash" });
+      await loadFolder(crumbs[crumbs.length - 1], crumbs);
+    } catch (e: any) {
+      toast({ title: "Could not delete", description: e.message, variant: "destructive" });
     }
   };
 
@@ -356,6 +413,32 @@ export function PortalVault({ portalToken, householdId }: Props) {
         </CardContent>
       </Card>
 
+      {/* Folder-level controls when client has elevated permission here */}
+      {(currentPerm === "upload" || currentPerm === "manage") && crumbs.length > 0 && (
+        <Card>
+          <CardContent className="p-3 flex items-center gap-2 flex-wrap">
+            <span className="text-[11px] text-muted-foreground mr-1">In this folder:</span>
+            <input
+              ref={folderUploadRef}
+              type="file"
+              multiple
+              className="hidden"
+              onChange={(e) => handleHereUpload(e.target.files)}
+            />
+            <Button size="sm" variant="outline" disabled={uploading} onClick={() => folderUploadRef.current?.click()} className="gap-1.5">
+              <Upload className="h-3.5 w-3.5" />
+              Upload here
+            </Button>
+            {currentPerm === "manage" && (
+              <Button size="sm" variant="outline" onClick={newSubfolder} className="gap-1.5">
+                <FolderPlus className="h-3.5 w-3.5" />
+                New folder
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {isEmpty ? (
         <Card>
           <CardContent className="py-10 text-center">
@@ -429,6 +512,16 @@ export function PortalVault({ portalToken, householdId }: Props) {
                     {isBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
                     <span className="hidden sm:inline">Download</span>
                   </Button>
+                  {currentPerm === "manage" && (
+                    <>
+                      <Button size="sm" variant="ghost" className="h-8 px-2" onClick={() => renameItem(f.id, f.name, false)} title="Rename">
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button size="sm" variant="ghost" className="h-8 px-2 text-destructive" onClick={() => deleteItem(f.id, false)} title="Delete">
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </>
+                  )}
                 </div>
               );
             })}
