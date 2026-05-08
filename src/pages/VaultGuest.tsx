@@ -274,9 +274,10 @@ export default function VaultGuest() {
     setVerifying(true);
     try {
       if (mode === "share") {
+        const authHeaders = await buildAuthHeaders();
         const r = await fetch(FUNCTIONS_URL, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...authHeaders },
           body: JSON.stringify({ action: "resolveShareLink", token, unlock_code: unlockCode }),
         });
         const j = await r.json();
