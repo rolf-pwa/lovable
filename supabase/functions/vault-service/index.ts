@@ -235,40 +235,127 @@ async function getAncestors(driveId: string, accessToken: string): Promise<strin
   return chain;
 }
 
+// Effective client capability: 'view' | 'upload' | 'manage'
+const ROLE_CAP: Record<string, "view" | "upload" | "manage"> = {
+  viewer: "view",
+  contributor: "upload",
+  manager: "manage",
+};
+function rank(c: "view" | "upload" | "manage") {
+  return c === "view" ? 0 : c === "upload" ? 1 : 2;
+}
+
+async function effectiveClientPermission(
+  contactId: string,
+  chain: string[],
+): Promise<"view" | "upload" | "manage"> {
+  // Baseline role
+  const { data: roleRow } = await supabaseAdmin
+    .from("vault_contact_roles")
+    .select("role")
+    .eq("contact_id", contactId)
+    .maybeSingle();
+  let cap: "view" | "upload" | "manage" = ROLE_CAP[roleRow?.role ?? "viewer"] ?? "view";
+  // Most specific (file > nearer folder > root) grant in chain
+  const { data: grants } = await supabaseAdmin
+    .from("vault_contact_grants")
+    .select("scope_type, drive_id, permission, expires_at, revoked_at")
+    .eq("contact_id", contactId)
+    .in("drive_id", chain.length ? chain : ["__none__"]);
+  const active = (grants ?? []).filter(
+    (g) => !g.revoked_at && (!g.expires_at || new Date(g.expires_at) > new Date()),
+  );
+  // Walk chain from most specific (driveId itself = chain[0]) outward
+  for (const id of chain) {
+    const match = active.find((g) => g.drive_id === id);
+    if (match) {
+      const grantCap = (match.permission as "view" | "upload" | "manage");
+      if (rank(grantCap) > rank(cap)) cap = grantCap;
+      break;
+    }
+  }
+  return cap;
+}
+
+type Need = false | "upload" | "rename" | "delete" | "create_folder";
+
 async function ensureAccess(
   actor: Actor,
   driveId: string,
   accessToken: string,
-  needWrite = false,
-): Promise<{ ok: boolean; reason?: string }> {
-  if (actor.kind === "staff") return { ok: true };
+  need: Need = false,
+): Promise<{ ok: boolean; reason?: string; cap?: string }> {
+  if (actor.kind === "staff") return { ok: true, cap: "manage" };
 
   const ancestors = await getAncestors(driveId, accessToken);
   const chain = [driveId, ...ancestors];
 
   if (actor.kind === "client") {
-    if (needWrite) return { ok: false, reason: "client_read_only" };
-    if (chain.includes(actor.vaultRootId)) {
-      // Also enforce client_visible flag from cache when available
+    if (!chain.includes(actor.vaultRootId)) return { ok: false, reason: "outside_vault_root" };
+    const cap = await effectiveClientPermission(actor.contactId, chain);
+
+    // For files, check client_visible unless explicit grant covers
+    if (!need) {
       const { data: row } = await supabaseAdmin
         .from("vault_files")
         .select("client_visible, is_folder")
         .eq("drive_id", driveId)
         .maybeSingle();
       if (row && row.is_folder === false && row.client_visible === false) {
-        return { ok: false, reason: "not_client_visible" };
+        // Allow if any explicit grant exists in chain
+        const { data: gr } = await supabaseAdmin
+          .from("vault_contact_grants")
+          .select("id")
+          .eq("contact_id", actor.contactId)
+          .in("drive_id", chain.length ? chain : ["__none__"])
+          .is("revoked_at", null)
+          .limit(1);
+        if (!gr || gr.length === 0) return { ok: false, reason: "not_client_visible" };
       }
-      return { ok: true };
+      return { ok: true, cap };
     }
-    return { ok: false, reason: "outside_vault_root" };
+
+    if (need === "upload") {
+      if (rank(cap) >= 1) return { ok: true, cap };
+      return { ok: false, reason: "client_no_upload" };
+    }
+    if (need === "create_folder") {
+      if (cap === "manage") return { ok: true, cap };
+      return { ok: false, reason: "client_no_create_folder" };
+    }
+    if (need === "rename" || need === "delete") {
+      if (cap === "manage") return { ok: true, cap };
+      if (cap === "upload") {
+        const { data: f } = await supabaseAdmin
+          .from("vault_files")
+          .select("uploaded_by_contact_id")
+          .eq("drive_id", driveId)
+          .maybeSingle();
+        if (f?.uploaded_by_contact_id === actor.contactId) return { ok: true, cap };
+      }
+      return { ok: false, reason: "client_can_modify_own_only" };
+    }
+    return { ok: false, reason: "unknown_need" };
   }
 
   if (actor.kind === "collaborator") {
     for (const g of actor.grants) {
-      if (needWrite && g.permission !== "upload") continue;
+      if (need && need !== "upload") continue; // collaborators: view + upload only
+      if (need === "upload" && g.permission !== "upload") continue;
       if (chain.includes(g.drive_id)) return { ok: true };
     }
     return { ok: false, reason: "no_matching_grant" };
+  }
+
+  if (actor.kind === "share_link") {
+    if (!chain.includes(actor.scopeDriveId)) return { ok: false, reason: "outside_share_scope" };
+    if (!need) return { ok: true };
+    if (need === "upload") {
+      if (actor.permission === "view_upload" || actor.permission === "view_upload_download")
+        return { ok: true };
+      return { ok: false, reason: "share_link_no_upload" };
+    }
+    return { ok: false, reason: "share_link_no_modify" };
   }
   return { ok: false, reason: "unknown_actor" };
 }
