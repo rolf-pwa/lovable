@@ -778,27 +778,12 @@ serve(async (req) => {
     if (action === "uploadFile") {
       const { folderId, fileName, mimeType, base64, contactId } = body;
 
-      // Clients may only upload into their household shoebox.
-      if (actor.kind === "client") {
-        const children = await driveListChildren(actor.vaultRootId, accessToken);
-        const shoebox = children.find(
-          (c: any) =>
-            c.mimeType === "application/vnd.google-apps.folder" &&
-            (c.name?.toLowerCase().includes("shoebox")),
-        );
-        if (!shoebox || shoebox.id !== folderId) {
-          await audit(actor, "firewall_block", null, folderId, fileName, req, { reason: "client_upload_outside_shoebox" });
-          return new Response(JSON.stringify({ error: "forbidden", reason: "client_upload_outside_shoebox" }), { status: 403, headers: { ...cors, "Content-Type": "application/json" } });
-        }
-      } else {
-        const access = await ensureAccess(actor, folderId, accessToken, true);
-        if (!access.ok) {
-          await audit(actor, "firewall_block", contactId ?? null, folderId, fileName, req, { reason: access.reason });
-          return new Response(JSON.stringify({ error: "forbidden", reason: access.reason }), { status: 403, headers: { ...cors, "Content-Type": "application/json" } });
-        }
+      const access = await ensureAccess(actor, folderId, accessToken, "upload");
+      if (!access.ok) {
+        await audit(actor, "firewall_block", contactId ?? null, folderId, fileName, req, { reason: access.reason });
+        return new Response(JSON.stringify({ error: "forbidden", reason: access.reason }), { status: 403, headers: { ...cors, "Content-Type": "application/json" } });
       }
 
-      // Decode base64 in chunks (avoid stack-limit on large files)
       const binary = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
       const boundary = "----vault" + Math.random().toString(36).slice(2);
       const meta = JSON.stringify({ name: fileName, parents: [folderId], mimeType });
@@ -815,19 +800,34 @@ serve(async (req) => {
       });
       if (!r.ok) throw new Error(`upload_failed: ${await r.text()}`);
       const created = await r.json();
+      const uploaderContactId =
+        contactId ??
+        (actor.kind === "client" ? actor.contactId : actor.kind === "collaborator" ? actor.contactId : null);
       await supabaseAdmin.from("vault_files").insert({
         drive_id: created.id,
-        contact_id: contactId ?? (actor.kind === "client" ? actor.contactId : actor.kind === "collaborator" ? actor.contactId : null),
+        contact_id: uploaderContactId,
+        household_id:
+          actor.kind === "client" ? actor.householdId :
+          actor.kind === "share_link" ? actor.householdId : null,
         parent_folder_id: folderId,
         ancestor_folder_ids: [folderId, ...(await getAncestors(folderId, accessToken))],
         name: fileName,
         mime_type: mimeType,
         is_folder: false,
-        client_visible: false, // staff review required
+        client_visible: actor.kind === "staff",
         uploaded_by_collaborator_id: actor.kind === "collaborator" ? actor.collaboratorId : null,
+        uploaded_by_contact_id: actor.kind === "client" ? actor.contactId : null,
         staff_reviewed: actor.kind === "staff",
       });
-      await audit(actor, "upload", contactId ?? null, created.id, fileName, req, { uploader: actor.kind });
+      // Bump share-link use count
+      if (actor.kind === "share_link") {
+        await supabaseAdmin.rpc; // noop, prefer direct update below
+        await supabaseAdmin
+          .from("vault_share_links")
+          .update({ use_count: (await supabaseAdmin.from("vault_share_links").select("use_count").eq("id", actor.linkId).maybeSingle()).data?.use_count + 1 || 1, last_accessed_at: new Date().toISOString() })
+          .eq("id", actor.linkId);
+      }
+      await audit(actor, "upload", uploaderContactId ?? null, created.id, fileName, req, { uploader: actor.kind });
       return new Response(JSON.stringify({ ok: true, fileId: created.id }), { headers: { ...cors, "Content-Type": "application/json" } });
     }
 
