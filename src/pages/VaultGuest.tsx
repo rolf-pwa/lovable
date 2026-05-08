@@ -72,7 +72,7 @@ async function tokenStream(
   fileId: string,
   disposition: "inline" | "attachment",
 ) {
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  const headers: Record<string, string> = { "Content-Type": "application/json", ...(await buildAuthHeaders()) };
   if (mode === "guest") headers["x-vault-guest-token"] = token;
   else headers["x-vault-share-token"] = token;
   if (unlockCode) headers["x-vault-unlock-code"] = unlockCode;
