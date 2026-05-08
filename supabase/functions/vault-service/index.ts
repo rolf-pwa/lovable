@@ -920,6 +920,235 @@ serve(async (req) => {
       return new Response(JSON.stringify({ ok: true, magicToken: tok?.token, unlockCode: code }), { headers: { ...cors, "Content-Type": "application/json" } });
     }
 
+    // ═════════════════════════════════════════════════════════
+    //  CLIENT PERMISSIONS  (staff manages, client/share consume)
+    // ═════════════════════════════════════════════════════════
+
+    // ─── Get effective permission for a folder/file (any actor) ───
+    if (action === "getEffectivePermission") {
+      const { driveId } = body;
+      if (!driveId)
+        return new Response(JSON.stringify({ error: "driveId required" }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
+      if (actor.kind === "staff")
+        return new Response(JSON.stringify({ cap: "manage" }), { headers: { ...cors, "Content-Type": "application/json" } });
+      if (actor.kind === "client") {
+        const ancestors = await getAncestors(driveId, accessToken);
+        const chain = [driveId, ...ancestors];
+        if (!chain.includes(actor.vaultRootId))
+          return new Response(JSON.stringify({ cap: "none" }), { headers: { ...cors, "Content-Type": "application/json" } });
+        const cap = await effectiveClientPermission(actor.contactId, chain);
+        return new Response(JSON.stringify({ cap }), { headers: { ...cors, "Content-Type": "application/json" } });
+      }
+      if (actor.kind === "share_link") {
+        const cap =
+          actor.permission === "view_upload_download" ? "manage" :
+          actor.permission === "view_upload" ? "upload" : "view";
+        return new Response(JSON.stringify({ cap, share_permission: actor.permission }), { headers: { ...cors, "Content-Type": "application/json" } });
+      }
+      return new Response(JSON.stringify({ cap: "view" }), { headers: { ...cors, "Content-Type": "application/json" } });
+    }
+
+    // ─── Set per-contact baseline role (staff) ───
+    if (action === "setContactRole") {
+      if (actor.kind !== "staff")
+        return new Response(JSON.stringify({ error: "staff_only" }), { status: 403, headers: { ...cors, "Content-Type": "application/json" } });
+      const { contactId, householdId, role } = body;
+      if (!contactId || !householdId || !role)
+        return new Response(JSON.stringify({ error: "missing_fields" }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
+      await supabaseAdmin
+        .from("vault_contact_roles")
+        .upsert({ contact_id: contactId, household_id: householdId, role, granted_by: actor.userId }, { onConflict: "contact_id" });
+      await audit(actor, "set_contact_role", contactId, null, null, req, { role, household_id: householdId });
+      return new Response(JSON.stringify({ ok: true }), { headers: { ...cors, "Content-Type": "application/json" } });
+    }
+
+    // ─── Set per-folder/file grant for a portal contact (staff) ───
+    if (action === "setContactGrant") {
+      if (actor.kind !== "staff")
+        return new Response(JSON.stringify({ error: "staff_only" }), { status: 403, headers: { ...cors, "Content-Type": "application/json" } });
+      const { contactId, householdId, scope_type, drive_id, permission, expires_at } = body;
+      if (!contactId || !householdId || !scope_type || !drive_id || !permission)
+        return new Response(JSON.stringify({ error: "missing_fields" }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
+      const { data: g } = await supabaseAdmin.from("vault_contact_grants").insert({
+        contact_id: contactId,
+        household_id: householdId,
+        scope_type,
+        drive_id,
+        permission,
+        expires_at: expires_at ?? null,
+        granted_by: actor.userId,
+      }).select().single();
+      await audit(actor, "set_contact_grant", contactId, drive_id, null, req, { permission, scope_type });
+      return new Response(JSON.stringify({ ok: true, grant: g }), { headers: { ...cors, "Content-Type": "application/json" } });
+    }
+
+    // ─── Revoke a contact grant (staff) ───
+    if (action === "revokeContactGrant") {
+      if (actor.kind !== "staff")
+        return new Response(JSON.stringify({ error: "staff_only" }), { status: 403, headers: { ...cors, "Content-Type": "application/json" } });
+      const { grantId } = body;
+      await supabaseAdmin.from("vault_contact_grants").update({ revoked_at: new Date().toISOString() }).eq("id", grantId);
+      await audit(actor, "revoke_contact_grant", null, null, null, req, { grantId });
+      return new Response(JSON.stringify({ ok: true }), { headers: { ...cors, "Content-Type": "application/json" } });
+    }
+
+    // ─── List all permissions for a household (staff UI) ───
+    if (action === "listContactPermissions") {
+      if (actor.kind !== "staff")
+        return new Response(JSON.stringify({ error: "staff_only" }), { status: 403, headers: { ...cors, "Content-Type": "application/json" } });
+      const { householdId } = body;
+      const { data: roles } = await supabaseAdmin
+        .from("vault_contact_roles").select("*").eq("household_id", householdId);
+      const { data: grants } = await supabaseAdmin
+        .from("vault_contact_grants").select("*").eq("household_id", householdId).is("revoked_at", null);
+      return new Response(JSON.stringify({ roles: roles ?? [], grants: grants ?? [] }), { headers: { ...cors, "Content-Type": "application/json" } });
+    }
+
+    // ═════════════════════════════════════════════════════════
+    //  RENAME / DELETE / CREATE FOLDER
+    // ═════════════════════════════════════════════════════════
+
+    if (action === "renameItem") {
+      const { driveId, newName } = body;
+      if (!driveId || !newName)
+        return new Response(JSON.stringify({ error: "missing_fields" }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
+      const access = await ensureAccess(actor, driveId, accessToken, "rename");
+      if (!access.ok) {
+        await audit(actor, "firewall_block", null, driveId, newName, req, { reason: access.reason, op: "rename" });
+        return new Response(JSON.stringify({ error: "forbidden", reason: access.reason }), { status: 403, headers: { ...cors, "Content-Type": "application/json" } });
+      }
+      const r = await fetch(`https://www.googleapis.com/drive/v3/files/${driveId}`, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ name: newName }),
+      });
+      if (!r.ok) throw new Error(`rename_failed: ${await r.text()}`);
+      await supabaseAdmin.from("vault_files").update({ name: newName }).eq("drive_id", driveId);
+      await audit(actor, "rename", null, driveId, newName, req);
+      return new Response(JSON.stringify({ ok: true }), { headers: { ...cors, "Content-Type": "application/json" } });
+    }
+
+    if (action === "deleteItem") {
+      const { driveId } = body;
+      if (!driveId)
+        return new Response(JSON.stringify({ error: "missing_fields" }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
+      const access = await ensureAccess(actor, driveId, accessToken, "delete");
+      if (!access.ok) {
+        await audit(actor, "firewall_block", null, driveId, null, req, { reason: access.reason, op: "delete" });
+        return new Response(JSON.stringify({ error: "forbidden", reason: access.reason }), { status: 403, headers: { ...cors, "Content-Type": "application/json" } });
+      }
+      // Trash (recoverable) instead of hard delete
+      const r = await fetch(`https://www.googleapis.com/drive/v3/files/${driveId}`, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ trashed: true }),
+      });
+      if (!r.ok) throw new Error(`delete_failed: ${await r.text()}`);
+      await audit(actor, "delete", null, driveId, null, req);
+      return new Response(JSON.stringify({ ok: true }), { headers: { ...cors, "Content-Type": "application/json" } });
+    }
+
+    if (action === "createFolder") {
+      const { parentFolderId, name } = body;
+      if (!parentFolderId || !name)
+        return new Response(JSON.stringify({ error: "missing_fields" }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
+      const access = await ensureAccess(actor, parentFolderId, accessToken, "create_folder");
+      if (!access.ok) {
+        await audit(actor, "firewall_block", null, parentFolderId, name, req, { reason: access.reason, op: "create_folder" });
+        return new Response(JSON.stringify({ error: "forbidden", reason: access.reason }), { status: 403, headers: { ...cors, "Content-Type": "application/json" } });
+      }
+      const created = await driveCreateFolder(name, parentFolderId, accessToken);
+      await audit(actor, "create_folder", null, created.id, name, req);
+      return new Response(JSON.stringify({ ok: true, folderId: created.id, name: created.name }), { headers: { ...cors, "Content-Type": "application/json" } });
+    }
+
+    // ═════════════════════════════════════════════════════════
+    //  VAULT-ONLY SHARE LINKS
+    // ═════════════════════════════════════════════════════════
+
+    if (action === "createShareLink") {
+      if (actor.kind !== "staff")
+        return new Response(JSON.stringify({ error: "staff_only" }), { status: 403, headers: { ...cors, "Content-Type": "application/json" } });
+      const { householdId, scope_type, drive_id, permission, link_type, expires_at, max_uses, generate_unlock_code } = body;
+      if (!householdId || !scope_type || !drive_id || !permission || !link_type)
+        return new Response(JSON.stringify({ error: "missing_fields" }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
+      // Verify scope is inside the household root
+      const { data: hh } = await supabaseAdmin.from("households").select("vault_root_folder_id").eq("id", householdId).maybeSingle();
+      if (!hh?.vault_root_folder_id)
+        return new Response(JSON.stringify({ error: "household_no_vault" }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
+      const ancestors = await getAncestors(drive_id, accessToken);
+      const chain = [drive_id, ...ancestors];
+      if (!chain.includes(hh.vault_root_folder_id))
+        return new Response(JSON.stringify({ error: "scope_outside_household" }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
+      const code = link_type === "guest" && generate_unlock_code ? genUnlockCode() : null;
+      const { data: link, error } = await supabaseAdmin.from("vault_share_links").insert({
+        link_type,
+        household_id: householdId,
+        scope_type,
+        drive_id,
+        permission,
+        unlock_code: code,
+        expires_at: expires_at ?? null,
+        max_uses: max_uses ?? null,
+        created_by: actor.userId,
+      }).select().single();
+      if (error) throw error;
+      await audit(actor, "share_link_created", null, drive_id, null, req, { link_type, permission });
+      return new Response(JSON.stringify({ ok: true, link }), { headers: { ...cors, "Content-Type": "application/json" } });
+    }
+
+    if (action === "listShareLinks") {
+      if (actor.kind !== "staff")
+        return new Response(JSON.stringify({ error: "staff_only" }), { status: 403, headers: { ...cors, "Content-Type": "application/json" } });
+      const { householdId, driveId } = body;
+      let q = supabaseAdmin.from("vault_share_links").select("*").order("created_at", { ascending: false });
+      if (householdId) q = q.eq("household_id", householdId);
+      if (driveId) q = q.eq("drive_id", driveId);
+      const { data } = await q;
+      return new Response(JSON.stringify({ links: data ?? [] }), { headers: { ...cors, "Content-Type": "application/json" } });
+    }
+
+    if (action === "revokeShareLink") {
+      if (actor.kind !== "staff")
+        return new Response(JSON.stringify({ error: "staff_only" }), { status: 403, headers: { ...cors, "Content-Type": "application/json" } });
+      const { linkId } = body;
+      await supabaseAdmin.from("vault_share_links").update({ revoked_at: new Date().toISOString() }).eq("id", linkId);
+      await audit(actor, "share_link_revoked", null, null, null, req, { linkId });
+      return new Response(JSON.stringify({ ok: true }), { headers: { ...cors, "Content-Type": "application/json" } });
+    }
+
+    // Anonymous resolver — given just a token, returns scope info so the
+    // guest/portal page can render. Validates unlock code for guest links.
+    if (action === "resolveShareLink") {
+      const { token, unlock_code } = body;
+      if (!token)
+        return new Response(JSON.stringify({ error: "token required" }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
+      const { data: link } = await supabaseAdmin.from("vault_share_links").select("*").eq("token", token).maybeSingle();
+      if (!link || link.revoked_at)
+        return new Response(JSON.stringify({ error: "invalid_or_revoked" }), { status: 404, headers: { ...cors, "Content-Type": "application/json" } });
+      if (link.expires_at && new Date(link.expires_at) <= new Date())
+        return new Response(JSON.stringify({ error: "expired" }), { status: 410, headers: { ...cors, "Content-Type": "application/json" } });
+      if (typeof link.max_uses === "number" && link.use_count >= link.max_uses)
+        return new Response(JSON.stringify({ error: "use_limit_reached" }), { status: 410, headers: { ...cors, "Content-Type": "application/json" } });
+      const needsCode = link.link_type === "guest" && !!link.unlock_code;
+      if (needsCode && unlock_code !== link.unlock_code)
+        return new Response(JSON.stringify({ needs_unlock_code: true }), { status: 200, headers: { ...cors, "Content-Type": "application/json" } });
+      const r = await fetch(`https://www.googleapis.com/drive/v3/files/${link.drive_id}?fields=id,name,mimeType`, { headers: { Authorization: `Bearer ${accessToken}` } });
+      const meta = r.ok ? await r.json() : {};
+      await audit(null, "share_link_redeemed", null, link.drive_id, meta.name ?? null, req, { link_id: link.id });
+      return new Response(JSON.stringify({
+        ok: true,
+        scope: {
+          drive_id: link.drive_id,
+          name: meta.name ?? null,
+          mime_type: meta.mimeType ?? null,
+          scope_type: link.scope_type,
+        },
+        permission: link.permission,
+        link_type: link.link_type,
+      }), { headers: { ...cors, "Content-Type": "application/json" } });
+    }
+
     return new Response(JSON.stringify({ error: "unknown_action", action }), {
       status: 400,
       headers: { ...cors, "Content-Type": "application/json" },
