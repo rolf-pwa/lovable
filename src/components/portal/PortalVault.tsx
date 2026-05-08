@@ -90,6 +90,14 @@ export function PortalVault({ portalToken, householdId }: Props) {
         setFolders(data.folders || []);
         setFiles(data.files || []);
         if (replaceCrumbs) setCrumbs(replaceCrumbs);
+        // Fetch effective permission for this folder
+        try {
+          const pRes = await callVault("getEffectivePermission", { driveId: folder.id });
+          if (pRes.ok) {
+            const pj = await pRes.json();
+            setCurrentPerm(pj.cap || "view");
+          }
+        } catch { setCurrentPerm("view"); }
       } catch (e: any) {
         setError(e.message || "Failed to load vault");
       } finally {
