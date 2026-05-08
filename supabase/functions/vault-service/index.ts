@@ -805,10 +805,12 @@ serve(async (req) => {
       const meta = JSON.stringify({ name: fileName, parents: [folderId], mimeType });
       const pre = `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${meta}\r\n--${boundary}\r\nContent-Type: ${mimeType}\r\n\r\n`;
       const post = `\r\n--${boundary}--`;
-      const bodyBytes = new Uint8Array(pre.length + binary.length + post.length);
-      bodyBytes.set(new TextEncoder().encode(pre), 0);
-      bodyBytes.set(binary, pre.length);
-      bodyBytes.set(new TextEncoder().encode(post), pre.length + binary.length);
+      const preBytes = new TextEncoder().encode(pre);
+      const postBytes = new TextEncoder().encode(post);
+      const bodyBytes = new Uint8Array(preBytes.length + binary.length + postBytes.length);
+      bodyBytes.set(preBytes, 0);
+      bodyBytes.set(binary, preBytes.length);
+      bodyBytes.set(postBytes, preBytes.length + binary.length);
       const r = await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart", {
         method: "POST",
         headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": `multipart/related; boundary=${boundary}` },
