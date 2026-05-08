@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useLocation, useParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,7 @@ import {
   Download,
   Eye,
   Shield,
+  Upload,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -29,16 +30,18 @@ function formatSize(n: number | null) {
   return `${(n / 1024 / 1024).toFixed(1)} MB`;
 }
 
-async function guestCall(
+type Mode = "guest" | "share";
+
+async function tokenCall(
+  mode: Mode,
   token: string,
   unlockCode: string | null,
   action: string,
   payload: Record<string, unknown> = {},
 ) {
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    "x-vault-guest-token": token,
-  };
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (mode === "guest") headers["x-vault-guest-token"] = token;
+  else headers["x-vault-share-token"] = token;
   if (unlockCode) headers["x-vault-unlock-code"] = unlockCode;
   const res = await fetch(FUNCTIONS_URL, {
     method: "POST",
@@ -50,10 +53,20 @@ async function guestCall(
   return json;
 }
 
-async function guestStream(token: string, fileId: string, disposition: "inline" | "attachment") {
+async function tokenStream(
+  mode: Mode,
+  token: string,
+  unlockCode: string | null,
+  fileId: string,
+  disposition: "inline" | "attachment",
+) {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (mode === "guest") headers["x-vault-guest-token"] = token;
+  else headers["x-vault-share-token"] = token;
+  if (unlockCode) headers["x-vault-unlock-code"] = unlockCode;
   const res = await fetch(`${FUNCTIONS_URL}?disposition=${disposition}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", "x-vault-guest-token": token },
+    headers,
     body: JSON.stringify({ action: "streamFile", fileId }),
   });
   if (!res.ok) {
@@ -63,31 +76,40 @@ async function guestStream(token: string, fileId: string, disposition: "inline" 
   return res.blob();
 }
 
-function GuestFolder({
+function FolderNode({
+  mode,
   token,
+  unlockCode,
   folderId,
   name,
   depth,
+  canUpload,
   onPreview,
+  onUploaded,
 }: {
+  mode: Mode;
   token: string;
+  unlockCode: string | null;
   folderId: string;
   name: string;
   depth: number;
+  canUpload: boolean;
   onPreview: (f: DriveFile) => void;
+  onUploaded?: () => void;
 }) {
   const [open, setOpen] = useState(depth === 0);
   const [loading, setLoading] = useState(false);
   const [folders, setFolders] = useState<DriveFolder[]>([]);
   const [files, setFiles] = useState<DriveFile[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
-    if (!open || loaded) return;
+    if (!open) return;
     (async () => {
       setLoading(true);
       try {
-        const j = await guestCall(token, null, "listFolder", { folderId });
+        const j = await tokenCall(mode, token, unlockCode, "listFolder", { folderId });
         setFolders(j.folders ?? []);
         setFiles(j.files ?? []);
         setLoaded(true);
@@ -97,11 +119,11 @@ function GuestFolder({
         setLoading(false);
       }
     })();
-  }, [open, loaded, folderId, token]);
+  }, [open, folderId, token, unlockCode, mode, reloadKey]);
 
   const dl = async (f: DriveFile) => {
     try {
-      const blob = await guestStream(token, f.id, "attachment");
+      const blob = await tokenStream(mode, token, unlockCode, f.id, "attachment");
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -113,18 +135,63 @@ function GuestFolder({
     }
   };
 
+  const handleUpload = async (fileList: FileList | null) => {
+    if (!fileList?.length) return;
+    try {
+      for (const f of Array.from(fileList)) {
+        const buf = new Uint8Array(await f.arrayBuffer());
+        let bin = "";
+        for (let i = 0; i < buf.length; i += 0x8000) {
+          bin += String.fromCharCode.apply(null, Array.from(buf.subarray(i, i + 0x8000)) as any);
+        }
+        await tokenCall(mode, token, unlockCode, "uploadFile", {
+          folderId,
+          fileName: f.name,
+          mimeType: f.type || "application/octet-stream",
+          base64: btoa(bin),
+        });
+      }
+      toast.success("Uploaded");
+      setReloadKey((k) => k + 1);
+      onUploaded?.();
+    } catch (e: any) {
+      toast.error(e.message);
+    }
+  };
+
   return (
     <div style={{ paddingLeft: depth === 0 ? 0 : 16 }}>
-      <button onClick={() => setOpen((v) => !v)} className="flex items-center gap-2 py-1.5 text-left hover:text-amber-500 w-full">
-        {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-        <Folder className="h-4 w-4 text-amber-500" />
-        <span className="font-serif">{name}</span>
-        {loading && <Loader2 className="h-3 w-3 animate-spin ml-1" />}
-      </button>
+      <div className="flex items-center gap-2 py-1.5">
+        <button onClick={() => setOpen((v) => !v)} className="flex items-center gap-2 text-left hover:text-amber-500 flex-1">
+          {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+          <Folder className="h-4 w-4 text-amber-500" />
+          <span className="font-serif">{name}</span>
+          {loading && <Loader2 className="h-3 w-3 animate-spin ml-1" />}
+        </button>
+        {canUpload && open && (
+          <label className="cursor-pointer">
+            <input type="file" multiple className="hidden" onChange={(e) => handleUpload(e.target.files)} />
+            <span className="inline-flex items-center gap-1 text-xs text-amber-500 hover:underline">
+              <Upload className="h-3 w-3" /> Upload
+            </span>
+          </label>
+        )}
+      </div>
       {open && (
         <div className="border-l border-border ml-2 pl-2">
           {folders.map((f) => (
-            <GuestFolder key={f.id} token={token} folderId={f.id} name={f.name} depth={depth + 1} onPreview={onPreview} />
+            <FolderNode
+              key={f.id}
+              mode={mode}
+              token={token}
+              unlockCode={unlockCode}
+              folderId={f.id}
+              name={f.name}
+              depth={depth + 1}
+              canUpload={canUpload}
+              onPreview={onPreview}
+              onUploaded={onUploaded}
+            />
           ))}
           {files.map((f) => (
             <div key={f.id} className="flex items-center gap-2 py-1.5 text-sm">
@@ -150,26 +217,66 @@ function GuestFolder({
 
 export default function VaultGuest() {
   const { token = "" } = useParams<{ token: string }>();
+  const location = useLocation();
+  const mode: Mode = location.pathname.includes("/vault/share/") ? "share" : "guest";
+
   const [unlockCode, setUnlockCode] = useState("");
   const [verifying, setVerifying] = useState(false);
   const [unlocked, setUnlocked] = useState(false);
+  const [needsCode, setNeedsCode] = useState(mode === "guest"); // share decides via resolve
   const [roots, setRoots] = useState<{ id: string; name: string }[]>([]);
+  const [scope, setScope] = useState<{ drive_id: string; name: string | null; mime_type: string | null; scope_type: "folder" | "file" } | null>(null);
+  const [permission, setPermission] = useState<"view" | "view_upload" | "view_upload_download">("view");
   const [preview, setPreview] = useState<{ file: DriveFile; url: string } | null>(null);
+
+  // For share mode, immediately attempt to resolve so we know whether unlock_code is needed
+  useEffect(() => {
+    if (mode !== "share" || unlocked) return;
+    (async () => {
+      try {
+        const r = await fetch(FUNCTIONS_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "resolveShareLink", token }),
+        });
+        const j = await r.json();
+        if (!r.ok) throw new Error(j.error ?? "invalid_link");
+        if (j.needs_unlock_code) {
+          setNeedsCode(true);
+          return;
+        }
+        setScope(j.scope);
+        setPermission(j.permission);
+        setNeedsCode(false);
+        setUnlocked(true);
+      } catch (e: any) {
+        toast.error(e.message);
+      }
+    })();
+  }, [mode, token, unlocked]);
 
   const verify = async () => {
     setVerifying(true);
     try {
-      // Pull collaborator's grants by listing each grant root
-      const grants = await guestCall(token, unlockCode, "listFolder", {
-        folderId: "__roots__", // server uses this only after unlock; harmless
-      }).catch(() => null);
-      // Even if listFolder("__roots__") errors, the unlock_verified_at is set.
-      // Fetch grants via a subsequent call against the actual root by reading
-      // server response — simpler: rely on the server returning forbidden until
-      // we explicitly know roots. So load grants from a dedicated helper:
+      if (mode === "share") {
+        const r = await fetch(FUNCTIONS_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "resolveShareLink", token, unlock_code: unlockCode }),
+        });
+        const j = await r.json();
+        if (!r.ok) throw new Error(j.error ?? "verification_failed");
+        if (j.needs_unlock_code) throw new Error("Incorrect unlock code");
+        setScope(j.scope);
+        setPermission(j.permission);
+        setUnlocked(true);
+        toast.success("Access granted");
+        return;
+      }
+      // guest mode (legacy collaborator)
       const r = await fetch(FUNCTIONS_URL, {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-vault-guest-token": token },
+        headers: { "Content-Type": "application/json", "x-vault-guest-token": token, "x-vault-unlock-code": unlockCode },
         body: JSON.stringify({ action: "myGrants" }),
       });
       const j = await r.json();
@@ -187,11 +294,25 @@ export default function VaultGuest() {
   const openPreview = async (file: DriveFile) => {
     setPreview({ file, url: "" });
     try {
-      const blob = await guestStream(token, file.id, "inline");
+      const blob = await tokenStream(mode, token, unlockCode || null, file.id, "inline");
       setPreview({ file, url: URL.createObjectURL(blob) });
     } catch (e: any) {
       toast.error(e.message);
       setPreview(null);
+    }
+  };
+
+  const directDownload = async (file: DriveFile) => {
+    try {
+      const blob = await tokenStream(mode, token, unlockCode || null, file.id, "attachment");
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = file.name;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e: any) {
+      toast.error(e.message);
     }
   };
 
@@ -201,7 +322,9 @@ export default function VaultGuest() {
     return mt === "application/pdf" || mt.startsWith("image/") || mt.startsWith("text/") || mt.includes("vnd.google-apps");
   }, [preview]);
 
-  if (!unlocked) {
+  const canUpload = permission === "view_upload" || permission === "view_upload_download";
+
+  if (!unlocked && needsCode) {
     return (
       <div className="min-h-screen flex items-center justify-center p-6 bg-background">
         <Card className="w-full max-w-md">
@@ -213,7 +336,7 @@ export default function VaultGuest() {
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              You've been invited to view documents through ProsperWise. Enter the 6-digit code from your invite to continue.
+              Enter the 6-digit unlock code from your invite to continue.
             </p>
             <div>
               <Label>Unlock code</Label>
@@ -229,11 +352,17 @@ export default function VaultGuest() {
               {verifying && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Unlock
             </Button>
-            <p className="text-xs text-muted-foreground">
-              Bound to this browser after unlock. All access is logged.
-            </p>
+            <p className="text-xs text-muted-foreground">All access is logged.</p>
           </CardContent>
         </Card>
+      </div>
+    );
+  }
+
+  if (!unlocked) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
       </div>
     );
   }
@@ -244,17 +373,60 @@ export default function VaultGuest() {
         <h1 className="text-2xl font-serif">Shared Documents</h1>
         <p className="text-sm text-muted-foreground">Access via ProsperWise · all activity is audited</p>
       </div>
-      {roots.length === 0 ? (
+
+      {mode === "share" && scope ? (
+        scope.scope_type === "folder" ? (
+          <Card>
+            <CardContent className="pt-6">
+              <FolderNode
+                mode="share"
+                token={token}
+                unlockCode={unlockCode || null}
+                folderId={scope.drive_id}
+                name={scope.name ?? "Shared folder"}
+                depth={0}
+                canUpload={canUpload}
+                onPreview={openPreview}
+              />
+            </CardContent>
+          </Card>
+        ) : (
+          <Card>
+            <CardContent className="pt-6 flex items-center gap-3">
+              <FileText className="h-5 w-5 text-muted-foreground" />
+              <span className="flex-1 truncate font-serif">{scope.name}</span>
+              <Button size="sm" variant="outline" onClick={() => openPreview({ id: scope.drive_id, name: scope.name ?? "file", mimeType: scope.mime_type ?? "", size: null })}>
+                <Eye className="h-4 w-4 mr-1" /> View
+              </Button>
+              {permission === "view_upload_download" && (
+                <Button size="sm" onClick={() => directDownload({ id: scope.drive_id, name: scope.name ?? "file", mimeType: scope.mime_type ?? "", size: null })}>
+                  <Download className="h-4 w-4 mr-1" /> Download
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        )
+      ) : roots.length === 0 ? (
         <p className="text-muted-foreground italic">No active grants.</p>
       ) : (
         roots.map((r) => (
           <Card key={r.id}>
             <CardContent className="pt-6">
-              <GuestFolder token={token} folderId={r.id} name={r.name} depth={0} onPreview={openPreview} />
+              <FolderNode
+                mode="guest"
+                token={token}
+                unlockCode={null}
+                folderId={r.id}
+                name={r.name}
+                depth={0}
+                canUpload={false}
+                onPreview={openPreview}
+              />
             </CardContent>
           </Card>
         ))
       )}
+
       <Dialog
         open={!!preview}
         onOpenChange={(o) => {
