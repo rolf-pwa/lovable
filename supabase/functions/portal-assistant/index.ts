@@ -250,14 +250,19 @@ serve(async (req) => {
       // Fire notification email (non-blocking)
       const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
       const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-      fetch(`${supabaseUrl}/functions/v1/notify-portal-request`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${serviceKey}`,
-        },
-        body: JSON.stringify({ request_id: data.id, event_type: "new" }),
-      }).catch((e) => console.error("[Notify] Fire-and-forget error:", e));
+      // @ts-ignore EdgeRuntime is provided by Supabase Edge Functions runtime
+      EdgeRuntime.waitUntil(
+        fetch(`${supabaseUrl}/functions/v1/notify-portal-request`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${serviceKey}`,
+          },
+          body: JSON.stringify({ request_id: data.id, event_type: "new" }),
+        })
+          .then((r) => r.text().then((t) => console.log(`[Notify] notify-portal-request responded ${r.status}: ${t}`)))
+          .catch((e) => console.error("[Notify] Background error:", e))
+      );
 
       return new Response(
         JSON.stringify({ success: true, requestId: data.id }),
