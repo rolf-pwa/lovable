@@ -17,6 +17,18 @@ import {
   Upload,
 } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+
+// Build auth headers if a staff session exists — lets logged-in staff
+// bypass the guest unlock-code prompt for share links.
+async function buildAuthHeaders(): Promise<Record<string, string>> {
+  const headers: Record<string, string> = {};
+  try {
+    const { data } = await supabase.auth.getSession();
+    if (data.session?.access_token) headers["Authorization"] = `Bearer ${data.session.access_token}`;
+  } catch { /* ignore */ }
+  return headers;
+}
 
 type DriveFolder = { id: string; name: string };
 type DriveFile = { id: string; name: string; mimeType: string; size: number | null };
@@ -39,7 +51,7 @@ async function tokenCall(
   action: string,
   payload: Record<string, unknown> = {},
 ) {
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  const headers: Record<string, string> = { "Content-Type": "application/json", ...(await buildAuthHeaders()) };
   if (mode === "guest") headers["x-vault-guest-token"] = token;
   else headers["x-vault-share-token"] = token;
   if (unlockCode) headers["x-vault-unlock-code"] = unlockCode;
@@ -60,7 +72,7 @@ async function tokenStream(
   fileId: string,
   disposition: "inline" | "attachment",
 ) {
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  const headers: Record<string, string> = { "Content-Type": "application/json", ...(await buildAuthHeaders()) };
   if (mode === "guest") headers["x-vault-guest-token"] = token;
   else headers["x-vault-share-token"] = token;
   if (unlockCode) headers["x-vault-unlock-code"] = unlockCode;
@@ -236,9 +248,10 @@ export default function VaultGuest() {
     if (mode !== "share" || unlocked) return;
     (async () => {
       try {
+        const authHeaders = await buildAuthHeaders();
         const r = await fetch(FUNCTIONS_URL, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...authHeaders },
           body: JSON.stringify({ action: "resolveShareLink", token }),
         });
         const j = await r.json();
@@ -261,9 +274,10 @@ export default function VaultGuest() {
     setVerifying(true);
     try {
       if (mode === "share") {
+        const authHeaders = await buildAuthHeaders();
         const r = await fetch(FUNCTIONS_URL, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...authHeaders },
           body: JSON.stringify({ action: "resolveShareLink", token, unlock_code: unlockCode }),
         });
         const j = await r.json();

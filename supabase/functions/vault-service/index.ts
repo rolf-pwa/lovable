@@ -103,6 +103,32 @@ type Actor =
       permission: "view" | "view_upload" | "view_upload_download";
     };
 
+// Returns true if the request carries either a valid staff JWT or a valid
+// portal client token. Used to bypass guest unlock-code prompts when the
+// recipient is already authenticated inside the app.
+async function isAuthenticatedPrincipal(req: Request): Promise<boolean> {
+  const portalToken = req.headers.get("x-portal-token");
+  if (portalToken) {
+    const { data: tok } = await supabaseAdmin
+      .from("portal_tokens")
+      .select("expires_at, revoked")
+      .eq("token", portalToken)
+      .maybeSingle();
+    if (tok && !tok.revoked && new Date(tok.expires_at) > new Date()) return true;
+  }
+  const authHeader = req.headers.get("Authorization") ?? "";
+  if (authHeader.startsWith("Bearer ")) {
+    try {
+      const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        global: { headers: { Authorization: authHeader } },
+      });
+      const { data } = await userClient.auth.getUser();
+      if (data?.user) return true;
+    } catch { /* ignore */ }
+  }
+  return false;
+}
+
 async function resolveActor(req: Request): Promise<Actor | null> {
   // 1. Collaborator guest token (highest specificity — checked first)
   const guestToken = req.headers.get("x-vault-guest-token");
@@ -156,7 +182,8 @@ async function resolveActor(req: Request): Promise<Actor | null> {
     const ua = req.headers.get("User-Agent") ?? "";
     if (link.link_type === "guest") {
       const provided = req.headers.get("x-vault-unlock-code");
-      if (link.unlock_code) {
+      const bypass = await isAuthenticatedPrincipal(req);
+      if (link.unlock_code && !bypass) {
         if (!provided || provided !== link.unlock_code) return null;
       }
       if (link.bound_user_agent && link.bound_user_agent !== ua) return null;
@@ -458,7 +485,8 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "expired" }), { status: 410, headers: { ...cors, "Content-Type": "application/json" } });
     if (typeof link.max_uses === "number" && link.use_count >= link.max_uses)
       return new Response(JSON.stringify({ error: "use_limit_reached" }), { status: 410, headers: { ...cors, "Content-Type": "application/json" } });
-    const needsCode = link.link_type === "guest" && !!link.unlock_code;
+    const bypass = await isAuthenticatedPrincipal(req);
+    const needsCode = link.link_type === "guest" && !!link.unlock_code && !bypass;
     if (needsCode && unlock_code !== link.unlock_code)
       return new Response(JSON.stringify({ needs_unlock_code: true }), { status: 200, headers: { ...cors, "Content-Type": "application/json" } });
     const accessTokenForMeta = await getValidGoogleToken();
@@ -1167,7 +1195,8 @@ serve(async (req) => {
         return new Response(JSON.stringify({ error: "expired" }), { status: 410, headers: { ...cors, "Content-Type": "application/json" } });
       if (typeof link.max_uses === "number" && link.use_count >= link.max_uses)
         return new Response(JSON.stringify({ error: "use_limit_reached" }), { status: 410, headers: { ...cors, "Content-Type": "application/json" } });
-      const needsCode = link.link_type === "guest" && !!link.unlock_code;
+      const bypass2 = await isAuthenticatedPrincipal(req);
+      const needsCode = link.link_type === "guest" && !!link.unlock_code && !bypass2;
       if (needsCode && unlock_code !== link.unlock_code)
         return new Response(JSON.stringify({ needs_unlock_code: true }), { status: 200, headers: { ...cors, "Content-Type": "application/json" } });
       const r = await fetch(`https://www.googleapis.com/drive/v3/files/${link.drive_id}?fields=id,name,mimeType`, { headers: { Authorization: `Bearer ${accessToken}` } });
