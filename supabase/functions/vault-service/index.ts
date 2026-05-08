@@ -377,9 +377,15 @@ async function audit(
         ? actor.userId
         : actor?.kind === "collaborator"
           ? actor.collaboratorId
-          : null,
+          : actor?.kind === "share_link"
+            ? actor.linkId
+            : null,
     actor_label:
-      actor?.kind === "client" ? `client:${actor.contactId}` : actor?.kind ?? "anonymous",
+      actor?.kind === "client"
+        ? `client:${actor.contactId}`
+        : actor?.kind === "share_link"
+          ? `share_link:${actor.linkId}`
+          : actor?.kind ?? "anonymous",
     action,
     drive_id: driveId,
     drive_name: driveName,
