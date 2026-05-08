@@ -2825,6 +2825,75 @@ export type Database = {
         }
         Relationships: []
       }
+      vault_contact_grants: {
+        Row: {
+          contact_id: string
+          drive_id: string
+          expires_at: string | null
+          granted_at: string
+          granted_by: string | null
+          household_id: string
+          id: string
+          permission: string
+          revoked_at: string | null
+          scope_type: string
+        }
+        Insert: {
+          contact_id: string
+          drive_id: string
+          expires_at?: string | null
+          granted_at?: string
+          granted_by?: string | null
+          household_id: string
+          id?: string
+          permission?: string
+          revoked_at?: string | null
+          scope_type: string
+        }
+        Update: {
+          contact_id?: string
+          drive_id?: string
+          expires_at?: string | null
+          granted_at?: string
+          granted_by?: string | null
+          household_id?: string
+          id?: string
+          permission?: string
+          revoked_at?: string | null
+          scope_type?: string
+        }
+        Relationships: []
+      }
+      vault_contact_roles: {
+        Row: {
+          contact_id: string
+          created_at: string
+          granted_by: string | null
+          household_id: string
+          id: string
+          role: Database["public"]["Enums"]["vault_contact_role"]
+          updated_at: string
+        }
+        Insert: {
+          contact_id: string
+          created_at?: string
+          granted_by?: string | null
+          household_id: string
+          id?: string
+          role?: Database["public"]["Enums"]["vault_contact_role"]
+          updated_at?: string
+        }
+        Update: {
+          contact_id?: string
+          created_at?: string
+          granted_by?: string | null
+          household_id?: string
+          id?: string
+          role?: Database["public"]["Enums"]["vault_contact_role"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       vault_files: {
         Row: {
           ancestor_folder_ids: string[]
@@ -2842,6 +2911,7 @@ export type Database = {
           staff_reviewed: boolean
           updated_at: string
           uploaded_by_collaborator_id: string | null
+          uploaded_by_contact_id: string | null
         }
         Insert: {
           ancestor_folder_ids?: string[]
@@ -2859,6 +2929,7 @@ export type Database = {
           staff_reviewed?: boolean
           updated_at?: string
           uploaded_by_collaborator_id?: string | null
+          uploaded_by_contact_id?: string | null
         }
         Update: {
           ancestor_folder_ids?: string[]
@@ -2876,6 +2947,7 @@ export type Database = {
           staff_reviewed?: boolean
           updated_at?: string
           uploaded_by_collaborator_id?: string | null
+          uploaded_by_contact_id?: string | null
         }
         Relationships: []
       }
@@ -2955,6 +3027,63 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      vault_share_links: {
+        Row: {
+          bound_user_agent: string | null
+          created_at: string
+          created_by: string
+          drive_id: string
+          expires_at: string | null
+          household_id: string
+          id: string
+          last_accessed_at: string | null
+          link_type: Database["public"]["Enums"]["vault_share_link_type"]
+          max_uses: number | null
+          permission: Database["public"]["Enums"]["vault_share_permission"]
+          revoked_at: string | null
+          scope_type: string
+          token: string
+          unlock_code: string | null
+          use_count: number
+        }
+        Insert: {
+          bound_user_agent?: string | null
+          created_at?: string
+          created_by: string
+          drive_id: string
+          expires_at?: string | null
+          household_id: string
+          id?: string
+          last_accessed_at?: string | null
+          link_type: Database["public"]["Enums"]["vault_share_link_type"]
+          max_uses?: number | null
+          permission?: Database["public"]["Enums"]["vault_share_permission"]
+          revoked_at?: string | null
+          scope_type: string
+          token?: string
+          unlock_code?: string | null
+          use_count?: number
+        }
+        Update: {
+          bound_user_agent?: string | null
+          created_at?: string
+          created_by?: string
+          drive_id?: string
+          expires_at?: string | null
+          household_id?: string
+          id?: string
+          last_accessed_at?: string | null
+          link_type?: Database["public"]["Enums"]["vault_share_link_type"]
+          max_uses?: number | null
+          permission?: Database["public"]["Enums"]["vault_share_permission"]
+          revoked_at?: string | null
+          scope_type?: string
+          token?: string
+          unlock_code?: string | null
+          use_count?: number
+        }
+        Relationships: []
       }
       vineyard_accounts: {
         Row: {
@@ -3074,6 +3203,9 @@ export type Database = {
       pipeline_category: "pws_consulting" | "new_aum" | "insurance"
       pipeline_status: "pending" | "in_process" | "completed"
       review_status: "pending" | "approved" | "rejected" | "escalated"
+      vault_contact_role: "viewer" | "contributor" | "manager"
+      vault_share_link_type: "portal" | "guest"
+      vault_share_permission: "view" | "view_upload" | "view_upload_download"
       visibility_scope: "private" | "household_shared" | "family_shared"
     }
     CompositeTypes: {
@@ -3219,6 +3351,9 @@ export const Constants = {
       pipeline_category: ["pws_consulting", "new_aum", "insurance"],
       pipeline_status: ["pending", "in_process", "completed"],
       review_status: ["pending", "approved", "rejected", "escalated"],
+      vault_contact_role: ["viewer", "contributor", "manager"],
+      vault_share_link_type: ["portal", "guest"],
+      vault_share_permission: ["view", "view_upload", "view_upload_download"],
       visibility_scope: ["private", "household_shared", "family_shared"],
     },
   },
