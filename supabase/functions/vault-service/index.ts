@@ -832,7 +832,7 @@ serve(async (req) => {
         name: fileName,
         mime_type: mimeType,
         is_folder: false,
-        client_visible: actor.kind === "staff",
+        client_visible: true,
         uploaded_by_collaborator_id: actor.kind === "collaborator" ? actor.collaboratorId : null,
         uploaded_by_contact_id: actor.kind === "client" ? actor.contactId : null,
         staff_reviewed: actor.kind === "staff",
