@@ -485,7 +485,8 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "expired" }), { status: 410, headers: { ...cors, "Content-Type": "application/json" } });
     if (typeof link.max_uses === "number" && link.use_count >= link.max_uses)
       return new Response(JSON.stringify({ error: "use_limit_reached" }), { status: 410, headers: { ...cors, "Content-Type": "application/json" } });
-    const needsCode = link.link_type === "guest" && !!link.unlock_code;
+    const bypass = await isAuthenticatedPrincipal(req);
+    const needsCode = link.link_type === "guest" && !!link.unlock_code && !bypass;
     if (needsCode && unlock_code !== link.unlock_code)
       return new Response(JSON.stringify({ needs_unlock_code: true }), { status: 200, headers: { ...cors, "Content-Type": "application/json" } });
     const accessTokenForMeta = await getValidGoogleToken();
