@@ -51,7 +51,7 @@ async function tokenCall(
   action: string,
   payload: Record<string, unknown> = {},
 ) {
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  const headers: Record<string, string> = { "Content-Type": "application/json", ...(await buildAuthHeaders()) };
   if (mode === "guest") headers["x-vault-guest-token"] = token;
   else headers["x-vault-share-token"] = token;
   if (unlockCode) headers["x-vault-unlock-code"] = unlockCode;
