@@ -233,7 +233,7 @@ function FolderNode({
             />
           ))}
           {files.map((f) => {
-            const visible = visMap[f.id] === true;
+            const visible = visMap[f.id] !== false; // default visible; staff can toggle off
             return (
               <div key={f.id} className="flex items-center gap-2 py-1.5 text-sm group">
                 <FileText className="h-4 w-4 text-muted-foreground" />
