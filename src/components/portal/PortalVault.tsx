@@ -413,6 +413,32 @@ export function PortalVault({ portalToken, householdId }: Props) {
         </CardContent>
       </Card>
 
+      {/* Folder-level controls when client has elevated permission here */}
+      {(currentPerm === "upload" || currentPerm === "manage") && crumbs.length > 0 && (
+        <Card>
+          <CardContent className="p-3 flex items-center gap-2 flex-wrap">
+            <span className="text-[11px] text-muted-foreground mr-1">In this folder:</span>
+            <input
+              ref={folderUploadRef}
+              type="file"
+              multiple
+              className="hidden"
+              onChange={(e) => handleHereUpload(e.target.files)}
+            />
+            <Button size="sm" variant="outline" disabled={uploading} onClick={() => folderUploadRef.current?.click()} className="gap-1.5">
+              <Upload className="h-3.5 w-3.5" />
+              Upload here
+            </Button>
+            {currentPerm === "manage" && (
+              <Button size="sm" variant="outline" onClick={newSubfolder} className="gap-1.5">
+                <FolderPlus className="h-3.5 w-3.5" />
+                New folder
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {isEmpty ? (
         <Card>
           <CardContent className="py-10 text-center">
