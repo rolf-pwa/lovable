@@ -156,7 +156,8 @@ async function resolveActor(req: Request): Promise<Actor | null> {
     const ua = req.headers.get("User-Agent") ?? "";
     if (link.link_type === "guest") {
       const provided = req.headers.get("x-vault-unlock-code");
-      if (link.unlock_code) {
+      const bypass = await isAuthenticatedPrincipal(req);
+      if (link.unlock_code && !bypass) {
         if (!provided || provided !== link.unlock_code) return null;
       }
       if (link.bound_user_agent && link.bound_user_agent !== ua) return null;
