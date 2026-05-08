@@ -142,7 +142,41 @@ async function resolveActor(req: Request): Promise<Actor | null> {
     };
   }
 
-  // 2. Portal client session (x-portal-token = portal_tokens.token)
+  // 2. Share-link guest token (vault_share_links)
+  const shareToken = req.headers.get("x-vault-share-token");
+  if (shareToken) {
+    const { data: link } = await supabaseAdmin
+      .from("vault_share_links")
+      .select("*")
+      .eq("token", shareToken)
+      .maybeSingle();
+    if (!link || link.revoked_at) return null;
+    if (link.expires_at && new Date(link.expires_at) <= new Date()) return null;
+    if (typeof link.max_uses === "number" && link.use_count >= link.max_uses) return null;
+    const ua = req.headers.get("User-Agent") ?? "";
+    if (link.link_type === "guest") {
+      const provided = req.headers.get("x-vault-unlock-code");
+      if (link.unlock_code) {
+        if (!provided || provided !== link.unlock_code) return null;
+      }
+      if (link.bound_user_agent && link.bound_user_agent !== ua) return null;
+      if (!link.bound_user_agent) {
+        await supabaseAdmin
+          .from("vault_share_links")
+          .update({ bound_user_agent: ua, last_accessed_at: new Date().toISOString() })
+          .eq("id", link.id);
+      }
+    }
+    return {
+      kind: "share_link",
+      linkId: link.id,
+      householdId: link.household_id,
+      scopeDriveId: link.drive_id,
+      permission: link.permission,
+    };
+  }
+
+  // 3. Portal client session (x-portal-token = portal_tokens.token)
   const portalToken = req.headers.get("x-portal-token");
   if (portalToken) {
     const { data: tok } = await supabaseAdmin
@@ -156,13 +190,12 @@ async function resolveActor(req: Request): Promise<Actor | null> {
       .select("household_id, vault_root_folder_id, households(vault_root_folder_id)")
       .eq("id", tok.contact_id)
       .maybeSingle();
-    // Prefer household-level vault; fall back to legacy per-contact vault
     const vaultRootId = (contact as any)?.households?.vault_root_folder_id ?? contact?.vault_root_folder_id;
     if (!vaultRootId) return null;
-    return { kind: "client", contactId: tok.contact_id, vaultRootId };
+    return { kind: "client", contactId: tok.contact_id, householdId: contact?.household_id ?? null, vaultRootId };
   }
 
-  // 3. Staff JWT
+  // 4. Staff JWT
   const authHeader = req.headers.get("Authorization") ?? "";
   if (authHeader.startsWith("Bearer ")) {
     const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
