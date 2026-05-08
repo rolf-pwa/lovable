@@ -216,7 +216,9 @@ function FolderNode({
 }
 
 export default function VaultGuest() {
-  const { token = "" } = useParams<{ token: string }>();
+  const { token: rawToken = "" } = useParams<{ token: string }>();
+  // Strip anything pasted after the token (e.g. "...token Unlock code: 123456")
+  const token = (rawToken.match(/^[a-f0-9]+/i)?.[0] ?? rawToken).trim();
   const location = useLocation();
   const mode: Mode = location.pathname.includes("/vault/share/") ? "share" : "guest";
 
