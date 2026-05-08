@@ -1,0 +1,1 @@
+ALTER TABLE public.vault_collaborators ALTER COLUMN contact_id DROP NOT NULL;
