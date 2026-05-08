@@ -88,12 +88,19 @@ function googleExportMime(mime: string) {
 // ───── Actor resolution ─────
 type Actor =
   | { kind: "staff"; userId: string }
-  | { kind: "client"; contactId: string; vaultRootId: string }
+  | { kind: "client"; contactId: string; householdId: string | null; vaultRootId: string }
   | {
       kind: "collaborator";
       collaboratorId: string;
       contactId: string;
       grants: Array<{ scope_type: string; drive_id: string; permission: string }>;
+    }
+  | {
+      kind: "share_link";
+      linkId: string;
+      householdId: string;
+      scopeDriveId: string;
+      permission: "view" | "view_upload" | "view_upload_download";
     };
 
 async function resolveActor(req: Request): Promise<Actor | null> {
