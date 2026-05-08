@@ -821,10 +821,14 @@ serve(async (req) => {
       });
       // Bump share-link use count
       if (actor.kind === "share_link") {
-        await supabaseAdmin.rpc; // noop, prefer direct update below
+        const { data: cur } = await supabaseAdmin
+          .from("vault_share_links")
+          .select("use_count")
+          .eq("id", actor.linkId)
+          .maybeSingle();
         await supabaseAdmin
           .from("vault_share_links")
-          .update({ use_count: (await supabaseAdmin.from("vault_share_links").select("use_count").eq("id", actor.linkId).maybeSingle()).data?.use_count + 1 || 1, last_accessed_at: new Date().toISOString() })
+          .update({ use_count: (cur?.use_count ?? 0) + 1, last_accessed_at: new Date().toISOString() })
           .eq("id", actor.linkId);
       }
       await audit(actor, "upload", uploaderContactId ?? null, created.id, fileName, req, { uploader: actor.kind });
