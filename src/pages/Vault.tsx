@@ -122,6 +122,57 @@ function FolderNode({
     }
   };
 
+  const renameItem = async (driveId: string, currentName: string, isFolder: boolean) => {
+    const next = window.prompt(`Rename ${isFolder ? "folder" : "file"}`, currentName);
+    if (!next || next === currentName) return;
+    try {
+      await callVault("renameItem", { driveId, newName: next });
+      toast.success("Renamed");
+      if (isFolder) {
+        setFolders((arr) => arr.map((f) => (f.id === driveId ? { ...f, name: next } : f)));
+      } else {
+        setFiles((arr) => arr.map((f) => (f.id === driveId ? { ...f, name: next } : f)));
+      }
+    } catch (e: any) { toast.error(e.message); }
+  };
+
+  const deleteItem = async (driveId: string, isFolder: boolean) => {
+    if (!window.confirm(`Move this ${isFolder ? "folder" : "file"} to Drive trash?`)) return;
+    try {
+      await callVault("deleteItem", { driveId });
+      toast.success("Moved to trash");
+      if (isFolder) setFolders((arr) => arr.filter((f) => f.id !== driveId));
+      else setFiles((arr) => arr.filter((f) => f.id !== driveId));
+    } catch (e: any) { toast.error(e.message); }
+  };
+
+  const newSubfolder = async () => {
+    const name = window.prompt("New folder name");
+    if (!name) return;
+    try {
+      const res = await callVault("createFolder", { parentFolderId: folderId, name });
+      toast.success("Folder created");
+      setFolders((arr) => [...arr, { id: res.folderId, name: res.name }]);
+    } catch (e: any) { toast.error(e.message); }
+  };
+
+  const copyVaultLink = async (driveId: string, isFolder: boolean) => {
+    if (!householdId) return;
+    try {
+      const res = await callVault("createShareLink", {
+        householdId,
+        scope_type: isFolder ? "folder" : "file",
+        drive_id: driveId,
+        permission: "view_upload_download",
+        link_type: "guest",
+        generate_unlock_code: true,
+      });
+      const url = `${window.location.origin}/vault/share/${res.link.token}`;
+      await navigator.clipboard.writeText(`${url}\nUnlock code: ${res.link.unlock_code}`);
+      toast.success("Vault link copied (with unlock code)");
+    } catch (e: any) { toast.error(e.message); }
+  };
+
   const isShoebox =
     depth > 0 && (name?.toLowerCase().includes("shoebox") ?? false);
 
@@ -147,15 +198,25 @@ function FolderNode({
           {loading && <Loader2 className="h-3 w-3 animate-spin ml-1" />}
         </button>
         {householdId && (
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-7 px-2 opacity-0 group-hover:opacity-100"
-            title="Share folder with collaborator"
-            onClick={() => onShare({ driveId: folderId, name, isFolder: true })}
-          >
-            <Share2 className="h-3.5 w-3.5" />
-          </Button>
+          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100">
+            <Button size="sm" variant="ghost" className="h-7 px-1.5" title="New subfolder" onClick={newSubfolder}>
+              <Plus className="h-3.5 w-3.5" />
+            </Button>
+            <Button size="sm" variant="ghost" className="h-7 px-1.5" title="Rename folder" onClick={() => renameItem(folderId, name, true)}>
+              <span className="text-[10px] font-mono">Aa</span>
+            </Button>
+            <Button size="sm" variant="ghost" className="h-7 px-1.5" title="Copy Vault link" onClick={() => copyVaultLink(folderId, true)}>
+              <Copy className="h-3.5 w-3.5" />
+            </Button>
+            <Button size="sm" variant="ghost" className="h-7 px-1.5" title="Share with collaborator" onClick={() => onShare({ driveId: folderId, name, isFolder: true })}>
+              <Share2 className="h-3.5 w-3.5" />
+            </Button>
+            {depth > 0 && (
+              <Button size="sm" variant="ghost" className="h-7 px-1.5 text-destructive" title="Move to trash" onClick={() => deleteItem(folderId, true)}>
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            )}
+          </div>
         )}
       </div>
       {open && (
@@ -191,15 +252,20 @@ function FolderNode({
                   <Download className="h-3.5 w-3.5" />
                 </Button>
                 {householdId && (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-7 px-2 opacity-0 group-hover:opacity-100"
-                    title="Share file with collaborator"
-                    onClick={() => onShare({ driveId: f.id, name: f.name, isFolder: false })}
-                  >
-                    <Share2 className="h-3.5 w-3.5" />
-                  </Button>
+                  <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100">
+                    <Button size="sm" variant="ghost" className="h-7 px-1.5" title="Rename" onClick={() => renameItem(f.id, f.name, false)}>
+                      <span className="text-[10px] font-mono">Aa</span>
+                    </Button>
+                    <Button size="sm" variant="ghost" className="h-7 px-1.5" title="Copy Vault link" onClick={() => copyVaultLink(f.id, false)}>
+                      <Copy className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button size="sm" variant="ghost" className="h-7 px-1.5" title="Share with collaborator" onClick={() => onShare({ driveId: f.id, name: f.name, isFolder: false })}>
+                      <Share2 className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button size="sm" variant="ghost" className="h-7 px-1.5 text-destructive" title="Move to trash" onClick={() => deleteItem(f.id, false)}>
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
                 )}
               </div>
             );
