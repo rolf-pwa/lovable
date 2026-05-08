@@ -696,7 +696,11 @@ serve(async (req) => {
       const headers: Record<string, string> = {
         ...cors,
         "Content-Type": outMime || "application/octet-stream",
-        "Content-Disposition": `${disposition}; filename="${(outName ?? "file").replace(/"/g, "")}"`,
+        "Content-Disposition": (() => {
+          const raw = (outName ?? "file").replace(/"/g, "");
+          const ascii = raw.replace(/[^\x20-\x7E]/g, "_");
+          return `${disposition}; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(raw)}`;
+        })(),
         "Cache-Control": "private, no-store",
       };
       const len = dlRes.headers.get("Content-Length");
