@@ -657,7 +657,7 @@ serve(async (req) => {
       let folders = files.filter((f: any) => f.mimeType === "application/vnd.google-apps.folder");
       let docs = files.filter((f: any) => f.mimeType !== "application/vnd.google-apps.folder");
 
-      // Client view: hide files not marked client_visible
+      // Client view: files are visible by default; only hide when explicitly toggled off
       if (actor.kind === "client") {
         const ids = docs.map((d: any) => d.id);
         const { data: visRows } = await supabaseAdmin
@@ -665,7 +665,7 @@ serve(async (req) => {
           .select("drive_id, client_visible")
           .in("drive_id", ids.length ? ids : ["__none__"]);
         const visMap = new Map((visRows ?? []).map((r) => [r.drive_id, r.client_visible]));
-        docs = docs.filter((d: any) => visMap.get(d.id) === true);
+        docs = docs.filter((d: any) => visMap.get(d.id) !== false);
       }
 
       // Collaborator view: only files/folders inside one of their grants
