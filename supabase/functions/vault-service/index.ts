@@ -32,7 +32,7 @@ function getCorsHeaders(req: Request) {
   return {
     "Access-Control-Allow-Origin": allowed,
     "Access-Control-Allow-Headers":
-      "authorization, x-client-info, apikey, content-type, x-vault-guest-token, x-vault-unlock-code, x-portal-token, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+      "authorization, x-client-info, apikey, content-type, x-vault-guest-token, x-vault-unlock-code, x-vault-share-token, x-portal-token, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   };
 }
@@ -88,12 +88,19 @@ function googleExportMime(mime: string) {
 // ───── Actor resolution ─────
 type Actor =
   | { kind: "staff"; userId: string }
-  | { kind: "client"; contactId: string; vaultRootId: string }
+  | { kind: "client"; contactId: string; householdId: string | null; vaultRootId: string }
   | {
       kind: "collaborator";
       collaboratorId: string;
       contactId: string;
       grants: Array<{ scope_type: string; drive_id: string; permission: string }>;
+    }
+  | {
+      kind: "share_link";
+      linkId: string;
+      householdId: string;
+      scopeDriveId: string;
+      permission: "view" | "view_upload" | "view_upload_download";
     };
 
 async function resolveActor(req: Request): Promise<Actor | null> {
@@ -135,7 +142,41 @@ async function resolveActor(req: Request): Promise<Actor | null> {
     };
   }
 
-  // 2. Portal client session (x-portal-token = portal_tokens.token)
+  // 2. Share-link guest token (vault_share_links)
+  const shareToken = req.headers.get("x-vault-share-token");
+  if (shareToken) {
+    const { data: link } = await supabaseAdmin
+      .from("vault_share_links")
+      .select("*")
+      .eq("token", shareToken)
+      .maybeSingle();
+    if (!link || link.revoked_at) return null;
+    if (link.expires_at && new Date(link.expires_at) <= new Date()) return null;
+    if (typeof link.max_uses === "number" && link.use_count >= link.max_uses) return null;
+    const ua = req.headers.get("User-Agent") ?? "";
+    if (link.link_type === "guest") {
+      const provided = req.headers.get("x-vault-unlock-code");
+      if (link.unlock_code) {
+        if (!provided || provided !== link.unlock_code) return null;
+      }
+      if (link.bound_user_agent && link.bound_user_agent !== ua) return null;
+      if (!link.bound_user_agent) {
+        await supabaseAdmin
+          .from("vault_share_links")
+          .update({ bound_user_agent: ua, last_accessed_at: new Date().toISOString() })
+          .eq("id", link.id);
+      }
+    }
+    return {
+      kind: "share_link",
+      linkId: link.id,
+      householdId: link.household_id,
+      scopeDriveId: link.drive_id,
+      permission: link.permission,
+    };
+  }
+
+  // 3. Portal client session (x-portal-token = portal_tokens.token)
   const portalToken = req.headers.get("x-portal-token");
   if (portalToken) {
     const { data: tok } = await supabaseAdmin
@@ -149,13 +190,12 @@ async function resolveActor(req: Request): Promise<Actor | null> {
       .select("household_id, vault_root_folder_id, households(vault_root_folder_id)")
       .eq("id", tok.contact_id)
       .maybeSingle();
-    // Prefer household-level vault; fall back to legacy per-contact vault
     const vaultRootId = (contact as any)?.households?.vault_root_folder_id ?? contact?.vault_root_folder_id;
     if (!vaultRootId) return null;
-    return { kind: "client", contactId: tok.contact_id, vaultRootId };
+    return { kind: "client", contactId: tok.contact_id, householdId: contact?.household_id ?? null, vaultRootId };
   }
 
-  // 3. Staff JWT
+  // 4. Staff JWT
   const authHeader = req.headers.get("Authorization") ?? "";
   if (authHeader.startsWith("Bearer ")) {
     const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
@@ -195,40 +235,127 @@ async function getAncestors(driveId: string, accessToken: string): Promise<strin
   return chain;
 }
 
+// Effective client capability: 'view' | 'upload' | 'manage'
+const ROLE_CAP: Record<string, "view" | "upload" | "manage"> = {
+  viewer: "view",
+  contributor: "upload",
+  manager: "manage",
+};
+function rank(c: "view" | "upload" | "manage") {
+  return c === "view" ? 0 : c === "upload" ? 1 : 2;
+}
+
+async function effectiveClientPermission(
+  contactId: string,
+  chain: string[],
+): Promise<"view" | "upload" | "manage"> {
+  // Baseline role
+  const { data: roleRow } = await supabaseAdmin
+    .from("vault_contact_roles")
+    .select("role")
+    .eq("contact_id", contactId)
+    .maybeSingle();
+  let cap: "view" | "upload" | "manage" = ROLE_CAP[roleRow?.role ?? "viewer"] ?? "view";
+  // Most specific (file > nearer folder > root) grant in chain
+  const { data: grants } = await supabaseAdmin
+    .from("vault_contact_grants")
+    .select("scope_type, drive_id, permission, expires_at, revoked_at")
+    .eq("contact_id", contactId)
+    .in("drive_id", chain.length ? chain : ["__none__"]);
+  const active = (grants ?? []).filter(
+    (g) => !g.revoked_at && (!g.expires_at || new Date(g.expires_at) > new Date()),
+  );
+  // Walk chain from most specific (driveId itself = chain[0]) outward
+  for (const id of chain) {
+    const match = active.find((g) => g.drive_id === id);
+    if (match) {
+      const grantCap = (match.permission as "view" | "upload" | "manage");
+      if (rank(grantCap) > rank(cap)) cap = grantCap;
+      break;
+    }
+  }
+  return cap;
+}
+
+type Need = false | "upload" | "rename" | "delete" | "create_folder";
+
 async function ensureAccess(
   actor: Actor,
   driveId: string,
   accessToken: string,
-  needWrite = false,
-): Promise<{ ok: boolean; reason?: string }> {
-  if (actor.kind === "staff") return { ok: true };
+  need: Need = false,
+): Promise<{ ok: boolean; reason?: string; cap?: string }> {
+  if (actor.kind === "staff") return { ok: true, cap: "manage" };
 
   const ancestors = await getAncestors(driveId, accessToken);
   const chain = [driveId, ...ancestors];
 
   if (actor.kind === "client") {
-    if (needWrite) return { ok: false, reason: "client_read_only" };
-    if (chain.includes(actor.vaultRootId)) {
-      // Also enforce client_visible flag from cache when available
+    if (!chain.includes(actor.vaultRootId)) return { ok: false, reason: "outside_vault_root" };
+    const cap = await effectiveClientPermission(actor.contactId, chain);
+
+    // For files, check client_visible unless explicit grant covers
+    if (!need) {
       const { data: row } = await supabaseAdmin
         .from("vault_files")
         .select("client_visible, is_folder")
         .eq("drive_id", driveId)
         .maybeSingle();
       if (row && row.is_folder === false && row.client_visible === false) {
-        return { ok: false, reason: "not_client_visible" };
+        // Allow if any explicit grant exists in chain
+        const { data: gr } = await supabaseAdmin
+          .from("vault_contact_grants")
+          .select("id")
+          .eq("contact_id", actor.contactId)
+          .in("drive_id", chain.length ? chain : ["__none__"])
+          .is("revoked_at", null)
+          .limit(1);
+        if (!gr || gr.length === 0) return { ok: false, reason: "not_client_visible" };
       }
-      return { ok: true };
+      return { ok: true, cap };
     }
-    return { ok: false, reason: "outside_vault_root" };
+
+    if (need === "upload") {
+      if (rank(cap) >= 1) return { ok: true, cap };
+      return { ok: false, reason: "client_no_upload" };
+    }
+    if (need === "create_folder") {
+      if (cap === "manage") return { ok: true, cap };
+      return { ok: false, reason: "client_no_create_folder" };
+    }
+    if (need === "rename" || need === "delete") {
+      if (cap === "manage") return { ok: true, cap };
+      if (cap === "upload") {
+        const { data: f } = await supabaseAdmin
+          .from("vault_files")
+          .select("uploaded_by_contact_id")
+          .eq("drive_id", driveId)
+          .maybeSingle();
+        if (f?.uploaded_by_contact_id === actor.contactId) return { ok: true, cap };
+      }
+      return { ok: false, reason: "client_can_modify_own_only" };
+    }
+    return { ok: false, reason: "unknown_need" };
   }
 
   if (actor.kind === "collaborator") {
     for (const g of actor.grants) {
-      if (needWrite && g.permission !== "upload") continue;
+      if (need && need !== "upload") continue; // collaborators: view + upload only
+      if (need === "upload" && g.permission !== "upload") continue;
       if (chain.includes(g.drive_id)) return { ok: true };
     }
     return { ok: false, reason: "no_matching_grant" };
+  }
+
+  if (actor.kind === "share_link") {
+    if (!chain.includes(actor.scopeDriveId)) return { ok: false, reason: "outside_share_scope" };
+    if (!need) return { ok: true };
+    if (need === "upload") {
+      if (actor.permission === "view_upload" || actor.permission === "view_upload_download")
+        return { ok: true };
+      return { ok: false, reason: "share_link_no_upload" };
+    }
+    return { ok: false, reason: "share_link_no_modify" };
   }
   return { ok: false, reason: "unknown_actor" };
 }
@@ -250,9 +377,15 @@ async function audit(
         ? actor.userId
         : actor?.kind === "collaborator"
           ? actor.collaboratorId
-          : null,
+          : actor?.kind === "share_link"
+            ? actor.linkId
+            : null,
     actor_label:
-      actor?.kind === "client" ? `client:${actor.contactId}` : actor?.kind ?? "anonymous",
+      actor?.kind === "client"
+        ? `client:${actor.contactId}`
+        : actor?.kind === "share_link"
+          ? `share_link:${actor.linkId}`
+          : actor?.kind ?? "anonymous",
     action,
     drive_id: driveId,
     drive_name: driveName,
@@ -488,6 +621,18 @@ serve(async (req) => {
         docs = (await Promise.all(docs.map(async (f: any) => ((await filterByGrant(f)) ? f : null)))).filter(Boolean);
       }
 
+      // Share-link view: only files/folders inside the link's scope
+      if (actor.kind === "share_link") {
+        const scope = actor.scopeDriveId;
+        const filterByScope = async (item: any) => {
+          if (item.id === scope) return true;
+          const anc = await getAncestors(item.id, accessToken);
+          return [item.id, ...anc].includes(scope);
+        };
+        folders = (await Promise.all(folders.map(async (f: any) => ((await filterByScope(f)) ? f : null)))).filter(Boolean);
+        docs = (await Promise.all(docs.map(async (f: any) => ((await filterByScope(f)) ? f : null)))).filter(Boolean);
+      }
+
       await audit(actor, "list", null, folderId, null, req, { count: folders.length + docs.length });
 
       return new Response(
@@ -516,6 +661,10 @@ serve(async (req) => {
       if (!access.ok) {
         await audit(actor, "firewall_block", null, fileId, null, req, { reason: access.reason });
         return new Response(JSON.stringify({ error: "forbidden", reason: access.reason }), { status: 403, headers: { ...cors, "Content-Type": "application/json" } });
+      }
+      // Share-link disposition rules: 'view' permits inline preview only (no attachment download)
+      if (actor.kind === "share_link" && disposition === "attachment" && actor.permission === "view") {
+        return new Response(JSON.stringify({ error: "forbidden", reason: "share_link_no_download" }), { status: 403, headers: { ...cors, "Content-Type": "application/json" } });
       }
 
       const metaRes = await fetch(
@@ -645,27 +794,12 @@ serve(async (req) => {
     if (action === "uploadFile") {
       const { folderId, fileName, mimeType, base64, contactId } = body;
 
-      // Clients may only upload into their household shoebox.
-      if (actor.kind === "client") {
-        const children = await driveListChildren(actor.vaultRootId, accessToken);
-        const shoebox = children.find(
-          (c: any) =>
-            c.mimeType === "application/vnd.google-apps.folder" &&
-            (c.name?.toLowerCase().includes("shoebox")),
-        );
-        if (!shoebox || shoebox.id !== folderId) {
-          await audit(actor, "firewall_block", null, folderId, fileName, req, { reason: "client_upload_outside_shoebox" });
-          return new Response(JSON.stringify({ error: "forbidden", reason: "client_upload_outside_shoebox" }), { status: 403, headers: { ...cors, "Content-Type": "application/json" } });
-        }
-      } else {
-        const access = await ensureAccess(actor, folderId, accessToken, true);
-        if (!access.ok) {
-          await audit(actor, "firewall_block", contactId ?? null, folderId, fileName, req, { reason: access.reason });
-          return new Response(JSON.stringify({ error: "forbidden", reason: access.reason }), { status: 403, headers: { ...cors, "Content-Type": "application/json" } });
-        }
+      const access = await ensureAccess(actor, folderId, accessToken, "upload");
+      if (!access.ok) {
+        await audit(actor, "firewall_block", contactId ?? null, folderId, fileName, req, { reason: access.reason });
+        return new Response(JSON.stringify({ error: "forbidden", reason: access.reason }), { status: 403, headers: { ...cors, "Content-Type": "application/json" } });
       }
 
-      // Decode base64 in chunks (avoid stack-limit on large files)
       const binary = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
       const boundary = "----vault" + Math.random().toString(36).slice(2);
       const meta = JSON.stringify({ name: fileName, parents: [folderId], mimeType });
@@ -682,19 +816,38 @@ serve(async (req) => {
       });
       if (!r.ok) throw new Error(`upload_failed: ${await r.text()}`);
       const created = await r.json();
+      const uploaderContactId =
+        contactId ??
+        (actor.kind === "client" ? actor.contactId : actor.kind === "collaborator" ? actor.contactId : null);
       await supabaseAdmin.from("vault_files").insert({
         drive_id: created.id,
-        contact_id: contactId ?? (actor.kind === "client" ? actor.contactId : actor.kind === "collaborator" ? actor.contactId : null),
+        contact_id: uploaderContactId,
+        household_id:
+          actor.kind === "client" ? actor.householdId :
+          actor.kind === "share_link" ? actor.householdId : null,
         parent_folder_id: folderId,
         ancestor_folder_ids: [folderId, ...(await getAncestors(folderId, accessToken))],
         name: fileName,
         mime_type: mimeType,
         is_folder: false,
-        client_visible: false, // staff review required
+        client_visible: actor.kind === "staff",
         uploaded_by_collaborator_id: actor.kind === "collaborator" ? actor.collaboratorId : null,
+        uploaded_by_contact_id: actor.kind === "client" ? actor.contactId : null,
         staff_reviewed: actor.kind === "staff",
       });
-      await audit(actor, "upload", contactId ?? null, created.id, fileName, req, { uploader: actor.kind });
+      // Bump share-link use count
+      if (actor.kind === "share_link") {
+        const { data: cur } = await supabaseAdmin
+          .from("vault_share_links")
+          .select("use_count")
+          .eq("id", actor.linkId)
+          .maybeSingle();
+        await supabaseAdmin
+          .from("vault_share_links")
+          .update({ use_count: (cur?.use_count ?? 0) + 1, last_accessed_at: new Date().toISOString() })
+          .eq("id", actor.linkId);
+      }
+      await audit(actor, "upload", uploaderContactId ?? null, created.id, fileName, req, { uploader: actor.kind });
       return new Response(JSON.stringify({ ok: true, fileId: created.id }), { headers: { ...cors, "Content-Type": "application/json" } });
     }
 
@@ -765,6 +918,235 @@ serve(async (req) => {
       const { data: tok } = await supabaseAdmin.from("vault_guest_tokens").insert({ collaborator_id: collaboratorId, unlock_code: code }).select().single();
       await audit(actor, "reissue_guest_token", null, null, null, req, { collaborator_id: collaboratorId });
       return new Response(JSON.stringify({ ok: true, magicToken: tok?.token, unlockCode: code }), { headers: { ...cors, "Content-Type": "application/json" } });
+    }
+
+    // ═════════════════════════════════════════════════════════
+    //  CLIENT PERMISSIONS  (staff manages, client/share consume)
+    // ═════════════════════════════════════════════════════════
+
+    // ─── Get effective permission for a folder/file (any actor) ───
+    if (action === "getEffectivePermission") {
+      const { driveId } = body;
+      if (!driveId)
+        return new Response(JSON.stringify({ error: "driveId required" }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
+      if (actor.kind === "staff")
+        return new Response(JSON.stringify({ cap: "manage" }), { headers: { ...cors, "Content-Type": "application/json" } });
+      if (actor.kind === "client") {
+        const ancestors = await getAncestors(driveId, accessToken);
+        const chain = [driveId, ...ancestors];
+        if (!chain.includes(actor.vaultRootId))
+          return new Response(JSON.stringify({ cap: "none" }), { headers: { ...cors, "Content-Type": "application/json" } });
+        const cap = await effectiveClientPermission(actor.contactId, chain);
+        return new Response(JSON.stringify({ cap }), { headers: { ...cors, "Content-Type": "application/json" } });
+      }
+      if (actor.kind === "share_link") {
+        const cap =
+          actor.permission === "view_upload_download" ? "manage" :
+          actor.permission === "view_upload" ? "upload" : "view";
+        return new Response(JSON.stringify({ cap, share_permission: actor.permission }), { headers: { ...cors, "Content-Type": "application/json" } });
+      }
+      return new Response(JSON.stringify({ cap: "view" }), { headers: { ...cors, "Content-Type": "application/json" } });
+    }
+
+    // ─── Set per-contact baseline role (staff) ───
+    if (action === "setContactRole") {
+      if (actor.kind !== "staff")
+        return new Response(JSON.stringify({ error: "staff_only" }), { status: 403, headers: { ...cors, "Content-Type": "application/json" } });
+      const { contactId, householdId, role } = body;
+      if (!contactId || !householdId || !role)
+        return new Response(JSON.stringify({ error: "missing_fields" }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
+      await supabaseAdmin
+        .from("vault_contact_roles")
+        .upsert({ contact_id: contactId, household_id: householdId, role, granted_by: actor.userId }, { onConflict: "contact_id" });
+      await audit(actor, "set_contact_role", contactId, null, null, req, { role, household_id: householdId });
+      return new Response(JSON.stringify({ ok: true }), { headers: { ...cors, "Content-Type": "application/json" } });
+    }
+
+    // ─── Set per-folder/file grant for a portal contact (staff) ───
+    if (action === "setContactGrant") {
+      if (actor.kind !== "staff")
+        return new Response(JSON.stringify({ error: "staff_only" }), { status: 403, headers: { ...cors, "Content-Type": "application/json" } });
+      const { contactId, householdId, scope_type, drive_id, permission, expires_at } = body;
+      if (!contactId || !householdId || !scope_type || !drive_id || !permission)
+        return new Response(JSON.stringify({ error: "missing_fields" }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
+      const { data: g } = await supabaseAdmin.from("vault_contact_grants").insert({
+        contact_id: contactId,
+        household_id: householdId,
+        scope_type,
+        drive_id,
+        permission,
+        expires_at: expires_at ?? null,
+        granted_by: actor.userId,
+      }).select().single();
+      await audit(actor, "set_contact_grant", contactId, drive_id, null, req, { permission, scope_type });
+      return new Response(JSON.stringify({ ok: true, grant: g }), { headers: { ...cors, "Content-Type": "application/json" } });
+    }
+
+    // ─── Revoke a contact grant (staff) ───
+    if (action === "revokeContactGrant") {
+      if (actor.kind !== "staff")
+        return new Response(JSON.stringify({ error: "staff_only" }), { status: 403, headers: { ...cors, "Content-Type": "application/json" } });
+      const { grantId } = body;
+      await supabaseAdmin.from("vault_contact_grants").update({ revoked_at: new Date().toISOString() }).eq("id", grantId);
+      await audit(actor, "revoke_contact_grant", null, null, null, req, { grantId });
+      return new Response(JSON.stringify({ ok: true }), { headers: { ...cors, "Content-Type": "application/json" } });
+    }
+
+    // ─── List all permissions for a household (staff UI) ───
+    if (action === "listContactPermissions") {
+      if (actor.kind !== "staff")
+        return new Response(JSON.stringify({ error: "staff_only" }), { status: 403, headers: { ...cors, "Content-Type": "application/json" } });
+      const { householdId } = body;
+      const { data: roles } = await supabaseAdmin
+        .from("vault_contact_roles").select("*").eq("household_id", householdId);
+      const { data: grants } = await supabaseAdmin
+        .from("vault_contact_grants").select("*").eq("household_id", householdId).is("revoked_at", null);
+      return new Response(JSON.stringify({ roles: roles ?? [], grants: grants ?? [] }), { headers: { ...cors, "Content-Type": "application/json" } });
+    }
+
+    // ═════════════════════════════════════════════════════════
+    //  RENAME / DELETE / CREATE FOLDER
+    // ═════════════════════════════════════════════════════════
+
+    if (action === "renameItem") {
+      const { driveId, newName } = body;
+      if (!driveId || !newName)
+        return new Response(JSON.stringify({ error: "missing_fields" }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
+      const access = await ensureAccess(actor, driveId, accessToken, "rename");
+      if (!access.ok) {
+        await audit(actor, "firewall_block", null, driveId, newName, req, { reason: access.reason, op: "rename" });
+        return new Response(JSON.stringify({ error: "forbidden", reason: access.reason }), { status: 403, headers: { ...cors, "Content-Type": "application/json" } });
+      }
+      const r = await fetch(`https://www.googleapis.com/drive/v3/files/${driveId}`, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ name: newName }),
+      });
+      if (!r.ok) throw new Error(`rename_failed: ${await r.text()}`);
+      await supabaseAdmin.from("vault_files").update({ name: newName }).eq("drive_id", driveId);
+      await audit(actor, "rename", null, driveId, newName, req);
+      return new Response(JSON.stringify({ ok: true }), { headers: { ...cors, "Content-Type": "application/json" } });
+    }
+
+    if (action === "deleteItem") {
+      const { driveId } = body;
+      if (!driveId)
+        return new Response(JSON.stringify({ error: "missing_fields" }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
+      const access = await ensureAccess(actor, driveId, accessToken, "delete");
+      if (!access.ok) {
+        await audit(actor, "firewall_block", null, driveId, null, req, { reason: access.reason, op: "delete" });
+        return new Response(JSON.stringify({ error: "forbidden", reason: access.reason }), { status: 403, headers: { ...cors, "Content-Type": "application/json" } });
+      }
+      // Trash (recoverable) instead of hard delete
+      const r = await fetch(`https://www.googleapis.com/drive/v3/files/${driveId}`, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ trashed: true }),
+      });
+      if (!r.ok) throw new Error(`delete_failed: ${await r.text()}`);
+      await audit(actor, "delete", null, driveId, null, req);
+      return new Response(JSON.stringify({ ok: true }), { headers: { ...cors, "Content-Type": "application/json" } });
+    }
+
+    if (action === "createFolder") {
+      const { parentFolderId, name } = body;
+      if (!parentFolderId || !name)
+        return new Response(JSON.stringify({ error: "missing_fields" }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
+      const access = await ensureAccess(actor, parentFolderId, accessToken, "create_folder");
+      if (!access.ok) {
+        await audit(actor, "firewall_block", null, parentFolderId, name, req, { reason: access.reason, op: "create_folder" });
+        return new Response(JSON.stringify({ error: "forbidden", reason: access.reason }), { status: 403, headers: { ...cors, "Content-Type": "application/json" } });
+      }
+      const created = await driveCreateFolder(name, parentFolderId, accessToken);
+      await audit(actor, "create_folder", null, created.id, name, req);
+      return new Response(JSON.stringify({ ok: true, folderId: created.id, name: created.name }), { headers: { ...cors, "Content-Type": "application/json" } });
+    }
+
+    // ═════════════════════════════════════════════════════════
+    //  VAULT-ONLY SHARE LINKS
+    // ═════════════════════════════════════════════════════════
+
+    if (action === "createShareLink") {
+      if (actor.kind !== "staff")
+        return new Response(JSON.stringify({ error: "staff_only" }), { status: 403, headers: { ...cors, "Content-Type": "application/json" } });
+      const { householdId, scope_type, drive_id, permission, link_type, expires_at, max_uses, generate_unlock_code } = body;
+      if (!householdId || !scope_type || !drive_id || !permission || !link_type)
+        return new Response(JSON.stringify({ error: "missing_fields" }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
+      // Verify scope is inside the household root
+      const { data: hh } = await supabaseAdmin.from("households").select("vault_root_folder_id").eq("id", householdId).maybeSingle();
+      if (!hh?.vault_root_folder_id)
+        return new Response(JSON.stringify({ error: "household_no_vault" }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
+      const ancestors = await getAncestors(drive_id, accessToken);
+      const chain = [drive_id, ...ancestors];
+      if (!chain.includes(hh.vault_root_folder_id))
+        return new Response(JSON.stringify({ error: "scope_outside_household" }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
+      const code = link_type === "guest" && generate_unlock_code ? genUnlockCode() : null;
+      const { data: link, error } = await supabaseAdmin.from("vault_share_links").insert({
+        link_type,
+        household_id: householdId,
+        scope_type,
+        drive_id,
+        permission,
+        unlock_code: code,
+        expires_at: expires_at ?? null,
+        max_uses: max_uses ?? null,
+        created_by: actor.userId,
+      }).select().single();
+      if (error) throw error;
+      await audit(actor, "share_link_created", null, drive_id, null, req, { link_type, permission });
+      return new Response(JSON.stringify({ ok: true, link }), { headers: { ...cors, "Content-Type": "application/json" } });
+    }
+
+    if (action === "listShareLinks") {
+      if (actor.kind !== "staff")
+        return new Response(JSON.stringify({ error: "staff_only" }), { status: 403, headers: { ...cors, "Content-Type": "application/json" } });
+      const { householdId, driveId } = body;
+      let q = supabaseAdmin.from("vault_share_links").select("*").order("created_at", { ascending: false });
+      if (householdId) q = q.eq("household_id", householdId);
+      if (driveId) q = q.eq("drive_id", driveId);
+      const { data } = await q;
+      return new Response(JSON.stringify({ links: data ?? [] }), { headers: { ...cors, "Content-Type": "application/json" } });
+    }
+
+    if (action === "revokeShareLink") {
+      if (actor.kind !== "staff")
+        return new Response(JSON.stringify({ error: "staff_only" }), { status: 403, headers: { ...cors, "Content-Type": "application/json" } });
+      const { linkId } = body;
+      await supabaseAdmin.from("vault_share_links").update({ revoked_at: new Date().toISOString() }).eq("id", linkId);
+      await audit(actor, "share_link_revoked", null, null, null, req, { linkId });
+      return new Response(JSON.stringify({ ok: true }), { headers: { ...cors, "Content-Type": "application/json" } });
+    }
+
+    // Anonymous resolver — given just a token, returns scope info so the
+    // guest/portal page can render. Validates unlock code for guest links.
+    if (action === "resolveShareLink") {
+      const { token, unlock_code } = body;
+      if (!token)
+        return new Response(JSON.stringify({ error: "token required" }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
+      const { data: link } = await supabaseAdmin.from("vault_share_links").select("*").eq("token", token).maybeSingle();
+      if (!link || link.revoked_at)
+        return new Response(JSON.stringify({ error: "invalid_or_revoked" }), { status: 404, headers: { ...cors, "Content-Type": "application/json" } });
+      if (link.expires_at && new Date(link.expires_at) <= new Date())
+        return new Response(JSON.stringify({ error: "expired" }), { status: 410, headers: { ...cors, "Content-Type": "application/json" } });
+      if (typeof link.max_uses === "number" && link.use_count >= link.max_uses)
+        return new Response(JSON.stringify({ error: "use_limit_reached" }), { status: 410, headers: { ...cors, "Content-Type": "application/json" } });
+      const needsCode = link.link_type === "guest" && !!link.unlock_code;
+      if (needsCode && unlock_code !== link.unlock_code)
+        return new Response(JSON.stringify({ needs_unlock_code: true }), { status: 200, headers: { ...cors, "Content-Type": "application/json" } });
+      const r = await fetch(`https://www.googleapis.com/drive/v3/files/${link.drive_id}?fields=id,name,mimeType`, { headers: { Authorization: `Bearer ${accessToken}` } });
+      const meta = r.ok ? await r.json() : {};
+      await audit(null, "share_link_redeemed", null, link.drive_id, meta.name ?? null, req, { link_id: link.id });
+      return new Response(JSON.stringify({
+        ok: true,
+        scope: {
+          drive_id: link.drive_id,
+          name: meta.name ?? null,
+          mime_type: meta.mimeType ?? null,
+          scope_type: link.scope_type,
+        },
+        permission: link.permission,
+        link_type: link.link_type,
+      }), { headers: { ...cors, "Content-Type": "application/json" } });
     }
 
     return new Response(JSON.stringify({ error: "unknown_action", action }), {
