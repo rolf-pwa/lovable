@@ -632,7 +632,167 @@ function CollaboratorsPanel({
   );
 }
 
-export function VaultView({ forcedHouseholdId, embedded = false }: { forcedHouseholdId?: string; embedded?: boolean }) {
+type Member = { id: string; first_name: string; last_name: string; email: string | null };
+type ContactRole = { contact_id: string; role: "viewer" | "contributor" | "manager" };
+type ShareLink = {
+  id: string;
+  token: string;
+  link_type: "portal" | "guest";
+  scope_type: "folder" | "file";
+  drive_id: string;
+  permission: "view" | "view_upload" | "view_upload_download";
+  unlock_code: string | null;
+  expires_at: string | null;
+  max_uses: number | null;
+  use_count: number;
+  revoked_at: string | null;
+  created_at: string;
+};
+
+function MemberRolesPanel({ householdId }: { householdId: string }) {
+  const [members, setMembers] = useState<Member[]>([]);
+  const [roles, setRoles] = useState<Record<string, ContactRole["role"]>>({});
+
+  useEffect(() => {
+    (async () => {
+      const { data: m } = await supabase
+        .from("contacts")
+        .select("id, first_name, last_name, email")
+        .eq("household_id", householdId)
+        .order("family_role");
+      setMembers((m ?? []) as Member[]);
+      try {
+        const res = await callVault("listContactPermissions", { householdId });
+        const map: Record<string, ContactRole["role"]> = {};
+        (res.roles ?? []).forEach((r: ContactRole) => (map[r.contact_id] = r.role));
+        setRoles(map);
+      } catch (e: any) { toast.error(e.message); }
+    })();
+  }, [householdId]);
+
+  const setRole = async (contactId: string, role: ContactRole["role"] | "none") => {
+    try {
+      if (role === "none") {
+        // Setting back to viewer effectively removes elevated rights
+        await callVault("setContactRole", { contactId, householdId, role: "viewer" });
+        setRoles((r) => ({ ...r, [contactId]: "viewer" }));
+      } else {
+        await callVault("setContactRole", { contactId, householdId, role });
+        setRoles((r) => ({ ...r, [contactId]: role }));
+      }
+      toast.success("Permission updated");
+    } catch (e: any) { toast.error(e.message); }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base font-serif">Household member permissions</CardTitle>
+      </CardHeader>
+      <CardContent>
+        {members.length === 0 ? (
+          <p className="text-sm text-muted-foreground italic">No household members.</p>
+        ) : (
+          <div className="space-y-2">
+            {members.map((m) => (
+              <div key={m.id} className="flex items-center gap-3 border rounded p-2">
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium truncate">{m.first_name} {m.last_name}</div>
+                  <div className="text-xs text-muted-foreground truncate">{m.email ?? "no email"}</div>
+                </div>
+                <Select value={roles[m.id] ?? "viewer"} onValueChange={(v) => setRole(m.id, v as any)}>
+                  <SelectTrigger className="w-[160px] h-8"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="viewer">Viewer</SelectItem>
+                    <SelectItem value="contributor">Contributor (upload + delete own)</SelectItem>
+                    <SelectItem value="manager">Manager (full)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            ))}
+          </div>
+        )}
+        <p className="text-[11px] text-muted-foreground mt-3">
+          Roles apply across the household vault. Use per-folder grants on a file/folder for finer control.
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
+function VaultLinksPanel({ householdId }: { householdId: string }) {
+  const [links, setLinks] = useState<ShareLink[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const refresh = async () => {
+    setLoading(true);
+    try {
+      const res = await callVault("listShareLinks", { householdId });
+      setLinks(res.links ?? []);
+    } finally { setLoading(false); }
+  };
+  useEffect(() => { refresh(); }, [householdId]);
+
+  const revoke = async (id: string) => {
+    if (!window.confirm("Revoke this Vault link?")) return;
+    try {
+      await callVault("revokeShareLink", { linkId: id });
+      toast.success("Revoked");
+      await refresh();
+    } catch (e: any) { toast.error(e.message); }
+  };
+
+  const copyUrl = async (l: ShareLink) => {
+    const url = `${window.location.origin}/vault/share/${l.token}`;
+    const txt = l.unlock_code ? `${url}\nUnlock code: ${l.unlock_code}` : url;
+    await navigator.clipboard.writeText(txt);
+    toast.success("Copied");
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base font-serif">Vault links</CardTitle>
+      </CardHeader>
+      <CardContent>
+        {loading ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : links.length === 0 ? (
+          <p className="text-sm text-muted-foreground italic">No links yet. Use the copy icon on any folder or file above to create one.</p>
+        ) : (
+          <div className="space-y-1.5">
+            {links.map((l) => {
+              const expired = l.expires_at && new Date(l.expires_at) <= new Date();
+              const dead = l.revoked_at || expired || (l.max_uses != null && l.use_count >= l.max_uses);
+              return (
+                <div key={l.id} className="flex items-center gap-2 text-xs bg-muted/30 rounded px-2 py-1.5">
+                  <Badge variant="outline" className="capitalize text-[10px]">{l.link_type}</Badge>
+                  <Badge variant="outline" className="capitalize text-[10px]">{l.scope_type}</Badge>
+                  <Badge variant={l.permission === "view" ? "secondary" : "default"} className="text-[10px]">{l.permission.replace(/_/g, " + ")}</Badge>
+                  <span className="flex-1 truncate font-mono">{l.drive_id}</span>
+                  <span className="text-muted-foreground">
+                    {l.revoked_at ? "revoked" : expired ? "expired" : l.expires_at ? `exp ${new Date(l.expires_at).toLocaleDateString()}` : "no expiry"}
+                  </span>
+                  {l.max_uses != null && <span className="text-muted-foreground">{l.use_count}/{l.max_uses}</span>}
+                  {!dead && (
+                    <>
+                      <Button size="sm" variant="ghost" className="h-6 px-1.5" title="Copy URL" onClick={() => copyUrl(l)}>
+                        <Copy className="h-3 w-3" />
+                      </Button>
+                      <Button size="sm" variant="ghost" className="h-6 px-1.5 text-destructive" title="Revoke" onClick={() => revoke(l.id)}>
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
   const params = useParams<{ householdId?: string; contactId?: string }>();
   const [householdId, setHouseholdId] = useState<string | null>(null);
   const [householdLabel, setHouseholdLabel] = useState<string>("");
