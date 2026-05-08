@@ -2782,7 +2782,7 @@ export type Database = {
       }
       vault_collaborators: {
         Row: {
-          contact_id: string
+          contact_id: string | null
           created_at: string
           email: string
           full_name: string
@@ -2796,7 +2796,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          contact_id: string
+          contact_id?: string | null
           created_at?: string
           email: string
           full_name: string
@@ -2810,7 +2810,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          contact_id?: string
+          contact_id?: string | null
           created_at?: string
           email?: string
           full_name?: string
