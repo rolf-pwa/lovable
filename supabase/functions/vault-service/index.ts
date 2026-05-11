@@ -18,6 +18,13 @@ import { checkOutboundPii } from "../_shared/pii-shield.ts";
 const APP_BASE_URL = "https://app.prosperwise.ca";
 
 // ── Wix Velo relay (client-facing email) ──
+function maskEmail(email: string): string {
+  const [local, domain] = email.split("@");
+  if (!domain) return "•••";
+  const head = local.slice(0, 2);
+  return `${head}${"•".repeat(Math.max(1, local.length - 2))}@${domain}`;
+}
+
 async function sendVaultEmailViaWix(payload: {
   email: string;
   full_name?: string;
