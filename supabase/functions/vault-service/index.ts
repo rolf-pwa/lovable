@@ -13,6 +13,52 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { checkOutboundPii } from "../_shared/pii-shield.ts";
+
+const APP_BASE_URL = "https://app.prosperwise.ca";
+
+// ── Wix Velo relay (client-facing email) ──
+async function sendVaultEmailViaWix(payload: {
+  email: string;
+  full_name?: string;
+  subject: string;
+  message: string;
+  event_type: string;
+}): Promise<void> {
+  const WIX_SITE_URL = Deno.env.get("WIX_SITE_URL");
+  const WIX_OTP_SECRET = Deno.env.get("WIX_OTP_SECRET");
+  if (!WIX_SITE_URL || !WIX_OTP_SECRET) {
+    console.warn("[VaultEmail] Wix secrets missing; skipping send");
+    return;
+  }
+  // PII Shield — never let financial/health content leave Canadian infra
+  const pii = checkOutboundPii(`${payload.subject}\n${payload.message}`);
+  if (pii.blocked) {
+    console.warn("[VaultEmail] PII Shield blocked send:", pii.reason);
+    return;
+  }
+  const baseUrl = WIX_SITE_URL.replace(/\/sendOtp\/?$/, "");
+  const notifyUrl = `${baseUrl}/sendNotification`;
+  const relayPayload = {
+    ...payload,
+    title: payload.subject,
+    email_subject: payload.subject,
+    subject_line: payload.subject,
+    update_title: payload.subject,
+    secret: WIX_OTP_SECRET,
+  };
+  try {
+    const res = await fetch(notifyUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(relayPayload),
+    });
+    const text = await res.text();
+    console.log(`[VaultEmail] Wix response ${res.status}: ${text}`);
+  } catch (e) {
+    console.error("[VaultEmail] Wix relay error:", e);
+  }
+}
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -839,6 +885,26 @@ serve(async (req) => {
         .select()
         .single();
       await audit(actor, "invite_collaborator", cId ?? null, null, null, req, { collaborator_id: collab.id, email, household_id: hhId });
+
+      // Auto-send invite email with link only (unlock code sent separately/manually)
+      if (email && tok?.token) {
+        const url = `${APP_BASE_URL}/vault/guest/${tok.token}`;
+        const subject = "You've been invited to a secure document vault";
+        const message =
+          `Hello${fullName ? ` ${fullName}` : ""},\n\n` +
+          `You've been granted secure access to a ProsperWise client vault.\n\n` +
+          `Open the vault: ${url}\n\n` +
+          `For your security, you'll be asked for a one-time unlock code on the landing page. ` +
+          `That code is being sent to you separately.\n\n` +
+          `Access can be revoked at any time. If you weren't expecting this invitation, please disregard this email.\n\n` +
+          `— ProsperWise`;
+        // @ts-ignore EdgeRuntime is provided by Supabase Edge Functions runtime
+        EdgeRuntime.waitUntil(sendVaultEmailViaWix({
+          email, full_name: fullName, subject, message, event_type: "vault_collaborator_invite",
+        }));
+        await audit(actor, "vault_invite_email_sent", cId ?? null, null, null, req, { collaborator_id: collab.id, email });
+      }
+
       return new Response(JSON.stringify({ ok: true, collaborator: collab, magicToken: tok?.token, unlockCode: code }), { headers: { ...cors, "Content-Type": "application/json" } });
     }
 
@@ -1134,7 +1200,7 @@ serve(async (req) => {
     if (action === "createShareLink") {
       if (actor.kind !== "staff")
         return new Response(JSON.stringify({ error: "staff_only" }), { status: 403, headers: { ...cors, "Content-Type": "application/json" } });
-      const { householdId, scope_type, drive_id, permission, link_type, expires_at, max_uses, generate_unlock_code } = body;
+      const { householdId, scope_type, drive_id, permission, link_type, expires_at, max_uses, generate_unlock_code, notify_email, recipient_name } = body;
       if (!householdId || !scope_type || !drive_id || !permission || !link_type)
         return new Response(JSON.stringify({ error: "missing_fields" }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
       // Verify scope is inside the household root
@@ -1159,6 +1225,28 @@ serve(async (req) => {
       }).select().single();
       if (error) throw error;
       await audit(actor, "share_link_created", null, drive_id, null, req, { link_type, permission });
+
+      // Optional: auto-send the share URL by email (link only — unlock code sent separately/manually)
+      if (notify_email) {
+        const path = link_type === "guest" ? `/vault/share/${link.token}` : `/portal/vault?share=${link.token}`;
+        const url = `${APP_BASE_URL}${path}`;
+        const subject = "A secure document has been shared with you";
+        const message =
+          `Hello${recipient_name ? ` ${recipient_name}` : ""},\n\n` +
+          `A secure document has been shared with you from ProsperWise.\n\n` +
+          `Open it here: ${url}\n\n` +
+          (code
+            ? `For your security, you'll be asked for a one-time unlock code on the landing page. That code is being sent to you separately.\n\n`
+            : `You'll be asked to verify your identity on the landing page.\n\n`) +
+          `Access can be revoked at any time. If you weren't expecting this, please disregard.\n\n` +
+          `— ProsperWise`;
+        // @ts-ignore EdgeRuntime is provided by Supabase Edge Functions runtime
+        EdgeRuntime.waitUntil(sendVaultEmailViaWix({
+          email: notify_email, full_name: recipient_name, subject, message, event_type: "vault_share_link",
+        }));
+        await audit(actor, "share_link_email_sent", null, drive_id, null, req, { link_id: link.id, email: notify_email });
+      }
+
       return new Response(JSON.stringify({ ok: true, link }), { headers: { ...cors, "Content-Type": "application/json" } });
     }
 

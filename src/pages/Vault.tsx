@@ -158,6 +158,10 @@ function FolderNode({
 
   const copyVaultLink = async (driveId: string, isFolder: boolean) => {
     if (!householdId) return;
+    // Optional: notify external recipient by email (link only — code shared manually)
+    const notifyEmail = window.prompt(
+      "Email this link to a recipient? Enter their email to send the link automatically (leave blank to just copy).\n\nFor security, the unlock code is NOT emailed — share it separately."
+    );
     try {
       const res = await callVault("createShareLink", {
         householdId,
@@ -166,10 +170,15 @@ function FolderNode({
         permission: "view_upload_download",
         link_type: "guest",
         generate_unlock_code: true,
+        notify_email: notifyEmail?.trim() || undefined,
       });
       const url = `${window.location.origin}/vault/share/${res.link.token}`;
       await navigator.clipboard.writeText(`${url}\nUnlock code: ${res.link.unlock_code}`);
-      toast.success("Vault link copied (with unlock code)");
+      toast.success(
+        notifyEmail?.trim()
+          ? `Link emailed to ${notifyEmail.trim()}. Unlock code copied — send it separately.`
+          : "Vault link copied (with unlock code)"
+      );
     } catch (e: any) { toast.error(e.message); }
   };
 
