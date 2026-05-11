@@ -22,6 +22,7 @@ type SMap = {
   client_last_name: string;
   session_date: string | null;
   event_type: string;
+  event_context: string;
   situation_summary: string;
   urgency_flag: string;
   risk_1: string; risk_2: string; risk_3: string; risk_4: string; risk_5: string;
