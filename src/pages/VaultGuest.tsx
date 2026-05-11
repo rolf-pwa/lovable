@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import prosperwiseLogo from "@/assets/prosperwise-logo.png";
 
 // Build auth headers if a staff session exists — lets logged-in staff
 // bypass the guest unlock-code prompt for share links.
@@ -242,6 +243,8 @@ export default function VaultGuest() {
   const [scope, setScope] = useState<{ drive_id: string; name: string | null; mime_type: string | null; scope_type: "folder" | "file" } | null>(null);
   const [permission, setPermission] = useState<"view" | "view_upload" | "view_upload_download">("view");
   const [preview, setPreview] = useState<{ file: DriveFile; url: string } | null>(null);
+  const [collaboratorName, setCollaboratorName] = useState<string | null>(null);
+  const [clientName, setClientName] = useState<string | null>(null);
 
   // For share mode, immediately attempt to resolve so we know whether unlock_code is needed
   useEffect(() => {
@@ -262,6 +265,7 @@ export default function VaultGuest() {
         }
         setScope(j.scope);
         setPermission(j.permission);
+        setClientName(j.client_name ?? null);
         setNeedsCode(false);
         setUnlocked(true);
       } catch (e: any) {
@@ -285,6 +289,7 @@ export default function VaultGuest() {
         if (j.needs_unlock_code) throw new Error("Incorrect unlock code");
         setScope(j.scope);
         setPermission(j.permission);
+        setClientName(j.client_name ?? null);
         setUnlocked(true);
         toast.success("Access granted");
         return;
@@ -298,6 +303,8 @@ export default function VaultGuest() {
       const j = await r.json();
       if (!r.ok) throw new Error(j.error ?? "verification_failed");
       setRoots(j.roots ?? []);
+      setCollaboratorName(j.collaborator_name ?? null);
+      setClientName(j.client_name ?? null);
       setUnlocked(true);
       toast.success("Access granted");
     } catch (e: any) {
@@ -342,35 +349,46 @@ export default function VaultGuest() {
 
   if (!unlocked && needsCode) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-6 bg-background">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <Shield className="h-5 w-5 text-amber-500" />
-              <CardTitle className="font-serif">Secure Document Access</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Enter the 6-digit unlock code from your invite to continue.
-            </p>
+      <div className="min-h-screen flex flex-col bg-background">
+        <header className="border-b border-border bg-card">
+          <div className="container max-w-4xl mx-auto px-6 py-4 flex items-center gap-3">
+            <img src={prosperwiseLogo} alt="ProsperWise" className="h-9 w-9" />
             <div>
-              <Label>Unlock code</Label>
-              <Input
-                value={unlockCode}
-                onChange={(e) => setUnlockCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                inputMode="numeric"
-                className="font-mono text-lg tracking-widest text-center"
-                placeholder="••••••"
-              />
+              <div className="font-serif text-lg leading-tight">ProsperWise</div>
+              <div className="text-xs text-muted-foreground">Secure Document Portal</div>
             </div>
-            <Button onClick={verify} disabled={unlockCode.length !== 6 || verifying} className="w-full">
-              {verifying && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Unlock
-            </Button>
-            <p className="text-xs text-muted-foreground">All access is logged.</p>
-          </CardContent>
-        </Card>
+          </div>
+        </header>
+        <div className="flex-1 flex items-center justify-center p-6">
+          <Card className="w-full max-w-md">
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Shield className="h-5 w-5 text-amber-500" />
+                <CardTitle className="font-serif">Secure Document Access</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Enter the 6-digit unlock code from your invite to continue.
+              </p>
+              <div>
+                <Label>Unlock code</Label>
+                <Input
+                  value={unlockCode}
+                  onChange={(e) => setUnlockCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  inputMode="numeric"
+                  className="font-mono text-lg tracking-widest text-center"
+                  placeholder="••••••"
+                />
+              </div>
+              <Button onClick={verify} disabled={unlockCode.length !== 6 || verifying} className="w-full">
+                {verifying && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                Unlock
+              </Button>
+              <p className="text-xs text-muted-foreground">All access is logged.</p>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
@@ -384,11 +402,37 @@ export default function VaultGuest() {
   }
 
   return (
-    <div className="container max-w-4xl mx-auto py-8 space-y-6">
-      <div>
-        <h1 className="text-2xl font-serif">Shared Documents</h1>
-        <p className="text-sm text-muted-foreground">Access via ProsperWise · all activity is audited</p>
-      </div>
+    <div className="min-h-screen bg-background">
+      <header className="border-b border-border bg-card">
+        <div className="container max-w-4xl mx-auto px-6 py-4 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <img src={prosperwiseLogo} alt="ProsperWise" className="h-9 w-9" />
+            <div>
+              <div className="font-serif text-lg leading-tight">ProsperWise</div>
+              <div className="text-xs text-muted-foreground">Secure Document Portal</div>
+            </div>
+          </div>
+          {(collaboratorName || clientName) && (
+            <div className="text-right text-xs sm:text-sm">
+              {collaboratorName && (
+                <div className="text-foreground">
+                  Signed in as <span className="font-medium">{collaboratorName}</span>
+                </div>
+              )}
+              {clientName && (
+                <div className="text-muted-foreground">
+                  Documents for <span className="font-medium text-foreground">{clientName}</span>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </header>
+      <div className="container max-w-4xl mx-auto py-8 space-y-6 px-6">
+        <div>
+          <h1 className="text-2xl font-serif">Shared Documents</h1>
+          <p className="text-sm text-muted-foreground">All activity is audited</p>
+        </div>
 
       {mode === "share" && scope ? (
         scope.scope_type === "folder" ? (
@@ -471,6 +515,7 @@ export default function VaultGuest() {
           </div>
         </DialogContent>
       </Dialog>
+      </div>
     </div>
   );
 }

@@ -541,12 +541,21 @@ serve(async (req) => {
       const r = await fetch(`https://www.googleapis.com/drive/v3/files/${link.drive_id}?fields=id,name,mimeType`, { headers: { Authorization: `Bearer ${accessTokenForMeta}` } });
       meta = r.ok ? await r.json() : {};
     }
+    // Resolve client (family) name for branding header
+    let clientName: string | null = null;
+    const { data: hh } = await supabaseAdmin
+      .from("households")
+      .select("label, families(name)")
+      .eq("id", link.household_id)
+      .maybeSingle();
+    if (hh) clientName = (hh as any).families?.name ?? hh.label ?? null;
     await audit(null, "share_link_redeemed", null, link.drive_id, meta.name ?? null, req, { link_id: link.id });
     return new Response(JSON.stringify({
       ok: true,
       scope: { drive_id: link.drive_id, name: meta.name ?? null, mime_type: meta.mimeType ?? null, scope_type: link.scope_type },
       permission: link.permission,
       link_type: link.link_type,
+      client_name: clientName,
     }), { headers: { ...cors, "Content-Type": "application/json" } });
   }
 
@@ -684,7 +693,26 @@ serve(async (req) => {
           roots.push({ id: j.id, name: j.name });
         }
       }
-      return new Response(JSON.stringify({ roots }), { headers: { ...cors, "Content-Type": "application/json" } });
+      // Resolve collaborator + client (family) name for branding header
+      const { data: collab } = await supabaseAdmin
+        .from("vault_collaborators")
+        .select("full_name, household_id")
+        .eq("id", actor.collaboratorId)
+        .maybeSingle();
+      let clientName: string | null = null;
+      if (collab?.household_id) {
+        const { data: hh } = await supabaseAdmin
+          .from("households")
+          .select("label, families(name)")
+          .eq("id", collab.household_id)
+          .maybeSingle();
+        if (hh) clientName = (hh as any).families?.name ?? hh.label ?? null;
+      }
+      return new Response(JSON.stringify({
+        roots,
+        collaborator_name: collab?.full_name ?? null,
+        client_name: clientName,
+      }), { headers: { ...cors, "Content-Type": "application/json" } });
     }
 
     // ─── LIST FOLDER ───

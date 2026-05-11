@@ -974,7 +974,7 @@ const Portal = () => {
               {isSelf && (
                 <TabsTrigger value="vault" className="flex-1 gap-1.5">
                   <FolderLock className="h-4 w-4" />
-                  Vault
+                  Documents
                 </TabsTrigger>
               )}
               {isSelf &&
