@@ -269,7 +269,7 @@ export default function StabilizationMap() {
                 style={{ width: "48mm", height: "auto", display: "block", marginBottom: "3mm" }}
               />
               <div style={{ fontSize: "9pt", fontWeight: 300, color: "rgba(255,255,255,.5)", letterSpacing: ".08em", textTransform: "uppercase" }}>
-                Sovereignty Operating System
+                Sovereignty Operating System™
               </div>
             </div>
             <hr style={{ border: "none", borderTop: "1px solid rgba(255,255,255,.18)" }} />

@@ -1399,7 +1399,7 @@ export default function SovereigntyCharter() {
           <div style={{ backgroundColor: "#2A4034", color: "#fff", padding: "10mm 12mm 9mm" }}>
             <img src={pwLogoWhite} alt="ProsperWise" style={{ width: "54mm", height: "auto", display: "block", marginBottom: "4mm" }} />
             <div style={{ fontSize: "8pt", fontWeight: 300, color: "rgba(255,255,255,.55)", letterSpacing: ".1em", textTransform: "uppercase", marginBottom: "4mm" }}>
-              Sovereignty Operating System
+              Sovereignty Operating System™
             </div>
             <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "24pt", fontWeight: 300, lineHeight: 1.08 }}>
               {charter.title}
