@@ -1,0 +1,1 @@
+ALTER TABLE public.stabilization_maps ADD COLUMN IF NOT EXISTS event_context TEXT NOT NULL DEFAULT 'Post-Close Governance';
