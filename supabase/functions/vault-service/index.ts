@@ -518,6 +518,52 @@ serve(async (req) => {
     }
   }
 
+  // Anonymous endpoint: collaborator forgot their unlock code and wants a
+  // fresh one emailed to the address on file (vault_guest_tokens fallback).
+  if (action === "requestGuestOtp") {
+    const { token } = body;
+    if (!token)
+      return new Response(JSON.stringify({ error: "token required" }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
+    const { data: tokenRow } = await supabaseAdmin
+      .from("vault_guest_tokens")
+      .select("id, revoked, expires_at, vault_collaborators(id, email, full_name, revoked_at)")
+      .eq("token", token)
+      .maybeSingle();
+    if (!tokenRow || tokenRow.revoked || (tokenRow as any).vault_collaborators?.revoked_at) {
+      // Don't leak whether token exists
+      return new Response(JSON.stringify({ ok: true }), { headers: { ...cors, "Content-Type": "application/json" } });
+    }
+    const collab = (tokenRow as any).vault_collaborators;
+    if (!collab?.email) {
+      return new Response(JSON.stringify({ ok: true }), { headers: { ...cors, "Content-Type": "application/json" } });
+    }
+    const newCode = String(Math.floor(100000 + Math.random() * 900000));
+    await supabaseAdmin
+      .from("vault_guest_tokens")
+      .update({
+        unlock_code: newCode,
+        unlock_verified_at: null,
+        bound_user_agent: null,
+        expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+      })
+      .eq("id", tokenRow.id);
+    const subject = "Your ProsperWise document vault code";
+    const message =
+      `Hello${collab.full_name ? ` ${collab.full_name}` : ""},\n\n` +
+      `Here is a new one-time unlock code for your secure document vault:\n\n` +
+      `    ${newCode}\n\n` +
+      `Enter it on the unlock page to access the documents shared with you. ` +
+      `This code replaces any previous code and is valid for 24 hours.\n\n` +
+      `If you didn't request this code, you can safely ignore this email — no one can access the vault without it.\n\n` +
+      `— ProsperWise`;
+    // @ts-ignore EdgeRuntime is provided by Supabase Edge Functions runtime
+    EdgeRuntime.waitUntil(sendVaultEmailViaWix({
+      email: collab.email, full_name: collab.full_name, subject, message, event_type: "vault_collaborator_otp",
+    }));
+    await audit(null, "vault_collaborator_otp_sent", null, null, null, req, { collaborator_id: collab.id, email: collab.email });
+    return new Response(JSON.stringify({ ok: true, email_hint: maskEmail(collab.email) }), { headers: { ...cors, "Content-Type": "application/json" } });
+  }
+
   // Anonymous endpoint: resolveShareLink runs before any actor exists,
   // because the caller is trying to redeem a token to *become* a share_link actor.
   if (action === "resolveShareLink") {
