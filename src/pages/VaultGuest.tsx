@@ -349,35 +349,46 @@ export default function VaultGuest() {
 
   if (!unlocked && needsCode) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-6 bg-background">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <Shield className="h-5 w-5 text-amber-500" />
-              <CardTitle className="font-serif">Secure Document Access</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Enter the 6-digit unlock code from your invite to continue.
-            </p>
+      <div className="min-h-screen flex flex-col bg-background">
+        <header className="border-b border-border bg-card">
+          <div className="container max-w-4xl mx-auto px-6 py-4 flex items-center gap-3">
+            <img src={prosperwiseLogo} alt="ProsperWise" className="h-9 w-9" />
             <div>
-              <Label>Unlock code</Label>
-              <Input
-                value={unlockCode}
-                onChange={(e) => setUnlockCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                inputMode="numeric"
-                className="font-mono text-lg tracking-widest text-center"
-                placeholder="••••••"
-              />
+              <div className="font-serif text-lg leading-tight">ProsperWise</div>
+              <div className="text-xs text-muted-foreground">Secure Document Portal</div>
             </div>
-            <Button onClick={verify} disabled={unlockCode.length !== 6 || verifying} className="w-full">
-              {verifying && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Unlock
-            </Button>
-            <p className="text-xs text-muted-foreground">All access is logged.</p>
-          </CardContent>
-        </Card>
+          </div>
+        </header>
+        <div className="flex-1 flex items-center justify-center p-6">
+          <Card className="w-full max-w-md">
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Shield className="h-5 w-5 text-amber-500" />
+                <CardTitle className="font-serif">Secure Document Access</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Enter the 6-digit unlock code from your invite to continue.
+              </p>
+              <div>
+                <Label>Unlock code</Label>
+                <Input
+                  value={unlockCode}
+                  onChange={(e) => setUnlockCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  inputMode="numeric"
+                  className="font-mono text-lg tracking-widest text-center"
+                  placeholder="••••••"
+                />
+              </div>
+              <Button onClick={verify} disabled={unlockCode.length !== 6 || verifying} className="w-full">
+                {verifying && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                Unlock
+              </Button>
+              <p className="text-xs text-muted-foreground">All access is logged.</p>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
