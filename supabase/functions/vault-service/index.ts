@@ -13,6 +13,52 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { checkOutboundPii } from "../_shared/pii-shield.ts";
+
+const APP_BASE_URL = "https://app.prosperwise.ca";
+
+// ── Wix Velo relay (client-facing email) ──
+async function sendVaultEmailViaWix(payload: {
+  email: string;
+  full_name?: string;
+  subject: string;
+  message: string;
+  event_type: string;
+}): Promise<void> {
+  const WIX_SITE_URL = Deno.env.get("WIX_SITE_URL");
+  const WIX_OTP_SECRET = Deno.env.get("WIX_OTP_SECRET");
+  if (!WIX_SITE_URL || !WIX_OTP_SECRET) {
+    console.warn("[VaultEmail] Wix secrets missing; skipping send");
+    return;
+  }
+  // PII Shield — never let financial/health content leave Canadian infra
+  const pii = checkOutboundPii(`${payload.subject}\n${payload.message}`);
+  if (pii.blocked) {
+    console.warn("[VaultEmail] PII Shield blocked send:", pii.reason);
+    return;
+  }
+  const baseUrl = WIX_SITE_URL.replace(/\/sendOtp\/?$/, "");
+  const notifyUrl = `${baseUrl}/sendNotification`;
+  const relayPayload = {
+    ...payload,
+    title: payload.subject,
+    email_subject: payload.subject,
+    subject_line: payload.subject,
+    update_title: payload.subject,
+    secret: WIX_OTP_SECRET,
+  };
+  try {
+    const res = await fetch(notifyUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(relayPayload),
+    });
+    const text = await res.text();
+    console.log(`[VaultEmail] Wix response ${res.status}: ${text}`);
+  } catch (e) {
+    console.error("[VaultEmail] Wix relay error:", e);
+  }
+}
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
