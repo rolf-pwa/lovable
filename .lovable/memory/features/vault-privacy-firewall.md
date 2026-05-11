@@ -32,3 +32,5 @@ Routes:
 **Revocation = instant:** flip `revoked_at` on collaborator or grant; next request 403s. Drive ACLs never granted to outside parties.
 
 **PIPEDA:** Drive bytes only ever decrypted inside Montreal Edge Function. No Drive URLs leave the server.
+
+**Auto-email (Wix Velo relay):** `inviteCollaborator` always emails the guest the `/vault/guest/{token}` URL with link only — unlock code is sent separately/manually. `createShareLink` accepts optional `notify_email` + `recipient_name`; when present, emails the share URL only. All sends are PII-Shield filtered and logged as `vault_invite_email_sent` / `share_link_email_sent` in `vault_audit_log`.
