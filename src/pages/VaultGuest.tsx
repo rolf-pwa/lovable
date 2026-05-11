@@ -245,6 +245,25 @@ export default function VaultGuest() {
   const [preview, setPreview] = useState<{ file: DriveFile; url: string } | null>(null);
   const [collaboratorName, setCollaboratorName] = useState<string | null>(null);
   const [clientName, setClientName] = useState<string | null>(null);
+  const [requestingOtp, setRequestingOtp] = useState(false);
+
+  const requestOtp = async () => {
+    setRequestingOtp(true);
+    try {
+      const r = await fetch(FUNCTIONS_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "requestGuestOtp", token }),
+      });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error ?? "could_not_send");
+      toast.success(j.email_hint ? `New code sent to ${j.email_hint}` : "If this link is valid, a new code has been emailed.");
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setRequestingOtp(false);
+    }
+  };
 
   // For share mode, immediately attempt to resolve so we know whether unlock_code is needed
   useEffect(() => {
