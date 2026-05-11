@@ -265,6 +265,7 @@ export default function VaultGuest() {
         }
         setScope(j.scope);
         setPermission(j.permission);
+        setClientName(j.client_name ?? null);
         setNeedsCode(false);
         setUnlocked(true);
       } catch (e: any) {
