@@ -515,6 +515,7 @@ export default function VaultGuest() {
           </div>
         </DialogContent>
       </Dialog>
+      </div>
     </div>
   );
 }
