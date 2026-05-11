@@ -436,7 +436,28 @@ function EditorForm({ map, onChange }: { map: SMap; onChange: (k: keyof SMap, v:
           <Input type="date" value={map.session_date || ""} onChange={(e) => onChange("session_date", e.target.value)} />
         </div>
       </div>
-      {S("event_type", "Event Type", EVENT_TYPES)}
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+        {S("event_type", "Event Type", EVENT_TYPES)}
+        <div className="space-y-1">
+          <Label className="text-xs">Event Context (subtitle)</Label>
+          <Select
+            value={EVENT_CONTEXTS.includes(map.event_context) ? map.event_context : "__custom__"}
+            onValueChange={(v) => onChange("event_context", v === "__custom__" ? (map.event_context || "") : v)}
+          >
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {EVENT_CONTEXTS.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+              <SelectItem value="__custom__">Custom…</SelectItem>
+            </SelectContent>
+          </Select>
+          <Input
+            className="mt-1"
+            placeholder="Custom subtitle (overrides preset)"
+            value={map.event_context || ""}
+            onChange={(e) => onChange("event_context", e.target.value)}
+          />
+        </div>
+      </div>
       {F("situation_summary", "Situation Summary", true)}
       {F("urgency_flag", "Urgency Flag", true)}
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
