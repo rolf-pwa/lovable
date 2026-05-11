@@ -55,6 +55,7 @@ const STATUS_COLOR: Record<StatusKind, string> = {
 };
 
 const EVENT_TYPES = ["Business Exit", "Inheritance", "Sudden Windfall", "Taxable Event"];
+const EVENT_CONTEXTS = ["Post-Close Governance", "Pre-Close Planning", "Growth-Stage Governance", "Post-Inheritance Governance", "Post-Windfall Governance", "Ongoing Governance"];
 const STOREHOUSE_OPTS = ["Not Established", "Partial", "Established"];
 const SOLICITATION_OPTS = ["Not Established", "Partial", "Established"];
 const CHARTER_OPTS = ["Not Started", "In Progress", "Complete"];
