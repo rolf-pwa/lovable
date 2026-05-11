@@ -243,6 +243,8 @@ export default function VaultGuest() {
   const [scope, setScope] = useState<{ drive_id: string; name: string | null; mime_type: string | null; scope_type: "folder" | "file" } | null>(null);
   const [permission, setPermission] = useState<"view" | "view_upload" | "view_upload_download">("view");
   const [preview, setPreview] = useState<{ file: DriveFile; url: string } | null>(null);
+  const [collaboratorName, setCollaboratorName] = useState<string | null>(null);
+  const [clientName, setClientName] = useState<string | null>(null);
 
   // For share mode, immediately attempt to resolve so we know whether unlock_code is needed
   useEffect(() => {
