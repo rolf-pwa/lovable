@@ -289,6 +289,7 @@ export default function VaultGuest() {
         if (j.needs_unlock_code) throw new Error("Incorrect unlock code");
         setScope(j.scope);
         setPermission(j.permission);
+        setClientName(j.client_name ?? null);
         setUnlocked(true);
         toast.success("Access granted");
         return;
@@ -302,6 +303,8 @@ export default function VaultGuest() {
       const j = await r.json();
       if (!r.ok) throw new Error(j.error ?? "verification_failed");
       setRoots(j.roots ?? []);
+      setCollaboratorName(j.collaborator_name ?? null);
+      setClientName(j.client_name ?? null);
       setUnlocked(true);
       toast.success("Access granted");
     } catch (e: any) {
