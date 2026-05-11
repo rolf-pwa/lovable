@@ -313,7 +313,7 @@ export default function StabilizationMap() {
                 {sessionDateLabel && <> &nbsp;·&nbsp; {sessionDateLabel}</>}
               </div>
               <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "26pt", fontWeight: 300, color: "#3B3F3F", lineHeight: 1.1, letterSpacing: "-0.005em" }}>
-                {map.event_type} &nbsp;·&nbsp; Post-Close Governance<br />
+                {map.event_type} &nbsp;·&nbsp; {map.event_context || "Post-Close Governance"}<br />
                 Your Sovereignty OS — Session One Findings
               </div>
               <hr style={{ width: "18mm", height: "3px", background: "#A98C5A", border: "none", marginTop: "2.5mm" }} />
