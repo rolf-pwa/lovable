@@ -385,6 +385,18 @@ export default function VaultGuest() {
                 {verifying && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                 Unlock
               </Button>
+              {mode === "guest" && (
+                <div className="text-center">
+                  <button
+                    type="button"
+                    onClick={requestOtp}
+                    disabled={requestingOtp}
+                    className="text-xs text-amber-500 hover:underline disabled:opacity-50"
+                  >
+                    {requestingOtp ? "Sending…" : "Forgot your code? Email me a new one"}
+                  </button>
+                </div>
+              )}
               <p className="text-xs text-muted-foreground">All access is logged.</p>
             </CardContent>
           </Card>
