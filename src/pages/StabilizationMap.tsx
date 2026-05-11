@@ -22,6 +22,7 @@ type SMap = {
   client_last_name: string;
   session_date: string | null;
   event_type: string;
+  event_context: string;
   situation_summary: string;
   urgency_flag: string;
   risk_1: string; risk_2: string; risk_3: string; risk_4: string; risk_5: string;
@@ -54,6 +55,7 @@ const STATUS_COLOR: Record<StatusKind, string> = {
 };
 
 const EVENT_TYPES = ["Business Exit", "Inheritance", "Sudden Windfall", "Taxable Event"];
+const EVENT_CONTEXTS = ["Post-Close Governance", "Pre-Close Planning", "Growth-Stage Governance", "Post-Inheritance Governance", "Post-Windfall Governance", "Ongoing Governance"];
 const STOREHOUSE_OPTS = ["Not Established", "Partial", "Established"];
 const SOLICITATION_OPTS = ["Not Established", "Partial", "Established"];
 const CHARTER_OPTS = ["Not Started", "In Progress", "Complete"];
@@ -311,7 +313,7 @@ export default function StabilizationMap() {
                 {sessionDateLabel && <> &nbsp;·&nbsp; {sessionDateLabel}</>}
               </div>
               <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "26pt", fontWeight: 300, color: "#3B3F3F", lineHeight: 1.1, letterSpacing: "-0.005em" }}>
-                {map.event_type} &nbsp;·&nbsp; Post-Close Governance<br />
+                {map.event_type} &nbsp;·&nbsp; {map.event_context || "Post-Close Governance"}<br />
                 Your Sovereignty OS — Session One Findings
               </div>
               <hr style={{ width: "18mm", height: "3px", background: "#A98C5A", border: "none", marginTop: "2.5mm" }} />
@@ -434,7 +436,28 @@ function EditorForm({ map, onChange }: { map: SMap; onChange: (k: keyof SMap, v:
           <Input type="date" value={map.session_date || ""} onChange={(e) => onChange("session_date", e.target.value)} />
         </div>
       </div>
-      {S("event_type", "Event Type", EVENT_TYPES)}
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+        {S("event_type", "Event Type", EVENT_TYPES)}
+        <div className="space-y-1">
+          <Label className="text-xs">Event Context (subtitle)</Label>
+          <Select
+            value={EVENT_CONTEXTS.includes(map.event_context) ? map.event_context : "__custom__"}
+            onValueChange={(v) => onChange("event_context", v === "__custom__" ? (map.event_context || "") : v)}
+          >
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {EVENT_CONTEXTS.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+              <SelectItem value="__custom__">Custom…</SelectItem>
+            </SelectContent>
+          </Select>
+          <Input
+            className="mt-1"
+            placeholder="Custom subtitle (overrides preset)"
+            value={map.event_context || ""}
+            onChange={(e) => onChange("event_context", e.target.value)}
+          />
+        </div>
+      </div>
       {F("situation_summary", "Situation Summary", true)}
       {F("urgency_flag", "Urgency Flag", true)}
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">

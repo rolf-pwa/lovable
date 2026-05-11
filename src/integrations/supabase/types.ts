@@ -2387,6 +2387,7 @@ export type Database = {
           contact_id: string | null
           created_at: string
           created_by: string | null
+          event_context: string
           event_type: string
           footer_note: string
           generation_error: string | null
@@ -2423,6 +2424,7 @@ export type Database = {
           contact_id?: string | null
           created_at?: string
           created_by?: string | null
+          event_context?: string
           event_type?: string
           footer_note?: string
           generation_error?: string | null
@@ -2459,6 +2461,7 @@ export type Database = {
           contact_id?: string | null
           created_at?: string
           created_by?: string | null
+          event_context?: string
           event_type?: string
           footer_note?: string
           generation_error?: string | null
