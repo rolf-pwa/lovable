@@ -885,6 +885,26 @@ serve(async (req) => {
         .select()
         .single();
       await audit(actor, "invite_collaborator", cId ?? null, null, null, req, { collaborator_id: collab.id, email, household_id: hhId });
+
+      // Auto-send invite email with link only (unlock code sent separately/manually)
+      if (email && tok?.token) {
+        const url = `${APP_BASE_URL}/vault/guest/${tok.token}`;
+        const subject = "You've been invited to a secure document vault";
+        const message =
+          `Hello${fullName ? ` ${fullName}` : ""},\n\n` +
+          `You've been granted secure access to a ProsperWise client vault.\n\n` +
+          `Open the vault: ${url}\n\n` +
+          `For your security, you'll be asked for a one-time unlock code on the landing page. ` +
+          `That code is being sent to you separately.\n\n` +
+          `Access can be revoked at any time. If you weren't expecting this invitation, please disregard this email.\n\n` +
+          `— ProsperWise`;
+        // @ts-ignore EdgeRuntime is provided by Supabase Edge Functions runtime
+        EdgeRuntime.waitUntil(sendVaultEmailViaWix({
+          email, full_name: fullName, subject, message, event_type: "vault_collaborator_invite",
+        }));
+        await audit(actor, "vault_invite_email_sent", cId ?? null, null, null, req, { collaborator_id: collab.id, email });
+      }
+
       return new Response(JSON.stringify({ ok: true, collaborator: collab, magicToken: tok?.token, unlockCode: code }), { headers: { ...cors, "Content-Type": "application/json" } });
     }
 
