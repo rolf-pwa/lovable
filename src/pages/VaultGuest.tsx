@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import prosperwiseLogo from "@/assets/prosperwise-logo.png";
 
 // Build auth headers if a staff session exists — lets logged-in staff
 // bypass the guest unlock-code prompt for share links.
