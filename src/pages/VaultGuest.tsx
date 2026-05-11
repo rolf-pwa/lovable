@@ -245,6 +245,25 @@ export default function VaultGuest() {
   const [preview, setPreview] = useState<{ file: DriveFile; url: string } | null>(null);
   const [collaboratorName, setCollaboratorName] = useState<string | null>(null);
   const [clientName, setClientName] = useState<string | null>(null);
+  const [requestingOtp, setRequestingOtp] = useState(false);
+
+  const requestOtp = async () => {
+    setRequestingOtp(true);
+    try {
+      const r = await fetch(FUNCTIONS_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "requestGuestOtp", token }),
+      });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error ?? "could_not_send");
+      toast.success(j.email_hint ? `New code sent to ${j.email_hint}` : "If this link is valid, a new code has been emailed.");
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setRequestingOtp(false);
+    }
+  };
 
   // For share mode, immediately attempt to resolve so we know whether unlock_code is needed
   useEffect(() => {
@@ -385,6 +404,18 @@ export default function VaultGuest() {
                 {verifying && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                 Unlock
               </Button>
+              {mode === "guest" && (
+                <div className="text-center">
+                  <button
+                    type="button"
+                    onClick={requestOtp}
+                    disabled={requestingOtp}
+                    className="text-xs text-amber-500 hover:underline disabled:opacity-50"
+                  >
+                    {requestingOtp ? "Sending…" : "Forgot your code? Email me a new one"}
+                  </button>
+                </div>
+              )}
               <p className="text-xs text-muted-foreground">All access is logged.</p>
             </CardContent>
           </Card>
