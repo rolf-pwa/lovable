@@ -402,11 +402,37 @@ export default function VaultGuest() {
   }
 
   return (
-    <div className="container max-w-4xl mx-auto py-8 space-y-6">
-      <div>
-        <h1 className="text-2xl font-serif">Shared Documents</h1>
-        <p className="text-sm text-muted-foreground">Access via ProsperWise · all activity is audited</p>
-      </div>
+    <div className="min-h-screen bg-background">
+      <header className="border-b border-border bg-card">
+        <div className="container max-w-4xl mx-auto px-6 py-4 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <img src={prosperwiseLogo} alt="ProsperWise" className="h-9 w-9" />
+            <div>
+              <div className="font-serif text-lg leading-tight">ProsperWise</div>
+              <div className="text-xs text-muted-foreground">Secure Document Portal</div>
+            </div>
+          </div>
+          {(collaboratorName || clientName) && (
+            <div className="text-right text-xs sm:text-sm">
+              {collaboratorName && (
+                <div className="text-foreground">
+                  Signed in as <span className="font-medium">{collaboratorName}</span>
+                </div>
+              )}
+              {clientName && (
+                <div className="text-muted-foreground">
+                  Documents for <span className="font-medium text-foreground">{clientName}</span>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </header>
+      <div className="container max-w-4xl mx-auto py-8 space-y-6 px-6">
+        <div>
+          <h1 className="text-2xl font-serif">Shared Documents</h1>
+          <p className="text-sm text-muted-foreground">All activity is audited</p>
+        </div>
 
       {mode === "share" && scope ? (
         scope.scope_type === "folder" ? (
