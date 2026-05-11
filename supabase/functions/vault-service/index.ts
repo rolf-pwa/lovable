@@ -1200,7 +1200,7 @@ serve(async (req) => {
     if (action === "createShareLink") {
       if (actor.kind !== "staff")
         return new Response(JSON.stringify({ error: "staff_only" }), { status: 403, headers: { ...cors, "Content-Type": "application/json" } });
-      const { householdId, scope_type, drive_id, permission, link_type, expires_at, max_uses, generate_unlock_code } = body;
+      const { householdId, scope_type, drive_id, permission, link_type, expires_at, max_uses, generate_unlock_code, notify_email, recipient_name } = body;
       if (!householdId || !scope_type || !drive_id || !permission || !link_type)
         return new Response(JSON.stringify({ error: "missing_fields" }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
       // Verify scope is inside the household root
@@ -1225,6 +1225,28 @@ serve(async (req) => {
       }).select().single();
       if (error) throw error;
       await audit(actor, "share_link_created", null, drive_id, null, req, { link_type, permission });
+
+      // Optional: auto-send the share URL by email (link only — unlock code sent separately/manually)
+      if (notify_email) {
+        const path = link_type === "guest" ? `/vault/share/${link.token}` : `/portal/vault?share=${link.token}`;
+        const url = `${APP_BASE_URL}${path}`;
+        const subject = "A secure document has been shared with you";
+        const message =
+          `Hello${recipient_name ? ` ${recipient_name}` : ""},\n\n` +
+          `A secure document has been shared with you from ProsperWise.\n\n` +
+          `Open it here: ${url}\n\n` +
+          (code
+            ? `For your security, you'll be asked for a one-time unlock code on the landing page. That code is being sent to you separately.\n\n`
+            : `You'll be asked to verify your identity on the landing page.\n\n`) +
+          `Access can be revoked at any time. If you weren't expecting this, please disregard.\n\n` +
+          `— ProsperWise`;
+        // @ts-ignore EdgeRuntime is provided by Supabase Edge Functions runtime
+        EdgeRuntime.waitUntil(sendVaultEmailViaWix({
+          email: notify_email, full_name: recipient_name, subject, message, event_type: "vault_share_link",
+        }));
+        await audit(actor, "share_link_email_sent", null, drive_id, null, req, { link_id: link.id, email: notify_email });
+      }
+
       return new Response(JSON.stringify({ ok: true, link }), { headers: { ...cors, "Content-Type": "application/json" } });
     }
 
