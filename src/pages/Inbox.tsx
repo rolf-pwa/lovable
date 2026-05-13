@@ -341,6 +341,9 @@ export default function Inbox() {
             <TabsTrigger value="all">All ({activeThreads.length})</TabsTrigger>
             <TabsTrigger value="sms">SMS</TabsTrigger>
             <TabsTrigger value="calls">Calls</TabsTrigger>
+            <TabsTrigger value="voicemail" className="data-[state=active]:text-amber-500">
+              Voicemails{voicemailCount > 0 ? ` (${voicemailCount})` : ""}
+            </TabsTrigger>
             <TabsTrigger value="unread">Unread ({unreadCount})</TabsTrigger>
             <TabsTrigger value="unmatched" className="data-[state=active]:text-amber-500">
               Unmatched ({unmatchedTimeline.filter((e) => !isArchived({ key: e.item.contact_id || `phone:${last10(e.item.direction === "outbound" ? e.item.to_number : e.item.from_number)}`, lastAt: e.at })).length})
@@ -356,6 +359,9 @@ export default function Inbox() {
           </TabsContent>
           <TabsContent value="calls" className="mt-4">
             <ThreadList threads={filterThreads("calls")} loading={loading} {...cardProps} />
+          </TabsContent>
+          <TabsContent value="voicemail" className="mt-4">
+            <ThreadList threads={filterThreads("voicemail")} loading={loading} {...cardProps} defaultOpen />
           </TabsContent>
           <TabsContent value="unread" className="mt-4">
             <ThreadList threads={filterThreads("unread")} loading={loading} {...cardProps} defaultOpen />
