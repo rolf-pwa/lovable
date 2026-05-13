@@ -26,6 +26,7 @@ import { ContactRequests } from "@/components/ContactRequests";
 import { ContactCalendar } from "@/components/ContactCalendar";
 import { ContactEmails } from "@/components/ContactEmails";
 import QuoCommunications from "@/components/QuoCommunications";
+import ManualActivityLog from "@/components/ManualActivityLog";
 import { SovereigntyAssistant } from "@/components/SovereigntyAssistant";
 import { AuditTrail } from "@/components/AuditTrail";
 import { StatementUpload } from "@/components/StatementUpload";
