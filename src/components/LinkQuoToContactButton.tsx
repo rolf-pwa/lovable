@@ -78,12 +78,13 @@ export default function LinkQuoToContactButton({
       } else {
         const { data: u } = await supabase.auth.getUser();
         if (!u.user?.id) throw new Error("Not signed in");
-        const { error } = await supabase.from("quo_activity_links").insert({
+        const row: any = {
           contact_id: c.id,
-          quo_call_id: quoCallId ?? null,
-          quo_message_id: quoMessageId ?? null,
           linked_by: u.user.id,
-        });
+        };
+        if (quoCallId) row.quo_call_id = quoCallId;
+        if (quoMessageId) row.quo_message_id = quoMessageId;
+        const { error } = await supabase.from("quo_activity_links").insert(row);
         if (error) throw error;
         setLinkedIds((s) => new Set(s).add(c.id));
         toast.success(`Linked to ${c.first_name} ${c.last_name ?? ""}`.trim());
