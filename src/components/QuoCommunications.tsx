@@ -35,6 +35,8 @@ interface QuoCall {
   next_steps: string | null;
   occurred_at: string;
   portal_visible: boolean;
+  is_voicemail?: boolean;
+  voicemail_url?: string | null;
 }
 
 export default function QuoCommunications({ contactId, contactPhone, contactName }: QuoCommunicationsProps) {
