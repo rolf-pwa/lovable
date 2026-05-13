@@ -49,6 +49,8 @@ interface QuoCall {
   from_number: string | null;
   to_number: string | null;
   read_at: string | null;
+  is_voicemail?: boolean;
+  voicemail_url?: string | null;
 }
 
 interface ContactLite {
