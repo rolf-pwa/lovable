@@ -646,8 +646,15 @@ function ChatBubble({
           <p className="whitespace-pre-wrap">{body}</p>
         ) : call ? (
           <div className="space-y-1">
-            <p className="font-medium">
-              {isOut ? "Outgoing" : "Incoming"} call · {Math.floor(call.duration_seconds / 60)}m {call.duration_seconds % 60}s
+            <p className="font-medium flex items-center gap-1.5">
+              {call.is_voicemail && (
+                <Badge className="text-[10px] bg-amber-500 text-amber-950 hover:bg-amber-500">
+                  Voicemail
+                </Badge>
+              )}
+              {call.is_voicemail
+                ? `Voicemail · ${Math.floor(call.duration_seconds / 60)}m ${call.duration_seconds % 60}s`
+                : `${isOut ? "Outgoing" : "Incoming"} call · ${Math.floor(call.duration_seconds / 60)}m ${call.duration_seconds % 60}s`}
             </p>
             {call.summary && <p className="whitespace-pre-wrap text-foreground/90">{call.summary}</p>}
             {call.next_steps && (
@@ -655,7 +662,10 @@ function ChatBubble({
                 <span className="font-semibold">Next: </span>{call.next_steps}
               </p>
             )}
-            {call.recording_url && (
+            {call.voicemail_url && (
+              <audio controls src={call.voicemail_url} className="w-full mt-1 h-8" preload="none" />
+            )}
+            {call.recording_url && !call.voicemail_url && (
               <a href={call.recording_url} target="_blank" rel="noopener noreferrer"
                 className="text-xs text-amber-500 hover:underline inline-block">
                 ▶ Listen to recording
