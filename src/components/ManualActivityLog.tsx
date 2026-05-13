@@ -246,11 +246,11 @@ export default function ManualActivityLog({ contactId, contactName }: Props) {
             <ChevronDown className={`h-4 w-4 transition-transform ${open ? "" : "-rotate-90"}`} />
             <ClipboardList className="h-4 w-4 text-amber-500" />
             <h3 className="font-serif text-base">Activity Log</h3>
-            {entries.length > 0 && (
-              <Badge variant="outline" className="text-[10px] ml-1">{entries.length}</Badge>
+            {(entries.length + linkedQuo.length) > 0 && (
+              <Badge variant="outline" className="text-[10px] ml-1">{entries.length + linkedQuo.length}</Badge>
             )}
             <span className="text-[11px] text-muted-foreground ml-2">
-              Manual log of calls &amp; texts outside Quo
+              Manual entries &amp; Quo cross-links
             </span>
           </CollapsibleTrigger>
           {open && (
@@ -262,11 +262,63 @@ export default function ManualActivityLog({ contactId, contactName }: Props) {
 
         <CollapsibleContent className="space-y-2 mt-3 border-t border-border pt-3">
           {loading && <p className="text-sm text-muted-foreground">Loading…</p>}
-          {!loading && entries.length === 0 && (
+          {!loading && entries.length === 0 && linkedQuo.length === 0 && (
             <p className="text-sm text-muted-foreground italic">
-              No manual entries yet. Use "Log" to record a call or message that happened outside Quo.
+              No entries yet. Use "Log" for calls/texts outside Quo, or use the "Link" button on a Quo message/call to surface it here.
             </p>
           )}
+
+          {/* Linked Quo records */}
+          {linkedQuo
+            .slice()
+            .sort((a, b) => new Date(b.occurred_at).getTime() - new Date(a.occurred_at).getTime())
+            .map((q) => (
+            <div key={`quo-${q.link_id}`} className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-sm space-y-1">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
+                  {q.source === "call"
+                    ? (q.is_voicemail ? <Voicemail className="h-3 w-3 text-amber-500" /> : <Phone className="h-3 w-3 text-amber-500" />)
+                    : <MessageSquare className="h-3 w-3 text-amber-500" />}
+                  <Badge className="text-[10px] bg-amber-500 text-amber-950 hover:bg-amber-500">
+                    <Link2 className="h-2.5 w-2.5 mr-1" />Linked from Quo
+                  </Badge>
+                  <span className="capitalize">
+                    {q.direction} {q.source === "call" ? (q.is_voicemail ? "voicemail" : "call") : "SMS"}
+                  </span>
+                  {q.duration_seconds != null && q.source === "call" && !q.is_voicemail && (
+                    <span>· {Math.floor((q.duration_seconds || 0) / 60)}m {((q.duration_seconds || 0) % 60)}s</span>
+                  )}
+                  <span>· {new Date(q.occurred_at).toLocaleString()}</span>
+                  {q.primary_contact_id && q.primary_contact_name && (
+                    <span>· with{" "}
+                      <Link to={`/contacts/${q.primary_contact_id}`} className="underline hover:text-amber-500">
+                        {q.primary_contact_name}
+                      </Link>
+                    </span>
+                  )}
+                </div>
+                <Button size="sm" variant="ghost" onClick={() => unlinkQuo(q.link_id)}
+                  className="h-6 px-2 text-destructive" title="Remove cross-link">
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </div>
+              {q.summary && <p className="whitespace-pre-wrap">{q.summary}</p>}
+              {q.next_steps && (
+                <p className="whitespace-pre-wrap text-amber-600 dark:text-amber-400">
+                  <span className="font-semibold">Next steps:</span> {q.next_steps}
+                </p>
+              )}
+              {q.body && <p className="whitespace-pre-wrap">{q.body}</p>}
+              {q.voicemail_url && (
+                <audio controls src={q.voicemail_url} className="w-full h-8" preload="none" />
+              )}
+              {q.recording_url && !q.voicemail_url && (
+                <a href={q.recording_url} target="_blank" rel="noopener noreferrer"
+                  className="text-xs text-amber-500 hover:underline">▶ Listen to recording</a>
+              )}
+            </div>
+          ))}
+
           {entries.map((e) => (
             <div key={e.id} className="rounded-lg border border-border bg-card p-3 text-sm space-y-1">
               <div className="flex items-center justify-between gap-2">
