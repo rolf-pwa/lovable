@@ -64,14 +64,9 @@ export default function LinkQuoToContactButton({
     setSaving(true);
     try {
       if (linkedIds.has(c.id)) {
-        const filter = quoCallId
-          ? { col: "quo_call_id", val: quoCallId }
-          : { col: "quo_message_id", val: quoMessageId! };
-        const { error } = await supabase
-          .from("quo_activity_links")
-          .delete()
-          .eq("contact_id", c.id)
-          .eq(filter.col, filter.val);
+        let qb: any = supabase.from("quo_activity_links").delete().eq("contact_id", c.id);
+        qb = quoCallId ? qb.eq("quo_call_id", quoCallId) : qb.eq("quo_message_id", quoMessageId);
+        const { error } = await qb;
         if (error) throw error;
         setLinkedIds((s) => { const n = new Set(s); n.delete(c.id); return n; });
         toast.success("Unlinked");
