@@ -1647,6 +1647,7 @@ export type Database = {
           duration_seconds: number | null
           from_number: string
           id: string
+          is_voicemail: boolean
           next_steps: string | null
           occurred_at: string
           portal_visible: boolean
@@ -1659,6 +1660,7 @@ export type Database = {
           to_number: string
           transcript: string | null
           updated_at: string
+          voicemail_url: string | null
         }
         Insert: {
           contact_id?: string | null
@@ -1667,6 +1669,7 @@ export type Database = {
           duration_seconds?: number | null
           from_number: string
           id?: string
+          is_voicemail?: boolean
           next_steps?: string | null
           occurred_at?: string
           portal_visible?: boolean
@@ -1679,6 +1682,7 @@ export type Database = {
           to_number: string
           transcript?: string | null
           updated_at?: string
+          voicemail_url?: string | null
         }
         Update: {
           contact_id?: string | null
@@ -1687,6 +1691,7 @@ export type Database = {
           duration_seconds?: number | null
           from_number?: string
           id?: string
+          is_voicemail?: boolean
           next_steps?: string | null
           occurred_at?: string
           portal_visible?: boolean
@@ -1699,6 +1704,7 @@ export type Database = {
           to_number?: string
           transcript?: string | null
           updated_at?: string
+          voicemail_url?: string | null
         }
         Relationships: [
           {

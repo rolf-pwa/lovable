@@ -252,6 +252,19 @@ serve(async (req) => {
       const counterparty = direction === "inbound" ? fromNum : toNum;
       const contactId = await findContactByPhone(admin, counterparty);
 
+      // Voicemail detection: inbound call that wasn't answered, or has voicemail payload
+      const voicemailObj = data?.voicemail || data?.voiceMail || null;
+      const isVoicemail =
+        direction === "inbound" &&
+        (!!voicemailObj ||
+          data?.answeredAt === null ||
+          data?.status === "no-answer" ||
+          data?.status === "missed");
+      const voicemailUrl =
+        voicemailObj?.url ||
+        voicemailObj?.media?.[0]?.url ||
+        (isVoicemail ? (data?.media?.[0]?.url || null) : null);
+
       await admin.from("quo_calls").upsert({
         quo_call_id: data?.id,
         contact_id: contactId,
@@ -259,17 +272,43 @@ serve(async (req) => {
         from_number: fromNum,
         to_number: toNum,
         status: data?.status || "completed",
-        duration_seconds: data?.duration || 0,
+        duration_seconds: data?.duration || voicemailObj?.duration || 0,
         quo_user_id: data?.userId || null,
         portal_visible: true,
+        is_voicemail: isVoicemail,
+        voicemail_url: voicemailUrl,
         occurred_at: data?.completedAt || data?.createdAt || new Date().toISOString(),
       }, { onConflict: "quo_call_id" });
+
+      // Staff bell notification for new voicemails
+      if (isVoicemail) {
+        const callerLabel = fromNum || "Unknown caller";
+        let title = `New voicemail from ${callerLabel}`;
+        let link = "/inbox";
+        if (contactId) {
+          const { data: c } = await admin
+            .from("contacts").select("first_name, last_name").eq("id", contactId).single();
+          const name = `${c?.first_name || ""} ${c?.last_name || ""}`.trim();
+          if (name) title = `New voicemail from ${name}`;
+          link = `/contacts/${contactId}`;
+        }
+        await admin.from("staff_notifications").insert({
+          title,
+          body: voicemailObj?.transcript || `Voicemail received at ${new Date().toLocaleString()}`,
+          link,
+          contact_id: contactId,
+          source_type: "voicemail",
+        });
+      }
     }
     else if (eventType === "call.recording.completed") {
       if (data?.callId) {
-        await admin.from("quo_calls")
-          .update({ recording_url: data?.media?.[0]?.url || data?.url || null })
-          .eq("quo_call_id", data.callId);
+        const url = data?.media?.[0]?.url || data?.url || null;
+        const isVm = data?.type === "voicemail" || data?.kind === "voicemail";
+        const update: Record<string, unknown> = isVm
+          ? { voicemail_url: url, is_voicemail: true }
+          : { recording_url: url };
+        await admin.from("quo_calls").update(update).eq("quo_call_id", data.callId);
       }
     }
     else if (eventType === "call.transcript.completed") {

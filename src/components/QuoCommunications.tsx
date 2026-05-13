@@ -35,6 +35,8 @@ interface QuoCall {
   next_steps: string | null;
   occurred_at: string;
   portal_visible: boolean;
+  is_voicemail?: boolean;
+  voicemail_url?: string | null;
 }
 
 export default function QuoCommunications({ contactId, contactPhone, contactName }: QuoCommunicationsProps) {
@@ -218,10 +220,16 @@ function CallRow({ c }: { c: QuoCall; onToggle?: () => void }) {
   const mins = Math.floor(c.duration_seconds / 60);
   const secs = c.duration_seconds % 60;
   return (
-    <div className="rounded-lg border border-border bg-card p-3 text-sm space-y-2">
+    <div className={`rounded-lg border p-3 text-sm space-y-2 ${
+      c.is_voicemail ? "border-amber-500/40 bg-amber-500/5" : "border-border bg-card"
+    }`}>
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
         <Phone className="h-3 w-3 text-amber-500" />
-        <span>{c.direction === "inbound" ? "Incoming call" : "Outgoing call"}</span>
+        {c.is_voicemail ? (
+          <Badge className="text-[10px] bg-amber-500 text-amber-950 hover:bg-amber-500">Voicemail</Badge>
+        ) : (
+          <span>{c.direction === "inbound" ? "Incoming call" : "Outgoing call"}</span>
+        )}
         <span>· {mins}m {secs}s</span>
         <span>· {new Date(c.occurred_at).toLocaleString()}</span>
       </div>
@@ -243,7 +251,10 @@ function CallRow({ c }: { c: QuoCall; onToggle?: () => void }) {
           <pre className="whitespace-pre-wrap mt-2 max-h-60 overflow-y-auto">{c.transcript}</pre>
         </details>
       )}
-      {c.recording_url && (
+      {c.voicemail_url && (
+        <audio controls src={c.voicemail_url} className="w-full h-8" preload="none" />
+      )}
+      {c.recording_url && !c.voicemail_url && (
         <a href={c.recording_url} target="_blank" rel="noopener noreferrer"
           className="text-xs text-amber-500 hover:underline">▶ Listen to recording</a>
       )}

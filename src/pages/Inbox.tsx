@@ -49,6 +49,8 @@ interface QuoCall {
   from_number: string | null;
   to_number: string | null;
   read_at: string | null;
+  is_voicemail?: boolean;
+  voicemail_url?: string | null;
 }
 
 interface ContactLite {
@@ -287,13 +289,16 @@ export default function Inbox() {
   const archivedThreads = useMemo(() => threads.filter(isArchived), [threads, archive]);
   const activeThreads = useMemo(() => threads.filter((t) => !isArchived(t)), [threads, archive]);
 
-  const filterThreads = (mode: "all" | "sms" | "calls" | "unread" | "unmatched" | "archived") => {
+  const voicemailCount = calls.filter((c) => c.is_voicemail && !c.read_at).length;
+
+  const filterThreads = (mode: "all" | "sms" | "calls" | "voicemail" | "unread" | "unmatched" | "archived") => {
     const source = mode === "archived" ? archivedThreads : activeThreads;
     return source
       .map((t) => {
         let entries = t.entries;
         if (mode === "sms") entries = entries.filter((e) => e.kind === "msg");
         if (mode === "calls") entries = entries.filter((e) => e.kind === "call");
+        if (mode === "voicemail") entries = entries.filter((e) => e.kind === "call" && e.item.is_voicemail);
         if (mode === "unread") entries = entries.filter((e) => e.item.direction === "inbound" && !e.item.read_at);
         if (mode === "unmatched") entries = entries.filter((e) => !e.item.contact_id);
         return { ...t, entries };
@@ -336,6 +341,9 @@ export default function Inbox() {
             <TabsTrigger value="all">All ({activeThreads.length})</TabsTrigger>
             <TabsTrigger value="sms">SMS</TabsTrigger>
             <TabsTrigger value="calls">Calls</TabsTrigger>
+            <TabsTrigger value="voicemail" className="data-[state=active]:text-amber-500">
+              Voicemails{voicemailCount > 0 ? ` (${voicemailCount})` : ""}
+            </TabsTrigger>
             <TabsTrigger value="unread">Unread ({unreadCount})</TabsTrigger>
             <TabsTrigger value="unmatched" className="data-[state=active]:text-amber-500">
               Unmatched ({unmatchedTimeline.filter((e) => !isArchived({ key: e.item.contact_id || `phone:${last10(e.item.direction === "outbound" ? e.item.to_number : e.item.from_number)}`, lastAt: e.at })).length})
@@ -351,6 +359,9 @@ export default function Inbox() {
           </TabsContent>
           <TabsContent value="calls" className="mt-4">
             <ThreadList threads={filterThreads("calls")} loading={loading} {...cardProps} />
+          </TabsContent>
+          <TabsContent value="voicemail" className="mt-4">
+            <ThreadList threads={filterThreads("voicemail")} loading={loading} {...cardProps} defaultOpen />
           </TabsContent>
           <TabsContent value="unread" className="mt-4">
             <ThreadList threads={filterThreads("unread")} loading={loading} {...cardProps} defaultOpen />
@@ -635,8 +646,15 @@ function ChatBubble({
           <p className="whitespace-pre-wrap">{body}</p>
         ) : call ? (
           <div className="space-y-1">
-            <p className="font-medium">
-              {isOut ? "Outgoing" : "Incoming"} call · {Math.floor(call.duration_seconds / 60)}m {call.duration_seconds % 60}s
+            <p className="font-medium flex items-center gap-1.5">
+              {call.is_voicemail && (
+                <Badge className="text-[10px] bg-amber-500 text-amber-950 hover:bg-amber-500">
+                  Voicemail
+                </Badge>
+              )}
+              {call.is_voicemail
+                ? `Voicemail · ${Math.floor(call.duration_seconds / 60)}m ${call.duration_seconds % 60}s`
+                : `${isOut ? "Outgoing" : "Incoming"} call · ${Math.floor(call.duration_seconds / 60)}m ${call.duration_seconds % 60}s`}
             </p>
             {call.summary && <p className="whitespace-pre-wrap text-foreground/90">{call.summary}</p>}
             {call.next_steps && (
@@ -644,7 +662,10 @@ function ChatBubble({
                 <span className="font-semibold">Next: </span>{call.next_steps}
               </p>
             )}
-            {call.recording_url && (
+            {call.voicemail_url && (
+              <audio controls src={call.voicemail_url} className="w-full mt-1 h-8" preload="none" />
+            )}
+            {call.recording_url && !call.voicemail_url && (
               <a href={call.recording_url} target="_blank" rel="noopener noreferrer"
                 className="text-xs text-amber-500 hover:underline inline-block">
                 ▶ Listen to recording
