@@ -1681,6 +1681,36 @@ export type Database = {
         }
         Relationships: []
       }
+      quo_activity_links: {
+        Row: {
+          contact_id: string
+          created_at: string
+          id: string
+          linked_by: string
+          note: string | null
+          quo_call_id: string | null
+          quo_message_id: string | null
+        }
+        Insert: {
+          contact_id: string
+          created_at?: string
+          id?: string
+          linked_by: string
+          note?: string | null
+          quo_call_id?: string | null
+          quo_message_id?: string | null
+        }
+        Update: {
+          contact_id?: string
+          created_at?: string
+          id?: string
+          linked_by?: string
+          note?: string | null
+          quo_call_id?: string | null
+          quo_message_id?: string | null
+        }
+        Relationships: []
+      }
       quo_calls: {
         Row: {
           contact_id: string | null

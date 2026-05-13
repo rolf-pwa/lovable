@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { toast } from "sonner";
 import { Loader2, Send, Phone, MessageSquare, RefreshCw, ChevronDown } from "lucide-react";
+import LinkQuoToContactButton from "@/components/LinkQuoToContactButton";
 
 interface QuoCommunicationsProps {
   contactId: string;
@@ -158,9 +159,9 @@ export default function QuoCommunications({ contactId, contactPhone, contactName
               <p className="text-sm text-muted-foreground italic">No SMS or call history yet.</p>
             )}
             {timeline.map((entry) => entry.kind === "msg" ? (
-              <MessageRow key={`m-${entry.item.id}`} m={entry.item} />
+              <MessageRow key={`m-${entry.item.id}`} m={entry.item} primaryContactId={contactId} />
             ) : (
-              <CallRow key={`c-${entry.item.id}`} c={entry.item} />
+              <CallRow key={`c-${entry.item.id}`} c={entry.item} primaryContactId={contactId} />
             ))}
           </div>
 
@@ -191,7 +192,7 @@ export default function QuoCommunications({ contactId, contactPhone, contactName
   );
 }
 
-function MessageRow({ m }: { m: QuoMessage; onToggle?: () => void }) {
+function MessageRow({ m, primaryContactId }: { m: QuoMessage; primaryContactId: string }) {
   const isOut = m.direction === "outbound";
   return (
     <div className={`flex ${isOut ? "justify-end" : "justify-start"}`}>
@@ -206,6 +207,7 @@ function MessageRow({ m }: { m: QuoMessage; onToggle?: () => void }) {
           {m.status && m.status !== "sent" && m.status !== "received" && (
             <Badge variant="outline" className="text-[10px]">{m.status}</Badge>
           )}
+          <LinkQuoToContactButton quoMessageId={m.id} excludeContactId={primaryContactId} />
         </div>
         <p className="whitespace-pre-wrap">{m.body}</p>
         {m.pii_blocked && m.pii_block_reason && (
@@ -216,7 +218,7 @@ function MessageRow({ m }: { m: QuoMessage; onToggle?: () => void }) {
   );
 }
 
-function CallRow({ c }: { c: QuoCall; onToggle?: () => void }) {
+function CallRow({ c, primaryContactId }: { c: QuoCall; primaryContactId: string }) {
   const mins = Math.floor(c.duration_seconds / 60);
   const secs = c.duration_seconds % 60;
   return (
@@ -232,6 +234,7 @@ function CallRow({ c }: { c: QuoCall; onToggle?: () => void }) {
         )}
         <span>· {mins}m {secs}s</span>
         <span>· {new Date(c.occurred_at).toLocaleString()}</span>
+        <div className="ml-auto"><LinkQuoToContactButton quoCallId={c.id} excludeContactId={primaryContactId} /></div>
       </div>
       {c.summary && (
         <div>
