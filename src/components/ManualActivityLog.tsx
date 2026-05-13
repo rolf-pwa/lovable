@@ -9,7 +9,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { ChevronDown, ClipboardList, Phone, MessageSquare, Plus, Trash2, Pencil } from "lucide-react";
+import { ChevronDown, ClipboardList, Phone, MessageSquare, Plus, Trash2, Pencil, Link2, Voicemail } from "lucide-react";
+import { Link } from "react-router-dom";
 
 interface Props {
   contactId: string;
@@ -29,6 +30,25 @@ interface Entry {
   body: string;
   logged_by: string;
   created_at: string;
+}
+
+interface LinkedQuoEntry {
+  link_id: string;
+  source: "call" | "message";
+  occurred_at: string;
+  // call fields
+  is_voicemail?: boolean;
+  duration_seconds?: number;
+  summary?: string | null;
+  next_steps?: string | null;
+  recording_url?: string | null;
+  voicemail_url?: string | null;
+  // message fields
+  body?: string | null;
+  // shared
+  direction?: "inbound" | "outbound";
+  primary_contact_id: string | null;
+  primary_contact_name: string | null;
 }
 
 function localDateTimeNow(): string {
