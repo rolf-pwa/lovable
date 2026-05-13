@@ -26,6 +26,7 @@ import { ContactRequests } from "@/components/ContactRequests";
 import { ContactCalendar } from "@/components/ContactCalendar";
 import { ContactEmails } from "@/components/ContactEmails";
 import QuoCommunications from "@/components/QuoCommunications";
+import ManualActivityLog from "@/components/ManualActivityLog";
 import { SovereigntyAssistant } from "@/components/SovereigntyAssistant";
 import { AuditTrail } from "@/components/AuditTrail";
 import { StatementUpload } from "@/components/StatementUpload";
@@ -521,6 +522,10 @@ const ContactDetail = () => {
                 <QuoCommunications
                   contactId={contact.id}
                   contactPhone={contact.phone}
+                  contactName={`${contact.first_name} ${contact.last_name || ""}`.trim()}
+                />
+                <ManualActivityLog
+                  contactId={contact.id}
                   contactName={`${contact.first_name} ${contact.last_name || ""}`.trim()}
                 />
                 <ContactEmails contactEmail={contact.email} />

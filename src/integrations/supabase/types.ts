@@ -1109,6 +1109,48 @@ export type Database = {
         }
         Relationships: []
       }
+      manual_activity_log: {
+        Row: {
+          body: string
+          contact_id: string
+          created_at: string
+          direction: Database["public"]["Enums"]["manual_activity_direction"]
+          duration_minutes: number | null
+          id: string
+          kind: Database["public"]["Enums"]["manual_activity_kind"]
+          logged_by: string
+          occurred_at: string
+          subject: string | null
+          updated_at: string
+        }
+        Insert: {
+          body?: string
+          contact_id: string
+          created_at?: string
+          direction?: Database["public"]["Enums"]["manual_activity_direction"]
+          duration_minutes?: number | null
+          id?: string
+          kind: Database["public"]["Enums"]["manual_activity_kind"]
+          logged_by: string
+          occurred_at?: string
+          subject?: string | null
+          updated_at?: string
+        }
+        Update: {
+          body?: string
+          contact_id?: string
+          created_at?: string
+          direction?: Database["public"]["Enums"]["manual_activity_direction"]
+          duration_minutes?: number | null
+          id?: string
+          kind?: Database["public"]["Enums"]["manual_activity_kind"]
+          logged_by?: string
+          occurred_at?: string
+          subject?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       marketing_update_reads: {
         Row: {
           contact_id: string
@@ -3209,6 +3251,8 @@ export type Database = {
       fee_tier: "sovereign" | "legacy" | "dynasty"
       fiduciary_entity: "pws" | "pwa"
       governance_status: "stabilization" | "sovereign" | "none" | "core"
+      manual_activity_direction: "inbound" | "outbound"
+      manual_activity_kind: "call" | "sms"
       pipeline_category: "pws_consulting" | "new_aum" | "insurance"
       pipeline_status: "pending" | "in_process" | "completed"
       review_status: "pending" | "approved" | "rejected" | "escalated"
@@ -3357,6 +3401,8 @@ export const Constants = {
       fee_tier: ["sovereign", "legacy", "dynasty"],
       fiduciary_entity: ["pws", "pwa"],
       governance_status: ["stabilization", "sovereign", "none", "core"],
+      manual_activity_direction: ["inbound", "outbound"],
+      manual_activity_kind: ["call", "sms"],
       pipeline_category: ["pws_consulting", "new_aum", "insurance"],
       pipeline_status: ["pending", "in_process", "completed"],
       review_status: ["pending", "approved", "rejected", "escalated"],
