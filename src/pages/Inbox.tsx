@@ -289,13 +289,16 @@ export default function Inbox() {
   const archivedThreads = useMemo(() => threads.filter(isArchived), [threads, archive]);
   const activeThreads = useMemo(() => threads.filter((t) => !isArchived(t)), [threads, archive]);
 
-  const filterThreads = (mode: "all" | "sms" | "calls" | "unread" | "unmatched" | "archived") => {
+  const voicemailCount = calls.filter((c) => c.is_voicemail && !c.read_at).length;
+
+  const filterThreads = (mode: "all" | "sms" | "calls" | "voicemail" | "unread" | "unmatched" | "archived") => {
     const source = mode === "archived" ? archivedThreads : activeThreads;
     return source
       .map((t) => {
         let entries = t.entries;
         if (mode === "sms") entries = entries.filter((e) => e.kind === "msg");
         if (mode === "calls") entries = entries.filter((e) => e.kind === "call");
+        if (mode === "voicemail") entries = entries.filter((e) => e.kind === "call" && e.item.is_voicemail);
         if (mode === "unread") entries = entries.filter((e) => e.item.direction === "inbound" && !e.item.read_at);
         if (mode === "unmatched") entries = entries.filter((e) => !e.item.contact_id);
         return { ...t, entries };
