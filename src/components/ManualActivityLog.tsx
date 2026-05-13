@@ -60,6 +60,7 @@ function localDateTimeNow(): string {
 export default function ManualActivityLog({ contactId, contactName }: Props) {
   const [open, setOpen] = useState(false);
   const [entries, setEntries] = useState<Entry[]>([]);
+  const [linkedQuo, setLinkedQuo] = useState<LinkedQuoEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Entry | null>(null);
@@ -99,13 +100,76 @@ export default function ManualActivityLog({ contactId, contactName }: Props) {
 
   const load = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("manual_activity_log")
-      .select("*")
-      .eq("contact_id", contactId)
-      .order("occurred_at", { ascending: false });
-    if (error) toast.error(`Load failed: ${error.message}`);
-    setEntries((data as Entry[]) ?? []);
+    const [manualRes, linksRes] = await Promise.all([
+      supabase
+        .from("manual_activity_log")
+        .select("*")
+        .eq("contact_id", contactId)
+        .order("occurred_at", { ascending: false }),
+      supabase
+        .from("quo_activity_links")
+        .select("id, quo_call_id, quo_message_id")
+        .eq("contact_id", contactId),
+    ]);
+    if (manualRes.error) toast.error(`Load failed: ${manualRes.error.message}`);
+    setEntries((manualRes.data as Entry[]) ?? []);
+
+    // Hydrate Quo records for any links
+    const links = (linksRes.data as any[]) ?? [];
+    const callIds = links.filter((l) => l.quo_call_id).map((l) => l.quo_call_id);
+    const msgIds = links.filter((l) => l.quo_message_id).map((l) => l.quo_message_id);
+
+    const [callsRes, msgsRes] = await Promise.all([
+      callIds.length
+        ? supabase.from("quo_calls").select("id, contact_id, direction, occurred_at, duration_seconds, summary, next_steps, recording_url, voicemail_url, is_voicemail").in("id", callIds)
+        : Promise.resolve({ data: [] as any[] }),
+      msgIds.length
+        ? supabase.from("quo_messages").select("id, contact_id, direction, occurred_at, body").in("id", msgIds)
+        : Promise.resolve({ data: [] as any[] }),
+    ]);
+
+    const allContactIds = Array.from(new Set([
+      ...((callsRes.data as any[]) ?? []).map((c) => c.contact_id),
+      ...((msgsRes.data as any[]) ?? []).map((m) => m.contact_id),
+    ].filter(Boolean)));
+    const nameMap = new Map<string, string>();
+    if (allContactIds.length) {
+      const { data: cs } = await supabase
+        .from("contacts").select("id, first_name, last_name").in("id", allContactIds);
+      (cs ?? []).forEach((c: any) => nameMap.set(c.id, `${c.first_name} ${c.last_name ?? ""}`.trim()));
+    }
+
+    const callMap = new Map<string, any>(((callsRes.data as any[]) ?? []).map((c) => [c.id, c]));
+    const msgMap = new Map<string, any>(((msgsRes.data as any[]) ?? []).map((m) => [m.id, m]));
+
+    const hydrated: LinkedQuoEntry[] = links.flatMap((l) => {
+      if (l.quo_call_id) {
+        const c = callMap.get(l.quo_call_id);
+        if (!c) return [];
+        return [{
+          link_id: l.id, source: "call",
+          occurred_at: c.occurred_at, direction: c.direction,
+          is_voicemail: c.is_voicemail, duration_seconds: c.duration_seconds,
+          summary: c.summary, next_steps: c.next_steps,
+          recording_url: c.recording_url, voicemail_url: c.voicemail_url,
+          primary_contact_id: c.contact_id,
+          primary_contact_name: c.contact_id ? (nameMap.get(c.contact_id) ?? null) : null,
+        } as LinkedQuoEntry];
+      }
+      if (l.quo_message_id) {
+        const m = msgMap.get(l.quo_message_id);
+        if (!m) return [];
+        return [{
+          link_id: l.id, source: "message",
+          occurred_at: m.occurred_at, direction: m.direction, body: m.body,
+          primary_contact_id: m.contact_id,
+          primary_contact_name: m.contact_id ? (nameMap.get(m.contact_id) ?? null) : null,
+        } as LinkedQuoEntry];
+      }
+      return [];
+    });
+
+    setLinkedQuo(hydrated);
     setLoading(false);
   };
 
@@ -113,6 +177,14 @@ export default function ManualActivityLog({ contactId, contactName }: Props) {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [contactId]);
+
+  const unlinkQuo = async (linkId: string) => {
+    if (!confirm("Remove this Quo cross-link from the activity log? (Original Quo record is kept.)")) return;
+    const { error } = await supabase.from("quo_activity_links").delete().eq("id", linkId);
+    if (error) { toast.error(`Unlink failed: ${error.message}`); return; }
+    toast.success("Unlinked");
+    load();
+  };
 
   const save = async () => {
     if (!body.trim() && !subject.trim()) {
