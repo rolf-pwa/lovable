@@ -218,7 +218,7 @@ function MessageRow({ m, primaryContactId }: { m: QuoMessage; primaryContactId: 
   );
 }
 
-function CallRow({ c }: { c: QuoCall; onToggle?: () => void }) {
+function CallRow({ c, primaryContactId }: { c: QuoCall; primaryContactId: string }) {
   const mins = Math.floor(c.duration_seconds / 60);
   const secs = c.duration_seconds % 60;
   return (
@@ -234,6 +234,7 @@ function CallRow({ c }: { c: QuoCall; onToggle?: () => void }) {
         )}
         <span>· {mins}m {secs}s</span>
         <span>· {new Date(c.occurred_at).toLocaleString()}</span>
+        <div className="ml-auto"><LinkQuoToContactButton quoCallId={c.id} excludeContactId={primaryContactId} /></div>
       </div>
       {c.summary && (
         <div>
