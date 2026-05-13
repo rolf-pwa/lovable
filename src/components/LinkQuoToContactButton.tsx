@@ -35,13 +35,9 @@ export default function LinkQuoToContactButton({
   useEffect(() => {
     if (!open) return;
     (async () => {
-      const filter = quoCallId
-        ? { col: "quo_call_id", val: quoCallId }
-        : { col: "quo_message_id", val: quoMessageId! };
-      const { data } = await supabase
-        .from("quo_activity_links")
-        .select("contact_id")
-        .eq(filter.col, filter.val);
+      let qb: any = supabase.from("quo_activity_links").select("contact_id");
+      qb = quoCallId ? qb.eq("quo_call_id", quoCallId) : qb.eq("quo_message_id", quoMessageId);
+      const { data } = await qb;
       setLinkedIds(new Set((data || []).map((r: any) => r.contact_id)));
     })();
   }, [open, quoCallId, quoMessageId]);
