@@ -192,7 +192,7 @@ export default function QuoCommunications({ contactId, contactPhone, contactName
   );
 }
 
-function MessageRow({ m }: { m: QuoMessage; onToggle?: () => void }) {
+function MessageRow({ m, primaryContactId }: { m: QuoMessage; primaryContactId: string }) {
   const isOut = m.direction === "outbound";
   return (
     <div className={`flex ${isOut ? "justify-end" : "justify-start"}`}>
@@ -207,6 +207,7 @@ function MessageRow({ m }: { m: QuoMessage; onToggle?: () => void }) {
           {m.status && m.status !== "sent" && m.status !== "received" && (
             <Badge variant="outline" className="text-[10px]">{m.status}</Badge>
           )}
+          <LinkQuoToContactButton quoMessageId={m.id} excludeContactId={primaryContactId} />
         </div>
         <p className="whitespace-pre-wrap">{m.body}</p>
         {m.pii_blocked && m.pii_block_reason && (
