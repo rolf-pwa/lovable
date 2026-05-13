@@ -159,9 +159,9 @@ export default function QuoCommunications({ contactId, contactPhone, contactName
               <p className="text-sm text-muted-foreground italic">No SMS or call history yet.</p>
             )}
             {timeline.map((entry) => entry.kind === "msg" ? (
-              <MessageRow key={`m-${entry.item.id}`} m={entry.item} />
+              <MessageRow key={`m-${entry.item.id}`} m={entry.item} primaryContactId={contactId} />
             ) : (
-              <CallRow key={`c-${entry.item.id}`} c={entry.item} />
+              <CallRow key={`c-${entry.item.id}`} c={entry.item} primaryContactId={contactId} />
             ))}
           </div>
 
