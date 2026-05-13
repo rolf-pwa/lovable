@@ -422,8 +422,10 @@ serve(async (req) => {
         .insert({
           first_name: firstName || "",
           last_name: lastName || "Unknown",
+          full_name: `${firstName || ""} ${lastName || "Unknown"}`.trim(),
           phone: normalized,
           email: email || null,
+          created_by: userId,
         })
         .select("id")
         .single();
