@@ -524,6 +524,10 @@ const ContactDetail = () => {
                   contactPhone={contact.phone}
                   contactName={`${contact.first_name} ${contact.last_name || ""}`.trim()}
                 />
+                <ManualActivityLog
+                  contactId={contact.id}
+                  contactName={`${contact.first_name} ${contact.last_name || ""}`.trim()}
+                />
                 <ContactEmails contactEmail={contact.email} />
               </TabsContent>
 
