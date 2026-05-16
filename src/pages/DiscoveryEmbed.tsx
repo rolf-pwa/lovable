@@ -527,10 +527,10 @@ export default function DiscoveryEmbed() {
       {/* Input */}
       {phase === "chat" && (
         <div
-          className="shrink-0 px-6 py-4"
-          style={{ borderTop: `1px solid ${C.border}`, backgroundColor: C.bg }}
+          className="shrink-0 px-3 py-3 sm:px-6 sm:py-4"
+          style={{ borderTop: `1px solid ${C.border}`, backgroundColor: C.bg, paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
         >
-          <div className="mx-auto flex max-w-3xl items-end gap-3">
+          <div className="mx-auto flex max-w-3xl items-end gap-2 sm:gap-3">
             <textarea
               ref={inputRef}
               value={input}
@@ -539,7 +539,7 @@ export default function DiscoveryEmbed() {
               placeholder="Share what's on your mind..."
               rows={1}
               disabled={isLoading}
-              className="flex-1 resize-none rounded-xl px-4 py-3 text-sm focus-visible:outline-none"
+              className="flex-1 resize-none rounded-xl px-3 py-2.5 sm:px-4 sm:py-3 text-base sm:text-sm focus-visible:outline-none"
               style={{
                 backgroundColor: "#FFFFFF",
                 border: `1px solid ${C.border}`,
@@ -551,16 +551,16 @@ export default function DiscoveryEmbed() {
             <button
               onClick={sendMessage}
               disabled={isLoading || !input.trim()}
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl disabled:opacity-40 transition-opacity"
+              className="flex h-10 w-10 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-xl disabled:opacity-40 transition-opacity"
               style={{ backgroundColor: C.green }}
             >
               <Send className="h-4 w-4" style={{ color: C.vellum }} />
             </button>
           </div>
 
-          <div className="mx-auto mt-3 max-w-3xl flex items-center justify-center gap-1.5">
-            <Lock className="h-3 w-3" style={{ color: C.bronze }} />
-            <p className="text-[10px] tracking-wide" style={{ color: C.bronze }}>
+          <div className="mx-auto mt-2 sm:mt-3 max-w-3xl flex items-center justify-center gap-1.5 px-2">
+            <Lock className="h-3 w-3 shrink-0" style={{ color: C.bronze }} />
+            <p className="text-[9px] sm:text-[10px] tracking-wide text-center" style={{ color: C.bronze }}>
               Private · Canadian servers (Montréal) · Nothing stored until you choose to take a next step
             </p>
           </div>
