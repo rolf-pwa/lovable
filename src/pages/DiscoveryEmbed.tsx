@@ -273,36 +273,36 @@ export default function DiscoveryEmbed() {
 
   return (
     <div
-      className="flex flex-col overflow-hidden"
-      style={{ height: "100vh", backgroundColor: C.bg, color: C.vellum }}
+      className="flex flex-col overflow-hidden w-full"
+      style={{ height: "100dvh", maxHeight: "100dvh", backgroundColor: C.bg, color: C.vellum }}
     >
       {/* Header */}
       <header
-        className="flex items-center justify-between px-8 py-5 shrink-0"
+        className="flex items-center justify-between gap-2 px-3 py-3 sm:px-8 sm:py-5 shrink-0"
         style={{ borderBottom: `1px solid ${C.border}`, backgroundColor: C.bg }}
       >
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4 min-w-0">
           <div
-            className="flex h-11 w-11 items-center justify-center rounded-full"
+            className="flex h-9 w-9 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-full"
             style={{ backgroundColor: C.green, boxShadow: `0 0 0 1px rgba(42,64,52,0.3)` }}
           >
-            <span className="font-serif text-lg" style={{ color: C.vellum }}>G</span>
+            <span className="font-serif text-base sm:text-lg" style={{ color: C.vellum }}>G</span>
           </div>
-          <div>
-            <h1 className="font-serif text-xl font-semibold" style={{ color: C.green, letterSpacing: "-0.01em" }}>
+          <div className="min-w-0">
+            <h1 className="font-serif text-base sm:text-xl font-semibold" style={{ color: C.green, letterSpacing: "-0.01em" }}>
               Georgia
             </h1>
-            <p className="text-[11px] tracking-wide uppercase" style={{ color: C.bronze, letterSpacing: "0.08em" }}>
+            <p className="text-[10px] sm:text-[11px] tracking-wide uppercase truncate" style={{ color: C.bronze, letterSpacing: "0.08em" }}>
               Transition Assistant · ProsperWise
             </p>
           </div>
         </div>
         <div
-          className="flex items-center gap-2 rounded-full px-4 py-1.5"
+          className="flex items-center gap-1.5 sm:gap-2 rounded-full px-2.5 sm:px-4 py-1 sm:py-1.5 shrink-0"
           style={{ border: `1px solid ${C.border}`, backgroundColor: "rgba(42,64,52,0.05)" }}
         >
           <Lock className="h-3 w-3" style={{ color: C.green }} />
-          <span className="text-[11px] font-medium" style={{ color: C.green }}>Secure</span>
+          <span className="text-[10px] sm:text-[11px] font-medium" style={{ color: C.green }}>Secure</span>
         </div>
       </header>
 
@@ -527,10 +527,10 @@ export default function DiscoveryEmbed() {
       {/* Input */}
       {phase === "chat" && (
         <div
-          className="shrink-0 px-6 py-4"
-          style={{ borderTop: `1px solid ${C.border}`, backgroundColor: C.bg }}
+          className="shrink-0 px-3 py-3 sm:px-6 sm:py-4"
+          style={{ borderTop: `1px solid ${C.border}`, backgroundColor: C.bg, paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
         >
-          <div className="mx-auto flex max-w-3xl items-end gap-3">
+          <div className="mx-auto flex max-w-3xl items-end gap-2 sm:gap-3">
             <textarea
               ref={inputRef}
               value={input}
@@ -539,7 +539,7 @@ export default function DiscoveryEmbed() {
               placeholder="Share what's on your mind..."
               rows={1}
               disabled={isLoading}
-              className="flex-1 resize-none rounded-xl px-4 py-3 text-sm focus-visible:outline-none"
+              className="flex-1 resize-none rounded-xl px-3 py-2.5 sm:px-4 sm:py-3 text-base sm:text-sm focus-visible:outline-none"
               style={{
                 backgroundColor: "#FFFFFF",
                 border: `1px solid ${C.border}`,
@@ -551,16 +551,16 @@ export default function DiscoveryEmbed() {
             <button
               onClick={sendMessage}
               disabled={isLoading || !input.trim()}
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl disabled:opacity-40 transition-opacity"
+              className="flex h-10 w-10 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-xl disabled:opacity-40 transition-opacity"
               style={{ backgroundColor: C.green }}
             >
               <Send className="h-4 w-4" style={{ color: C.vellum }} />
             </button>
           </div>
 
-          <div className="mx-auto mt-3 max-w-3xl flex items-center justify-center gap-1.5">
-            <Lock className="h-3 w-3" style={{ color: C.bronze }} />
-            <p className="text-[10px] tracking-wide" style={{ color: C.bronze }}>
+          <div className="mx-auto mt-2 sm:mt-3 max-w-3xl flex items-center justify-center gap-1.5 px-2">
+            <Lock className="h-3 w-3 shrink-0" style={{ color: C.bronze }} />
+            <p className="text-[9px] sm:text-[10px] tracking-wide text-center" style={{ color: C.bronze }}>
               Private · Canadian servers (Montréal) · Nothing stored until you choose to take a next step
             </p>
           </div>
