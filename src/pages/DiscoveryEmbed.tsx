@@ -273,36 +273,36 @@ export default function DiscoveryEmbed() {
 
   return (
     <div
-      className="flex flex-col overflow-hidden"
-      style={{ height: "100vh", backgroundColor: C.bg, color: C.vellum }}
+      className="flex flex-col overflow-hidden w-full"
+      style={{ height: "100dvh", maxHeight: "100dvh", backgroundColor: C.bg, color: C.vellum }}
     >
       {/* Header */}
       <header
-        className="flex items-center justify-between px-8 py-5 shrink-0"
+        className="flex items-center justify-between gap-2 px-3 py-3 sm:px-8 sm:py-5 shrink-0"
         style={{ borderBottom: `1px solid ${C.border}`, backgroundColor: C.bg }}
       >
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4 min-w-0">
           <div
-            className="flex h-11 w-11 items-center justify-center rounded-full"
+            className="flex h-9 w-9 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-full"
             style={{ backgroundColor: C.green, boxShadow: `0 0 0 1px rgba(42,64,52,0.3)` }}
           >
-            <span className="font-serif text-lg" style={{ color: C.vellum }}>G</span>
+            <span className="font-serif text-base sm:text-lg" style={{ color: C.vellum }}>G</span>
           </div>
-          <div>
-            <h1 className="font-serif text-xl font-semibold" style={{ color: C.green, letterSpacing: "-0.01em" }}>
+          <div className="min-w-0">
+            <h1 className="font-serif text-base sm:text-xl font-semibold" style={{ color: C.green, letterSpacing: "-0.01em" }}>
               Georgia
             </h1>
-            <p className="text-[11px] tracking-wide uppercase" style={{ color: C.bronze, letterSpacing: "0.08em" }}>
+            <p className="text-[10px] sm:text-[11px] tracking-wide uppercase truncate" style={{ color: C.bronze, letterSpacing: "0.08em" }}>
               Transition Assistant · ProsperWise
             </p>
           </div>
         </div>
         <div
-          className="flex items-center gap-2 rounded-full px-4 py-1.5"
+          className="flex items-center gap-1.5 sm:gap-2 rounded-full px-2.5 sm:px-4 py-1 sm:py-1.5 shrink-0"
           style={{ border: `1px solid ${C.border}`, backgroundColor: "rgba(42,64,52,0.05)" }}
         >
           <Lock className="h-3 w-3" style={{ color: C.green }} />
-          <span className="text-[11px] font-medium" style={{ color: C.green }}>Secure</span>
+          <span className="text-[10px] sm:text-[11px] font-medium" style={{ color: C.green }}>Secure</span>
         </div>
       </header>
 
