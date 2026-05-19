@@ -138,7 +138,23 @@ async function sendViaWix(payload: {
   }
 }
 
+// Append short ET timestamp so Gmail does not collapse / dedup rapid-fire
+// notifications with otherwise-identical subjects.
+function uniqueifySubject(subject: string): string {
+  try {
+    const stamp = new Date().toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      timeZone: "America/Toronto",
+    });
+    return `${subject} · ${stamp} ET`;
+  } catch {
+    return `${subject} · ${new Date().toISOString().slice(11, 16)} UTC`;
+  }
+}
+
 // Dispatch to whichever channels are enabled
+
 async function dispatchNotification(args: {
   email: string;
   subject: string;
