@@ -613,6 +613,21 @@ serve(async (req) => {
         .select("token")
         .single();
 
+      // Mint trusted device unless client opted out
+      let gTrustedDeviceToken: string | null = null;
+      let gTrustedDeviceExpiresAt: string | null = null;
+      if (trustDevice !== false) {
+        const minted = await mintTrustedDevice(supabase, {
+          contactId: contact.id,
+          ip: clientIp,
+          userAgent,
+        });
+        if (minted) {
+          gTrustedDeviceToken = minted.raw;
+          gTrustedDeviceExpiresAt = minted.expiresAt;
+        }
+      }
+
       // Load portal data (same as OTP verify flow)
       const [accountsRes, storehousesRes, auditRes, requestsRes] = await Promise.all([
         supabase.from("vineyard_accounts").select("*").eq("contact_id", contact.id).order("created_at"),
