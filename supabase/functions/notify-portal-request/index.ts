@@ -312,21 +312,25 @@ if (req.method === "OPTIONS") {
       const cleanEmail = contact.email.trim().toLowerCase();
       const firstName = contact.first_name || "there";
 
+      const link = await mintMagicLink(supabase, { contactId, targetHash: "tasks" });
+      const url = link?.url || plainPortalUrl();
+      const linkFooter = `\n\nOpen it here:\n${url}\n\n(This one-tap link is valid for 1 hour and works once. After that, sign in at https://app.prosperwise.ca)`;
+
       let subject = "";
       let message = "";
 
       if (task_event === "comment") {
         subject = `New comment on: ${task_name}`;
-        message = `Hi ${firstName},\n\nA new comment has been added to your action item "${task_name}".\n\nLog in to your portal to view the details.\n\nThank you,\nProsperWise Team`;
+        message = `Hi ${firstName},\n\nA new comment has been added to your action item "${task_name}".${linkFooter}\n\nThank you,\nProsperWise Team`;
       } else if (task_event === "completed") {
         subject = `Action item completed: ${task_name}`;
-        message = `Hi ${firstName},\n\nYour action item "${task_name}" has been marked as complete.\n\nLog in to your portal to review.\n\nThank you,\nProsperWise Team`;
+        message = `Hi ${firstName},\n\nYour action item "${task_name}" has been marked as complete.${linkFooter}\n\nThank you,\nProsperWise Team`;
       } else if (task_event === "reopened") {
         subject = `Action item reopened: ${task_name}`;
-        message = `Hi ${firstName},\n\nYour action item "${task_name}" has been reopened.\n\nLog in to your portal for details.\n\nThank you,\nProsperWise Team`;
+        message = `Hi ${firstName},\n\nYour action item "${task_name}" has been reopened.${linkFooter}\n\nThank you,\nProsperWise Team`;
       } else {
         subject = `Update on: ${task_name}`;
-        message = `Hi ${firstName},\n\nYour action item "${task_name}" has been updated.\n\nLog in to your portal to view the changes.\n\nThank you,\nProsperWise Team`;
+        message = `Hi ${firstName},\n\nYour action item "${task_name}" has been updated.${linkFooter}\n\nThank you,\nProsperWise Team`;
       }
 
       const result = await dispatchNotification({
