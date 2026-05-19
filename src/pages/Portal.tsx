@@ -370,6 +370,22 @@ const Portal = () => {
     setOtpLoading(true);
     setOtpError(null);
     try {
+      // Try silent device login first (skips OTP for trusted devices)
+      const stored = readTrustedDevice();
+      if (stored && stored.email === email.trim().toLowerCase()) {
+        const dev = await supabase.functions.invoke("portal-otp", {
+          body: { action: "device-login", email: email.trim(), trusted_device_token: stored.token },
+        });
+        if (!dev.error && !dev.data?.error && dev.data?.contact) {
+          setData(dev.data);
+          setDrilldown({ level: "individual" });
+          setOtpLoading(false);
+          return;
+        }
+        // token rejected — clear it so we don't loop
+        clearTrustedDevice();
+      }
+
       const resp = await supabase.functions.invoke("portal-otp", {
         body: { action: "send", email: email.trim() },
       });
@@ -388,11 +404,14 @@ const Portal = () => {
     setOtpError(null);
     try {
       const resp = await supabase.functions.invoke("portal-otp", {
-        body: { action: "verify", email: email.trim(), code: otp },
+        body: { action: "verify", email: email.trim(), code: otp, trust_device: trustDevice },
       });
       if (resp.error || resp.data?.error) {
         setOtpError(resp.data?.error || "Invalid code. Please try again.");
       } else {
+        if (trustDevice && resp.data?.trusted_device_token) {
+          writeTrustedDevice(resp.data.trusted_device_token, email.trim());
+        }
         setData(resp.data);
         setDrilldown({ level: "individual" });
       }
