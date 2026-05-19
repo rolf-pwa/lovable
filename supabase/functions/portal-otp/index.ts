@@ -790,14 +790,3 @@ serve(async (req) => {
     });
   }
 });
-
-    return new Response(JSON.stringify({ error: "Invalid action" }), {
-      status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  } catch (e) {
-    console.error("Portal OTP error:", e);
-    return new Response(JSON.stringify({ error: "Server error" }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
-});
