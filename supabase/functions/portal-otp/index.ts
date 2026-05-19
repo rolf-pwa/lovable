@@ -449,6 +449,21 @@ serve(async (req) => {
         .select("token")
         .single();
 
+      // Mint a trusted-device token unless the client explicitly opted out
+      let trustedDeviceToken: string | null = null;
+      let trustedDeviceExpiresAt: string | null = null;
+      if (trustDevice !== false) {
+        const minted = await mintTrustedDevice(supabase, {
+          contactId,
+          ip: clientIp,
+          userAgent,
+        });
+        if (minted) {
+          trustedDeviceToken = minted.raw;
+          trustedDeviceExpiresAt = minted.expiresAt;
+        }
+      }
+
       // Now load portal data
       const [contactRes, accountsRes, storehousesRes, auditRes, requestsRes] = await Promise.all([
         supabase.from("contacts").select("id, first_name, last_name, full_name, email, email_notifications_enabled, governance_status, fiduciary_entity, quiet_period_start_date, google_drive_url, charter_url, asana_url, ia_financial_url, vineyard_ebitda, vineyard_operating_income, vineyard_balance_sheet_summary, family_id, household_id, family_role, is_minor").eq("id", contactId).maybeSingle(),
