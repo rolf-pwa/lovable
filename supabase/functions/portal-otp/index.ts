@@ -537,6 +537,8 @@ serve(async (req) => {
 
       return new Response(JSON.stringify({
         portal_token: newToken?.token || null,
+        trusted_device_token: trustedDeviceToken,
+        trusted_device_expires_at: trustedDeviceExpiresAt,
         contact: contactRes.data,
         vineyard_accounts: accountsRes.data || [],
         storehouses: storehousesRes.data || [],
