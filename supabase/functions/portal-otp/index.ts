@@ -242,7 +242,19 @@ serve(async (req) => {
   );
 
   try {
-    const { action, email, code } = await req.json();
+    const body = await req.json();
+    const { action, email, code, deviceToken, trustDevice } = body as {
+      action: string;
+      email?: string;
+      code?: string;
+      deviceToken?: string;
+      trustDevice?: boolean;
+    };
+    const clientIp =
+      req.headers.get("cf-connecting-ip") ||
+      (req.headers.get("x-forwarded-for") || "").split(",")[0].trim() ||
+      null;
+    const userAgent = req.headers.get("user-agent") || null;
 
     if (action === "send") {
       if (!email || typeof email !== "string") {
