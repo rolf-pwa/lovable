@@ -696,6 +696,8 @@ serve(async (req) => {
 
       return new Response(JSON.stringify({
         portal_token: newToken?.token || null,
+        trusted_device_token: gTrustedDeviceToken,
+        trusted_device_expires_at: gTrustedDeviceExpiresAt,
         contact,
         vineyard_accounts: accountsRes.data || [],
         storehouses: storehousesRes.data || [],
@@ -712,6 +714,82 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    // ── Trusted-device fast-login: skip OTP if the client presents a valid device token ──
+    if (action === "device-login") {
+      if (!email || !deviceToken) {
+        return new Response(JSON.stringify({ error: "Email and device token required" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const cleanEmail = email.trim().toLowerCase();
+      const validated = await validateTrustedDevice(supabase, {
+        rawToken: deviceToken,
+        expectedEmail: cleanEmail,
+        ip: clientIp,
+        userAgent,
+      });
+      if (!validated) {
+        return new Response(JSON.stringify({ error: "Device not trusted" }), {
+          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      // Hand off to the existing OTP path by issuing a portal_token and returning data
+      await supabase.from("portal_logins").insert({
+        contact_id: validated.contactId, login_method: "trusted_device",
+      });
+      const { data: newToken } = await supabase
+        .from("portal_tokens")
+        .insert({ contact_id: validated.contactId, created_by: validated.contactId })
+        .select("token").single();
+
+      // Reuse portal-validate-shape via a minimal in-line load (kept minimal — only fields the portal needs at boot)
+      const { data: contact } = await supabase
+        .from("contacts")
+        .select("id, first_name, last_name, full_name, email, email_notifications_enabled, governance_status, fiduciary_entity, quiet_period_start_date, google_drive_url, charter_url, asana_url, ia_financial_url, family_id, household_id, family_role, is_minor")
+        .eq("id", validated.contactId).maybeSingle();
+
+      return new Response(JSON.stringify({
+        portal_token: newToken?.token || null,
+        device_login: true,
+        contact,
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    if (action === "revoke-devices") {
+      // Caller must already be authenticated to the portal — we accept the
+      // current portal_token as proof (rather than a device token).
+      const portalTokenStr = (body as any).portal_token;
+      if (!portalTokenStr) {
+        return new Response(JSON.stringify({ error: "portal_token required" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const { data: pt } = await supabase
+        .from("portal_tokens")
+        .select("contact_id, revoked, expires_at")
+        .eq("token", portalTokenStr).maybeSingle();
+      if (!pt || pt.revoked || new Date(pt.expires_at) < new Date()) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      await revokeAllDevices(supabase, pt.contact_id);
+      return new Response(JSON.stringify({ revoked: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    return new Response(JSON.stringify({ error: "Invalid action" }), {
+      status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  } catch (e) {
+    console.error("Portal OTP error:", e);
+    return new Response(JSON.stringify({ error: "Server error" }), {
+      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+});
 
     return new Response(JSON.stringify({ error: "Invalid action" }), {
       status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
