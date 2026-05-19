@@ -12,6 +12,19 @@ import { checkOutboundPii } from "../_shared/pii-shield.ts";
 
 const GATEWAY_URL = "https://connector-gateway.lovable.dev/google_mail/gmail/v1";
 const SENDER_DISPLAY = "ProsperWise <admin@prosperwise.ca>";
+const APP_URL = "https://app.prosperwise.ca";
+
+function appendAppLinkText(body: string): string {
+  if (body.includes(APP_URL)) return body;
+  return `${body.replace(/\s+$/, "")}\n\n—\nProsperWise: ${APP_URL}\n`;
+}
+
+function appendAppLinkHtml(body: string): string {
+  if (body.includes(APP_URL)) return body;
+  const footer = `<hr style="border:none;border-top:1px solid #2A4034;margin:24px 0 12px" /><p style="font-family:'DM Sans',sans-serif;font-size:13px;color:#8a8a8a;margin:0">ProsperWise &middot; <a href="${APP_URL}" style="color:#f59e0b;text-decoration:none">${APP_URL}</a></p>`;
+  if (/<\/body\s*>/i.test(body)) return body.replace(/<\/body\s*>/i, `${footer}</body>`);
+  return `${body}${footer}`;
+}
 
 const ALLOWED_ORIGINS = [
   "https://prosperwise.lovable.app",
@@ -183,8 +196,12 @@ serve(async (req) => {
     );
   }
 
+  // Append app link to every notification (text + html variants)
+  const textWithLink = text ? appendAppLinkText(text) : undefined;
+  const htmlWithLink = html ? appendAppLinkHtml(html) : undefined;
+
   // PII Shield — block financial/health PII before it leaves Canadian infra
-  const piiCheckText = `${subject}\n${text ?? ""}\n${html ?? ""}`;
+  const piiCheckText = `${subject}\n${textWithLink ?? ""}\n${htmlWithLink ?? ""}`;
   const pii = checkOutboundPii(piiCheckText);
   if (pii.blocked) {
     console.warn(`[send-admin-email] PII Shield blocked: ${pii.reason} (${pii.matched})`);
@@ -194,7 +211,7 @@ serve(async (req) => {
     );
   }
 
-  const raw = buildRawEmail({ to, cc, bcc, subject, text, html, replyTo });
+  const raw = buildRawEmail({ to, cc, bcc, subject, text: textWithLink, html: htmlWithLink, replyTo });
   const rawEncoded = base64UrlEncode(raw);
 
   try {
