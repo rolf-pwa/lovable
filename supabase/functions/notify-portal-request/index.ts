@@ -79,7 +79,7 @@ async function sendViaGmail(args: {
 }
 
 // ── Wix relay helper ──
-async function sendViaWix(payload: {
+async function dispatchNotification(payload: {
   email: string;
   subject: string;
   message: string;
@@ -149,7 +149,7 @@ async function dispatchNotification(args: {
   const channels: Record<string, any> = {};
   const tasks: Promise<void>[] = [];
   if (wix) {
-    tasks.push(sendViaWix(args).then((r) => { channels.wix = r; }));
+    tasks.push(dispatchNotification(args).then((r) => { channels.wix = r; }));
   }
   if (gmail) {
     tasks.push(
@@ -242,7 +242,7 @@ if (req.method === "OPTIONS") {
           link_tab: "updates",
         });
 
-        await sendViaWix({
+        await dispatchNotification({
           email: cleanEmail,
           subject: title,
           message: `Hi ${firstName},\n\nA new update has been posted for you: "${title}"\n\nPlease log in to your portal to read it.\n\nThank you,\nProsperWise Team`,
@@ -325,7 +325,7 @@ if (req.method === "OPTIONS") {
         message = `Hi ${firstName},\n\nYour action item "${task_name}" has been updated.\n\nLog in to your portal to view the changes.\n\nThank you,\nProsperWise Team`;
       }
 
-      const result = await sendViaWix({
+      const result = await dispatchNotification({
         email: cleanEmail,
         subject,
         message,
@@ -398,7 +398,7 @@ if (req.method === "OPTIONS") {
       message = `Hi ${contact.first_name || "there"},\n\nThere's an update on your ${requestType} request.\n\nCurrent status: ${status}\n\nThank you,\nProsperWise Team`;
     }
 
-    const result = await sendViaWix({
+    const result = await dispatchNotification({
       email: cleanEmail,
       subject,
       message,
