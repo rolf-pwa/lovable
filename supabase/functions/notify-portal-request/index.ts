@@ -312,7 +312,7 @@ if (req.method === "OPTIONS") {
       const cleanEmail = contact.email.trim().toLowerCase();
       const firstName = contact.first_name || "there";
 
-      const link = await mintMagicLink(supabase, { contactId, targetHash: "tasks" });
+      const link = await mintMagicLink(supabase, { contactId: contact_id, targetHash: "tasks" });
       const url = link?.url || plainPortalUrl();
       const linkFooter = `\n\nOpen it here:\n${url}\n\n(This one-tap link is valid for 1 hour and works once. After that, sign in at https://app.prosperwise.ca)`;
 
