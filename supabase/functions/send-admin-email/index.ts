@@ -196,8 +196,12 @@ serve(async (req) => {
     );
   }
 
+  // Append app link to every notification (text + html variants)
+  const textWithLink = text ? appendAppLinkText(text) : undefined;
+  const htmlWithLink = html ? appendAppLinkHtml(html) : undefined;
+
   // PII Shield — block financial/health PII before it leaves Canadian infra
-  const piiCheckText = `${subject}\n${text ?? ""}\n${html ?? ""}`;
+  const piiCheckText = `${subject}\n${textWithLink ?? ""}\n${htmlWithLink ?? ""}`;
   const pii = checkOutboundPii(piiCheckText);
   if (pii.blocked) {
     console.warn(`[send-admin-email] PII Shield blocked: ${pii.reason} (${pii.matched})`);
@@ -207,7 +211,7 @@ serve(async (req) => {
     );
   }
 
-  const raw = buildRawEmail({ to, cc, bcc, subject, text, html, replyTo });
+  const raw = buildRawEmail({ to, cc, bcc, subject, text: textWithLink, html: htmlWithLink, replyTo });
   const rawEncoded = base64UrlEncode(raw);
 
   try {
