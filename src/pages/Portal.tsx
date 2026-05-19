@@ -237,6 +237,26 @@ const Portal = () => {
   const [otp, setOtp] = useState("");
   const [otpLoading, setOtpLoading] = useState(false);
   const [otpError, setOtpError] = useState<string | null>(null);
+  const [trustDevice, setTrustDevice] = useState(true);
+
+  // ── Trusted device (skip-OTP) helpers ──
+  const TRUSTED_DEVICE_KEY = "pw_trusted_device";
+  const readTrustedDevice = (): { token: string; email: string } | null => {
+    try {
+      const raw = localStorage.getItem(TRUSTED_DEVICE_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (!parsed?.token || !parsed?.email) return null;
+      return parsed;
+    } catch { return null; }
+  };
+  const writeTrustedDevice = (token: string | null, emailVal: string) => {
+    if (!token) return;
+    try { localStorage.setItem(TRUSTED_DEVICE_KEY, JSON.stringify({ token, email: emailVal.toLowerCase() })); } catch {}
+  };
+  const clearTrustedDevice = () => {
+    try { localStorage.removeItem(TRUSTED_DEVICE_KEY); } catch {}
+  };
 
   // Inactivity timeout (15 minutes)
   const INACTIVITY_TIMEOUT = 15 * 60 * 1000;
