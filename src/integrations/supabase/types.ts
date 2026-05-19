@@ -1505,31 +1505,96 @@ export type Database = {
           created_at: string
           created_by: string
           expires_at: string
+          first_used_ip: string | null
+          first_used_user_agent: string | null
           id: string
+          purpose: string
           revoked: boolean
+          single_use: boolean
+          target_hash: string | null
           token: string
+          used_at: string | null
         }
         Insert: {
           contact_id: string
           created_at?: string
           created_by: string
           expires_at?: string
+          first_used_ip?: string | null
+          first_used_user_agent?: string | null
           id?: string
+          purpose?: string
           revoked?: boolean
+          single_use?: boolean
+          target_hash?: string | null
           token?: string
+          used_at?: string | null
         }
         Update: {
           contact_id?: string
           created_at?: string
           created_by?: string
           expires_at?: string
+          first_used_ip?: string | null
+          first_used_user_agent?: string | null
           id?: string
+          purpose?: string
           revoked?: boolean
+          single_use?: boolean
+          target_hash?: string | null
           token?: string
+          used_at?: string | null
         }
         Relationships: [
           {
             foreignKeyName: "portal_tokens_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      portal_trusted_devices: {
+        Row: {
+          contact_id: string
+          created_at: string
+          device_label: string | null
+          expires_at: string
+          id: string
+          last_used_at: string | null
+          last_used_ip: string | null
+          revoked: boolean
+          token_hash: string
+          user_agent: string | null
+        }
+        Insert: {
+          contact_id: string
+          created_at?: string
+          device_label?: string | null
+          expires_at?: string
+          id?: string
+          last_used_at?: string | null
+          last_used_ip?: string | null
+          revoked?: boolean
+          token_hash: string
+          user_agent?: string | null
+        }
+        Update: {
+          contact_id?: string
+          created_at?: string
+          device_label?: string | null
+          expires_at?: string
+          id?: string
+          last_used_at?: string | null
+          last_used_ip?: string | null
+          revoked?: boolean
+          token_hash?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portal_trusted_devices_contact_id_fkey"
             columns: ["contact_id"]
             isOneToOne: false
             referencedRelation: "contacts"
