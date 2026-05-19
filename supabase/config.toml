@@ -63,3 +63,8 @@ verify_jwt = false
 [functions.quo-webhook]
 verify_jwt = false
 
+[functions.send-admin-email]
+verify_jwt = false
+
+
+

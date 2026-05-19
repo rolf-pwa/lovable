@@ -29,6 +29,55 @@ const STATUS_LABELS: Record<string, string> = {
   resolved: "Resolved",
 };
 
+// ── Channel routing ──
+// NOTIFICATION_CHANNEL controls outbound transactional email:
+//   "wix"   (default) — only Wix Velo relay
+//   "gmail"           — only admin@prosperwise.ca via Gmail connector
+//   "both"            — fire both (useful for cutover testing)
+function getChannels(): { wix: boolean; gmail: boolean } {
+  const ch = (Deno.env.get("NOTIFICATION_CHANNEL") || "wix").toLowerCase();
+  return { wix: ch === "wix" || ch === "both", gmail: ch === "gmail" || ch === "both" };
+}
+
+// ── Gmail (admin@) helper via send-admin-email edge function ──
+async function sendViaGmail(args: {
+  to: string;
+  subject: string;
+  text: string;
+  replyTo?: string;
+}): Promise<{ sent: boolean; reason?: string; messageId?: string }> {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!supabaseUrl || !serviceKey) {
+    return { sent: false, reason: "no_supabase_env" };
+  }
+  try {
+    const res = await fetch(`${supabaseUrl}/functions/v1/send-admin-email`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${serviceKey}`,
+        "x-internal-call": "1",
+      },
+      body: JSON.stringify(args),
+    });
+    const body = await res.text();
+    if (!res.ok) {
+      console.error(`[Notify] Gmail relay failed: ${res.status} ${body}`);
+      return { sent: false, reason: "gmail_error" };
+    }
+    try {
+      const json = JSON.parse(body);
+      return { sent: true, messageId: json.messageId };
+    } catch {
+      return { sent: true };
+    }
+  } catch (err) {
+    console.error("[Notify] Error calling send-admin-email:", err);
+    return { sent: false, reason: "gmail_error" };
+  }
+}
+
 // ── Wix relay helper ──
 async function sendViaWix(payload: {
   email: string;
@@ -86,6 +135,34 @@ async function sendViaWix(payload: {
     return { sent: false, reason: "wix_error" };
   }
 }
+
+// Dispatch to whichever channels are enabled
+async function dispatchNotification(args: {
+  email: string;
+  subject: string;
+  message: string;
+  event_type: string;
+  template_id?: string;
+  [key: string]: string | undefined;
+}): Promise<{ sent: boolean; channels: Record<string, any> }> {
+  const { wix, gmail } = getChannels();
+  const channels: Record<string, any> = {};
+  const tasks: Promise<void>[] = [];
+  if (wix) {
+    tasks.push(sendViaWix(args).then((r) => { channels.wix = r; }));
+  }
+  if (gmail) {
+    tasks.push(
+      sendViaGmail({ to: args.email, subject: args.subject, text: args.message })
+        .then((r) => { channels.gmail = r; })
+    );
+  }
+  await Promise.all(tasks);
+  const sent = Object.values(channels).some((r: any) => r?.sent);
+  return { sent, channels };
+}
+
+
 
 serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
@@ -165,7 +242,7 @@ if (req.method === "OPTIONS") {
           link_tab: "updates",
         });
 
-        await sendViaWix({
+        await dispatchNotification({
           email: cleanEmail,
           subject: title,
           message: `Hi ${firstName},\n\nA new update has been posted for you: "${title}"\n\nPlease log in to your portal to read it.\n\nThank you,\nProsperWise Team`,
@@ -248,7 +325,7 @@ if (req.method === "OPTIONS") {
         message = `Hi ${firstName},\n\nYour action item "${task_name}" has been updated.\n\nLog in to your portal to view the changes.\n\nThank you,\nProsperWise Team`;
       }
 
-      const result = await sendViaWix({
+      const result = await dispatchNotification({
         email: cleanEmail,
         subject,
         message,
@@ -321,7 +398,7 @@ if (req.method === "OPTIONS") {
       message = `Hi ${contact.first_name || "there"},\n\nThere's an update on your ${requestType} request.\n\nCurrent status: ${status}\n\nThank you,\nProsperWise Team`;
     }
 
-    const result = await sendViaWix({
+    const result = await dispatchNotification({
       email: cleanEmail,
       subject,
       message,
