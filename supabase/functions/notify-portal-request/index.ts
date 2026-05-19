@@ -79,7 +79,7 @@ async function sendViaGmail(args: {
 }
 
 // ── Wix relay helper ──
-async function dispatchNotification(payload: {
+async function sendViaWix(payload: {
   email: string;
   subject: string;
   message: string;
@@ -149,7 +149,7 @@ async function dispatchNotification(args: {
   const channels: Record<string, any> = {};
   const tasks: Promise<void>[] = [];
   if (wix) {
-    tasks.push(dispatchNotification(args).then((r) => { channels.wix = r; }));
+    tasks.push(sendViaWix(args).then((r) => { channels.wix = r; }));
   }
   if (gmail) {
     tasks.push(
