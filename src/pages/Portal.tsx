@@ -237,6 +237,26 @@ const Portal = () => {
   const [otp, setOtp] = useState("");
   const [otpLoading, setOtpLoading] = useState(false);
   const [otpError, setOtpError] = useState<string | null>(null);
+  const [trustDevice, setTrustDevice] = useState(true);
+
+  // ── Trusted device (skip-OTP) helpers ──
+  const TRUSTED_DEVICE_KEY = "pw_trusted_device";
+  const readTrustedDevice = (): { token: string; email: string } | null => {
+    try {
+      const raw = localStorage.getItem(TRUSTED_DEVICE_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (!parsed?.token || !parsed?.email) return null;
+      return parsed;
+    } catch { return null; }
+  };
+  const writeTrustedDevice = (token: string | null, emailVal: string) => {
+    if (!token) return;
+    try { localStorage.setItem(TRUSTED_DEVICE_KEY, JSON.stringify({ token, email: emailVal.toLowerCase() })); } catch {}
+  };
+  const clearTrustedDevice = () => {
+    try { localStorage.removeItem(TRUSTED_DEVICE_KEY); } catch {}
+  };
 
   // Inactivity timeout (15 minutes)
   const INACTIVITY_TIMEOUT = 15 * 60 * 1000;
@@ -350,6 +370,22 @@ const Portal = () => {
     setOtpLoading(true);
     setOtpError(null);
     try {
+      // Try silent device login first (skips OTP for trusted devices)
+      const stored = readTrustedDevice();
+      if (stored && stored.email === email.trim().toLowerCase()) {
+        const dev = await supabase.functions.invoke("portal-otp", {
+          body: { action: "device-login", email: email.trim(), trusted_device_token: stored.token },
+        });
+        if (!dev.error && !dev.data?.error && dev.data?.contact) {
+          setData(dev.data);
+          setDrilldown({ level: "individual" });
+          setOtpLoading(false);
+          return;
+        }
+        // token rejected — clear it so we don't loop
+        clearTrustedDevice();
+      }
+
       const resp = await supabase.functions.invoke("portal-otp", {
         body: { action: "send", email: email.trim() },
       });
@@ -368,11 +404,14 @@ const Portal = () => {
     setOtpError(null);
     try {
       const resp = await supabase.functions.invoke("portal-otp", {
-        body: { action: "verify", email: email.trim(), code: otp },
+        body: { action: "verify", email: email.trim(), code: otp, trust_device: trustDevice },
       });
       if (resp.error || resp.data?.error) {
         setOtpError(resp.data?.error || "Invalid code. Please try again.");
       } else {
+        if (trustDevice && resp.data?.trusted_device_token) {
+          writeTrustedDevice(resp.data.trusted_device_token, email.trim());
+        }
         setData(resp.data);
         setDrilldown({ level: "individual" });
       }
@@ -470,6 +509,15 @@ const Portal = () => {
                   </InputOTP>
                 </div>
                 {otpError && <p className="text-xs text-destructive text-center">{otpError}</p>}
+                <label className="flex items-center justify-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={trustDevice}
+                    onChange={(e) => setTrustDevice(e.target.checked)}
+                    className="h-3.5 w-3.5 rounded border-border accent-accent"
+                  />
+                  Remember this device for 30 days
+                </label>
                 <Button onClick={handleVerifyOtp} disabled={otpLoading || otp.length !== 6} className="w-full" size="lg">
                   {otpLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                   Verify & Enter Portal

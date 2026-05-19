@@ -1,5 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { mintMagicLink, plainPortalUrl } from "../_shared/portal-magic-link.ts";
+
 
 const ALLOWED_ORIGINS = [
   "https://prosperwise.lovable.app",
@@ -242,10 +244,12 @@ if (req.method === "OPTIONS") {
           link_tab: "updates",
         });
 
+        const link = await mintMagicLink(supabase, { contactId: c.id, targetHash: "updates" });
+        const url = link?.url || plainPortalUrl();
         await dispatchNotification({
           email: cleanEmail,
           subject: title,
-          message: `Hi ${firstName},\n\nA new update has been posted for you: "${title}"\n\nPlease log in to your portal to read it.\n\nThank you,\nProsperWise Team`,
+          message: `Hi ${firstName},\n\nA new update has been posted for you: "${title}"\n\nOpen it here:\n${url}\n\n(This one-tap link is valid for 1 hour and works once. After that, sign in at https://app.prosperwise.ca)\n\nThank you,\nProsperWise Team`,
           event_type: "marketing_update",
           template_id: "VEXE9Be",
         });
@@ -308,21 +312,25 @@ if (req.method === "OPTIONS") {
       const cleanEmail = contact.email.trim().toLowerCase();
       const firstName = contact.first_name || "there";
 
+      const link = await mintMagicLink(supabase, { contactId, targetHash: "tasks" });
+      const url = link?.url || plainPortalUrl();
+      const linkFooter = `\n\nOpen it here:\n${url}\n\n(This one-tap link is valid for 1 hour and works once. After that, sign in at https://app.prosperwise.ca)`;
+
       let subject = "";
       let message = "";
 
       if (task_event === "comment") {
         subject = `New comment on: ${task_name}`;
-        message = `Hi ${firstName},\n\nA new comment has been added to your action item "${task_name}".\n\nLog in to your portal to view the details.\n\nThank you,\nProsperWise Team`;
+        message = `Hi ${firstName},\n\nA new comment has been added to your action item "${task_name}".${linkFooter}\n\nThank you,\nProsperWise Team`;
       } else if (task_event === "completed") {
         subject = `Action item completed: ${task_name}`;
-        message = `Hi ${firstName},\n\nYour action item "${task_name}" has been marked as complete.\n\nLog in to your portal to review.\n\nThank you,\nProsperWise Team`;
+        message = `Hi ${firstName},\n\nYour action item "${task_name}" has been marked as complete.${linkFooter}\n\nThank you,\nProsperWise Team`;
       } else if (task_event === "reopened") {
         subject = `Action item reopened: ${task_name}`;
-        message = `Hi ${firstName},\n\nYour action item "${task_name}" has been reopened.\n\nLog in to your portal for details.\n\nThank you,\nProsperWise Team`;
+        message = `Hi ${firstName},\n\nYour action item "${task_name}" has been reopened.${linkFooter}\n\nThank you,\nProsperWise Team`;
       } else {
         subject = `Update on: ${task_name}`;
-        message = `Hi ${firstName},\n\nYour action item "${task_name}" has been updated.\n\nLog in to your portal to view the changes.\n\nThank you,\nProsperWise Team`;
+        message = `Hi ${firstName},\n\nYour action item "${task_name}" has been updated.${linkFooter}\n\nThank you,\nProsperWise Team`;
       }
 
       const result = await dispatchNotification({
@@ -381,21 +389,25 @@ if (req.method === "OPTIONS") {
     const requestType = TYPE_LABELS[portalRequest.request_type] || portalRequest.request_type;
     const status = STATUS_LABELS[portalRequest.status] || portalRequest.status;
 
+    const link = await mintMagicLink(supabase, { contactId: contact.id, targetHash: "requests" });
+    const url = link?.url || plainPortalUrl();
+    const linkFooter = `\n\nOpen it here:\n${url}\n\n(This one-tap link is valid for 1 hour and works once. After that, sign in at https://app.prosperwise.ca)`;
+
     let subject = "";
     let message = "";
 
     if (event_type === "new") {
       subject = `Your ${requestType} request has been received`;
-      message = `Hi ${contact.first_name || "there"},\n\nWe've received your ${requestType} request and will get back to you shortly.\n\nRequest: ${portalRequest.request_description}\n\nThank you,\nProsperWise Team`;
+      message = `Hi ${contact.first_name || "there"},\n\nWe've received your ${requestType} request and will get back to you shortly.\n\nRequest: ${portalRequest.request_description}${linkFooter}\n\nThank you,\nProsperWise Team`;
     } else if (event_type === "status_update") {
       subject = `Your ${requestType} request is now ${status}`;
-      message = `Hi ${contact.first_name || "there"},\n\nYour ${requestType} request has been updated to: ${status}.\n\nRequest: ${portalRequest.request_description}\n\nThank you,\nProsperWise Team`;
+      message = `Hi ${contact.first_name || "there"},\n\nYour ${requestType} request has been updated to: ${status}.\n\nRequest: ${portalRequest.request_description}${linkFooter}\n\nThank you,\nProsperWise Team`;
     } else if (event_type === "message") {
       subject = `New message on your ${requestType} request`;
-      message = `Hi ${contact.first_name || "there"},\n\nYou have a new message regarding your ${requestType} request.\n\nLog in to your portal to view the details.\n\nThank you,\nProsperWise Team`;
+      message = `Hi ${contact.first_name || "there"},\n\nYou have a new message regarding your ${requestType} request.${linkFooter}\n\nThank you,\nProsperWise Team`;
     } else {
       subject = `Update on your ${requestType} request`;
-      message = `Hi ${contact.first_name || "there"},\n\nThere's an update on your ${requestType} request.\n\nCurrent status: ${status}\n\nThank you,\nProsperWise Team`;
+      message = `Hi ${contact.first_name || "there"},\n\nThere's an update on your ${requestType} request.\n\nCurrent status: ${status}${linkFooter}\n\nThank you,\nProsperWise Team`;
     }
 
     const result = await dispatchNotification({
