@@ -249,8 +249,27 @@ if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders }
       });
     }
 
+    // Enforce single-use semantics for magic-link tokens. We allow the same
+    // token to resolve once (so the page can load), then mark it used.
+    // Subsequent attempts get rejected — the user falls back to OTP.
+    if (portalToken.single_use && portalToken.used_at) {
+      return new Response(JSON.stringify({ error: "This link has already been used. Please sign in with your email." }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (portalToken.single_use && !portalToken.used_at) {
+      const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || null;
+      await supabase
+        .from("portal_tokens")
+        .update({ used_at: new Date().toISOString(), first_used_ip: clientIp })
+        .eq("token", token);
+    }
+
     const contactId = portalToken.contact_id;
     const advisorUserId = portalToken.created_by;
+
 
     // Fetch all portal data in parallel
     const [contactRes, accountsRes, storehousesRes, auditRes, requestsRes, holdingTankRes, charterRes] = await Promise.all([
