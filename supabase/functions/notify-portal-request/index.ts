@@ -244,10 +244,12 @@ if (req.method === "OPTIONS") {
           link_tab: "updates",
         });
 
+        const link = await mintMagicLink(supabase, { contactId: c.id, targetHash: "updates" });
+        const url = link?.url || plainPortalUrl();
         await dispatchNotification({
           email: cleanEmail,
           subject: title,
-          message: `Hi ${firstName},\n\nA new update has been posted for you: "${title}"\n\nPlease log in to your portal to read it.\n\nThank you,\nProsperWise Team`,
+          message: `Hi ${firstName},\n\nA new update has been posted for you: "${title}"\n\nOpen it here:\n${url}\n\n(This one-tap link is valid for 1 hour and works once. After that, sign in at https://app.prosperwise.ca)\n\nThank you,\nProsperWise Team`,
           event_type: "marketing_update",
           template_id: "VEXE9Be",
         });
