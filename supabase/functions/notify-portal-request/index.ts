@@ -1,5 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { mintMagicLink, plainPortalUrl } from "../_shared/portal-magic-link.ts";
+
 
 const ALLOWED_ORIGINS = [
   "https://prosperwise.lovable.app",
