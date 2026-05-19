@@ -155,10 +155,11 @@ async function dispatchNotification(args: {
   }
   if (gmail) {
     tasks.push(
-      sendViaGmail({ to: args.email, subject: args.subject, text: args.message })
+      sendViaGmail({ to: args.email, subject: uniqueifySubject(args.subject), text: args.message })
         .then((r) => { channels.gmail = r; })
     );
   }
+
   await Promise.all(tasks);
   const sent = Object.values(channels).some((r: any) => r?.sent);
   return { sent, channels };
