@@ -287,31 +287,72 @@ serve(async (req) => {
         expires_at: expiresAt,
       });
 
-      // Send OTP email via Wix triggered email relay
+      // Outbound channels: Wix relay (default) and/or Gmail (admin@) via send-admin-email
+      const channel = (Deno.env.get("NOTIFICATION_CHANNEL") || "wix").toLowerCase();
+      const useWix = channel === "wix" || channel === "both";
+      const useGmail = channel === "gmail" || channel === "both";
+
       const WIX_SITE_URL = Deno.env.get("WIX_SITE_URL");
       const WIX_OTP_SECRET = Deno.env.get("WIX_OTP_SECRET");
 
-      if (WIX_SITE_URL && WIX_OTP_SECRET) {
-        try {
-          const wixPayload = JSON.stringify({
-            email: cleanEmail,
-            code: otp,
-            secret: WIX_OTP_SECRET,
-          });
-          const wixRes = await fetch(WIX_SITE_URL, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: wixPayload,
-          });
-          if (!wixRes.ok) {
-            console.error("[WixRelay] Failed to send OTP. Status:", wixRes.status);
+      const sendTasks: Promise<unknown>[] = [];
+
+      if (useWix && WIX_SITE_URL && WIX_OTP_SECRET) {
+        sendTasks.push((async () => {
+          try {
+            const wixPayload = JSON.stringify({
+              email: cleanEmail,
+              code: otp,
+              secret: WIX_OTP_SECRET,
+            });
+            const wixRes = await fetch(WIX_SITE_URL, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: wixPayload,
+            });
+            if (!wixRes.ok) {
+              console.error("[WixRelay] Failed to send OTP. Status:", wixRes.status);
+            }
+          } catch (wixErr) {
+            console.error("[WixRelay] Error calling Wix endpoint:", wixErr);
           }
-        } catch (wixErr) {
-          console.error("[WixRelay] Error calling Wix endpoint:", wixErr);
-        }
-      } else {
+        })());
+      } else if (useWix) {
         console.warn(`[OTP] Wix secrets missing! WIX_SITE_URL=${!!WIX_SITE_URL}, WIX_OTP_SECRET=${!!WIX_OTP_SECRET}`);
       }
+
+      if (useGmail) {
+        sendTasks.push((async () => {
+          try {
+            const supabaseUrl = Deno.env.get("SUPABASE_URL");
+            const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+            if (!supabaseUrl || !serviceKey) {
+              console.warn("[OTP] Supabase env missing for Gmail relay");
+              return;
+            }
+            const subject = `Your ProsperWise sign-in code: ${otp}`;
+            const text = `Hi ${contact.first_name || "there"},\n\nYour one-time sign-in code is:\n\n${otp}\n\nThis code expires in 10 minutes. If you didn't request it, you can ignore this email.\n\nThank you,\nProsperWise Team`;
+            const gmRes = await fetch(`${supabaseUrl}/functions/v1/send-admin-email`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${serviceKey}`,
+                "x-internal-call": "1",
+              },
+              body: JSON.stringify({ to: cleanEmail, subject, text }),
+            });
+            if (!gmRes.ok) {
+              const body = await gmRes.text();
+              console.error(`[OTP] Gmail relay failed: ${gmRes.status} ${body}`);
+            }
+          } catch (gmErr) {
+            console.error("[OTP] Error calling send-admin-email:", gmErr);
+          }
+        })());
+      }
+
+      await Promise.all(sendTasks);
+
 
       return new Response(JSON.stringify({ sent: true }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
