@@ -509,6 +509,15 @@ const Portal = () => {
                   </InputOTP>
                 </div>
                 {otpError && <p className="text-xs text-destructive text-center">{otpError}</p>}
+                <label className="flex items-center justify-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={trustDevice}
+                    onChange={(e) => setTrustDevice(e.target.checked)}
+                    className="h-3.5 w-3.5 rounded border-border accent-accent"
+                  />
+                  Remember this device for 30 days
+                </label>
                 <Button onClick={handleVerifyOtp} disabled={otpLoading || otp.length !== 6} className="w-full" size="lg">
                   {otpLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                   Verify & Enter Portal
