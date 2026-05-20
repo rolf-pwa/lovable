@@ -696,6 +696,42 @@ export type Database = {
           },
         ]
       }
+      email_digest_queue: {
+        Row: {
+          contact_id: string | null
+          created_at: string
+          first_name: string | null
+          id: string
+          link_tab: string
+          recipient_email: string
+          sent_at: string | null
+          task_event: string
+          task_name: string
+        }
+        Insert: {
+          contact_id?: string | null
+          created_at?: string
+          first_name?: string | null
+          id?: string
+          link_tab?: string
+          recipient_email: string
+          sent_at?: string | null
+          task_event: string
+          task_name: string
+        }
+        Update: {
+          contact_id?: string | null
+          created_at?: string
+          first_name?: string | null
+          id?: string
+          link_tab?: string
+          recipient_email?: string
+          sent_at?: string | null
+          task_event?: string
+          task_name?: string
+        }
+        Relationships: []
+      }
       families: {
         Row: {
           annual_savings: number
