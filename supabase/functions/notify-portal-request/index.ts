@@ -329,36 +329,30 @@ if (req.method === "OPTIONS") {
       const cleanEmail = contact.email.trim().toLowerCase();
       const firstName = contact.first_name || "there";
 
-      const link = await mintMagicLink(supabase, { contactId: contact_id, targetHash: "tasks" });
-      const url = link?.url || plainPortalUrl();
-      const linkFooter = `\n\nOpen it here:\n${url}\n\n(This one-tap link is valid for 1 hour and works once. After that, sign in at https://app.prosperwise.ca)`;
+      // Enqueue into the digest buffer. The process-email-digest cron groups
+      // pending rows per recipient every 10 minutes and ships ONE email,
+      // preventing rapid-fire bursts from being threaded/dropped by Gmail.
+      const { error: enqueueErr } = await supabase
+        .from("email_digest_queue")
+        .insert({
+          contact_id,
+          recipient_email: cleanEmail,
+          first_name: firstName,
+          task_name,
+          task_event: task_event || "updated",
+          link_tab: "tasks",
+        });
 
-      let subject = "";
-      let message = "";
-
-      if (task_event === "comment") {
-        subject = `New comment on: ${task_name}`;
-        message = `Hi ${firstName},\n\nA new comment has been added to your action item "${task_name}".${linkFooter}\n\nThank you,\nProsperWise Team`;
-      } else if (task_event === "completed") {
-        subject = `Action item completed: ${task_name}`;
-        message = `Hi ${firstName},\n\nYour action item "${task_name}" has been marked as complete.${linkFooter}\n\nThank you,\nProsperWise Team`;
-      } else if (task_event === "reopened") {
-        subject = `Action item reopened: ${task_name}`;
-        message = `Hi ${firstName},\n\nYour action item "${task_name}" has been reopened.${linkFooter}\n\nThank you,\nProsperWise Team`;
-      } else {
-        subject = `Update on: ${task_name}`;
-        message = `Hi ${firstName},\n\nYour action item "${task_name}" has been updated.${linkFooter}\n\nThank you,\nProsperWise Team`;
+      if (enqueueErr) {
+        console.error("[Notify] Failed to enqueue task digest item:", enqueueErr);
+        return new Response(JSON.stringify({ sent: false, reason: "enqueue_failed", error: enqueueErr.message }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
 
-      const result = await dispatchNotification({
-        email: cleanEmail,
-        subject,
-        message,
-        event_type: `task_${task_event}`,
-        template_id: "VC9ofWh",
-      });
-
-      return new Response(JSON.stringify(result), {
+      console.log(`[Notify] Enqueued task digest item for ${cleanEmail} (event: ${task_event})`);
+      return new Response(JSON.stringify({ queued: true }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
