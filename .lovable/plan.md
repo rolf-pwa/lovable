@@ -1,58 +1,58 @@
-## Goal
 
-Add `admin@prosperwise.ca` as a shared sender for select notifications using the new Lovable Gmail connector. Wix Velo relay stays in place — this is an additive channel, not a replacement.
+# Activate Gemini Enterprise in ProsperWise
 
-## Scope
+Goal: stand up the Gemini Enterprise connector so staff can query their Workspace vault (Drive, Gmail, Calendar, and any future agent outputs) from inside the app, with grounded answers and citations.
 
-Route through admin@prosperwise.ca:
-1. **Portal request notifications to staff** (currently `notify-portal-request` → Wix)
-2. **Client-facing portal emails** — OTP, request replies, scheduled updates (currently Wix Velo templates)
+## Phase 1 — Connection & smoke test
 
-Out of scope: Discovery confirmations, internal Drive/lead alerts (keep as-is).
+1. Link the **Gemini Enterprise** connector to the project (Lovable connector gateway, OAuth with your Google account).
+2. Verify the connection (project ID, location, engine ID come from connection configuration — no manual entry).
+3. List connected data stores via the inspection endpoint so we confirm Drive / Gmail / Calendar are indexed and visible to the engine.
 
-## Architecture
+Deliverable: a confirmation panel in Settings → Integrations showing "Gemini Enterprise: connected" plus the list of indexed data stores.
 
-```text
-caller fn ──► send-admin-email (new) ──► Lovable Gateway ──► Gmail API (admin@)
-                                    │
-                                    └──► PII Shield check (block financial/health)
-```
+## Phase 2 — Staff Assistant surface (Command Center)
 
-- **Connector**: New Lovable Gmail connector, single connection authorized on `admin@prosperwise.ca`. Sets `GOOGLE_MAIL_API_KEY` env var automatically.
-- **New edge function**: `send-admin-email` — single entry point. Validates JWT, runs PII Shield (`_shared/pii-shield.ts`), builds RFC 2822 message, base64url-encodes, POSTs to `https://connector-gateway.lovable.dev/google_mail/gmail/v1/users/me/messages/send`.
-- **No new DB tables.** Optional: log sends to existing audit trail.
+A new **Ask Gemini** panel in the staff dashboard:
 
-## Implementation steps
+- Chat-style UI (Sanctuary aesthetic: dark slate bg, amber accents, Noto Serif headings, DM Sans body).
+- Calls an edge function `gemini-assist` that proxies `streamAssist` through the gateway.
+- Streams the answer (depth-tracking brace parser, filters `thought:true` chunks, renders markdown).
+- Shows citation chips under each answer linking back to the source Drive doc / Gmail thread / Calendar event.
+- Maintains a session per conversation (saves `sessionInfo.session` for multi-turn follow-ups).
+- Pinned to staff role only — never exposed in the client portal (PII Shield + privacy firewall).
 
-1. **Connect Gmail connector** — call `standard_connectors--connect` with `connector_id: google_mail`. User authorizes on admin@prosperwise.ca with `gmail.send` scope.
-2. **Create `supabase/functions/send-admin-email/index.ts`**
-   - Inputs (Zod): `{ to: string | string[], subject, html?, text?, replyTo?, cc?, bcc? }`
-   - JWT validation via `getClaims()`
-   - PII Shield middleware on subject + body
-   - RFC 2822 builder (handles cc/bcc as headers, multipart for HTML+text)
-   - Gateway call with `Authorization: Bearer LOVABLE_API_KEY` + `X-Connection-Api-Key: GOOGLE_MAIL_API_KEY`
-   - Returns `{ messageId }`
-3. **Add `[functions.send-admin-email]` block** to `supabase/config.toml` (default `verify_jwt = false`, JWT validated in code).
-4. **Add a routing flag per caller** — env var `NOTIFICATION_CHANNEL` (`wix` | `gmail` | `both`) read inside each existing function, defaulting to `wix` so nothing changes until we flip per-flow.
-5. **Wire callers** (each gets a small `sendViaGmail()` branch alongside existing Wix call):
-   - `notify-portal-request/index.ts` — staff alert on new portal request
-   - `portal-otp/index.ts` — OTP delivery to client
-   - `portal-request-reply/index.ts` — reply notifications to client
-   - `process-scheduled-updates/index.ts` — scheduled marketing/update emails to client
-6. **Test path** — `supabase--curl_edge_functions` to POST a test payload to `send-admin-email`; verify a message lands in admin@'s Sent folder.
-7. **Update memory** — amend `mem://integrations/wix-relay` and Core "Communications" rule to note Gmail is an approved secondary channel under PII Shield.
+Example queries it should handle on day one:
+- "What did the Harrison family send last quarter about their trust restructuring?"
+- "Summarize all charter drafts produced by my Gemini agents this week."
+- "Which clients have unreviewed agent outputs in Drive?"
+
+## Phase 3 — Agent output bridge (foundation for your future Gemini agents)
+
+Light groundwork so when you start dropping agent outputs into Drive, the app picks them up cleanly:
+
+- Add a recognized folder convention per contact (e.g. `/Agents/` subfolder alongside the existing `CHARTER_SUBFOLDER_NAME`).
+- Extend `drive-watch` to tag files originating from that folder as `source: 'gemini_agent'` in the staff notification + holding tank.
+- Surface those in the staff notification bell as **"Agent output ready for review"** (HITL gate before anything reaches a client).
+
+No portal-facing changes in this phase — outputs stay internal until an advisor approves them, per the Sovereignty Audit Trail rules.
+
+## Out of scope (deferred)
+
+- Actions via Gemini Enterprise API (sending emails, creating events) — not supported by the API, only the GCP console UI. Continue routing actions through existing Gmail / Calendar / Asana edge functions.
+- Client-portal exposure of Gemini answers — requires PII Shield review first.
+- `search` endpoint (ranked results UI) — `streamAssist` covers the chat use case; we can add a search-style results view later if you want a document browser.
 
 ## Technical notes
 
-- Gmail connector is **builder-account** scoped — admin@ is the workspace owner of the connection, not per-staff. Per-user `google_tokens` system is untouched.
-- Insufficient-scope errors → call `reconnect` with `https://www.googleapis.com/auth/gmail.send`.
-- Reply-To: set to advisor address when notifying clients so replies route back naturally.
-- PII Shield must run BEFORE building the raw message; reject with 422 on hit.
-- All client-bound subjects/bodies remain Charter-disclosed (US infra routing for Gmail acknowledged).
+- Edge function: `supabase/functions/gemini-assist/index.ts`, `verify_jwt` validated in code via `supabaseUser.auth.getUser()`.
+- Gateway base: `https://connector-gateway.lovable.dev/gemini_enterprise/v1alpha`.
+- Headers: `Authorization: Bearer ${LOVABLE_API_KEY}`, `X-Connection-Api-Key: ${GEMINI_ENTERPRISE_API_KEY}`.
+- Resource paths built from connection configuration (`projectId`, `location`, `engineId`) — fetched via `get_connection_configuration`, never hardcoded.
+- Stream parser: depth-tracking brace extractor (not NDJSON), handles `SKIPPED` state, merges overlapping text chunks.
+- Sessions persisted in a new `gemini_sessions` table (staff `user_id`, `session_path`, `last_used_at`) with RLS scoped to `auth.uid()`.
+- Storage region stays Montreal — the connector itself is global, but no Gemini Enterprise response data is persisted server-side beyond session pointers and audit log entries.
 
-## What I won't change
+## Open question
 
-- Wix Velo relay code path stays intact
-- `google_tokens` per-user OAuth stays untouched
-- No DB migrations
-- No UI changes
+One thing to confirm before I build Phase 2: do you want the **Ask Gemini** panel embedded directly into the Command Center dashboard (always visible alongside tasks/calendar), or as a dedicated `/assistant` route reached from the sidebar? Embedded keeps it in your daily flow; dedicated gives it more room and conversation history.
