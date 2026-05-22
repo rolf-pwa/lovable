@@ -1,58 +1,157 @@
 
-# Activate Gemini Enterprise in ProsperWise
+# ProsperWise ↔ Agentic Ops Integration Contract
 
-Goal: stand up the Gemini Enterprise connector so staff can query their Workspace vault (Drive, Gmail, Calendar, and any future agent outputs) from inside the app, with grounded answers and citations.
+This is the shareable build spec for the Ops dev team. ProsperWise (PW) remains the canonical client system. Agentic Ops (Ops) owns the deterministic AI brain (Georgia v2, Charter Architect, Stabilization Map, Charter Drafting, Quarterly Reviews, Shadow-Loop).
 
-## Phase 1 — Connection & smoke test
+Scope of this plan:
+1. Decommission deprecated AI functions in PW.
+2. PW renders all client-facing PDFs and archives a copy to the Vault.
+3. Every Ops → PW call is logged in a single observability table.
 
-1. Link the **Gemini Enterprise** connector to the project (Lovable connector gateway, OAuth with your Google account).
-2. Verify the connection (project ID, location, engine ID come from connection configuration — no manual entry).
-3. List connected data stores via the inspection endpoint so we confirm Drive / Gmail / Calendar are indexed and visible to the engine.
+Everything else (Georgia v1 discovery, Holding Tank, Portal, Asana, Quo, PII Shield, audit trail) stays as-is.
 
-Deliverable: a confirmation panel in Settings → Integrations showing "Gemini Enterprise: connected" plus the list of indexed data stores.
+---
 
-## Phase 2 — Staff Assistant surface (Command Center)
+## 1. Deprecate PW AI functions
 
-A new **Ask Gemini** panel in the staff dashboard:
+Functions Ops will replace. Cutover is **hard** (no proxy shells) once Ops endpoints are live and smoke-tested against staging.
 
-- Chat-style UI (Sanctuary aesthetic: dark slate bg, amber accents, Noto Serif headings, DM Sans body).
-- Calls an edge function `gemini-assist` that proxies `streamAssist` through the gateway.
-- Streams the answer (depth-tracking brace parser, filters `thought:true` chunks, renders markdown).
-- Shows citation chips under each answer linking back to the source Drive doc / Gmail thread / Calendar event.
-- Maintains a session per conversation (saves `sessionInfo.session` for multi-turn follow-ups).
-- Pinned to staff role only — never exposed in the client portal (PII Shield + privacy firewall).
+| PW function | Replaced by Ops agent | Action |
+|---|---|---|
+| `supabase/functions/stabilization-map-generate` | Stabilization Map agent | Delete |
+| `supabase/functions/stabilization-map-from-audit` | Stabilization Map agent | Delete |
+| `supabase/functions/generate-charter-draft` | Charter Architect | Delete |
+| `supabase/functions/quarterly-system-review-generate` | Quarterly Reviews engine | Delete (PDF render path stays — see §2) |
+| `supabase/functions/vertex-ai` (charter / map / review code paths only) | Distributed across Ops agents | Trim — keep Sovereignty Assistant + CFO helper paths only |
 
-Example queries it should handle on day one:
-- "What did the Harrison family send last quarter about their trust restructuring?"
-- "Summarize all charter drafts produced by my Gemini agents this week."
-- "Which clients have unreviewed agent outputs in Drive?"
+Frontend cleanup:
+- `StabilizationMapButton`, `GenerateCharterDraftButton`, `QuarterlySystemReviewButton` switch from `supabase.functions.invoke(...)` to calling the new Ops trigger endpoint (`POST /ops-trigger/{agent}` proxied through one thin PW edge function, see §3).
+- `StabilizationMapResolver`, `QuarterlySystemReviewResolver`, `SovereigntyCharter` pages keep their HITL review UI unchanged — they read from `review_queue` / draft tables exactly as today.
 
-## Phase 3 — Agent output bridge (foundation for your future Gemini agents)
+Deletion order:
+1. Ops endpoints live in staging.
+2. PW buttons re-wired to Ops trigger.
+3. Smoke test end-to-end against one test household.
+4. Delete deprecated functions via `supabase--delete_edge_functions`.
+5. Drop unused secrets if any become orphaned.
 
-Light groundwork so when you start dropping agent outputs into Drive, the app picks them up cleanly:
+---
 
-- Add a recognized folder convention per contact (e.g. `/Agents/` subfolder alongside the existing `CHARTER_SUBFOLDER_NAME`).
-- Extend `drive-watch` to tag files originating from that folder as `source: 'gemini_agent'` in the staff notification + holding tank.
-- Surface those in the staff notification bell as **"Agent output ready for review"** (HITL gate before anything reaches a client).
+## 2. PDF rendering + Vault archival
 
-No portal-facing changes in this phase — outputs stay internal until an advisor approves them, per the Sovereignty Audit Trail rules.
+**Rule:** Ops returns structured JSON only. PW owns all PDF rendering so branding, fonts (Noto Serif / DM Sans), Sanctuary palette, and footer disclaimers stay in one place.
 
-## Out of scope (deferred)
+### Flow
 
-- Actions via Gemini Enterprise API (sending emails, creating events) — not supported by the API, only the GCP console UI. Continue routing actions through existing Gmail / Calendar / Asana edge functions.
-- Client-portal exposure of Gemini answers — requires PII Shield review first.
-- `search` endpoint (ranked results UI) — `streamAssist` covers the chat use case; we can add a search-style results view later if you want a document browser.
+```text
+Ops agent finishes
+   │ POST /agent-submit-{charter|map|quarterly-review}
+   ▼
+PW writes draft to review_queue / draft table
+   │
+   ▼
+Advisor approves in HITL UI
+   │
+   ▼
+PW render-pdf edge function (new):
+   - pulls approved JSON
+   - renders branded PDF (reuses existing quarterly-system-review-generate render code)
+   - uploads to charter-source-uploads bucket
+     path: {household_id}/{kind}/{yyyy-mm-dd}-{agent_run_id}.pdf
+   - inserts row into sovereignty_charter_sources
+       source_kind = 'charter_draft' | 'stabilization_map' | 'quarterly_review'
+       agent_run_id, ops_agent, approved_by, approved_at
+   - signed 24h URL returned to advisor
+   - existing portal-reviews-pinning logic auto-surfaces it in Portal > Reviews (quarterly) or Portal > Charter (charter/map)
+```
 
-## Technical notes
+### New PW edge function
 
-- Edge function: `supabase/functions/gemini-assist/index.ts`, `verify_jwt` validated in code via `supabaseUser.auth.getUser()`.
-- Gateway base: `https://connector-gateway.lovable.dev/gemini_enterprise/v1alpha`.
-- Headers: `Authorization: Bearer ${LOVABLE_API_KEY}`, `X-Connection-Api-Key: ${GEMINI_ENTERPRISE_API_KEY}`.
-- Resource paths built from connection configuration (`projectId`, `location`, `engineId`) — fetched via `get_connection_configuration`, never hardcoded.
-- Stream parser: depth-tracking brace extractor (not NDJSON), handles `SKIPPED` state, merges overlapping text chunks.
-- Sessions persisted in a new `gemini_sessions` table (staff `user_id`, `session_path`, `last_used_at`) with RLS scoped to `auth.uid()`.
-- Storage region stays Montreal — the connector itself is global, but no Gemini Enterprise response data is persisted server-side beyond session pointers and audit log entries.
+`supabase/functions/render-agent-pdf/index.ts`
+- Input: `{ agent_run_id, kind, contact_id, household_id, payload_json }`
+- Auth: staff JWT (HITL approval action), validated via `supabase.auth.getUser()`
+- Reuses render helpers from current `quarterly-system-review-generate` (extract to `_shared/pdf-render.ts`)
+- Writes to bucket + `sovereignty_charter_sources` in one transaction
+- Returns `{ signed_url, vault_path, source_id }`
 
-## Open question
+### Vault visibility
 
-One thing to confirm before I build Phase 2: do you want the **Ask Gemini** panel embedded directly into the Command Center dashboard (always visible alongside tasks/calendar), or as a dedicated `/assistant` route reached from the sidebar? Embedded keeps it in your daily flow; dedicated gives it more room and conversation history.
+Vault already reads from `sovereignty_charter_sources`. No Vault changes needed beyond the new `source_kind` enums.
+
+---
+
+## 3. Ops call logging (`agent_invocations`)
+
+Single source of truth for every Ops ↔ PW exchange. Lives in PW so it correlates with `sovereignty_audit_trail`.
+
+### Schema (migration to run at integration time)
+
+```sql
+CREATE TABLE public.agent_invocations (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  agent_run_id uuid NOT NULL UNIQUE,      -- generated by Ops, echoed on every call in the run
+  agent_name text NOT NULL,                -- 'georgia_v2' | 'charter_architect' | 'stabilization_map' | 'charter_drafting' | 'quarterly_review' | 'shadow_loop'
+  direction text NOT NULL,                 -- 'inbound' (Ops→PW) | 'outbound' (PW→Ops)
+  endpoint text NOT NULL,                  -- e.g. 'agent-submit-charter-draft'
+  contact_id uuid REFERENCES contacts(id),
+  household_id uuid REFERENCES households(id),
+  request_payload jsonb,                   -- redacted by PII Shield before insert
+  response_status int,
+  response_payload jsonb,                  -- redacted
+  latency_ms int,
+  hmac_valid boolean,
+  error text,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX ON agent_invocations (agent_run_id);
+CREATE INDEX ON agent_invocations (contact_id, created_at DESC);
+CREATE INDEX ON agent_invocations (agent_name, created_at DESC);
+
+ALTER TABLE agent_invocations ENABLE ROW LEVEL SECURITY;
+-- staff-only read; writes via service role from edge functions
+CREATE POLICY "Staff read agent invocations"
+  ON agent_invocations FOR SELECT TO authenticated
+  USING (public.has_role(auth.uid(), 'admin') OR public.has_role(auth.uid(), 'staff'));
+```
+
+### Logging contract for Ops
+
+Every PW edge function in the Ops surface (inbound `agent-submit-*`, `agent-resolve-uuid`, `agent-log-question`, `agent-vault-status`, `agent-fetch-source`, outbound `quiet-period-started`, `ops-trigger`) MUST:
+1. Verify HMAC signature using `AGENTIC_OPS_SIGNING_SECRET`.
+2. Run request body through `_shared/pii-shield.ts` before logging.
+3. Insert one `agent_invocations` row per call with `agent_run_id` (Ops generates; PW echoes).
+4. Wrap handler in latency timer; record `response_status`, `error` on failure.
+
+A small `_shared/log-agent-call.ts` helper will standardize this.
+
+### Observability tile
+
+Command Center gets one new widget (`AgentOpsHealth.tsx`): last 24h invocation count by agent, p95 latency, error rate, HMAC-fail count. Staff-only.
+
+---
+
+## Build order (for Ops dev team handoff)
+
+1. **PW migration:** create `agent_invocations` + helper.
+2. **PW edge functions (new):**
+   - `_shared/log-agent-call.ts`, `_shared/pdf-render.ts`, `_shared/ops-hmac.ts`
+   - `ops-trigger` (single outbound proxy: kind → Ops endpoint)
+   - `agent-submit-charter-draft`, `agent-submit-stabilization-map`, `agent-submit-quarterly-review`
+   - `agent-resolve-uuid`, `agent-log-question`, `agent-vault-status`, `agent-fetch-source`
+   - `pii-shield-scan`
+   - `render-agent-pdf`
+   - `quiet-period-started` (outbound webhook)
+3. **Frontend re-wire:** three trigger buttons + resolver pages point at `ops-trigger` and `render-agent-pdf`.
+4. **Smoke test** one test household end-to-end.
+5. **Delete deprecated functions** (§1 list) + remove dead frontend code paths.
+6. **Ship Command Center observability tile.**
+
+---
+
+## Open items for Ops dev team to confirm
+
+1. `agent_run_id` generation — Ops generates UUIDv4 at run start, echoes on every call in the run (PW assumes this).
+2. HMAC scheme — HMAC-SHA256 over `{timestamp}.{body}`, header `X-Ops-Signature: t={ts},v1={hex}`, 5-minute skew window. Confirm or propose alternative.
+3. `agent-fetch-source` — Ops will pull source PDFs via signed URL (no JSON file passing); confirm Ops handles loop-based base64 internally for files >5MB.
+4. Vertex region pin — Ops must enforce `northamerica-northeast1` for PIPEDA; PW will not validate this at call time.
