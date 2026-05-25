@@ -1,157 +1,219 @@
 
-# ProsperWise ↔ Agentic Ops Integration Contract
+# ProsperWise Document Vault — Technical Specification
 
-This is the shareable build spec for the Ops dev team. ProsperWise (PW) remains the canonical client system. Agentic Ops (Ops) owns the deterministic AI brain (Georgia v2, Charter Architect, Stabilization Map, Charter Drafting, Quarterly Reviews, Shadow-Loop).
-
-Scope of this plan:
-1. Decommission deprecated AI functions in PW.
-2. PW renders all client-facing PDFs and archives a copy to the Vault.
-3. Every Ops → PW call is logged in a single observability table.
-
-Everything else (Georgia v1 discovery, Holding Tank, Portal, Asana, Quo, PII Shield, audit trail) stays as-is.
+**Version:** 1.0 · **Owner:** ProsperWise · **Backend:** Google Drive (firm Workspace) proxied through Supabase Edge Functions in `northamerica-northeast1` (Montreal, PIPEDA-pinned).
 
 ---
 
-## 1. Deprecate PW AI functions
+## 1. Purpose & Principles
 
-Functions Ops will replace. Cutover is **hard** (no proxy shells) once Ops endpoints are live and smoke-tested against staging.
+The Vault is the firm's **only** client-document surface. Drive itself is never exposed — to clients, collaborators, or even staff browsers. Every byte passes through one Edge Function (`vault-service`) that enforces an ancestry firewall.
 
-| PW function | Replaced by Ops agent | Action |
-|---|---|---|
-| `supabase/functions/stabilization-map-generate` | Stabilization Map agent | Delete |
-| `supabase/functions/stabilization-map-from-audit` | Stabilization Map agent | Delete |
-| `supabase/functions/generate-charter-draft` | Charter Architect | Delete |
-| `supabase/functions/quarterly-system-review-generate` | Quarterly Reviews engine | Delete (PDF render path stays — see §2) |
-| `supabase/functions/vertex-ai` (charter / map / review code paths only) | Distributed across Ops agents | Trim — keep Sovereignty Assistant + CFO helper paths only |
-
-Frontend cleanup:
-- `StabilizationMapButton`, `GenerateCharterDraftButton`, `QuarterlySystemReviewButton` switch from `supabase.functions.invoke(...)` to calling the new Ops trigger endpoint (`POST /ops-trigger/{agent}` proxied through one thin PW edge function, see §3).
-- `StabilizationMapResolver`, `QuarterlySystemReviewResolver`, `SovereigntyCharter` pages keep their HITL review UI unchanged — they read from `review_queue` / draft tables exactly as today.
-
-Deletion order:
-1. Ops endpoints live in staging.
-2. PW buttons re-wired to Ops trigger.
-3. Smoke test end-to-end against one test household.
-4. Delete deprecated functions via `supabase--delete_edge_functions`.
-5. Drop unused secrets if any become orphaned.
+Hard rules:
+1. **Drive is invisible.** No Drive URLs, no Drive ACLs to outside parties — ever.
+2. **One vault per household.** Households inside the same family do NOT share vaults (fiduciary isolation).
+3. **Default-deny.** Every action revalidates the actor's ancestor chain.
+4. **Instant revocation.** Flipping `revoked_at` 403s the next request — no Drive cleanup needed.
+5. **PIPEDA pinning.** Bytes decrypt only inside the Montreal Edge Function. Wix Velo relay (PII-Shielded) for client-facing emails.
+6. **Everything is audited** to `vault_audit_log` with actor, IP, UA, action, drive_id.
 
 ---
 
-## 2. PDF rendering + Vault archival
-
-**Rule:** Ops returns structured JSON only. PW owns all PDF rendering so branding, fonts (Noto Serif / DM Sans), Sanctuary palette, and footer disclaimers stay in one place.
-
-### Flow
+## 2. Architecture
 
 ```text
-Ops agent finishes
-   │ POST /agent-submit-{charter|map|quarterly-review}
-   ▼
-PW writes draft to review_queue / draft table
-   │
-   ▼
-Advisor approves in HITL UI
-   │
-   ▼
-PW render-pdf edge function (new):
-   - pulls approved JSON
-   - renders branded PDF (reuses existing quarterly-system-review-generate render code)
-   - uploads to charter-source-uploads bucket
-     path: {household_id}/{kind}/{yyyy-mm-dd}-{agent_run_id}.pdf
-   - inserts row into sovereignty_charter_sources
-       source_kind = 'charter_draft' | 'stabilization_map' | 'quarterly_review'
-       agent_run_id, ops_agent, approved_by, approved_at
-   - signed 24h URL returned to advisor
-   - existing portal-reviews-pinning logic auto-surfaces it in Portal > Reviews (quarterly) or Portal > Charter (charter/map)
+              ┌──────────────────────────────────────────────────┐
+              │  CRM (staff)   Portal (client)   Guest landing   │
+              │   Vault.tsx     PortalVault       VaultGuest     │
+              └──────┬─────────────┬────────────────┬────────────┘
+                     │ Bearer JWT  │ x-portal-token │ x-vault-{guest|share}-token
+                     │             │                │  (+ x-vault-unlock-code)
+                     └─────────────┴────────────────┘
+                                   │
+                       Supabase Edge Function: vault-service
+                       (Montreal · single entrypoint · firewall)
+                                   │
+                  ┌────────────────┼────────────────┐
+                  │                │                │
+            Supabase DB     Google Drive API    Wix Velo relay
+        (state · audit)   (firm Workspace OAuth)  (PII-Shielded email)
 ```
 
-### New PW edge function
-
-`supabase/functions/render-agent-pdf/index.ts`
-- Input: `{ agent_run_id, kind, contact_id, household_id, payload_json }`
-- Auth: staff JWT (HITL approval action), validated via `supabase.auth.getUser()`
-- Reuses render helpers from current `quarterly-system-review-generate` (extract to `_shared/pdf-render.ts`)
-- Writes to bucket + `sovereignty_charter_sources` in one transaction
-- Returns `{ signed_url, vault_path, source_id }`
-
-### Vault visibility
-
-Vault already reads from `sovereignty_charter_sources`. No Vault changes needed beyond the new `source_kind` enums.
+Single function, action-dispatched (`{ action, ...payload }` over POST). Google access token = firm Workspace ghost user from `google_tokens` (most-recent row, auto-refreshed).
 
 ---
 
-## 3. Ops call logging (`agent_invocations`)
+## 3. Actors & Authentication
 
-Single source of truth for every Ops ↔ PW exchange. Lives in PW so it correlates with `sovereignty_audit_trail`.
+| Actor | Auth header | Resolves to | Firewall basis |
+|---|---|---|---|
+| `staff` | `Authorization: Bearer <Supabase JWT>` | `auth.users.id` | Bypass — full manage |
+| `client` | `x-portal-token` → `portal_tokens` (non-revoked, non-expired) | `contacts.id` + `households.vault_root_folder_id` | Ancestry must include `vaultRootId` |
+| `collaborator` | `x-vault-guest-token` + `x-vault-unlock-code` (first use) | `vault_collaborators.id` + active `vault_collaborator_grants[]` | Ancestry must include one grant drive_id |
+| `share_link` | `x-vault-share-token` (+ `x-vault-unlock-code` if guest type & not authenticated) | `vault_share_links.id` + `scopeDriveId` | Ancestry must include `scopeDriveId` |
 
-### Schema (migration to run at integration time)
+`resolveActor()` checks in this order: collaborator → share-link → portal → staff. First match wins. An authenticated staff/portal session **bypasses** the guest unlock-code prompt on share links (`isAuthenticatedPrincipal`).
 
-```sql
-CREATE TABLE public.agent_invocations (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  agent_run_id uuid NOT NULL UNIQUE,      -- generated by Ops, echoed on every call in the run
-  agent_name text NOT NULL,                -- 'georgia_v2' | 'charter_architect' | 'stabilization_map' | 'charter_drafting' | 'quarterly_review' | 'shadow_loop'
-  direction text NOT NULL,                 -- 'inbound' (Ops→PW) | 'outbound' (PW→Ops)
-  endpoint text NOT NULL,                  -- e.g. 'agent-submit-charter-draft'
-  contact_id uuid REFERENCES contacts(id),
-  household_id uuid REFERENCES households(id),
-  request_payload jsonb,                   -- redacted by PII Shield before insert
-  response_status int,
-  response_payload jsonb,                  -- redacted
-  latency_ms int,
-  hmac_valid boolean,
-  error text,
-  created_at timestamptz NOT NULL DEFAULT now()
-);
-
-CREATE INDEX ON agent_invocations (agent_run_id);
-CREATE INDEX ON agent_invocations (contact_id, created_at DESC);
-CREATE INDEX ON agent_invocations (agent_name, created_at DESC);
-
-ALTER TABLE agent_invocations ENABLE ROW LEVEL SECURITY;
--- staff-only read; writes via service role from edge functions
-CREATE POLICY "Staff read agent invocations"
-  ON agent_invocations FOR SELECT TO authenticated
-  USING (public.has_role(auth.uid(), 'admin') OR public.has_role(auth.uid(), 'staff'));
-```
-
-### Logging contract for Ops
-
-Every PW edge function in the Ops surface (inbound `agent-submit-*`, `agent-resolve-uuid`, `agent-log-question`, `agent-vault-status`, `agent-fetch-source`, outbound `quiet-period-started`, `ops-trigger`) MUST:
-1. Verify HMAC signature using `AGENTIC_OPS_SIGNING_SECRET`.
-2. Run request body through `_shared/pii-shield.ts` before logging.
-3. Insert one `agent_invocations` row per call with `agent_run_id` (Ops generates; PW echoes).
-4. Wrap handler in latency timer; record `response_status`, `error` on failure.
-
-A small `_shared/log-agent-call.ts` helper will standardize this.
-
-### Observability tile
-
-Command Center gets one new widget (`AgentOpsHealth.tsx`): last 24h invocation count by agent, p95 latency, error rate, HMAC-fail count. Staff-only.
+Guest token first-use binds the request's `User-Agent` to `vault_guest_tokens.bound_user_agent`; subsequent calls with a different UA are rejected.
 
 ---
 
-## Build order (for Ops dev team handoff)
+## 4. Database Schema
 
-1. **PW migration:** create `agent_invocations` + helper.
-2. **PW edge functions (new):**
-   - `_shared/log-agent-call.ts`, `_shared/pdf-render.ts`, `_shared/ops-hmac.ts`
-   - `ops-trigger` (single outbound proxy: kind → Ops endpoint)
-   - `agent-submit-charter-draft`, `agent-submit-stabilization-map`, `agent-submit-quarterly-review`
-   - `agent-resolve-uuid`, `agent-log-question`, `agent-vault-status`, `agent-fetch-source`
-   - `pii-shield-scan`
-   - `render-agent-pdf`
-   - `quiet-period-started` (outbound webhook)
-3. **Frontend re-wire:** three trigger buttons + resolver pages point at `ops-trigger` and `render-agent-pdf`.
-4. **Smoke test** one test household end-to-end.
-5. **Delete deprecated functions** (§1 list) + remove dead frontend code paths.
-6. **Ship Command Center observability tile.**
+| Table | Purpose | Key columns |
+|---|---|---|
+| `households.vault_root_folder_id` | Per-household Drive root | text (nullable) |
+| `contacts.vault_root_folder_id` | Legacy per-contact root (fallback for orphans) | text (nullable) |
+| `vault_folder_templates` | Subfolders auto-created on provisioning | `display_name`, `position`, `is_active` |
+| `vault_files` | Cached file metadata + control flags | `household_id`, `contact_id`, `drive_id` (uniq), `parent_folder_id`, `ancestor_folder_ids[]`, `is_folder`, `client_visible` (default true), `staff_reviewed`, `uploaded_by_contact_id` |
+| `vault_contact_roles` | Baseline client capability per contact | `contact_id`, `role` ∈ {viewer, contributor, manager} |
+| `vault_contact_grants` | Per-contact explicit elevations | `contact_id`, `scope_type` ∈ {folder,file}, `drive_id`, `permission` ∈ {view,upload,manage}, `expires_at`, `revoked_at` |
+| `vault_collaborators` | Outside professionals scoped to a household | `household_id`, `contact_id`, `email`, `full_name`, `role`, `invited_at`, `revoked_at`. UNIQUE(`household_id`,`email`) |
+| `vault_collaborator_grants` | Per-collaborator scoped permissions | `collaborator_id`, `scope_type`, `drive_id`, `permission` ∈ {view,upload}, `expires_at` (default +30d), `revoked_at` |
+| `vault_guest_tokens` | Collaborator session tokens | `collaborator_id`, `token`, `unlock_code`, `unlock_verified_at`, `bound_user_agent`, `expires_at`, `revoked` |
+| `vault_share_links` | Ad-hoc share URLs (folder or file) | `household_id`, `scope_type`, `drive_id`, `permission` ∈ {view, view_upload, view_upload_download}, `link_type` ∈ {guest, authenticated}, `unlock_code`, `max_uses`, `use_count`, `bound_user_agent`, `expires_at`, `revoked_at` |
+| `vault_audit_log` | Immutable activity log | `household_id`, `contact_id`, `actor_type`, `actor_id`, `actor_label`, `action`, `drive_id`, `drive_name`, `ip`, `user_agent`, `metadata` jsonb |
+
+**RLS:** Service-role only for writes; staff-only `SELECT` for inspection tables. All client/collaborator/share-link traffic goes through `vault-service` using the service role.
 
 ---
 
-## Open items for Ops dev team to confirm
+## 5. Firewall: `ensureAccess(actor, driveId, need)`
 
-1. `agent_run_id` generation — Ops generates UUIDv4 at run start, echoes on every call in the run (PW assumes this).
-2. HMAC scheme — HMAC-SHA256 over `{timestamp}.{body}`, header `X-Ops-Signature: t={ts},v1={hex}`, 5-minute skew window. Confirm or propose alternative.
-3. `agent-fetch-source` — Ops will pull source PDFs via signed URL (no JSON file passing); confirm Ops handles loop-based base64 internally for files >5MB.
-4. Vertex region pin — Ops must enforce `northamerica-northeast1` for PIPEDA; PW will not validate this at call time.
+The single chokepoint every action calls before touching Drive bytes.
+
+1. Build ancestor chain via `getAncestors(driveId)` — DB cache (`vault_files.ancestor_folder_ids`) first, fall back to Drive walk (max depth 12).
+2. `chain = [driveId, ...ancestors]`.
+3. Branch by actor:
+   - **staff** → allow, cap = `manage`.
+   - **client** → `chain` must include `vaultRootId`. Then resolve `effectiveClientPermission(contactId, chain)`:
+     - Start from baseline `vault_contact_roles.role` (default `viewer`).
+     - Walk chain from most-specific outward; first active `vault_contact_grants` row wins (if higher than baseline).
+     - For file reads without a `need`: if `vault_files.client_visible === false`, require an explicit grant in chain; else 403 with `not_client_visible`.
+   - **collaborator** → at least one active grant's `drive_id` must appear in chain. For uploads, that grant must be `permission='upload'`.
+   - **share_link** → chain must include `scopeDriveId`. Upload only if `permission` is `view_upload` or `view_upload_download`.
+4. Capability gates for mutating actions:
+   | `need` | client | collaborator | share_link |
+   |---|---|---|---|
+   | `upload` | cap ≥ `upload` | grant `upload` in chain | `view_upload`/`view_upload_download` |
+   | `create_folder` | cap = `manage` | denied | denied |
+   | `rename` / `delete` | `manage`; or `upload` only if `uploaded_by_contact_id = self` | denied | denied |
+
+Every block writes `firewall_block` to the audit log with `reason`.
+
+---
+
+## 6. Action Surface (single edge function)
+
+Anonymous (no actor required):
+- `resolveShareLink({token, unlock_code?})` — returns scope + permission + client name; signals `needs_unlock_code` for guest-type links.
+- `requestGuestOtp({token})` — rotates `unlock_code`, emails via Wix Velo (PII-shielded); response masks email.
+
+Staff-only:
+- `provisionVault({householdId | contactId, parentFolderId})` — creates `ProsperWise Vault — {Family}{ (Label)}` under `parentFolderId`, seeds subfolders from `vault_folder_templates`, writes `households.vault_root_folder_id`.
+- `inviteCollaborator({householdId, email, fullName, role, grants[]})` — creates collaborator + guest token + unlock code, emails link (code sent separately, manual).
+- `createShareLink({householdId, scope_type, drive_id, permission, link_type, generate_unlock_code, notify_email?, max_uses?, expires_at?})`.
+- `setVisibility({fileId, householdId, clientVisible})` — toggles `vault_files.client_visible`.
+- `listGrants` / `updateGrant` / `revokeGrant` for both contact and collaborator grants.
+
+Any actor (firewalled):
+- `getRoot` — client portal entry (returns `{rootFolderId, rootName}`).
+- `ensureShoebox` — finds/creates `00 Shoebox (Client Uploads)` under household root.
+- `listFolder({folderId})` — Drive listing, filtered by actor scope + `client_visible` for clients.
+- `streamFile({fileId})` + `?disposition=inline|attachment` — proxies bytes from Drive; sets `Content-Disposition` and `Content-Type` accordingly. Native Google Docs exported per `googleExportMime()`.
+- `uploadFile({folderId, fileName, mimeType, base64})` — base64 chunked encode required client-side (`0x8000`-byte windows, no spread operator).
+- `createFolder({parentFolderId, name})`, `renameItem({driveId, newName})`, `deleteItem({driveId})` — capability-gated.
+- `getEffectivePermission({driveId})` — returns `cap` so portal can show/hide action buttons.
+- `myGrants` (collaborator) — list grant roots.
+
+---
+
+## 7. Frontend Surfaces
+
+| Surface | Route(s) | Component | Actor |
+|---|---|---|---|
+| Staff vault browser | `/vault/household/:householdId` (canonical), `/vault/:contactId` (legacy redirect) | `src/pages/Vault.tsx` | staff |
+| Sovereign Portal vault tab | `/portal` → `<PortalVault>` | `src/components/portal/PortalVault.tsx` | client |
+| Guest landing | `/vault/guest/:token` (collaborator), `/vault/share/:token` (share link) | `src/pages/VaultGuest.tsx` | collaborator / share_link |
+
+Portal Vault always opens at the household root, surfaces the Shoebox prominently, shows breadcrumbs, and only renders mutating controls when `getEffectivePermission` returns ≥ `upload` / `manage`. Inline preview supported for `application/pdf` and `image/*` via blob URLs (revoked after 60s).
+
+---
+
+## 8. Provisioning & Folder Templates
+
+`provisionVault` creates the Drive root inside a staff-supplied `parentFolderId` (firm's shared drive root) named `ProsperWise Vault — {Family Name}` (+ ` ({Label})` if label ≠ "Primary"), then iterates `vault_folder_templates WHERE is_active ORDER BY position` to create initial subfolders. The Shoebox is created on first portal upload via `ensureShoebox`.
+
+---
+
+## 9. Upload Pipeline
+
+1. Client/staff reads the File via `arrayBuffer()`.
+2. Encodes to base64 in `0x8000`-byte chunks (avoid spread-operator stack-limit crashes on large PDFs — Sanctuary core rule).
+3. POSTs `{action: "uploadFile", folderId, fileName, mimeType, base64}`.
+4. Edge function decodes, multipart-uploads to Drive under `folderId`, writes `vault_files` row with `uploaded_by_contact_id` (when client) and `ancestor_folder_ids`.
+5. **Portal hard cap:** 25 MB per file (`MAX_UPLOAD_BYTES`). Staff browser unbounded by app code.
+6. Portal client uploads default to the Shoebox; folder-level uploads only available where `cap ≥ upload`.
+
+---
+
+## 10. Sharing Flows
+
+**Collaborator (lawyer/accountant/executor/POA):**
+1. Staff `inviteCollaborator` → row in `vault_collaborators` + `vault_guest_tokens` (24 h initial, code regenerable).
+2. Wix Velo emails the `/vault/guest/{token}` URL (link only — unlock code shared via separate channel).
+3. Staff attaches `vault_collaborator_grants` to specific folders/files (default 30-day expiry).
+4. Guest opens link → submits unlock code → token binds to User-Agent → sees only their grant roots → audited reads/uploads.
+
+**Ad-hoc share link:**
+- Staff hits Copy icon on any folder/file → `createShareLink` with `permission` of choice, optional `notify_email` (sends link only via Wix), optional `max_uses` and `expires_at`.
+- Guest landing page resolves scope, prompts for unlock code if `link_type='guest'`.
+- Authenticated staff/portal sessions bypass the unlock-code prompt.
+
+---
+
+## 11. Audit & Compliance
+
+Every action writes one row to `vault_audit_log` with:
+`{household_id, contact_id, actor_type, actor_id, actor_label, action, drive_id, drive_name, ip (x-forwarded-for), user_agent, metadata}`.
+
+Actions logged: `provision`, `list`, `stream`, `upload`, `create_folder`, `rename`, `delete`, `set_visibility`, `invite_collaborator`, `vault_invite_email_sent`, `share_link_created`, `share_link_email_sent`, `share_link_redeemed`, `vault_collaborator_otp_sent`, `firewall_block` (with `reason`), grant CRUD.
+
+PII Shield (`supabase/functions/_shared/pii-shield.ts`) wraps every Wix Velo send. Hits → log + drop (never leaves Canadian infra).
+
+---
+
+## 12. Failure Modes & Edge Cases
+
+- **No Google token** → `no_google_token` 400 (all actions). Staff must reconnect Workspace via `/google-auth`.
+- **Token refresh race** → `getValidGoogleToken` refreshes when expiry ≤ now+60s, writes back to `google_tokens`.
+- **Orphan contact** (no household_id) → falls back to legacy `contacts.vault_root_folder_id`.
+- **Ancestor walk depth > 12** → breaks; chain stops there (defensive cap on Drive shenanigans).
+- **Guest UA drift** → 401; user must `requestGuestOtp` to reset.
+- **Share link exhausted** (`use_count ≥ max_uses`) → 410 `use_limit_reached`.
+- **Vault not provisioned** → portal renders "Personal CFO will set this up" empty state.
+
+---
+
+## 13. Security Posture (what should never happen)
+
+- A client must never see another household's files, even within the same family.
+- A collaborator must never see anything outside their explicit grants.
+- A share link must never escalate beyond `permission` or escape `scopeDriveId`.
+- A revoked collaborator/grant/share link must 403 within the next request.
+- No Drive URL, file ID for an out-of-scope file, or raw access token may ever appear in a client response payload.
+- No client-facing email may contain financial PII (PII Shield enforced).
+
+---
+
+## 14. Open Roadmap Items (out of scope for v1, listed for reference)
+
+- Bulk download (zip) for collaborators with multiple grant roots.
+- Server-side virus scan before upload finalize.
+- Watermarked PDF streaming for share-link previews.
+- Vault → SideDrawer mirroring for the Vault-of-Record protocol.
+- Cron-driven `ancestor_folder_ids` backfill for newly moved files.
+
+---
+
+*This is the complete v1 spec of the deployed Vault. Pair it with `mem://features/vault-privacy-firewall` for the in-codebase summary. Once Agentic Ops integration ships, the Vault becomes the canonical destination for `render-agent-pdf` outputs via the `charter-source-uploads` → `sovereignty_charter_sources` pipeline (see `.lovable/plan.md`).*
