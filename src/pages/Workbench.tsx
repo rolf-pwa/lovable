@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/AppLayout";
 import { PageBreadcrumbs } from "@/components/PageBreadcrumbs";
 import { CashflowAnalyst } from "@/components/workbench/CashflowAnalyst";
+import { PerformanceAnalyst } from "@/components/workbench/PerformanceAnalyst";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -91,7 +92,10 @@ const Workbench = () => {
           </CardContent>
         </Card>
 
-        {/* Agent Cards (only Cashflow for now) */}
+        {/* Cross-client agent — no household required */}
+        <PerformanceAnalyst />
+
+        {/* Household-scoped agents */}
         {selectedHousehold && currentHH ? (
           <CashflowAnalyst
             householdId={selectedHousehold}
@@ -102,9 +106,9 @@ const Workbench = () => {
             <CardContent className="py-16 flex flex-col items-center gap-4 text-center">
               <BarChart3 className="h-12 w-12 text-muted-foreground/30" />
               <div>
-                <p className="font-medium text-foreground">Select a household to begin</p>
+                <p className="font-medium text-foreground">Select a household to unlock household-scoped agents</p>
                 <p className="text-sm text-muted-foreground">
-                  Choose a household above to access the Cashflow Analyst and other workbench tools.
+                  Choose a household above to access the Cashflow Analyst and other household-scoped workbench tools.
                 </p>
               </div>
             </CardContent>
