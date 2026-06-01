@@ -331,7 +331,9 @@ export function PerformanceAnalyst() {
       }
       toast.success(`Saved ${payload.length} snapshot${payload.length === 1 ? "" : "s"} and updated ${updated} account value${updated === 1 ? "" : "s"}.`);
     } catch (e: any) {
-      toast.error(`Save failed: ${e.message}`);
+      console.error("Save snapshots failed:", e);
+      const detail = e?.message || e?.details || e?.hint || JSON.stringify(e);
+      toast.error(`Save failed: ${detail}`);
     } finally {
       setSaving(false);
     }
