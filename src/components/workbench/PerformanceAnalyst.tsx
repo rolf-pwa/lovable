@@ -10,9 +10,12 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import {
   BarChart, Bar, XAxis, YAxis, Tooltip as RTooltip, ResponsiveContainer, CartesianGrid,
 } from "recharts";
-import { TrendingUp, Upload, Save, Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
+import { TrendingUp, Upload, Save, Loader2, AlertCircle, CheckCircle2, X } from "lucide-react";
 import { toast } from "sonner";
 
 type ParsedRow = {
