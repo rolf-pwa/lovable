@@ -1262,15 +1262,15 @@ const Portal = () => {
             </Card>
           )}
 
-          {/* Holding Tank — moved below Household tile when no Vineyard/Storehouses */}
-          {holdingTankOnly && <PortalHoldingTank accounts={holding_tank} />}
+          {/* Dynamic Quick Links (My Accounts, Empathy, etc.) — pinned below Household */}
+          {isSelf && <PortalDynamicLinks contact={contact} />}
 
           {/* Charter — hidden if no charter file */}
-
           {(() => {
             const charterUrl = charter?.draft_status === "ratified" ? (contact.charter_url || family?.charter_document_url) : null;
             return charterUrl ? <PortalCharter charterUrl={charterUrl} /> : null;
           })()}
+
 
           {/* Updates — moved from tabs */}
           {isSelf && (
