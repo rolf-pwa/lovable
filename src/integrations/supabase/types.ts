@@ -22,6 +22,7 @@ export type Database = {
           created_by: string | null
           current_harvest: number
           current_value: number
+          holding_tank_id: string | null
           id: string
           notes: string | null
           reporting_year: number
@@ -38,6 +39,7 @@ export type Database = {
           created_by?: string | null
           current_harvest?: number
           current_value?: number
+          holding_tank_id?: string | null
           id?: string
           notes?: string | null
           reporting_year?: number
@@ -54,6 +56,7 @@ export type Database = {
           created_by?: string | null
           current_harvest?: number
           current_value?: number
+          holding_tank_id?: string | null
           id?: string
           notes?: string | null
           reporting_year?: number
@@ -69,6 +72,13 @@ export type Database = {
             columns: ["contact_id"]
             isOneToOne: false
             referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "account_harvest_snapshots_holding_tank_id_fkey"
+            columns: ["holding_tank_id"]
+            isOneToOne: false
+            referencedRelation: "holding_tank"
             referencedColumns: ["id"]
           },
           {

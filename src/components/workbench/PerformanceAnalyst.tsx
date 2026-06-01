@@ -40,6 +40,7 @@ type ParsedRow = {
   contactId?: string | null;
   contactLabel?: string;
   vineyardAccountId?: string | null;
+  holdingTankId?: string | null;
   matchStatus: "matched" | "no_contact" | "no_account" | "ambiguous";
 };
 
@@ -69,6 +70,9 @@ export function PerformanceAnalyst() {
   }>>([]);
   const [accounts, setAccounts] = useState<Array<{
     id: string; contact_id: string; account_number: string | null; account_name: string | null;
+  }>>([]);
+  const [holdingTanks, setHoldingTanks] = useState<Array<{
+    id: string; contact_id: string; account_name: string | null; account_number: string | null;
   }>>([]);
 
   const handleFile = async (file: File) => {
@@ -147,6 +151,14 @@ export function PerformanceAnalyst() {
       }>;
       setAccounts(accounts);
 
+      // Pull holding tank entries as fallback when no vineyard accounts exist
+      const { data: htData } = await (supabase.from("holding_tank" as any) as any)
+        .select("id, contact_id, account_name, account_number");
+      const holdingTanks = (htData || []) as Array<{
+        id: string; contact_id: string; account_name: string | null; account_number: string | null;
+      }>;
+      setHoldingTanks(holdingTanks);
+
       const out: ParsedRow[] = dataRows.map((r, i) => {
         const lastName = get(r, idx.last).trim();
         const firstName = get(r, idx.first).trim();
@@ -191,7 +203,19 @@ export function PerformanceAnalyst() {
             if (global.length === 1) vineyardAccountId = global[0].id;
           }
         }
+        // Fallback to holding tank if no vineyard account
+        let holdingTankId: string | null = null;
         if (matchStatus === "matched" && !vineyardAccountId) {
+          const htMatches = holdingTanks.filter(
+            (h) => h.contact_id === contactId && (h.account_number || "").trim() === contractNumber
+          );
+          if (htMatches.length === 1) {
+            holdingTankId = htMatches[0].id;
+          } else if (htMatches.length === 0) {
+            matchStatus = "no_account";
+          }
+        }
+        if (matchStatus === "matched" && !vineyardAccountId && !holdingTankId) {
           matchStatus = "no_account";
         }
 
@@ -216,6 +240,7 @@ export function PerformanceAnalyst() {
           contactId,
           contactLabel,
           vineyardAccountId,
+          holdingTankId,
           matchStatus,
         };
       }).filter(Boolean) as ParsedRow[];
@@ -253,7 +278,7 @@ export function PerformanceAnalyst() {
     [rows]
   );
 
-  const saveable = rows.filter((r) => r.matchStatus === "matched" && r.vineyardAccountId);
+  const saveable = rows.filter((r) => r.matchStatus === "matched" && (r.vineyardAccountId || r.holdingTankId));
 
   const handleSave = async () => {
     if (!asOfDate) {
@@ -261,23 +286,30 @@ export function PerformanceAnalyst() {
       return;
     }
     if (saveable.length === 0) {
-      toast.error("No rows can be saved — need both a matched contact and a matched Vineyard account.");
+      toast.error("No rows can be saved — need a matched contact and a matched Vineyard account or Holding Tank entry.");
       return;
     }
     setSaving(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      const payload = saveable.map((r) => ({
-        contact_id: r.contactId!,
-        vineyard_account_id: r.vineyardAccountId!,
-        snapshot_date: asOfDate,
-        boy_value: r.boyValue,
-        ytd_value: r.currentValue,
-        current_harvest: r.variationDollar,
-        current_value: r.currentValue,
-        notes: `Imported from ${fileName} (Performance Analyst)`,
-        created_by: user?.id || null,
-      }));
+      const payload = saveable.map((r) => {
+        const base: any = {
+          contact_id: r.contactId!,
+          snapshot_date: asOfDate,
+          boy_value: r.boyValue,
+          ytd_value: r.currentValue,
+          current_harvest: r.variationDollar,
+          current_value: r.currentValue,
+          notes: `Imported from ${fileName} (Performance Analyst)`,
+          created_by: user?.id || null,
+        };
+        if (r.vineyardAccountId) {
+          base.vineyard_account_id = r.vineyardAccountId;
+        } else if (r.holdingTankId) {
+          base.holding_tank_id = r.holdingTankId;
+        }
+        return base;
+      });
       const { error } = await (supabase.from("account_harvest_snapshots" as any) as any).insert(payload);
       if (error) throw error;
       toast.success(`Saved ${payload.length} harvest snapshot${payload.length === 1 ? "" : "s"}.`);
@@ -293,22 +325,29 @@ export function PerformanceAnalyst() {
       prev.map((r) => {
         if (r.rowIndex !== rowIndex) return r;
         if (!contactId) {
-          return { ...r, contactId: null, contactLabel: `${r.firstName} ${r.lastName}`.trim(), vineyardAccountId: null, matchStatus: "no_contact" };
+          return { ...r, contactId: null, contactLabel: `${r.firstName} ${r.lastName}`.trim(), vineyardAccountId: null, holdingTankId: null, matchStatus: "no_contact" };
         }
         const c = contacts.find((x) => x.id === contactId);
         const label = c?.full_name || `${c?.first_name || ""} ${c?.last_name || ""}`.trim();
         // Try auto-pick a vineyard account by contract number for this contact
         let vId: string | null = null;
+        let hId: string | null = null;
         if (r.contractNumber) {
           const m = accounts.filter((a) => a.contact_id === contactId && (a.account_number || "").trim() === r.contractNumber);
           if (m.length === 1) vId = m[0].id;
+        }
+        // Fallback: try holding tank if no vineyard account matched
+        if (!vId && r.contractNumber) {
+          const ht = holdingTanks.filter((h) => h.contact_id === contactId && (h.account_number || "").trim() === r.contractNumber);
+          if (ht.length === 1) hId = ht[0].id;
         }
         return {
           ...r,
           contactId,
           contactLabel: label,
           vineyardAccountId: vId,
-          matchStatus: vId ? "matched" : "no_account",
+          holdingTankId: hId,
+          matchStatus: (vId || hId) ? "matched" : "no_account",
         };
       })
     );
@@ -321,7 +360,22 @@ export function PerformanceAnalyst() {
         return {
           ...r,
           vineyardAccountId: accountId,
-          matchStatus: r.contactId ? (accountId ? "matched" : "no_account") : "no_contact",
+          holdingTankId: accountId ? null : r.holdingTankId,
+          matchStatus: r.contactId ? (accountId ? "matched" : (r.holdingTankId ? "matched" : "no_account")) : "no_contact",
+        };
+      })
+    );
+  };
+
+  const setRowHoldingTank = (rowIndex: number, holdingTankId: string | null) => {
+    setRows((prev) =>
+      prev.map((r) => {
+        if (r.rowIndex !== rowIndex) return r;
+        return {
+          ...r,
+          holdingTankId,
+          vineyardAccountId: holdingTankId ? null : r.vineyardAccountId,
+          matchStatus: r.contactId ? (holdingTankId || r.vineyardAccountId ? "matched" : "no_account") : "no_contact",
         };
       })
     );
@@ -395,7 +449,7 @@ export function PerformanceAnalyst() {
                 )}
                 <span>
                   {saveable.length} of {rows.length} row{rows.length === 1 ? "" : "s"} can be saved as harvest snapshots
-                  (require matched contact + matched Vineyard account by contract number).
+                  (require matched contact + matched Vineyard account or Holding Tank entry by contract number).
                 </span>
               </div>
             </div>
@@ -468,8 +522,10 @@ export function PerformanceAnalyst() {
                         row={r}
                         contacts={contacts}
                         accounts={accounts}
+                        holdingTanks={holdingTanks}
                         onContactChange={(cid) => setRowContact(r.rowIndex, cid)}
                         onAccountChange={(aid) => setRowAccount(r.rowIndex, aid)}
+                        onHoldingTankChange={(hid) => setRowHoldingTank(r.rowIndex, hid)}
                       />
                     </TableCell>
                   </TableRow>
@@ -498,21 +554,25 @@ function Stat({
 
 type Contact = { id: string; first_name: string | null; last_name: string | null; full_name: string | null };
 type Account = { id: string; contact_id: string; account_number: string | null; account_name: string | null };
+type HoldingTank = { id: string; contact_id: string; account_number: string | null; account_name: string | null };
 
 function ContactAccountPicker({
-  row, contacts, accounts, onContactChange, onAccountChange,
+  row, contacts, accounts, holdingTanks, onContactChange, onAccountChange, onHoldingTankChange,
 }: {
   row: ParsedRow;
   contacts: Contact[];
   accounts: Account[];
+  holdingTanks: HoldingTank[];
   onContactChange: (id: string | null) => void;
   onAccountChange: (id: string | null) => void;
+  onHoldingTankChange: (id: string | null) => void;
 }) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
 
   const selectedContact = row.contactId ? contacts.find((c) => c.id === row.contactId) : null;
   const contactAccounts = row.contactId ? accounts.filter((a) => a.contact_id === row.contactId) : [];
+  const contactHoldingTanks = row.contactId ? holdingTanks.filter((h) => h.contact_id === row.contactId) : [];
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -542,9 +602,7 @@ function ContactAccountPicker({
             <X className="h-3 w-3" />
           </Button>
         </div>
-        {contactAccounts.length === 0 ? (
-          <span className="text-[11px] text-amber-600">No Vineyard accounts for this contact</span>
-        ) : (
+        {contactAccounts.length > 0 ? (
           <Select
             value={row.vineyardAccountId || ""}
             onValueChange={(v) => onAccountChange(v || null)}
@@ -560,6 +618,24 @@ function ContactAccountPicker({
               ))}
             </SelectContent>
           </Select>
+        ) : contactHoldingTanks.length > 0 ? (
+          <Select
+            value={row.holdingTankId || ""}
+            onValueChange={(v) => onHoldingTankChange(v || null)}
+          >
+            <SelectTrigger className="h-7 text-xs">
+              <SelectValue placeholder="Pick Holding Tank entry…" />
+            </SelectTrigger>
+            <SelectContent>
+              {contactHoldingTanks.map((h) => (
+                <SelectItem key={h.id} value={h.id} className="text-xs">
+                  {(h.account_number ? h.account_number + " · " : "") + (h.account_name || "Holding Tank")}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : (
+          <span className="text-[11px] text-amber-600">No Vineyard accounts for this contact</span>
         )}
       </div>
     );
