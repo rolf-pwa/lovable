@@ -328,6 +328,9 @@ export function PerformanceAnalyst() {
           current_value: r.currentValue,
           notes: `Imported from ${fileName} (Performance Analyst)`,
           created_by: user?.id || null,
+          vineyard_account_id: null,
+          storehouse_id: null,
+          holding_tank_id: null,
         };
         if (r.vineyardAccountId) {
           base.vineyard_account_id = r.vineyardAccountId;
