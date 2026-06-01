@@ -339,6 +339,12 @@ export function PerformanceAnalyst() {
           vineyard_account_id: null,
           storehouse_id: null,
           holding_tank_id: null,
+          ror_ytd: r.rorYtd ?? null,
+          ror_6m: r.ror6m ?? null,
+          ror_1y: r.ror1y ?? null,
+          ror_3y: r.ror3y ?? null,
+          ror_5y: r.ror5y ?? null,
+          ror_since_inception: r.rorSinceInception ?? null,
         };
         if (includeCreatedBy) base.created_by = user?.id || null;
         if (r.vineyardAccountId) {

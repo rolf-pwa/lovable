@@ -26,6 +26,12 @@ export type Database = {
           id: string
           notes: string | null
           reporting_year: number
+          ror_1y: number | null
+          ror_3y: number | null
+          ror_5y: number | null
+          ror_6m: number | null
+          ror_since_inception: number | null
+          ror_ytd: number | null
           snapshot_date: string
           storehouse_id: string | null
           updated_at: string
@@ -43,6 +49,12 @@ export type Database = {
           id?: string
           notes?: string | null
           reporting_year?: number
+          ror_1y?: number | null
+          ror_3y?: number | null
+          ror_5y?: number | null
+          ror_6m?: number | null
+          ror_since_inception?: number | null
+          ror_ytd?: number | null
           snapshot_date?: string
           storehouse_id?: string | null
           updated_at?: string
@@ -60,6 +72,12 @@ export type Database = {
           id?: string
           notes?: string | null
           reporting_year?: number
+          ror_1y?: number | null
+          ror_3y?: number | null
+          ror_5y?: number | null
+          ror_6m?: number | null
+          ror_since_inception?: number | null
+          ror_ytd?: number | null
           snapshot_date?: string
           storehouse_id?: string | null
           updated_at?: string
