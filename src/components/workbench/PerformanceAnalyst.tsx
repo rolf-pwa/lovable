@@ -278,7 +278,7 @@ export function PerformanceAnalyst() {
     [rows]
   );
 
-  const saveable = rows.filter((r) => r.matchStatus === "matched" && r.vineyardAccountId);
+  const saveable = rows.filter((r) => r.matchStatus === "matched" && (r.vineyardAccountId || r.holdingTankId));
 
   const handleSave = async () => {
     if (!asOfDate) {
