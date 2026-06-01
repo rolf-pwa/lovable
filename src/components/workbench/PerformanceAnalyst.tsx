@@ -40,6 +40,7 @@ type ParsedRow = {
   contactId?: string | null;
   contactLabel?: string;
   vineyardAccountId?: string | null;
+  holdingTankId?: string | null;
   matchStatus: "matched" | "no_contact" | "no_account" | "ambiguous";
 };
 
