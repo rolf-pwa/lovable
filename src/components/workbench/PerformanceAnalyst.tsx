@@ -318,7 +318,7 @@ export function PerformanceAnalyst() {
         throw new Error("No rows could be saved because the linked accounts no longer match the selected contacts.");
       }
 
-      const payload = validRows.map((r) => {
+      const makeSnapshotPayload = (r: ParsedRow, includeCreatedBy: boolean) => {
         const base: any = {
           contact_id: r.contactId!,
           snapshot_date: asOfDate,
@@ -332,15 +332,59 @@ export function PerformanceAnalyst() {
           storehouse_id: null,
           holding_tank_id: null,
         };
+        if (includeCreatedBy) base.created_by = user?.id || null;
         if (r.vineyardAccountId) {
           base.vineyard_account_id = r.vineyardAccountId;
         } else if (r.holdingTankId) {
           base.holding_tank_id = r.holdingTankId;
         }
         return base;
+      };
+
+      const [existingVineyard, existingHolding] = await Promise.all([
+        vineyardIds.length
+          ? (supabase.from("account_harvest_snapshots" as any) as any)
+              .select("id, vineyard_account_id")
+              .eq("snapshot_date", asOfDate)
+              .in("vineyard_account_id", vineyardIds)
+          : Promise.resolve({ data: [], error: null }),
+        holdingIds.length
+          ? (supabase.from("account_harvest_snapshots" as any) as any)
+              .select("id, holding_tank_id")
+              .eq("snapshot_date", asOfDate)
+              .in("holding_tank_id", holdingIds)
+          : Promise.resolve({ data: [], error: null }),
+      ]);
+
+      if (existingVineyard.error) throw existingVineyard.error;
+      if (existingHolding.error) throw existingHolding.error;
+
+      const existingSnapshotIds = new Map<string, string>();
+      (existingVineyard.data || []).forEach((s: any) => existingSnapshotIds.set(`vineyard:${s.vineyard_account_id}`, s.id));
+      (existingHolding.data || []).forEach((s: any) => existingSnapshotIds.set(`holding:${s.holding_tank_id}`, s.id));
+
+      const inserts: any[] = [];
+      const updates: Array<{ id: string; values: any }> = [];
+      validRows.forEach((r) => {
+        const key = r.vineyardAccountId ? `vineyard:${r.vineyardAccountId}` : `holding:${r.holdingTankId}`;
+        const existingId = existingSnapshotIds.get(key);
+        if (existingId) {
+          updates.push({ id: existingId, values: makeSnapshotPayload(r, false) });
+        } else {
+          inserts.push(makeSnapshotPayload(r, true));
+        }
       });
-      const { error } = await (supabase.from("account_harvest_snapshots" as any) as any).insert(payload);
-      if (error) throw error;
+
+      if (inserts.length > 0) {
+        const { error } = await (supabase.from("account_harvest_snapshots" as any) as any).insert(inserts);
+        if (error) throw error;
+      }
+      for (const update of updates) {
+        const { error } = await (supabase.from("account_harvest_snapshots" as any) as any)
+          .update(update.values)
+          .eq("id", update.id);
+        if (error) throw error;
+      }
 
       // Auto-update current_value on linked Vineyard accounts and Holding Tank entries
       const vineyardUpdates = validRows.filter((r) => r.vineyardAccountId);
@@ -359,7 +403,7 @@ export function PerformanceAnalyst() {
         if (!upErr) updated++;
       }
       const skipped = saveable.length - validRows.length;
-      toast.success(`Saved ${payload.length} snapshot${payload.length === 1 ? "" : "s"} and updated ${updated} account value${updated === 1 ? "" : "s"}${skipped ? `; skipped ${skipped} mismatched row${skipped === 1 ? "" : "s"}` : ""}.`);
+      toast.success(`Saved ${validRows.length} snapshot${validRows.length === 1 ? "" : "s"} (${inserts.length} new, ${updates.length} updated) and updated ${updated} account value${updated === 1 ? "" : "s"}${skipped ? `; skipped ${skipped} mismatched row${skipped === 1 ? "" : "s"}` : ""}.`);
     } catch (e: any) {
       console.error("Save snapshots failed:", e);
       const detail = e?.message || e?.details || e?.hint || JSON.stringify(e);
