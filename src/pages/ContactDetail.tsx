@@ -702,11 +702,22 @@ const ContactDetail = () => {
                                     {storehouse.risk_cap && <span>{storehouse.risk_cap}</span>}
                                   </div>
                                 </div>
-                                <div className="text-right text-xs text-muted-foreground">
-                                  <p>Calculated Harvest</p>
-                                  <p className="text-sm font-semibold text-foreground">{formatCurrency(harvest)}</p>
+                                <div className="flex gap-4 text-right text-xs text-muted-foreground">
+                                  <div>
+                                    <p>BOY</p>
+                                    <p className="text-sm font-semibold text-foreground">{formatCurrency(boy)}</p>
+                                  </div>
+                                  <div>
+                                    <p>Current Value</p>
+                                    <p className="text-sm font-semibold text-foreground">{formatCurrency(current)}</p>
+                                  </div>
+                                  <div>
+                                    <p>YTD Harvest</p>
+                                    <p className={`text-sm font-semibold ${harvest >= 0 ? "text-emerald-500" : "text-destructive"}`}>{formatCurrency(harvest)}</p>
+                                  </div>
                                 </div>
                               </div>
+
 
                               <div className="grid gap-3 md:grid-cols-3">
                                 <Input type="date" value={draft?.snapshot_date ?? ""} onChange={(e) => updateHarvestDraft(key, "snapshot_date", e.target.value)} />
