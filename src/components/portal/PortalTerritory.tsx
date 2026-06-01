@@ -180,6 +180,7 @@ export function PortalTerritory({ vineyardAccounts, storehouses, contact, family
   return (
     <div className="space-y-6">
       {/* Vineyard Overview */}
+      {showVineyard && (
       <Card>
         <CardHeader>
           <div className="flex items-center gap-3">
