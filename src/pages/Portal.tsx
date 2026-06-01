@@ -1260,7 +1260,11 @@ const Portal = () => {
             </Card>
           )}
 
+          {/* Holding Tank — moved below Household tile when no Vineyard/Storehouses */}
+          {holdingTankOnly && <PortalHoldingTank accounts={holding_tank} />}
+
           {/* Charter — hidden if no charter file */}
+
           {(() => {
             const charterUrl = charter?.draft_status === "ratified" ? (contact.charter_url || family?.charter_document_url) : null;
             return charterUrl ? <PortalCharter charterUrl={charterUrl} /> : null;
