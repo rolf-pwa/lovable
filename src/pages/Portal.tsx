@@ -977,6 +977,10 @@ const Portal = () => {
   const renderIndividualView = () => {
     const ind = getIndividualData();
     const isSelf = !currentMember;
+    const hasTerritory = (ind.vineyardAccounts?.length || 0) > 0 || (ind.memberStorehouses?.length || 0) > 0;
+    const holdingTankOnly = isSelf && !hasTerritory && holding_tank.length > 0;
+
+
 
     return (
       <div className="grid gap-6 lg:grid-cols-3">
