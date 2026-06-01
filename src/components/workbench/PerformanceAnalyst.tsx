@@ -286,23 +286,30 @@ export function PerformanceAnalyst() {
       return;
     }
     if (saveable.length === 0) {
-      toast.error("No rows can be saved — need both a matched contact and a matched Vineyard account.");
+      toast.error("No rows can be saved — need a matched contact and a matched Vineyard account or Holding Tank entry.");
       return;
     }
     setSaving(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      const payload = saveable.map((r) => ({
-        contact_id: r.contactId!,
-        vineyard_account_id: r.vineyardAccountId!,
-        snapshot_date: asOfDate,
-        boy_value: r.boyValue,
-        ytd_value: r.currentValue,
-        current_harvest: r.variationDollar,
-        current_value: r.currentValue,
-        notes: `Imported from ${fileName} (Performance Analyst)`,
-        created_by: user?.id || null,
-      }));
+      const payload = saveable.map((r) => {
+        const base: any = {
+          contact_id: r.contactId!,
+          snapshot_date: asOfDate,
+          boy_value: r.boyValue,
+          ytd_value: r.currentValue,
+          current_harvest: r.variationDollar,
+          current_value: r.currentValue,
+          notes: `Imported from ${fileName} (Performance Analyst)`,
+          created_by: user?.id || null,
+        };
+        if (r.vineyardAccountId) {
+          base.vineyard_account_id = r.vineyardAccountId;
+        } else if (r.holdingTankId) {
+          base.holding_tank_id = r.holdingTankId;
+        }
+        return base;
+      });
       const { error } = await (supabase.from("account_harvest_snapshots" as any) as any).insert(payload);
       if (error) throw error;
       toast.success(`Saved ${payload.length} harvest snapshot${payload.length === 1 ? "" : "s"}.`);
