@@ -312,7 +312,24 @@ export function PerformanceAnalyst() {
       });
       const { error } = await (supabase.from("account_harvest_snapshots" as any) as any).insert(payload);
       if (error) throw error;
-      toast.success(`Saved ${payload.length} harvest snapshot${payload.length === 1 ? "" : "s"}.`);
+
+      // Auto-update current_value on linked Vineyard accounts and Holding Tank entries
+      const vineyardUpdates = saveable.filter((r) => r.vineyardAccountId);
+      const holdingUpdates = saveable.filter((r) => !r.vineyardAccountId && r.holdingTankId);
+      let updated = 0;
+      for (const r of vineyardUpdates) {
+        const { error: upErr } = await (supabase.from("vineyard_accounts" as any) as any)
+          .update({ current_value: r.currentValue })
+          .eq("id", r.vineyardAccountId);
+        if (!upErr) updated++;
+      }
+      for (const r of holdingUpdates) {
+        const { error: upErr } = await (supabase.from("holding_tank" as any) as any)
+          .update({ current_value: r.currentValue })
+          .eq("id", r.holdingTankId);
+        if (!upErr) updated++;
+      }
+      toast.success(`Saved ${payload.length} snapshot${payload.length === 1 ? "" : "s"} and updated ${updated} account value${updated === 1 ? "" : "s"}.`);
     } catch (e: any) {
       toast.error(`Save failed: ${e.message}`);
     } finally {
