@@ -495,3 +495,105 @@ function Stat({
     </div>
   );
 }
+
+type Contact = { id: string; first_name: string | null; last_name: string | null; full_name: string | null };
+type Account = { id: string; contact_id: string; account_number: string | null; account_name: string | null };
+
+function ContactAccountPicker({
+  row, contacts, accounts, onContactChange, onAccountChange,
+}: {
+  row: ParsedRow;
+  contacts: Contact[];
+  accounts: Account[];
+  onContactChange: (id: string | null) => void;
+  onAccountChange: (id: string | null) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const [open, setOpen] = useState(false);
+
+  const selectedContact = row.contactId ? contacts.find((c) => c.id === row.contactId) : null;
+  const contactAccounts = row.contactId ? accounts.filter((a) => a.contact_id === row.contactId) : [];
+
+  const results = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return [];
+    return contacts
+      .filter((c) => {
+        const name = `${c.first_name || ""} ${c.last_name || ""} ${c.full_name || ""}`.toLowerCase();
+        return name.includes(q);
+      })
+      .slice(0, 8);
+  }, [query, contacts]);
+
+  if (selectedContact) {
+    return (
+      <div className="flex flex-col gap-1.5 min-w-[260px]">
+        <div className="flex items-center gap-1.5">
+          <Badge className="bg-emerald-500/15 text-emerald-600 border-emerald-500/30 truncate max-w-[200px]">
+            {selectedContact.full_name || `${selectedContact.first_name || ""} ${selectedContact.last_name || ""}`.trim()}
+          </Badge>
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-5 w-5"
+            onClick={() => onContactChange(null)}
+            title="Unlink contact"
+          >
+            <X className="h-3 w-3" />
+          </Button>
+        </div>
+        {contactAccounts.length === 0 ? (
+          <span className="text-[11px] text-amber-600">No Vineyard accounts for this contact</span>
+        ) : (
+          <Select
+            value={row.vineyardAccountId || ""}
+            onValueChange={(v) => onAccountChange(v || null)}
+          >
+            <SelectTrigger className="h-7 text-xs">
+              <SelectValue placeholder="Pick Vineyard account…" />
+            </SelectTrigger>
+            <SelectContent>
+              {contactAccounts.map((a) => (
+                <SelectItem key={a.id} value={a.id} className="text-xs">
+                  {(a.account_number ? a.account_number + " · " : "") + (a.account_name || "Account")}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative min-w-[260px]">
+      <Input
+        value={query}
+        onFocus={() => setOpen(true)}
+        onBlur={() => setTimeout(() => setOpen(false), 150)}
+        onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
+        placeholder={row.matchStatus === "ambiguous" ? "Multiple matches — pick one…" : "Search contact…"}
+        className="h-7 text-xs"
+      />
+      {open && results.length > 0 && (
+        <div className="absolute z-20 mt-1 w-full max-h-56 overflow-auto rounded-md border border-border bg-popover shadow-md">
+          {results.map((c) => (
+            <button
+              key={c.id}
+              type="button"
+              className="block w-full text-left px-2 py-1.5 text-xs hover:bg-muted"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => {
+                onContactChange(c.id);
+                setQuery("");
+                setOpen(false);
+              }}
+            >
+              {c.full_name || `${c.first_name || ""} ${c.last_name || ""}`.trim()}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
