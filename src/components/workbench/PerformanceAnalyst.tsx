@@ -196,11 +196,6 @@ export function PerformanceAnalyst() {
           );
           if (acctMatches.length === 1) {
             vineyardAccountId = acctMatches[0].id;
-          } else {
-            const global = accounts.filter(
-              (a) => (a.account_number || "").trim() === contractNumber
-            );
-            if (global.length === 1) vineyardAccountId = global[0].id;
           }
         }
         // Fallback to holding tank if no vineyard account
@@ -292,7 +287,38 @@ export function PerformanceAnalyst() {
     setSaving(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      const payload = saveable.map((r) => {
+      const vineyardIds = [...new Set(saveable.map((r) => r.vineyardAccountId).filter(Boolean))] as string[];
+      const holdingIds = [...new Set(saveable.map((r) => r.holdingTankId).filter(Boolean))] as string[];
+
+      const [vineyardCheck, holdingCheck] = await Promise.all([
+        vineyardIds.length
+          ? (supabase.from("vineyard_accounts" as any) as any)
+              .select("id, contact_id")
+              .in("id", vineyardIds)
+          : Promise.resolve({ data: [], error: null }),
+        holdingIds.length
+          ? (supabase.from("holding_tank" as any) as any)
+              .select("id, contact_id")
+              .in("id", holdingIds)
+          : Promise.resolve({ data: [], error: null }),
+      ]);
+
+      if (vineyardCheck.error) throw vineyardCheck.error;
+      if (holdingCheck.error) throw holdingCheck.error;
+
+      const vineyardOwners = new Map((vineyardCheck.data || []).map((a: any) => [a.id, a.contact_id]));
+      const holdingOwners = new Map((holdingCheck.data || []).map((a: any) => [a.id, a.contact_id]));
+      const validRows = saveable.filter((r) => {
+        if (r.vineyardAccountId) return vineyardOwners.get(r.vineyardAccountId) === r.contactId;
+        if (r.holdingTankId) return holdingOwners.get(r.holdingTankId) === r.contactId;
+        return false;
+      });
+
+      if (validRows.length === 0) {
+        throw new Error("No rows could be saved because the linked accounts no longer match the selected contacts.");
+      }
+
+      const payload = validRows.map((r) => {
         const base: any = {
           contact_id: r.contactId!,
           snapshot_date: asOfDate,
@@ -302,6 +328,9 @@ export function PerformanceAnalyst() {
           current_value: r.currentValue,
           notes: `Imported from ${fileName} (Performance Analyst)`,
           created_by: user?.id || null,
+          vineyard_account_id: null,
+          storehouse_id: null,
+          holding_tank_id: null,
         };
         if (r.vineyardAccountId) {
           base.vineyard_account_id = r.vineyardAccountId;
@@ -314,22 +343,23 @@ export function PerformanceAnalyst() {
       if (error) throw error;
 
       // Auto-update current_value on linked Vineyard accounts and Holding Tank entries
-      const vineyardUpdates = saveable.filter((r) => r.vineyardAccountId);
-      const holdingUpdates = saveable.filter((r) => !r.vineyardAccountId && r.holdingTankId);
+      const vineyardUpdates = validRows.filter((r) => r.vineyardAccountId);
+      const holdingUpdates = validRows.filter((r) => !r.vineyardAccountId && r.holdingTankId);
       let updated = 0;
       for (const r of vineyardUpdates) {
         const { error: upErr } = await (supabase.from("vineyard_accounts" as any) as any)
-          .update({ current_value: r.currentValue })
+          .update({ book_value: r.boyValue, current_value: r.currentValue })
           .eq("id", r.vineyardAccountId);
         if (!upErr) updated++;
       }
       for (const r of holdingUpdates) {
         const { error: upErr } = await (supabase.from("holding_tank" as any) as any)
-          .update({ current_value: r.currentValue })
+          .update({ book_value: r.boyValue, current_value: r.currentValue })
           .eq("id", r.holdingTankId);
         if (!upErr) updated++;
       }
-      toast.success(`Saved ${payload.length} snapshot${payload.length === 1 ? "" : "s"} and updated ${updated} account value${updated === 1 ? "" : "s"}.`);
+      const skipped = saveable.length - validRows.length;
+      toast.success(`Saved ${payload.length} snapshot${payload.length === 1 ? "" : "s"} and updated ${updated} account value${updated === 1 ? "" : "s"}${skipped ? `; skipped ${skipped} mismatched row${skipped === 1 ? "" : "s"}` : ""}.`);
     } catch (e: any) {
       console.error("Save snapshots failed:", e);
       const detail = e?.message || e?.details || e?.hint || JSON.stringify(e);
