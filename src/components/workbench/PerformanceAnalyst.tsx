@@ -151,6 +151,14 @@ export function PerformanceAnalyst() {
       }>;
       setAccounts(accounts);
 
+      // Pull holding tank entries as fallback when no vineyard accounts exist
+      const { data: htData } = await (supabase.from("holding_tank" as any) as any)
+        .select("id, contact_id, account_name, account_number");
+      const holdingTanks = (htData || []) as Array<{
+        id: string; contact_id: string; account_name: string | null; account_number: string | null;
+      }>;
+      setHoldingTanks(holdingTanks);
+
       const out: ParsedRow[] = dataRows.map((r, i) => {
         const lastName = get(r, idx.last).trim();
         const firstName = get(r, idx.first).trim();
