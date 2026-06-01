@@ -288,18 +288,46 @@ export function PerformanceAnalyst() {
     }
   };
 
-  const statusBadge = (s: ParsedRow["matchStatus"]) => {
-    switch (s) {
-      case "matched":
-        return <Badge className="bg-emerald-500/15 text-emerald-600 border-emerald-500/30">Matched</Badge>;
-      case "no_account":
-        return <Badge variant="outline" className="text-amber-600 border-amber-500/40">No account</Badge>;
-      case "ambiguous":
-        return <Badge variant="outline" className="text-amber-600 border-amber-500/40">Ambiguous</Badge>;
-      default:
-        return <Badge variant="outline" className="text-muted-foreground">No contact</Badge>;
-    }
+  const setRowContact = (rowIndex: number, contactId: string | null) => {
+    setRows((prev) =>
+      prev.map((r) => {
+        if (r.rowIndex !== rowIndex) return r;
+        if (!contactId) {
+          return { ...r, contactId: null, contactLabel: `${r.firstName} ${r.lastName}`.trim(), vineyardAccountId: null, matchStatus: "no_contact" };
+        }
+        const c = contacts.find((x) => x.id === contactId);
+        const label = c?.full_name || `${c?.first_name || ""} ${c?.last_name || ""}`.trim();
+        // Try auto-pick a vineyard account by contract number for this contact
+        let vId: string | null = null;
+        if (r.contractNumber) {
+          const m = accounts.filter((a) => a.contact_id === contactId && (a.account_number || "").trim() === r.contractNumber);
+          if (m.length === 1) vId = m[0].id;
+        }
+        return {
+          ...r,
+          contactId,
+          contactLabel: label,
+          vineyardAccountId: vId,
+          matchStatus: vId ? "matched" : "no_account",
+        };
+      })
+    );
   };
+
+  const setRowAccount = (rowIndex: number, accountId: string | null) => {
+    setRows((prev) =>
+      prev.map((r) => {
+        if (r.rowIndex !== rowIndex) return r;
+        return {
+          ...r,
+          vineyardAccountId: accountId,
+          matchStatus: r.contactId ? (accountId ? "matched" : "no_account") : "no_contact",
+        };
+      })
+    );
+  };
+
+
 
   return (
     <Card>
