@@ -318,6 +318,15 @@ export function PerformanceAnalyst() {
         throw new Error("No rows could be saved because the linked accounts no longer match the selected contacts.");
       }
 
+      const snapshotRows = Array.from(
+        new Map(
+          validRows.map((r) => [
+            r.vineyardAccountId ? `vineyard:${r.vineyardAccountId}` : `holding:${r.holdingTankId}`,
+            r,
+          ])
+        ).values()
+      );
+
       const makeSnapshotPayload = (r: ParsedRow, includeCreatedBy: boolean) => {
         const base: any = {
           contact_id: r.contactId!,
@@ -327,7 +336,6 @@ export function PerformanceAnalyst() {
           current_harvest: r.variationDollar,
           current_value: r.currentValue,
           notes: `Imported from ${fileName} (Performance Analyst)`,
-          created_by: user?.id || null,
           vineyard_account_id: null,
           storehouse_id: null,
           holding_tank_id: null,
@@ -365,7 +373,7 @@ export function PerformanceAnalyst() {
 
       const inserts: any[] = [];
       const updates: Array<{ id: string; values: any }> = [];
-      validRows.forEach((r) => {
+      snapshotRows.forEach((r) => {
         const key = r.vineyardAccountId ? `vineyard:${r.vineyardAccountId}` : `holding:${r.holdingTankId}`;
         const existingId = existingSnapshotIds.get(key);
         if (existingId) {
@@ -387,8 +395,8 @@ export function PerformanceAnalyst() {
       }
 
       // Auto-update current_value on linked Vineyard accounts and Holding Tank entries
-      const vineyardUpdates = validRows.filter((r) => r.vineyardAccountId);
-      const holdingUpdates = validRows.filter((r) => !r.vineyardAccountId && r.holdingTankId);
+      const vineyardUpdates = snapshotRows.filter((r) => r.vineyardAccountId);
+      const holdingUpdates = snapshotRows.filter((r) => !r.vineyardAccountId && r.holdingTankId);
       let updated = 0;
       for (const r of vineyardUpdates) {
         const { error: upErr } = await (supabase.from("vineyard_accounts" as any) as any)
@@ -403,7 +411,7 @@ export function PerformanceAnalyst() {
         if (!upErr) updated++;
       }
       const skipped = saveable.length - validRows.length;
-      toast.success(`Saved ${validRows.length} snapshot${validRows.length === 1 ? "" : "s"} (${inserts.length} new, ${updates.length} updated) and updated ${updated} account value${updated === 1 ? "" : "s"}${skipped ? `; skipped ${skipped} mismatched row${skipped === 1 ? "" : "s"}` : ""}.`);
+      toast.success(`Saved ${snapshotRows.length} snapshot${snapshotRows.length === 1 ? "" : "s"} (${inserts.length} new, ${updates.length} updated) and updated ${updated} account value${updated === 1 ? "" : "s"}${skipped ? `; skipped ${skipped} mismatched row${skipped === 1 ? "" : "s"}` : ""}.`);
     } catch (e: any) {
       console.error("Save snapshots failed:", e);
       const detail = e?.message || e?.details || e?.hint || JSON.stringify(e);
