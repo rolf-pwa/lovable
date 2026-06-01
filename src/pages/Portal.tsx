@@ -1012,7 +1012,7 @@ const Portal = () => {
                 <Calendar className="h-4 w-4" />
                 Meetings
               </TabsTrigger>
-              {isSelf && holding_tank.length > 0 && !holdingTankOnly && (
+              {isSelf && holding_tank.length > 0 && (
                 <TabsTrigger value="holding-tank" className="flex-1 gap-1.5">
                   <Landmark className="h-4 w-4" />
                   <span className="hidden sm:inline">Holding Tank</span>
@@ -1138,7 +1138,7 @@ const Portal = () => {
             </TabsContent>
 
             {/* Holding Tank Tab */}
-            {isSelf && holding_tank.length > 0 && !holdingTankOnly && (
+            {isSelf && holding_tank.length > 0 && (
               <TabsContent value="holding-tank" className="mt-4">
                 <PortalHoldingTank accounts={holding_tank} />
               </TabsContent>
