@@ -68,38 +68,55 @@ export function PerformanceAnalyst() {
     setFileName(file.name);
     try {
       const text = await file.text();
-      const parsed = Papa.parse<Record<string, string>>(text, {
-        header: true,
-        skipEmptyLines: true,
-        transformHeader: (h) => h.trim(),
-      });
 
-      const headers = parsed.meta.fields || [];
-      // Find as-of date from "Market Value As of YYYY-MM-DD"
-      const asOfHeader = headers.find((h) => /market value as of/i.test(h));
-      const asOfMatch = asOfHeader?.match(/(\d{4}-\d{2}-\d{2})/);
+      // Parse without headers first so we can locate the real header row
+      // (some exports prefix the file with title/footnote rows).
+      const raw = Papa.parse<string[]>(text, { skipEmptyLines: true });
+      const allRows = (raw.data as string[][]).filter((r) => Array.isArray(r));
+
+      const headerRowIdx = allRows.findIndex(
+        (r) =>
+          r.some((c) => /^\s*last\s*name\s*$/i.test(c || "")) &&
+          r.some((c) => /^\s*first\s*name\s*$/i.test(c || ""))
+      );
+      if (headerRowIdx < 0) {
+        throw new Error('Could not find header row (expected a row containing "Last Name" and "First Name").');
+      }
+
+      const rawHeaders = allRows[headerRowIdx].map((h) => (h || "").trim());
+      // Deduplicate empty/duplicate headers so we can key by index reliably.
+      const headers = rawHeaders.map((h, i) => h || `col_${i}`);
+      const dataRows = allRows.slice(headerRowIdx + 1).filter((r) =>
+        r.some((c) => (c || "").trim() !== "")
+      );
+
+      const findIdx = (re: RegExp) => headers.findIndex((h) => re.test(h));
+      const asOfIdx = findIdx(/^\s*(market value\s+)?as of\b/i);
+      const asOfHeader = asOfIdx >= 0 ? headers[asOfIdx] : "";
+      const asOfMatch = asOfHeader.match(/(\d{4}-\d{2}-\d{2})/);
       const asOf = asOfMatch?.[1] || "";
       setAsOfDate(asOf);
 
-      const findCol = (re: RegExp) => headers.find((h) => re.test(h)) || "";
-      const cols = {
-        last: findCol(/^last\s*name/i),
-        first: findCol(/^first\s*name/i),
-        contract: findCol(/contract\s*(number|#|no)/i),
-        product: findCol(/^product/i),
-        registration: findCol(/registration/i),
-        issue: findCol(/issue\s*date/i),
-        boy: findCol(/begin(ning)?\s*of\s*(the\s*)?year|market value beg/i),
-        asOf: asOfHeader || "",
-        varPct: findCol(/variation\s*%/i),
-        varDol: findCol(/variation\s*\$/i),
-        ytd: findCol(/year[-\s]*to[-\s]*date|\bYTD\b/i),
-        m6: findCol(/6\s*months?/i),
-        y1: findCol(/^.*\b1\s*year\b.*$/i),
-        y3: findCol(/3\s*years?/i),
-        y5: findCol(/5\s*years?/i),
-        sinceInit: findCol(/since\s*initial|inception/i),
+      const idx = {
+        last: findIdx(/^last\s*name/i),
+        first: findIdx(/^first\s*name/i),
+        contract: findIdx(/contract\s*(number|#|no)?/i),
+        product: findIdx(/^product/i),
+        registration: findIdx(/registration|type of reg/i),
+        issue: findIdx(/issue\s*date/i),
+        boy: findIdx(/begin(n)?ing\s*of\s*(the\s*)?year|market value beg/i),
+        asOf: asOfIdx,
+        // The two columns immediately after the as-of column are typically % and $ variation.
+        varPct: asOfIdx >= 0 ? asOfIdx + 1 : findIdx(/variation\s*%|^\s*%\s*$/i),
+        varDol: asOfIdx >= 0 ? asOfIdx + 2 : findIdx(/variation\s*\$|^\s*\$\s*$/i),
+        ytd: findIdx(/year[-\s]*to[-\s]*date|\bYTD\b/i),
+        m6: findIdx(/6\s*months?/i),
+        y1: findIdx(/(^|[^0-9])1\s*year\b/i),
+        y3: findIdx(/3\s*years?/i),
+        y5: findIdx(/5\s*years?/i),
+        sinceInit: findIdx(/since\s*initial|inception/i),
       };
+      const get = (row: string[], i: number) => (i >= 0 ? row[i] ?? "" : "");
 
       // Pull contacts for matching
       const { data: contactsData } = await supabase
