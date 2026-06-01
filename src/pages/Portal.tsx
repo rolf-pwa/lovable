@@ -1309,8 +1309,8 @@ const Portal = () => {
             </Card>
           )}
 
-          {/* Dynamic Quick Links */}
-          {isSelf && <PortalDynamicLinks contact={contact} />}
+
+
 
 
           {/* Timeline — bottom of sidebar */}
