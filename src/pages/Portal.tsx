@@ -1246,48 +1246,45 @@ const Portal = () => {
             </Card>
           )}
 
-          {/* Charter */}
-          <PortalCharter charterUrl={charter?.draft_status === "ratified" ? (contact.charter_url || family?.charter_document_url) : null} />
+          {/* Charter — hidden if no charter file */}
+          {(() => {
+            const charterUrl = charter?.draft_status === "ratified" ? (contact.charter_url || family?.charter_document_url) : null;
+            return charterUrl ? <PortalCharter charterUrl={charterUrl} /> : null;
+          })()}
 
-          {/* Quarterly Governance Reviews */}
-          {isSelf && quarterly_reviews.length > 0 && (
+          {/* Updates — moved from tabs */}
+          {isSelf && (
             <Card>
               <CardContent className="p-4 space-y-2">
                 <div className="flex items-center gap-2">
-                  <FileBarChart className="h-4 w-4 text-accent" />
-                  <h3 className="text-sm font-semibold text-foreground font-serif">Reviews</h3>
+                  <Megaphone className="h-4 w-4 text-accent" />
+                  <h3 className="text-sm font-semibold text-foreground font-serif">Updates</h3>
+                  {unreadUpdateCount > 0 && (
+                    <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-accent text-[10px] font-bold text-accent-foreground px-1">
+                      {unreadUpdateCount > 99 ? "99+" : unreadUpdateCount}
+                    </span>
+                  )}
                 </div>
-                <div className="space-y-1.5 pt-1">
-                  {quarterly_reviews.map((review) => {
-                    const member = household_members.find((m: any) => m.id === review.contact_id);
-                    const memberName = review.contact_id === contact.id
-                      ? `${contact.first_name} ${contact.last_name || ""}`.trim()
-                      : member ? `${member.first_name} ${member.last_name || ""}`.trim() : null;
-                    const href = review.signed_url || review.drive_url || "#";
-                    const dateLabel = review.review_date
-                      ? new Date(review.review_date).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })
-                      : null;
-                    return (
-                      <a
-                        key={review.id}
-                        href={href}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-start gap-2 rounded-md border border-border bg-card px-2.5 py-2 hover:border-accent/40 hover:bg-accent/5 transition-colors"
-                      >
-                        <FileBarChart className="h-3.5 w-3.5 text-accent mt-0.5 shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-medium text-foreground truncate">{review.title}</p>
-                          {(dateLabel || memberName) && (
-                            <p className="text-[10px] text-muted-foreground truncate">
-                              {dateLabel}{dateLabel && memberName ? " · " : ""}{memberName}
-                            </p>
-                          )}
-                        </div>
-                      </a>
-                    );
-                  })}
+                <PortalUpdates governanceStatus={contact.governance_status} contactId={contact.id} householdId={contact.household_id} portalToken={portalToken} />
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Requests — moved from tabs */}
+          {isSelf && (
+            <Card>
+              <CardContent className="p-4 space-y-2">
+                <div className="flex items-center gap-2">
+                  <ClipboardList className="h-4 w-4 text-accent" />
+                  <h3 className="text-sm font-semibold text-foreground font-serif">Requests</h3>
                 </div>
+                <PortalRequests
+                  requests={portal_requests || []}
+                  contactId={contact.id}
+                  contactName={`${contact.first_name} ${contact.last_name || ""}`.trim()}
+                  portalToken={portalToken}
+                  onUpdate={() => refreshData(portalToken)}
+                />
               </CardContent>
             </Card>
           )}
@@ -1295,24 +1292,6 @@ const Portal = () => {
           {/* Dynamic Quick Links */}
           {isSelf && <PortalDynamicLinks contact={contact} />}
 
-          {/* Holding Tank */}
-          {isSelf && holding_tank.length > 0 && (
-            <PortalHoldingTank accounts={holding_tank} />
-          )}
-
-          {/* Vineyard & Storehouses */}
-          <PortalTerritory
-            vineyardAccounts={ind.vineyardAccounts}
-            storehouses={ind.memberStorehouses}
-            contact={isSelf ? contact : currentMember}
-            family={family}
-            household={household}
-            householdMembers={[]}
-            scopeLabel={isSelf ? "My Territory" : `${currentMember?.first_name || ""}'s Territory`}
-            portalToken={portalToken}
-            onScopeChange={() => refreshData(portalToken)}
-            corporations={corporations}
-          />
 
           {/* Timeline — bottom of sidebar */}
           <div>
