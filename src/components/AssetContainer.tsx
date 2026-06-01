@@ -338,22 +338,10 @@ function AccountRow({ acc, moveTargets, onMoveAccount, updateVisibilityScope, de
               <div className="text-[10px] text-muted-foreground">Loading history…</div>
             ) : (
               <>
-                <div className="grid grid-cols-2 gap-2 text-[11px]">
+                <div className="grid grid-cols-3 gap-2 text-[11px]">
                   <div className="rounded bg-background/60 px-2 py-1.5">
                     <div className="text-[9px] uppercase tracking-wider text-muted-foreground">Beginning of Year</div>
                     <div className="font-semibold tabular-nums">{fmt(boy)}</div>
-                  </div>
-                  <div className="rounded bg-background/60 px-2 py-1.5">
-                    <div className="text-[9px] uppercase tracking-wider text-muted-foreground">YTD Market</div>
-                    <div className="font-semibold tabular-nums">{fmt(ytd)}</div>
-                    <div
-                      className={`text-[9px] tabular-nums ${
-                        varianceYtdDollars >= 0 ? "text-green-600" : "text-destructive"
-                      }`}
-                    >
-                      {varianceYtdDollars >= 0 ? "+" : ""}
-                      {fmt(varianceYtdDollars)} vs BOY
-                    </div>
                   </div>
                   <div className="rounded bg-background/60 px-2 py-1.5">
                     <div className="text-[9px] uppercase tracking-wider text-muted-foreground">Current Market</div>
@@ -368,66 +356,61 @@ function AccountRow({ acc, moveTargets, onMoveAccount, updateVisibilityScope, de
                     </div>
                   </div>
                   <div className="rounded bg-background/60 px-2 py-1.5">
-                    <div className="text-[9px] uppercase tracking-wider text-muted-foreground">YTD Harvest</div>
-                    <div className="font-semibold tabular-nums">{fmt(harvest)}</div>
+                    <div className="text-[9px] uppercase tracking-wider text-muted-foreground">YTD Change (Harvest)</div>
+                    <div
+                      className={`font-semibold tabular-nums ${
+                        harvest >= 0 ? "text-green-600" : "text-destructive"
+                      }`}
+                    >
+                      {harvest >= 0 ? "+" : ""}
+                      {fmt(harvest)}
+                    </div>
                   </div>
                 </div>
 
                 <div>
                   <div className="text-[9px] uppercase tracking-wider text-muted-foreground mb-1">
-                    Historical Snapshots
+                    Historical Rate of Return
                   </div>
-                  {snapshots && snapshots.length > 0 ? (
+                  {latest && [latest.ror_ytd, latest.ror_6m, latest.ror_1y, latest.ror_3y, latest.ror_5y, latest.ror_since_inception].some((v) => v !== null && v !== undefined) ? (
                     <div className="overflow-x-auto">
                       <table className="w-full text-[10px] tabular-nums">
                         <thead>
                           <tr className="text-muted-foreground border-b border-border/50">
-                            <th className="text-left py-1 pr-2 font-medium">Date</th>
-                            <th className="text-right py-1 px-1 font-medium">BOY</th>
-                            <th className="text-right py-1 px-1 font-medium">Market</th>
-                            <th className="text-right py-1 px-1 font-medium">Harvest</th>
-                            <th className="text-right py-1 pl-1 font-medium">Return $</th>
-                            <th className="text-right py-1 pl-1 font-medium">Return %</th>
+                            <th className="text-right py-1 px-1 font-medium">YTD</th>
+                            <th className="text-right py-1 px-1 font-medium">6 Mo</th>
+                            <th className="text-right py-1 px-1 font-medium">1 Yr</th>
+                            <th className="text-right py-1 px-1 font-medium">3 Yr</th>
+                            <th className="text-right py-1 px-1 font-medium">5 Yr</th>
+                            <th className="text-right py-1 px-1 font-medium">Since Inception</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {snapshots.map((s) => {
-                            const ret = Number(s.current_value) - Number(s.boy_value);
-                            const pct = Number(s.boy_value) > 0 ? (ret / Number(s.boy_value)) * 100 : 0;
-                            return (
-                              <tr key={s.id} className="border-b border-border/30 last:border-0">
-                                <td className="py-1 pr-2">{s.snapshot_date}</td>
-                                <td className="text-right py-1 px-1">{fmt(Number(s.boy_value))}</td>
-                                <td className="text-right py-1 px-1">{fmt(Number(s.current_value))}</td>
-                                <td className="text-right py-1 px-1">{fmt(Number(s.current_harvest))}</td>
+                          <tr>
+                            {[latest.ror_ytd, latest.ror_6m, latest.ror_1y, latest.ror_3y, latest.ror_5y, latest.ror_since_inception].map((v, i) => {
+                              const num = v === null || v === undefined ? null : Number(v);
+                              return (
                                 <td
-                                  className={`text-right py-1 pl-1 ${
-                                    ret >= 0 ? "text-green-600" : "text-destructive"
+                                  key={i}
+                                  className={`text-right py-1 px-1 ${
+                                    num === null ? "text-muted-foreground" : num >= 0 ? "text-green-600" : "text-destructive"
                                   }`}
                                 >
-                                  {ret >= 0 ? "+" : ""}
-                                  {fmt(ret)}
+                                  {num === null ? "—" : `${num >= 0 ? "+" : ""}${num.toFixed(2)}%`}
                                 </td>
-                                <td
-                                  className={`text-right py-1 pl-1 ${
-                                    pct >= 0 ? "text-green-600" : "text-destructive"
-                                  }`}
-                                >
-                                  {pct >= 0 ? "+" : ""}
-                                  {pct.toFixed(2)}%
-                                </td>
-                              </tr>
-                            );
-                          })}
+                              );
+                            })}
+                          </tr>
                         </tbody>
                       </table>
                     </div>
                   ) : (
                     <div className="text-[10px] text-muted-foreground italic">
-                      No snapshots yet. Save one from the Performance Analyst.
+                      No rate of return data. Import a CSV from the Performance Analyst.
                     </div>
                   )}
                 </div>
+
               </>
             )}
           </div>
