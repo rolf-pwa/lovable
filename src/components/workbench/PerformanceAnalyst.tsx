@@ -10,9 +10,12 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import {
   BarChart, Bar, XAxis, YAxis, Tooltip as RTooltip, ResponsiveContainer, CartesianGrid,
 } from "recharts";
-import { TrendingUp, Upload, Save, Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
+import { TrendingUp, Upload, Save, Loader2, AlertCircle, CheckCircle2, X } from "lucide-react";
 import { toast } from "sonner";
 
 type ParsedRow = {
@@ -61,6 +64,12 @@ export function PerformanceAnalyst() {
   const [rows, setRows] = useState<ParsedRow[]>([]);
   const [asOfDate, setAsOfDate] = useState<string>("");
   const [fileName, setFileName] = useState<string>("");
+  const [contacts, setContacts] = useState<Array<{
+    id: string; first_name: string | null; last_name: string | null; full_name: string | null;
+  }>>([]);
+  const [accounts, setAccounts] = useState<Array<{
+    id: string; contact_id: string; account_number: string | null; account_name: string | null;
+  }>>([]);
 
   const handleFile = async (file: File) => {
     setParsing(true);
@@ -121,8 +130,11 @@ export function PerformanceAnalyst() {
       // Pull contacts for matching
       const { data: contactsData } = await supabase
         .from("contacts")
-        .select("id, first_name, last_name, full_name, household_id, family_id");
-      const contacts = contactsData || [];
+        .select("id, first_name, last_name, full_name");
+      const contacts = (contactsData || []) as Array<{
+        id: string; first_name: string | null; last_name: string | null; full_name: string | null;
+      }>;
+      setContacts(contacts);
 
       // Pull vineyard accounts for contract match
       const { data: vineyardData } = await (supabase.from("vineyard_accounts" as any) as any)
@@ -133,6 +145,7 @@ export function PerformanceAnalyst() {
         account_number: string | null;
         account_name: string | null;
       }>;
+      setAccounts(accounts);
 
       const out: ParsedRow[] = dataRows.map((r, i) => {
         const lastName = get(r, idx.last).trim();
@@ -275,18 +288,46 @@ export function PerformanceAnalyst() {
     }
   };
 
-  const statusBadge = (s: ParsedRow["matchStatus"]) => {
-    switch (s) {
-      case "matched":
-        return <Badge className="bg-emerald-500/15 text-emerald-600 border-emerald-500/30">Matched</Badge>;
-      case "no_account":
-        return <Badge variant="outline" className="text-amber-600 border-amber-500/40">No account</Badge>;
-      case "ambiguous":
-        return <Badge variant="outline" className="text-amber-600 border-amber-500/40">Ambiguous</Badge>;
-      default:
-        return <Badge variant="outline" className="text-muted-foreground">No contact</Badge>;
-    }
+  const setRowContact = (rowIndex: number, contactId: string | null) => {
+    setRows((prev) =>
+      prev.map((r) => {
+        if (r.rowIndex !== rowIndex) return r;
+        if (!contactId) {
+          return { ...r, contactId: null, contactLabel: `${r.firstName} ${r.lastName}`.trim(), vineyardAccountId: null, matchStatus: "no_contact" };
+        }
+        const c = contacts.find((x) => x.id === contactId);
+        const label = c?.full_name || `${c?.first_name || ""} ${c?.last_name || ""}`.trim();
+        // Try auto-pick a vineyard account by contract number for this contact
+        let vId: string | null = null;
+        if (r.contractNumber) {
+          const m = accounts.filter((a) => a.contact_id === contactId && (a.account_number || "").trim() === r.contractNumber);
+          if (m.length === 1) vId = m[0].id;
+        }
+        return {
+          ...r,
+          contactId,
+          contactLabel: label,
+          vineyardAccountId: vId,
+          matchStatus: vId ? "matched" : "no_account",
+        };
+      })
+    );
   };
+
+  const setRowAccount = (rowIndex: number, accountId: string | null) => {
+    setRows((prev) =>
+      prev.map((r) => {
+        if (r.rowIndex !== rowIndex) return r;
+        return {
+          ...r,
+          vineyardAccountId: accountId,
+          matchStatus: r.contactId ? (accountId ? "matched" : "no_account") : "no_contact",
+        };
+      })
+    );
+  };
+
+
 
   return (
     <Card>
@@ -397,7 +438,7 @@ export function PerformanceAnalyst() {
                   <TableHead className="text-right">Δ %</TableHead>
                   <TableHead className="text-right">YTD</TableHead>
                   <TableHead className="text-right">1Y</TableHead>
-                  <TableHead>Match</TableHead>
+                  <TableHead className="min-w-[260px]">Linked contact / account</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -422,7 +463,15 @@ export function PerformanceAnalyst() {
                     <TableCell className="text-right tabular-nums text-xs">
                       {r.ror1y !== undefined ? fmtPct(r.ror1y) : "—"}
                     </TableCell>
-                    <TableCell>{statusBadge(r.matchStatus)}</TableCell>
+                    <TableCell>
+                      <ContactAccountPicker
+                        row={r}
+                        contacts={contacts}
+                        accounts={accounts}
+                        onContactChange={(cid) => setRowContact(r.rowIndex, cid)}
+                        onAccountChange={(aid) => setRowAccount(r.rowIndex, aid)}
+                      />
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -443,6 +492,108 @@ function Stat({
     <div className="rounded-lg border border-border bg-muted/20 p-3">
       <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</div>
       <div className={`text-lg font-semibold tabular-nums ${color}`}>{value}</div>
+    </div>
+  );
+}
+
+type Contact = { id: string; first_name: string | null; last_name: string | null; full_name: string | null };
+type Account = { id: string; contact_id: string; account_number: string | null; account_name: string | null };
+
+function ContactAccountPicker({
+  row, contacts, accounts, onContactChange, onAccountChange,
+}: {
+  row: ParsedRow;
+  contacts: Contact[];
+  accounts: Account[];
+  onContactChange: (id: string | null) => void;
+  onAccountChange: (id: string | null) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const [open, setOpen] = useState(false);
+
+  const selectedContact = row.contactId ? contacts.find((c) => c.id === row.contactId) : null;
+  const contactAccounts = row.contactId ? accounts.filter((a) => a.contact_id === row.contactId) : [];
+
+  const results = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return [];
+    return contacts
+      .filter((c) => {
+        const name = `${c.first_name || ""} ${c.last_name || ""} ${c.full_name || ""}`.toLowerCase();
+        return name.includes(q);
+      })
+      .slice(0, 8);
+  }, [query, contacts]);
+
+  if (selectedContact) {
+    return (
+      <div className="flex flex-col gap-1.5 min-w-[260px]">
+        <div className="flex items-center gap-1.5">
+          <Badge className="bg-emerald-500/15 text-emerald-600 border-emerald-500/30 truncate max-w-[200px]">
+            {selectedContact.full_name || `${selectedContact.first_name || ""} ${selectedContact.last_name || ""}`.trim()}
+          </Badge>
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-5 w-5"
+            onClick={() => onContactChange(null)}
+            title="Unlink contact"
+          >
+            <X className="h-3 w-3" />
+          </Button>
+        </div>
+        {contactAccounts.length === 0 ? (
+          <span className="text-[11px] text-amber-600">No Vineyard accounts for this contact</span>
+        ) : (
+          <Select
+            value={row.vineyardAccountId || ""}
+            onValueChange={(v) => onAccountChange(v || null)}
+          >
+            <SelectTrigger className="h-7 text-xs">
+              <SelectValue placeholder="Pick Vineyard account…" />
+            </SelectTrigger>
+            <SelectContent>
+              {contactAccounts.map((a) => (
+                <SelectItem key={a.id} value={a.id} className="text-xs">
+                  {(a.account_number ? a.account_number + " · " : "") + (a.account_name || "Account")}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative min-w-[260px]">
+      <Input
+        value={query}
+        onFocus={() => setOpen(true)}
+        onBlur={() => setTimeout(() => setOpen(false), 150)}
+        onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
+        placeholder={row.matchStatus === "ambiguous" ? "Multiple matches — pick one…" : "Search contact…"}
+        className="h-7 text-xs"
+      />
+      {open && results.length > 0 && (
+        <div className="absolute z-20 mt-1 w-full max-h-56 overflow-auto rounded-md border border-border bg-popover shadow-md">
+          {results.map((c) => (
+            <button
+              key={c.id}
+              type="button"
+              className="block w-full text-left px-2 py-1.5 text-xs hover:bg-muted"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => {
+                onContactChange(c.id);
+                setQuery("");
+                setOpen(false);
+              }}
+            >
+              {c.full_name || `${c.first_name || ""} ${c.last_name || ""}`.trim()}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
