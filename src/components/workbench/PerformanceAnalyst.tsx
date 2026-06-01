@@ -134,10 +134,15 @@ export function PerformanceAnalyst() {
         account_name: string | null;
       }>;
 
-      const out: ParsedRow[] = parsed.data.map((r, i) => {
-        const lastName = (r[cols.last] || "").trim();
-        const firstName = (r[cols.first] || "").trim();
-        const contractNumber = (r[cols.contract] || "").trim();
+      const out: ParsedRow[] = dataRows.map((r, i) => {
+        const lastName = get(r, idx.last).trim();
+        const firstName = get(r, idx.first).trim();
+        const contractNumber = get(r, idx.contract).trim();
+
+        // Skip footer/total rows that lack a name
+        if (!lastName && !firstName) {
+          return null as any;
+        }
 
         // Match contact by name (case-insensitive)
         const matches = contacts.filter(
@@ -167,7 +172,6 @@ export function PerformanceAnalyst() {
           if (acctMatches.length === 1) {
             vineyardAccountId = acctMatches[0].id;
           } else {
-            // Fall back: any account anywhere with that contract number
             const global = accounts.filter(
               (a) => (a.account_number || "").trim() === contractNumber
             );
@@ -183,25 +187,26 @@ export function PerformanceAnalyst() {
           lastName,
           firstName,
           contractNumber,
-          product: (r[cols.product] || "").trim(),
-          registrationType: (r[cols.registration] || "").trim(),
-          issueDate: (r[cols.issue] || "").trim(),
-          boyValue: num(r[cols.boy]),
-          currentValue: num(r[cols.asOf]),
-          variationPct: num(r[cols.varPct]),
-          variationDollar: num(r[cols.varDol]),
-          rorYtd: cols.ytd ? num(r[cols.ytd]) : undefined,
-          ror6m: cols.m6 ? num(r[cols.m6]) : undefined,
-          ror1y: cols.y1 ? num(r[cols.y1]) : undefined,
-          ror3y: cols.y3 ? num(r[cols.y3]) : undefined,
-          ror5y: cols.y5 ? num(r[cols.y5]) : undefined,
-          rorSinceInception: cols.sinceInit ? num(r[cols.sinceInit]) : undefined,
+          product: get(r, idx.product).trim(),
+          registrationType: get(r, idx.registration).trim(),
+          issueDate: get(r, idx.issue).trim(),
+          boyValue: num(get(r, idx.boy)),
+          currentValue: num(get(r, idx.asOf)),
+          variationPct: num(get(r, idx.varPct)),
+          variationDollar: num(get(r, idx.varDol)),
+          rorYtd: idx.ytd >= 0 ? num(get(r, idx.ytd)) : undefined,
+          ror6m: idx.m6 >= 0 ? num(get(r, idx.m6)) : undefined,
+          ror1y: idx.y1 >= 0 ? num(get(r, idx.y1)) : undefined,
+          ror3y: idx.y3 >= 0 ? num(get(r, idx.y3)) : undefined,
+          ror5y: idx.y5 >= 0 ? num(get(r, idx.y5)) : undefined,
+          rorSinceInception: idx.sinceInit >= 0 ? num(get(r, idx.sinceInit)) : undefined,
           contactId,
           contactLabel,
           vineyardAccountId,
           matchStatus,
         };
-      });
+      }).filter(Boolean) as ParsedRow[];
+
 
       setRows(out);
       if (!asOf) {
