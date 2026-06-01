@@ -438,7 +438,7 @@ export function PerformanceAnalyst() {
                   <TableHead className="text-right">Δ %</TableHead>
                   <TableHead className="text-right">YTD</TableHead>
                   <TableHead className="text-right">1Y</TableHead>
-                  <TableHead>Match</TableHead>
+                  <TableHead className="min-w-[260px]">Linked contact / account</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
