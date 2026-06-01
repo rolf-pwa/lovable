@@ -978,8 +978,8 @@ const Portal = () => {
     const ind = getIndividualData();
     const isSelf = !currentMember;
     const hasTerritory = (ind.vineyardAccounts?.length || 0) > 0 || (ind.memberStorehouses?.length || 0) > 0;
-    const holdingTankOnly = isSelf && !hasTerritory && holding_tank.length > 0;
-    const effectiveTab = (!hasTerritory && (activeTab === "vineyard" || activeTab === "storehouses")) || (holdingTankOnly && activeTab === "holding-tank") ? "tasks" : activeTab;
+    const effectiveTab = !hasTerritory && (activeTab === "vineyard" || activeTab === "storehouses") ? "tasks" : activeTab;
+
 
 
 
@@ -1012,7 +1012,7 @@ const Portal = () => {
                 <Calendar className="h-4 w-4" />
                 Meetings
               </TabsTrigger>
-              {isSelf && holding_tank.length > 0 && !holdingTankOnly && (
+              {isSelf && holding_tank.length > 0 && (
                 <TabsTrigger value="holding-tank" className="flex-1 gap-1.5">
                   <Landmark className="h-4 w-4" />
                   <span className="hidden sm:inline">Holding Tank</span>
@@ -1138,7 +1138,7 @@ const Portal = () => {
             </TabsContent>
 
             {/* Holding Tank Tab */}
-            {isSelf && holding_tank.length > 0 && !holdingTankOnly && (
+            {isSelf && holding_tank.length > 0 && (
               <TabsContent value="holding-tank" className="mt-4">
                 <PortalHoldingTank accounts={holding_tank} />
               </TabsContent>
@@ -1262,15 +1262,15 @@ const Portal = () => {
             </Card>
           )}
 
-          {/* Holding Tank — moved below Household tile when no Vineyard/Storehouses */}
-          {holdingTankOnly && <PortalHoldingTank accounts={holding_tank} />}
+          {/* Dynamic Quick Links (My Accounts, Empathy, etc.) — pinned below Household */}
+          {isSelf && <PortalDynamicLinks contact={contact} />}
 
           {/* Charter — hidden if no charter file */}
-
           {(() => {
             const charterUrl = charter?.draft_status === "ratified" ? (contact.charter_url || family?.charter_document_url) : null;
             return charterUrl ? <PortalCharter charterUrl={charterUrl} /> : null;
           })()}
+
 
           {/* Updates — moved from tabs */}
           {isSelf && (
@@ -1309,8 +1309,8 @@ const Portal = () => {
             </Card>
           )}
 
-          {/* Dynamic Quick Links */}
-          {isSelf && <PortalDynamicLinks contact={contact} />}
+
+
 
 
           {/* Timeline — bottom of sidebar */}
