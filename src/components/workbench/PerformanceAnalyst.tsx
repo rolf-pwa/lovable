@@ -360,7 +360,22 @@ export function PerformanceAnalyst() {
         return {
           ...r,
           vineyardAccountId: accountId,
-          matchStatus: r.contactId ? (accountId ? "matched" : "no_account") : "no_contact",
+          holdingTankId: accountId ? null : r.holdingTankId,
+          matchStatus: r.contactId ? (accountId ? "matched" : (r.holdingTankId ? "matched" : "no_account")) : "no_contact",
+        };
+      })
+    );
+  };
+
+  const setRowHoldingTank = (rowIndex: number, holdingTankId: string | null) => {
+    setRows((prev) =>
+      prev.map((r) => {
+        if (r.rowIndex !== rowIndex) return r;
+        return {
+          ...r,
+          holdingTankId,
+          vineyardAccountId: holdingTankId ? null : r.vineyardAccountId,
+          matchStatus: r.contactId ? (holdingTankId || r.vineyardAccountId ? "matched" : "no_account") : "no_contact",
         };
       })
     );
