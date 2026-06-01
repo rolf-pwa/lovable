@@ -50,6 +50,7 @@ interface Props {
   portalToken?: string;
   onScopeChange?: () => void;
   corporations?: any[];
+  section?: "vineyard" | "storehouses" | "all";
 }
 
 function ScopeBadge({
@@ -143,7 +144,9 @@ function ScopeBadge({
   );
 }
 
-export function PortalTerritory({ vineyardAccounts, storehouses, contact, family, household, householdMembers = [], scopeLabel, portalToken, onScopeChange, corporations = [] }: Props) {
+export function PortalTerritory({ vineyardAccounts, storehouses, contact, family, household, householdMembers = [], scopeLabel, portalToken, onScopeChange, corporations = [], section = "all" }: Props) {
+  const showVineyard = section === "all" || section === "vineyard";
+  const showStorehouses = section === "all" || section === "storehouses";
   const isIndividualSelf = scopeLabel === "My Territory";
   
   // If scopeLabel is provided, assets are already pre-filtered by the parent; show all
@@ -177,6 +180,7 @@ export function PortalTerritory({ vineyardAccounts, storehouses, contact, family
   return (
     <div className="space-y-6">
       {/* Vineyard Overview */}
+      {showVineyard && (
       <Card>
         <CardHeader>
           <div className="flex items-center gap-3">
@@ -284,8 +288,10 @@ export function PortalTerritory({ vineyardAccounts, storehouses, contact, family
           )}
         </CardContent>
       </Card>
+      )}
 
       {/* Storehouses */}
+      {showStorehouses && (
       <Card>
         <CardHeader>
           <div className="flex items-center gap-3">
@@ -377,6 +383,7 @@ export function PortalTerritory({ vineyardAccounts, storehouses, contact, family
           })}
         </CardContent>
       </Card>
+      )}
     </div>
   );
 }
