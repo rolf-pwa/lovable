@@ -1010,21 +1010,26 @@ const Portal = () => {
                 <Calendar className="h-4 w-4" />
                 Meetings
               </TabsTrigger>
-              {isSelf && holding_tank.length > 0 && (
+              {isSelf && holding_tank.length > 0 && !holdingTankOnly && (
                 <TabsTrigger value="holding-tank" className="flex-1 gap-1.5">
                   <Landmark className="h-4 w-4" />
                   <span className="hidden sm:inline">Holding Tank</span>
                   <span className="sm:hidden">Tank</span>
                 </TabsTrigger>
               )}
-              <TabsTrigger value="vineyard" className="flex-1 gap-1.5">
-                <Grape className="h-4 w-4" />
-                Vineyard
-              </TabsTrigger>
-              <TabsTrigger value="storehouses" className="flex-1 gap-1.5">
-                <Landmark className="h-4 w-4" />
-                Storehouses
-              </TabsTrigger>
+              {hasTerritory && (
+                <>
+                  <TabsTrigger value="vineyard" className="flex-1 gap-1.5">
+                    <Grape className="h-4 w-4" />
+                    Vineyard
+                  </TabsTrigger>
+                  <TabsTrigger value="storehouses" className="flex-1 gap-1.5">
+                    <Landmark className="h-4 w-4" />
+                    Storehouses
+                  </TabsTrigger>
+                </>
+              )}
+
               {isSelf && (
                 <TabsTrigger value="vault" className="flex-1 gap-1.5">
                   <FolderLock className="h-4 w-4" />
