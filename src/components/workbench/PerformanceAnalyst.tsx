@@ -64,6 +64,12 @@ export function PerformanceAnalyst() {
   const [rows, setRows] = useState<ParsedRow[]>([]);
   const [asOfDate, setAsOfDate] = useState<string>("");
   const [fileName, setFileName] = useState<string>("");
+  const [contacts, setContacts] = useState<Array<{
+    id: string; first_name: string | null; last_name: string | null; full_name: string | null;
+  }>>([]);
+  const [accounts, setAccounts] = useState<Array<{
+    id: string; contact_id: string; account_number: string | null; account_name: string | null;
+  }>>([]);
 
   const handleFile = async (file: File) => {
     setParsing(true);
