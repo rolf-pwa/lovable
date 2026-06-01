@@ -228,7 +228,7 @@ function AccountRow({ acc, moveTargets, onMoveAccount, updateVisibilityScope, de
     setLoading(true);
     supabase
       .from("account_harvest_snapshots")
-      .select("id, snapshot_date, reporting_year, boy_value, ytd_value, current_harvest, current_value")
+      .select("id, snapshot_date, reporting_year, boy_value, ytd_value, current_harvest, current_value, ror_ytd, ror_6m, ror_1y, ror_3y, ror_5y, ror_since_inception")
       .eq(fkColumn, acc.id)
       .order("snapshot_date", { ascending: false })
       .then(({ data, error }) => {
