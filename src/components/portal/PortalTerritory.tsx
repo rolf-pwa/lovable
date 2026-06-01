@@ -288,8 +288,10 @@ export function PortalTerritory({ vineyardAccounts, storehouses, contact, family
           )}
         </CardContent>
       </Card>
+      )}
 
       {/* Storehouses */}
+      {showStorehouses && (
       <Card>
         <CardHeader>
           <div className="flex items-center gap-3">
