@@ -50,6 +50,7 @@ interface Props {
   portalToken?: string;
   onScopeChange?: () => void;
   corporations?: any[];
+  section?: "vineyard" | "storehouses" | "all";
 }
 
 function ScopeBadge({
