@@ -325,22 +325,29 @@ export function PerformanceAnalyst() {
       prev.map((r) => {
         if (r.rowIndex !== rowIndex) return r;
         if (!contactId) {
-          return { ...r, contactId: null, contactLabel: `${r.firstName} ${r.lastName}`.trim(), vineyardAccountId: null, matchStatus: "no_contact" };
+          return { ...r, contactId: null, contactLabel: `${r.firstName} ${r.lastName}`.trim(), vineyardAccountId: null, holdingTankId: null, matchStatus: "no_contact" };
         }
         const c = contacts.find((x) => x.id === contactId);
         const label = c?.full_name || `${c?.first_name || ""} ${c?.last_name || ""}`.trim();
         // Try auto-pick a vineyard account by contract number for this contact
         let vId: string | null = null;
+        let hId: string | null = null;
         if (r.contractNumber) {
           const m = accounts.filter((a) => a.contact_id === contactId && (a.account_number || "").trim() === r.contractNumber);
           if (m.length === 1) vId = m[0].id;
+        }
+        // Fallback: try holding tank if no vineyard account matched
+        if (!vId && r.contractNumber) {
+          const ht = holdingTanks.filter((h) => h.contact_id === contactId && (h.account_number || "").trim() === r.contractNumber);
+          if (ht.length === 1) hId = ht[0].id;
         }
         return {
           ...r,
           contactId,
           contactLabel: label,
           vineyardAccountId: vId,
-          matchStatus: vId ? "matched" : "no_account",
+          holdingTankId: hId,
+          matchStatus: (vId || hId) ? "matched" : "no_account",
         };
       })
     );
