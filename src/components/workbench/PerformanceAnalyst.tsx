@@ -463,7 +463,15 @@ export function PerformanceAnalyst() {
                     <TableCell className="text-right tabular-nums text-xs">
                       {r.ror1y !== undefined ? fmtPct(r.ror1y) : "—"}
                     </TableCell>
-                    <TableCell>{statusBadge(r.matchStatus)}</TableCell>
+                    <TableCell>
+                      <ContactAccountPicker
+                        row={r}
+                        contacts={contacts}
+                        accounts={accounts}
+                        onContactChange={(cid) => setRowContact(r.rowIndex, cid)}
+                        onAccountChange={(aid) => setRowAccount(r.rowIndex, aid)}
+                      />
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
