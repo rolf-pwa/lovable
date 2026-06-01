@@ -554,21 +554,25 @@ function Stat({
 
 type Contact = { id: string; first_name: string | null; last_name: string | null; full_name: string | null };
 type Account = { id: string; contact_id: string; account_number: string | null; account_name: string | null };
+type HoldingTank = { id: string; contact_id: string; account_number: string | null; account_name: string | null };
 
 function ContactAccountPicker({
-  row, contacts, accounts, onContactChange, onAccountChange,
+  row, contacts, accounts, holdingTanks, onContactChange, onAccountChange, onHoldingTankChange,
 }: {
   row: ParsedRow;
   contacts: Contact[];
   accounts: Account[];
+  holdingTanks: HoldingTank[];
   onContactChange: (id: string | null) => void;
   onAccountChange: (id: string | null) => void;
+  onHoldingTankChange: (id: string | null) => void;
 }) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
 
   const selectedContact = row.contactId ? contacts.find((c) => c.id === row.contactId) : null;
   const contactAccounts = row.contactId ? accounts.filter((a) => a.contact_id === row.contactId) : [];
+  const contactHoldingTanks = row.contactId ? holdingTanks.filter((h) => h.contact_id === row.contactId) : [];
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
