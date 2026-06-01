@@ -244,10 +244,8 @@ function AccountRow({ acc, moveTargets, onMoveAccount, updateVisibilityScope, de
 
   const latest = snapshots && snapshots.length > 0 ? snapshots[0] : null;
   const boy = latest ? Number(latest.boy_value) : 0;
-  const ytd = latest ? Number(latest.ytd_value) : 0;
   const harvest = latest ? Number(latest.current_harvest) : 0;
   const marketCurrent = latest ? Number(latest.current_value) : current;
-  const varianceYtdDollars = ytd - boy;
   const varianceCurrentDollars = marketCurrent - boy;
 
   return (
