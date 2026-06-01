@@ -68,38 +68,55 @@ export function PerformanceAnalyst() {
     setFileName(file.name);
     try {
       const text = await file.text();
-      const parsed = Papa.parse<Record<string, string>>(text, {
-        header: true,
-        skipEmptyLines: true,
-        transformHeader: (h) => h.trim(),
-      });
 
-      const headers = parsed.meta.fields || [];
-      // Find as-of date from "Market Value As of YYYY-MM-DD"
-      const asOfHeader = headers.find((h) => /market value as of/i.test(h));
-      const asOfMatch = asOfHeader?.match(/(\d{4}-\d{2}-\d{2})/);
+      // Parse without headers first so we can locate the real header row
+      // (some exports prefix the file with title/footnote rows).
+      const raw = Papa.parse<string[]>(text, { skipEmptyLines: true });
+      const allRows = (raw.data as string[][]).filter((r) => Array.isArray(r));
+
+      const headerRowIdx = allRows.findIndex(
+        (r) =>
+          r.some((c) => /^\s*last\s*name\s*$/i.test(c || "")) &&
+          r.some((c) => /^\s*first\s*name\s*$/i.test(c || ""))
+      );
+      if (headerRowIdx < 0) {
+        throw new Error('Could not find header row (expected a row containing "Last Name" and "First Name").');
+      }
+
+      const rawHeaders = allRows[headerRowIdx].map((h) => (h || "").trim());
+      // Deduplicate empty/duplicate headers so we can key by index reliably.
+      const headers = rawHeaders.map((h, i) => h || `col_${i}`);
+      const dataRows = allRows.slice(headerRowIdx + 1).filter((r) =>
+        r.some((c) => (c || "").trim() !== "")
+      );
+
+      const findIdx = (re: RegExp) => headers.findIndex((h) => re.test(h));
+      const asOfIdx = findIdx(/^\s*(market value\s+)?as of\b/i);
+      const asOfHeader = asOfIdx >= 0 ? headers[asOfIdx] : "";
+      const asOfMatch = asOfHeader.match(/(\d{4}-\d{2}-\d{2})/);
       const asOf = asOfMatch?.[1] || "";
       setAsOfDate(asOf);
 
-      const findCol = (re: RegExp) => headers.find((h) => re.test(h)) || "";
-      const cols = {
-        last: findCol(/^last\s*name/i),
-        first: findCol(/^first\s*name/i),
-        contract: findCol(/contract\s*(number|#|no)/i),
-        product: findCol(/^product/i),
-        registration: findCol(/registration/i),
-        issue: findCol(/issue\s*date/i),
-        boy: findCol(/begin(ning)?\s*of\s*(the\s*)?year|market value beg/i),
-        asOf: asOfHeader || "",
-        varPct: findCol(/variation\s*%/i),
-        varDol: findCol(/variation\s*\$/i),
-        ytd: findCol(/year[-\s]*to[-\s]*date|\bYTD\b/i),
-        m6: findCol(/6\s*months?/i),
-        y1: findCol(/^.*\b1\s*year\b.*$/i),
-        y3: findCol(/3\s*years?/i),
-        y5: findCol(/5\s*years?/i),
-        sinceInit: findCol(/since\s*initial|inception/i),
+      const idx = {
+        last: findIdx(/^last\s*name/i),
+        first: findIdx(/^first\s*name/i),
+        contract: findIdx(/contract\s*(number|#|no)?/i),
+        product: findIdx(/^product/i),
+        registration: findIdx(/registration|type of reg/i),
+        issue: findIdx(/issue\s*date/i),
+        boy: findIdx(/begin(n)?ing\s*of\s*(the\s*)?year|market value beg/i),
+        asOf: asOfIdx,
+        // The two columns immediately after the as-of column are typically % and $ variation.
+        varPct: asOfIdx >= 0 ? asOfIdx + 1 : findIdx(/variation\s*%|^\s*%\s*$/i),
+        varDol: asOfIdx >= 0 ? asOfIdx + 2 : findIdx(/variation\s*\$|^\s*\$\s*$/i),
+        ytd: findIdx(/year[-\s]*to[-\s]*date|\bYTD\b/i),
+        m6: findIdx(/6\s*months?/i),
+        y1: findIdx(/(^|[^0-9])1\s*year\b/i),
+        y3: findIdx(/3\s*years?/i),
+        y5: findIdx(/5\s*years?/i),
+        sinceInit: findIdx(/since\s*initial|inception/i),
       };
+      const get = (row: string[], i: number) => (i >= 0 ? row[i] ?? "" : "");
 
       // Pull contacts for matching
       const { data: contactsData } = await supabase
@@ -117,10 +134,15 @@ export function PerformanceAnalyst() {
         account_name: string | null;
       }>;
 
-      const out: ParsedRow[] = parsed.data.map((r, i) => {
-        const lastName = (r[cols.last] || "").trim();
-        const firstName = (r[cols.first] || "").trim();
-        const contractNumber = (r[cols.contract] || "").trim();
+      const out: ParsedRow[] = dataRows.map((r, i) => {
+        const lastName = get(r, idx.last).trim();
+        const firstName = get(r, idx.first).trim();
+        const contractNumber = get(r, idx.contract).trim();
+
+        // Skip footer/total rows that lack a name
+        if (!lastName && !firstName) {
+          return null as any;
+        }
 
         // Match contact by name (case-insensitive)
         const matches = contacts.filter(
@@ -150,7 +172,6 @@ export function PerformanceAnalyst() {
           if (acctMatches.length === 1) {
             vineyardAccountId = acctMatches[0].id;
           } else {
-            // Fall back: any account anywhere with that contract number
             const global = accounts.filter(
               (a) => (a.account_number || "").trim() === contractNumber
             );
@@ -166,25 +187,26 @@ export function PerformanceAnalyst() {
           lastName,
           firstName,
           contractNumber,
-          product: (r[cols.product] || "").trim(),
-          registrationType: (r[cols.registration] || "").trim(),
-          issueDate: (r[cols.issue] || "").trim(),
-          boyValue: num(r[cols.boy]),
-          currentValue: num(r[cols.asOf]),
-          variationPct: num(r[cols.varPct]),
-          variationDollar: num(r[cols.varDol]),
-          rorYtd: cols.ytd ? num(r[cols.ytd]) : undefined,
-          ror6m: cols.m6 ? num(r[cols.m6]) : undefined,
-          ror1y: cols.y1 ? num(r[cols.y1]) : undefined,
-          ror3y: cols.y3 ? num(r[cols.y3]) : undefined,
-          ror5y: cols.y5 ? num(r[cols.y5]) : undefined,
-          rorSinceInception: cols.sinceInit ? num(r[cols.sinceInit]) : undefined,
+          product: get(r, idx.product).trim(),
+          registrationType: get(r, idx.registration).trim(),
+          issueDate: get(r, idx.issue).trim(),
+          boyValue: num(get(r, idx.boy)),
+          currentValue: num(get(r, idx.asOf)),
+          variationPct: num(get(r, idx.varPct)),
+          variationDollar: num(get(r, idx.varDol)),
+          rorYtd: idx.ytd >= 0 ? num(get(r, idx.ytd)) : undefined,
+          ror6m: idx.m6 >= 0 ? num(get(r, idx.m6)) : undefined,
+          ror1y: idx.y1 >= 0 ? num(get(r, idx.y1)) : undefined,
+          ror3y: idx.y3 >= 0 ? num(get(r, idx.y3)) : undefined,
+          ror5y: idx.y5 >= 0 ? num(get(r, idx.y5)) : undefined,
+          rorSinceInception: idx.sinceInit >= 0 ? num(get(r, idx.sinceInit)) : undefined,
           contactId,
           contactLabel,
           vineyardAccountId,
           matchStatus,
         };
-      });
+      }).filter(Boolean) as ParsedRow[];
+
 
       setRows(out);
       if (!asOf) {
