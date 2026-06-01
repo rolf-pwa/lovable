@@ -602,9 +602,7 @@ function ContactAccountPicker({
             <X className="h-3 w-3" />
           </Button>
         </div>
-        {contactAccounts.length === 0 ? (
-          <span className="text-[11px] text-amber-600">No Vineyard accounts for this contact</span>
-        ) : (
+        {contactAccounts.length > 0 ? (
           <Select
             value={row.vineyardAccountId || ""}
             onValueChange={(v) => onAccountChange(v || null)}
@@ -620,6 +618,24 @@ function ContactAccountPicker({
               ))}
             </SelectContent>
           </Select>
+        ) : contactHoldingTanks.length > 0 ? (
+          <Select
+            value={row.holdingTankId || ""}
+            onValueChange={(v) => onHoldingTankChange(v || null)}
+          >
+            <SelectTrigger className="h-7 text-xs">
+              <SelectValue placeholder="Pick Holding Tank entry…" />
+            </SelectTrigger>
+            <SelectContent>
+              {contactHoldingTanks.map((h) => (
+                <SelectItem key={h.id} value={h.id} className="text-xs">
+                  {(h.account_number ? h.account_number + " · " : "") + (h.account_name || "Holding Tank")}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : (
+          <span className="text-[11px] text-amber-600">No Vineyard accounts for this contact</span>
         )}
       </div>
     );
