@@ -306,7 +306,7 @@ export function HoldingTank({ contactId, householdId, onAccountMoved }: HoldingT
             <div className="flex gap-4 mt-1">
               <span className="text-sm font-medium">Current: {formatCurrency(totalValue)}</span>
               {totalBookValue > 0 && (
-                <span className="text-sm text-muted-foreground">Book: {formatCurrency(totalBookValue)}</span>
+                <span className="text-sm text-muted-foreground">Beginning of Year: {formatCurrency(totalBookValue)}</span>
               )}
             </div>
           )}
@@ -455,7 +455,7 @@ function HoldingTankRow({
             <p className="text-sm font-semibold">{formatCurrency(account.current_value)}</p>
           )}
           {account.book_value != null && (
-            <p className="text-xs text-muted-foreground">Book: {formatCurrency(account.book_value)}</p>
+            <p className="text-xs text-muted-foreground">Beginning of Year: {formatCurrency(account.book_value)}</p>
           )}
         </div>
       </div>

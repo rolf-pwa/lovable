@@ -69,7 +69,7 @@ export function PortalHoldingTank({ accounts }: PortalHoldingTankProps) {
                 <p className="text-sm font-semibold">{formatCurrency(account.current_value)}</p>
               )}
               {account.book_value != null && (
-                <p className="text-[10px] text-muted-foreground">Book: {formatCurrency(account.book_value)}</p>
+                <p className="text-[10px] text-muted-foreground">Beginning of Year: {formatCurrency(account.book_value)}</p>
               )}
               {account.expected_deposit_date && (
                 <p className="text-[10px] text-muted-foreground flex items-center gap-1 justify-end">
