@@ -522,8 +522,10 @@ export function PerformanceAnalyst() {
                         row={r}
                         contacts={contacts}
                         accounts={accounts}
+                        holdingTanks={holdingTanks}
                         onContactChange={(cid) => setRowContact(r.rowIndex, cid)}
                         onAccountChange={(aid) => setRowAccount(r.rowIndex, aid)}
+                        onHoldingTankChange={(hid) => setRowHoldingTank(r.rowIndex, hid)}
                       />
                     </TableCell>
                   </TableRow>
