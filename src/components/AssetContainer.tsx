@@ -192,6 +192,12 @@ interface SnapshotRow {
   ytd_value: number;
   current_harvest: number;
   current_value: number;
+  ror_ytd: number | null;
+  ror_6m: number | null;
+  ror_1y: number | null;
+  ror_3y: number | null;
+  ror_5y: number | null;
+  ror_since_inception: number | null;
 }
 
 interface AccountRowProps {
