@@ -130,8 +130,11 @@ export function PerformanceAnalyst() {
       // Pull contacts for matching
       const { data: contactsData } = await supabase
         .from("contacts")
-        .select("id, first_name, last_name, full_name, household_id, family_id");
-      const contacts = contactsData || [];
+        .select("id, first_name, last_name, full_name");
+      const contacts = (contactsData || []) as Array<{
+        id: string; first_name: string | null; last_name: string | null; full_name: string | null;
+      }>;
+      setContacts(contacts);
 
       // Pull vineyard accounts for contract match
       const { data: vineyardData } = await (supabase.from("vineyard_accounts" as any) as any)
@@ -142,6 +145,7 @@ export function PerformanceAnalyst() {
         account_number: string | null;
         account_name: string | null;
       }>;
+      setAccounts(accounts);
 
       const out: ParsedRow[] = dataRows.map((r, i) => {
         const lastName = get(r, idx.last).trim();
