@@ -449,7 +449,7 @@ export function PerformanceAnalyst() {
                 )}
                 <span>
                   {saveable.length} of {rows.length} row{rows.length === 1 ? "" : "s"} can be saved as harvest snapshots
-                  (require matched contact + matched Vineyard account by contract number).
+                  (require matched contact + matched Vineyard account or Holding Tank entry by contract number).
                 </span>
               </div>
             </div>
