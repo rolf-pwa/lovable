@@ -203,7 +203,19 @@ export function PerformanceAnalyst() {
             if (global.length === 1) vineyardAccountId = global[0].id;
           }
         }
+        // Fallback to holding tank if no vineyard account
+        let holdingTankId: string | null = null;
         if (matchStatus === "matched" && !vineyardAccountId) {
+          const htMatches = holdingTanks.filter(
+            (h) => h.contact_id === contactId && (h.account_number || "").trim() === contractNumber
+          );
+          if (htMatches.length === 1) {
+            holdingTankId = htMatches[0].id;
+          } else if (htMatches.length === 0) {
+            matchStatus = "no_account";
+          }
+        }
+        if (matchStatus === "matched" && !vineyardAccountId && !holdingTankId) {
           matchStatus = "no_account";
         }
 
@@ -228,6 +240,7 @@ export function PerformanceAnalyst() {
           contactId,
           contactLabel,
           vineyardAccountId,
+          holdingTankId,
           matchStatus,
         };
       }).filter(Boolean) as ParsedRow[];
