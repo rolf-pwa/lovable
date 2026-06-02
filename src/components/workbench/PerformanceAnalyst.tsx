@@ -467,7 +467,7 @@ export function PerformanceAnalyst() {
       prev.map((r) => {
         if (r.rowIndex !== rowIndex) return r;
         if (!contactId) {
-          return { ...r, contactId: null, contactLabel: `${r.firstName} ${r.lastName}`.trim(), vineyardAccountId: null, holdingTankId: null, matchStatus: "no_contact" };
+          return { ...r, contactId: null, contactLabel: `${r.firstName} ${r.lastName}`.trim(), vineyardAccountId: null, holdingTankId: null, storehouseId: null, matchStatus: "no_contact" };
         }
         const c = contacts.find((x) => x.id === contactId);
         const label = c?.full_name || `${c?.first_name || ""} ${c?.last_name || ""}`.trim();
@@ -489,39 +489,30 @@ export function PerformanceAnalyst() {
           contactLabel: label,
           vineyardAccountId: vId,
           holdingTankId: hId,
+          storehouseId: null,
           matchStatus: (vId || hId) ? "matched" : "no_account",
         };
       })
     );
   };
 
-  const setRowAccount = (rowIndex: number, accountId: string | null) => {
+  const setRowLink = (rowIndex: number, kind: AccountKind, id: string | null) => {
     setRows((prev) =>
       prev.map((r) => {
         if (r.rowIndex !== rowIndex) return r;
-        return {
-          ...r,
-          vineyardAccountId: accountId,
-          holdingTankId: accountId ? null : r.holdingTankId,
-          matchStatus: r.contactId ? (accountId ? "matched" : (r.holdingTankId ? "matched" : "no_account")) : "no_contact",
-        };
+        const next = { ...r, vineyardAccountId: null, holdingTankId: null, storehouseId: null };
+        if (id) {
+          if (kind === "vineyard") next.vineyardAccountId = id;
+          else if (kind === "holding") next.holdingTankId = id;
+          else next.storehouseId = id;
+        }
+        const hasLink = !!(next.vineyardAccountId || next.holdingTankId || next.storehouseId);
+        next.matchStatus = r.contactId ? (hasLink ? "matched" : "no_account") : "no_contact";
+        return next;
       })
     );
   };
 
-  const setRowHoldingTank = (rowIndex: number, holdingTankId: string | null) => {
-    setRows((prev) =>
-      prev.map((r) => {
-        if (r.rowIndex !== rowIndex) return r;
-        return {
-          ...r,
-          holdingTankId,
-          vineyardAccountId: holdingTankId ? null : r.vineyardAccountId,
-          matchStatus: r.contactId ? (holdingTankId || r.vineyardAccountId ? "matched" : "no_account") : "no_contact",
-        };
-      })
-    );
-  };
 
 
 
