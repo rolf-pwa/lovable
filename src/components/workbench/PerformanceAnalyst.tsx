@@ -41,8 +41,11 @@ type ParsedRow = {
   contactLabel?: string;
   vineyardAccountId?: string | null;
   holdingTankId?: string | null;
+  storehouseId?: string | null;
   matchStatus: "matched" | "no_contact" | "no_account" | "ambiguous";
 };
+
+type AccountKind = "vineyard" | "holding" | "storehouse";
 
 const num = (v: any): number => {
   if (v === null || v === undefined) return 0;
@@ -73,6 +76,9 @@ export function PerformanceAnalyst() {
   }>>([]);
   const [holdingTanks, setHoldingTanks] = useState<Array<{
     id: string; contact_id: string; account_name: string | null; account_number: string | null;
+  }>>([]);
+  const [storehouses, setStorehouses] = useState<Array<{
+    id: string; contact_id: string; label: string; storehouse_number: number;
   }>>([]);
 
   const handleFile = async (file: File) => {
@@ -159,6 +165,14 @@ export function PerformanceAnalyst() {
       }>;
       setHoldingTanks(holdingTanks);
 
+      // Pull storehouses (selectable by user; no contract auto-match)
+      const { data: shData } = await (supabase.from("storehouses" as any) as any)
+        .select("id, contact_id, label, storehouse_number");
+      const storehouses = (shData || []) as Array<{
+        id: string; contact_id: string; label: string; storehouse_number: number;
+      }>;
+      setStorehouses(storehouses);
+
       const out: ParsedRow[] = dataRows.map((r, i) => {
         const lastName = get(r, idx.last).trim();
         const firstName = get(r, idx.first).trim();
@@ -236,6 +250,7 @@ export function PerformanceAnalyst() {
           contactLabel,
           vineyardAccountId,
           holdingTankId,
+          storehouseId: null,
           matchStatus,
         };
       }).filter(Boolean) as ParsedRow[];
@@ -273,7 +288,7 @@ export function PerformanceAnalyst() {
     [rows]
   );
 
-  const saveable = rows.filter((r) => r.matchStatus === "matched" && (r.vineyardAccountId || r.holdingTankId));
+  const saveable = rows.filter((r) => r.matchStatus === "matched" && (r.vineyardAccountId || r.holdingTankId || r.storehouseId));
 
   const handleSave = async () => {
     if (!asOfDate) {
@@ -281,7 +296,7 @@ export function PerformanceAnalyst() {
       return;
     }
     if (saveable.length === 0) {
-      toast.error("No rows can be saved — need a matched contact and a matched Vineyard account or Holding Tank entry.");
+      toast.error("No rows can be saved — need a matched contact and a linked Vineyard, Holding Tank, or Storehouse account.");
       return;
     }
     setSaving(true);
@@ -289,8 +304,9 @@ export function PerformanceAnalyst() {
       const { data: { user } } = await supabase.auth.getUser();
       const vineyardIds = [...new Set(saveable.map((r) => r.vineyardAccountId).filter(Boolean))] as string[];
       const holdingIds = [...new Set(saveable.map((r) => r.holdingTankId).filter(Boolean))] as string[];
+      const storehouseIds = [...new Set(saveable.map((r) => r.storehouseId).filter(Boolean))] as string[];
 
-      const [vineyardCheck, holdingCheck] = await Promise.all([
+      const [vineyardCheck, holdingCheck, storehouseCheck] = await Promise.all([
         vineyardIds.length
           ? (supabase.from("vineyard_accounts" as any) as any)
               .select("id, contact_id")
@@ -301,16 +317,24 @@ export function PerformanceAnalyst() {
               .select("id, contact_id")
               .in("id", holdingIds)
           : Promise.resolve({ data: [], error: null }),
+        storehouseIds.length
+          ? (supabase.from("storehouses" as any) as any)
+              .select("id, contact_id")
+              .in("id", storehouseIds)
+          : Promise.resolve({ data: [], error: null }),
       ]);
 
       if (vineyardCheck.error) throw vineyardCheck.error;
       if (holdingCheck.error) throw holdingCheck.error;
+      if (storehouseCheck.error) throw storehouseCheck.error;
 
       const vineyardOwners = new Map((vineyardCheck.data || []).map((a: any) => [a.id, a.contact_id]));
       const holdingOwners = new Map((holdingCheck.data || []).map((a: any) => [a.id, a.contact_id]));
+      const storehouseOwners = new Map((storehouseCheck.data || []).map((a: any) => [a.id, a.contact_id]));
       const validRows = saveable.filter((r) => {
         if (r.vineyardAccountId) return vineyardOwners.get(r.vineyardAccountId) === r.contactId;
         if (r.holdingTankId) return holdingOwners.get(r.holdingTankId) === r.contactId;
+        if (r.storehouseId) return storehouseOwners.get(r.storehouseId) === r.contactId;
         return false;
       });
 
@@ -318,13 +342,15 @@ export function PerformanceAnalyst() {
         throw new Error("No rows could be saved because the linked accounts no longer match the selected contacts.");
       }
 
+      const keyFor = (r: ParsedRow) =>
+        r.vineyardAccountId
+          ? `vineyard:${r.vineyardAccountId}`
+          : r.holdingTankId
+            ? `holding:${r.holdingTankId}`
+            : `storehouse:${r.storehouseId}`;
+
       const snapshotRows = Array.from(
-        new Map(
-          validRows.map((r) => [
-            r.vineyardAccountId ? `vineyard:${r.vineyardAccountId}` : `holding:${r.holdingTankId}`,
-            r,
-          ])
-        ).values()
+        new Map(validRows.map((r) => [keyFor(r), r])).values()
       );
 
       const makeSnapshotPayload = (r: ParsedRow, includeCreatedBy: boolean) => {
@@ -347,15 +373,13 @@ export function PerformanceAnalyst() {
           ror_since_inception: r.rorSinceInception ?? null,
         };
         if (includeCreatedBy) base.created_by = user?.id || null;
-        if (r.vineyardAccountId) {
-          base.vineyard_account_id = r.vineyardAccountId;
-        } else if (r.holdingTankId) {
-          base.holding_tank_id = r.holdingTankId;
-        }
+        if (r.vineyardAccountId) base.vineyard_account_id = r.vineyardAccountId;
+        else if (r.holdingTankId) base.holding_tank_id = r.holdingTankId;
+        else if (r.storehouseId) base.storehouse_id = r.storehouseId;
         return base;
       };
 
-      const [existingVineyard, existingHolding] = await Promise.all([
+      const [existingVineyard, existingHolding, existingStorehouse] = await Promise.all([
         vineyardIds.length
           ? (supabase.from("account_harvest_snapshots" as any) as any)
               .select("id, vineyard_account_id")
@@ -368,20 +392,27 @@ export function PerformanceAnalyst() {
               .eq("snapshot_date", asOfDate)
               .in("holding_tank_id", holdingIds)
           : Promise.resolve({ data: [], error: null }),
+        storehouseIds.length
+          ? (supabase.from("account_harvest_snapshots" as any) as any)
+              .select("id, storehouse_id")
+              .eq("snapshot_date", asOfDate)
+              .in("storehouse_id", storehouseIds)
+          : Promise.resolve({ data: [], error: null }),
       ]);
 
       if (existingVineyard.error) throw existingVineyard.error;
       if (existingHolding.error) throw existingHolding.error;
+      if (existingStorehouse.error) throw existingStorehouse.error;
 
       const existingSnapshotIds = new Map<string, string>();
       (existingVineyard.data || []).forEach((s: any) => existingSnapshotIds.set(`vineyard:${s.vineyard_account_id}`, s.id));
       (existingHolding.data || []).forEach((s: any) => existingSnapshotIds.set(`holding:${s.holding_tank_id}`, s.id));
+      (existingStorehouse.data || []).forEach((s: any) => existingSnapshotIds.set(`storehouse:${s.storehouse_id}`, s.id));
 
       const inserts: any[] = [];
       const updates: Array<{ id: string; values: any }> = [];
       snapshotRows.forEach((r) => {
-        const key = r.vineyardAccountId ? `vineyard:${r.vineyardAccountId}` : `holding:${r.holdingTankId}`;
-        const existingId = existingSnapshotIds.get(key);
+        const existingId = existingSnapshotIds.get(keyFor(r));
         if (existingId) {
           updates.push({ id: existingId, values: makeSnapshotPayload(r, false) });
         } else {
@@ -400,21 +431,25 @@ export function PerformanceAnalyst() {
         if (error) throw error;
       }
 
-      // Auto-update current_value on linked Vineyard accounts and Holding Tank entries
-      const vineyardUpdates = snapshotRows.filter((r) => r.vineyardAccountId);
-      const holdingUpdates = snapshotRows.filter((r) => !r.vineyardAccountId && r.holdingTankId);
+      // Auto-update current_value on the linked records
       let updated = 0;
-      for (const r of vineyardUpdates) {
-        const { error: upErr } = await (supabase.from("vineyard_accounts" as any) as any)
-          .update({ book_value: r.boyValue, current_value: r.currentValue })
-          .eq("id", r.vineyardAccountId);
-        if (!upErr) updated++;
-      }
-      for (const r of holdingUpdates) {
-        const { error: upErr } = await (supabase.from("holding_tank" as any) as any)
-          .update({ book_value: r.boyValue, current_value: r.currentValue })
-          .eq("id", r.holdingTankId);
-        if (!upErr) updated++;
+      for (const r of snapshotRows) {
+        if (r.vineyardAccountId) {
+          const { error: upErr } = await (supabase.from("vineyard_accounts" as any) as any)
+            .update({ book_value: r.boyValue, current_value: r.currentValue })
+            .eq("id", r.vineyardAccountId);
+          if (!upErr) updated++;
+        } else if (r.holdingTankId) {
+          const { error: upErr } = await (supabase.from("holding_tank" as any) as any)
+            .update({ book_value: r.boyValue, current_value: r.currentValue })
+            .eq("id", r.holdingTankId);
+          if (!upErr) updated++;
+        } else if (r.storehouseId) {
+          const { error: upErr } = await (supabase.from("storehouses" as any) as any)
+            .update({ book_value: r.boyValue, current_value: r.currentValue })
+            .eq("id", r.storehouseId);
+          if (!upErr) updated++;
+        }
       }
       const skipped = saveable.length - validRows.length;
       toast.success(`Saved ${snapshotRows.length} snapshot${snapshotRows.length === 1 ? "" : "s"} (${inserts.length} new, ${updates.length} updated) and updated ${updated} account value${updated === 1 ? "" : "s"}${skipped ? `; skipped ${skipped} mismatched row${skipped === 1 ? "" : "s"}` : ""}.`);
@@ -432,7 +467,7 @@ export function PerformanceAnalyst() {
       prev.map((r) => {
         if (r.rowIndex !== rowIndex) return r;
         if (!contactId) {
-          return { ...r, contactId: null, contactLabel: `${r.firstName} ${r.lastName}`.trim(), vineyardAccountId: null, holdingTankId: null, matchStatus: "no_contact" };
+          return { ...r, contactId: null, contactLabel: `${r.firstName} ${r.lastName}`.trim(), vineyardAccountId: null, holdingTankId: null, storehouseId: null, matchStatus: "no_contact" };
         }
         const c = contacts.find((x) => x.id === contactId);
         const label = c?.full_name || `${c?.first_name || ""} ${c?.last_name || ""}`.trim();
@@ -454,39 +489,30 @@ export function PerformanceAnalyst() {
           contactLabel: label,
           vineyardAccountId: vId,
           holdingTankId: hId,
+          storehouseId: null,
           matchStatus: (vId || hId) ? "matched" : "no_account",
         };
       })
     );
   };
 
-  const setRowAccount = (rowIndex: number, accountId: string | null) => {
+  const setRowLink = (rowIndex: number, kind: AccountKind, id: string | null) => {
     setRows((prev) =>
       prev.map((r) => {
         if (r.rowIndex !== rowIndex) return r;
-        return {
-          ...r,
-          vineyardAccountId: accountId,
-          holdingTankId: accountId ? null : r.holdingTankId,
-          matchStatus: r.contactId ? (accountId ? "matched" : (r.holdingTankId ? "matched" : "no_account")) : "no_contact",
-        };
+        const next = { ...r, vineyardAccountId: null, holdingTankId: null, storehouseId: null };
+        if (id) {
+          if (kind === "vineyard") next.vineyardAccountId = id;
+          else if (kind === "holding") next.holdingTankId = id;
+          else next.storehouseId = id;
+        }
+        const hasLink = !!(next.vineyardAccountId || next.holdingTankId || next.storehouseId);
+        next.matchStatus = r.contactId ? (hasLink ? "matched" : "no_account") : "no_contact";
+        return next;
       })
     );
   };
 
-  const setRowHoldingTank = (rowIndex: number, holdingTankId: string | null) => {
-    setRows((prev) =>
-      prev.map((r) => {
-        if (r.rowIndex !== rowIndex) return r;
-        return {
-          ...r,
-          holdingTankId,
-          vineyardAccountId: holdingTankId ? null : r.vineyardAccountId,
-          matchStatus: r.contactId ? (holdingTankId || r.vineyardAccountId ? "matched" : "no_account") : "no_contact",
-        };
-      })
-    );
-  };
 
 
 
@@ -630,11 +656,12 @@ export function PerformanceAnalyst() {
                         contacts={contacts}
                         accounts={accounts}
                         holdingTanks={holdingTanks}
+                        storehouses={storehouses}
                         onContactChange={(cid) => setRowContact(r.rowIndex, cid)}
-                        onAccountChange={(aid) => setRowAccount(r.rowIndex, aid)}
-                        onHoldingTankChange={(hid) => setRowHoldingTank(r.rowIndex, hid)}
+                        onLinkChange={(kind, id) => setRowLink(r.rowIndex, kind, id)}
                       />
                     </TableCell>
+
                   </TableRow>
                 ))}
               </TableBody>
@@ -662,17 +689,18 @@ function Stat({
 type Contact = { id: string; first_name: string | null; last_name: string | null; full_name: string | null };
 type Account = { id: string; contact_id: string; account_number: string | null; account_name: string | null };
 type HoldingTank = { id: string; contact_id: string; account_number: string | null; account_name: string | null };
+type Storehouse = { id: string; contact_id: string; label: string; storehouse_number: number };
 
 function ContactAccountPicker({
-  row, contacts, accounts, holdingTanks, onContactChange, onAccountChange, onHoldingTankChange,
+  row, contacts, accounts, holdingTanks, storehouses, onContactChange, onLinkChange,
 }: {
   row: ParsedRow;
   contacts: Contact[];
   accounts: Account[];
   holdingTanks: HoldingTank[];
+  storehouses: Storehouse[];
   onContactChange: (id: string | null) => void;
-  onAccountChange: (id: string | null) => void;
-  onHoldingTankChange: (id: string | null) => void;
+  onLinkChange: (kind: AccountKind, id: string | null) => void;
 }) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
@@ -680,6 +708,20 @@ function ContactAccountPicker({
   const selectedContact = row.contactId ? contacts.find((c) => c.id === row.contactId) : null;
   const contactAccounts = row.contactId ? accounts.filter((a) => a.contact_id === row.contactId) : [];
   const contactHoldingTanks = row.contactId ? holdingTanks.filter((h) => h.contact_id === row.contactId) : [];
+  const contactStorehouses = row.contactId ? storehouses.filter((s) => s.contact_id === row.contactId) : [];
+
+  const currentKind: AccountKind = row.vineyardAccountId
+    ? "vineyard"
+    : row.holdingTankId
+      ? "holding"
+      : row.storehouseId
+        ? "storehouse"
+        : (contactAccounts.length > 0 ? "vineyard" : contactHoldingTanks.length > 0 ? "holding" : "storehouse");
+
+  const currentId =
+    currentKind === "vineyard" ? row.vineyardAccountId || "" :
+    currentKind === "holding" ? row.holdingTankId || "" :
+    row.storehouseId || "";
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -693,8 +735,13 @@ function ContactAccountPicker({
   }, [query, contacts]);
 
   if (selectedContact) {
+    const kindOptions =
+      currentKind === "vineyard" ? contactAccounts.map((a) => ({ id: a.id, label: (a.account_number ? a.account_number + " · " : "") + (a.account_name || "Account") })) :
+      currentKind === "holding" ? contactHoldingTanks.map((h) => ({ id: h.id, label: (h.account_number ? h.account_number + " · " : "") + (h.account_name || "Holding Tank") })) :
+      contactStorehouses.map((s) => ({ id: s.id, label: `#${s.storehouse_number} · ${s.label}` }));
+
     return (
-      <div className="flex flex-col gap-1.5 min-w-[260px]">
+      <div className="flex flex-col gap-1.5 min-w-[280px]">
         <div className="flex items-center gap-1.5">
           <Badge className="bg-emerald-500/15 text-emerald-600 border-emerald-500/30 truncate max-w-[200px]">
             {selectedContact.full_name || `${selectedContact.first_name || ""} ${selectedContact.last_name || ""}`.trim()}
@@ -709,44 +756,44 @@ function ContactAccountPicker({
             <X className="h-3 w-3" />
           </Button>
         </div>
-        {contactAccounts.length > 0 ? (
+        <div className="flex items-center gap-1.5">
           <Select
-            value={row.vineyardAccountId || ""}
-            onValueChange={(v) => onAccountChange(v || null)}
+            value={currentKind}
+            onValueChange={(v) => onLinkChange(v as AccountKind, null)}
           >
-            <SelectTrigger className="h-7 text-xs">
-              <SelectValue placeholder="Pick Vineyard account…" />
+            <SelectTrigger className="h-7 text-xs w-[120px]">
+              <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {contactAccounts.map((a) => (
-                <SelectItem key={a.id} value={a.id} className="text-xs">
-                  {(a.account_number ? a.account_number + " · " : "") + (a.account_name || "Account")}
-                </SelectItem>
-              ))}
+              <SelectItem value="vineyard" className="text-xs">Vineyard</SelectItem>
+              <SelectItem value="holding" className="text-xs">Holding Tank</SelectItem>
+              <SelectItem value="storehouse" className="text-xs">Storehouse</SelectItem>
             </SelectContent>
           </Select>
-        ) : contactHoldingTanks.length > 0 ? (
-          <Select
-            value={row.holdingTankId || ""}
-            onValueChange={(v) => onHoldingTankChange(v || null)}
-          >
-            <SelectTrigger className="h-7 text-xs">
-              <SelectValue placeholder="Pick Holding Tank entry…" />
-            </SelectTrigger>
-            <SelectContent>
-              {contactHoldingTanks.map((h) => (
-                <SelectItem key={h.id} value={h.id} className="text-xs">
-                  {(h.account_number ? h.account_number + " · " : "") + (h.account_name || "Holding Tank")}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        ) : (
-          <span className="text-[11px] text-amber-600">No Vineyard accounts for this contact</span>
-        )}
+          {kindOptions.length > 0 ? (
+            <Select
+              value={currentId}
+              onValueChange={(v) => onLinkChange(currentKind, v || null)}
+            >
+              <SelectTrigger className="h-7 text-xs flex-1">
+                <SelectValue placeholder={`Pick ${currentKind === "vineyard" ? "Vineyard" : currentKind === "holding" ? "Holding Tank" : "Storehouse"}…`} />
+              </SelectTrigger>
+              <SelectContent>
+                {kindOptions.map((o) => (
+                  <SelectItem key={o.id} value={o.id} className="text-xs">
+                    {o.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <span className="text-[11px] text-amber-600 flex-1">No {currentKind === "vineyard" ? "Vineyard accounts" : currentKind === "holding" ? "Holding Tank entries" : "Storehouses"} for this contact</span>
+          )}
+        </div>
       </div>
     );
   }
+
 
   return (
     <div className="relative min-w-[260px]">
