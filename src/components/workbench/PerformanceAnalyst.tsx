@@ -77,6 +77,9 @@ export function PerformanceAnalyst() {
   const [holdingTanks, setHoldingTanks] = useState<Array<{
     id: string; contact_id: string; account_name: string | null; account_number: string | null;
   }>>([]);
+  const [storehouses, setStorehouses] = useState<Array<{
+    id: string; contact_id: string; label: string; storehouse_number: number;
+  }>>([]);
 
   const handleFile = async (file: File) => {
     setParsing(true);
