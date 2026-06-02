@@ -932,8 +932,8 @@ const Portal = () => {
         {/* Right Sidebar: Household-Shared Territory */}
         <div className="space-y-4">
           {/* Household Holding Tank */}
-          {holding_tank.length > 0 && (
-            <PortalHoldingTank accounts={holding_tank} />
+          {household_holding_tank.length > 0 && (
+            <PortalHoldingTank accounts={household_holding_tank} />
           )}
 
           <PortalTerritory
