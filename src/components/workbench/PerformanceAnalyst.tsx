@@ -762,7 +762,7 @@ function ContactAccountPicker({
         <div className="flex items-center gap-1.5">
           <Select
             value={currentKind}
-            onValueChange={(v) => onLinkChange(v as AccountKind, null)}
+            onValueChange={(v) => { setKindOverride(v as AccountKind); onLinkChange(v as AccountKind, null); }}
           >
             <SelectTrigger className="h-7 text-xs w-[120px]">
               <SelectValue />
