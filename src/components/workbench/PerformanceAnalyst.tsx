@@ -41,8 +41,11 @@ type ParsedRow = {
   contactLabel?: string;
   vineyardAccountId?: string | null;
   holdingTankId?: string | null;
+  storehouseId?: string | null;
   matchStatus: "matched" | "no_contact" | "no_account" | "ambiguous";
 };
+
+type AccountKind = "vineyard" | "holding" | "storehouse";
 
 const num = (v: any): number => {
   if (v === null || v === undefined) return 0;
