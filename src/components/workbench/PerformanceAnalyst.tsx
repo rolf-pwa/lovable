@@ -689,17 +689,18 @@ function Stat({
 type Contact = { id: string; first_name: string | null; last_name: string | null; full_name: string | null };
 type Account = { id: string; contact_id: string; account_number: string | null; account_name: string | null };
 type HoldingTank = { id: string; contact_id: string; account_number: string | null; account_name: string | null };
+type Storehouse = { id: string; contact_id: string; label: string; storehouse_number: number };
 
 function ContactAccountPicker({
-  row, contacts, accounts, holdingTanks, onContactChange, onAccountChange, onHoldingTankChange,
+  row, contacts, accounts, holdingTanks, storehouses, onContactChange, onLinkChange,
 }: {
   row: ParsedRow;
   contacts: Contact[];
   accounts: Account[];
   holdingTanks: HoldingTank[];
+  storehouses: Storehouse[];
   onContactChange: (id: string | null) => void;
-  onAccountChange: (id: string | null) => void;
-  onHoldingTankChange: (id: string | null) => void;
+  onLinkChange: (kind: AccountKind, id: string | null) => void;
 }) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
@@ -707,6 +708,20 @@ function ContactAccountPicker({
   const selectedContact = row.contactId ? contacts.find((c) => c.id === row.contactId) : null;
   const contactAccounts = row.contactId ? accounts.filter((a) => a.contact_id === row.contactId) : [];
   const contactHoldingTanks = row.contactId ? holdingTanks.filter((h) => h.contact_id === row.contactId) : [];
+  const contactStorehouses = row.contactId ? storehouses.filter((s) => s.contact_id === row.contactId) : [];
+
+  const currentKind: AccountKind = row.vineyardAccountId
+    ? "vineyard"
+    : row.holdingTankId
+      ? "holding"
+      : row.storehouseId
+        ? "storehouse"
+        : (contactAccounts.length > 0 ? "vineyard" : contactHoldingTanks.length > 0 ? "holding" : "storehouse");
+
+  const currentId =
+    currentKind === "vineyard" ? row.vineyardAccountId || "" :
+    currentKind === "holding" ? row.holdingTankId || "" :
+    row.storehouseId || "";
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -720,8 +735,13 @@ function ContactAccountPicker({
   }, [query, contacts]);
 
   if (selectedContact) {
+    const kindOptions =
+      currentKind === "vineyard" ? contactAccounts.map((a) => ({ id: a.id, label: (a.account_number ? a.account_number + " · " : "") + (a.account_name || "Account") })) :
+      currentKind === "holding" ? contactHoldingTanks.map((h) => ({ id: h.id, label: (h.account_number ? h.account_number + " · " : "") + (h.account_name || "Holding Tank") })) :
+      contactStorehouses.map((s) => ({ id: s.id, label: `#${s.storehouse_number} · ${s.label}` }));
+
     return (
-      <div className="flex flex-col gap-1.5 min-w-[260px]">
+      <div className="flex flex-col gap-1.5 min-w-[280px]">
         <div className="flex items-center gap-1.5">
           <Badge className="bg-emerald-500/15 text-emerald-600 border-emerald-500/30 truncate max-w-[200px]">
             {selectedContact.full_name || `${selectedContact.first_name || ""} ${selectedContact.last_name || ""}`.trim()}
@@ -736,44 +756,44 @@ function ContactAccountPicker({
             <X className="h-3 w-3" />
           </Button>
         </div>
-        {contactAccounts.length > 0 ? (
+        <div className="flex items-center gap-1.5">
           <Select
-            value={row.vineyardAccountId || ""}
-            onValueChange={(v) => onAccountChange(v || null)}
+            value={currentKind}
+            onValueChange={(v) => onLinkChange(v as AccountKind, null)}
           >
-            <SelectTrigger className="h-7 text-xs">
-              <SelectValue placeholder="Pick Vineyard account…" />
+            <SelectTrigger className="h-7 text-xs w-[120px]">
+              <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {contactAccounts.map((a) => (
-                <SelectItem key={a.id} value={a.id} className="text-xs">
-                  {(a.account_number ? a.account_number + " · " : "") + (a.account_name || "Account")}
-                </SelectItem>
-              ))}
+              <SelectItem value="vineyard" className="text-xs">Vineyard</SelectItem>
+              <SelectItem value="holding" className="text-xs">Holding Tank</SelectItem>
+              <SelectItem value="storehouse" className="text-xs">Storehouse</SelectItem>
             </SelectContent>
           </Select>
-        ) : contactHoldingTanks.length > 0 ? (
-          <Select
-            value={row.holdingTankId || ""}
-            onValueChange={(v) => onHoldingTankChange(v || null)}
-          >
-            <SelectTrigger className="h-7 text-xs">
-              <SelectValue placeholder="Pick Holding Tank entry…" />
-            </SelectTrigger>
-            <SelectContent>
-              {contactHoldingTanks.map((h) => (
-                <SelectItem key={h.id} value={h.id} className="text-xs">
-                  {(h.account_number ? h.account_number + " · " : "") + (h.account_name || "Holding Tank")}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        ) : (
-          <span className="text-[11px] text-amber-600">No Vineyard accounts for this contact</span>
-        )}
+          {kindOptions.length > 0 ? (
+            <Select
+              value={currentId}
+              onValueChange={(v) => onLinkChange(currentKind, v || null)}
+            >
+              <SelectTrigger className="h-7 text-xs flex-1">
+                <SelectValue placeholder={`Pick ${currentKind === "vineyard" ? "Vineyard" : currentKind === "holding" ? "Holding Tank" : "Storehouse"}…`} />
+              </SelectTrigger>
+              <SelectContent>
+                {kindOptions.map((o) => (
+                  <SelectItem key={o.id} value={o.id} className="text-xs">
+                    {o.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <span className="text-[11px] text-amber-600 flex-1">No {currentKind === "vineyard" ? "Vineyard accounts" : currentKind === "holding" ? "Holding Tank entries" : "Storehouses"} for this contact</span>
+          )}
+        </div>
       </div>
     );
   }
+
 
   return (
     <div className="relative min-w-[260px]">
