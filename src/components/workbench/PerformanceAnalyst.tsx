@@ -656,11 +656,12 @@ export function PerformanceAnalyst() {
                         contacts={contacts}
                         accounts={accounts}
                         holdingTanks={holdingTanks}
+                        storehouses={storehouses}
                         onContactChange={(cid) => setRowContact(r.rowIndex, cid)}
-                        onAccountChange={(aid) => setRowAccount(r.rowIndex, aid)}
-                        onHoldingTankChange={(hid) => setRowHoldingTank(r.rowIndex, hid)}
+                        onLinkChange={(kind, id) => setRowLink(r.rowIndex, kind, id)}
                       />
                     </TableCell>
+
                   </TableRow>
                 ))}
               </TableBody>
