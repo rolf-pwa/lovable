@@ -288,7 +288,7 @@ export function PerformanceAnalyst() {
     [rows]
   );
 
-  const saveable = rows.filter((r) => r.matchStatus === "matched" && (r.vineyardAccountId || r.holdingTankId));
+  const saveable = rows.filter((r) => r.matchStatus === "matched" && (r.vineyardAccountId || r.holdingTankId || r.storehouseId));
 
   const handleSave = async () => {
     if (!asOfDate) {
@@ -296,7 +296,7 @@ export function PerformanceAnalyst() {
       return;
     }
     if (saveable.length === 0) {
-      toast.error("No rows can be saved — need a matched contact and a matched Vineyard account or Holding Tank entry.");
+      toast.error("No rows can be saved — need a matched contact and a linked Vineyard, Holding Tank, or Storehouse account.");
       return;
     }
     setSaving(true);
@@ -304,8 +304,9 @@ export function PerformanceAnalyst() {
       const { data: { user } } = await supabase.auth.getUser();
       const vineyardIds = [...new Set(saveable.map((r) => r.vineyardAccountId).filter(Boolean))] as string[];
       const holdingIds = [...new Set(saveable.map((r) => r.holdingTankId).filter(Boolean))] as string[];
+      const storehouseIds = [...new Set(saveable.map((r) => r.storehouseId).filter(Boolean))] as string[];
 
-      const [vineyardCheck, holdingCheck] = await Promise.all([
+      const [vineyardCheck, holdingCheck, storehouseCheck] = await Promise.all([
         vineyardIds.length
           ? (supabase.from("vineyard_accounts" as any) as any)
               .select("id, contact_id")
@@ -316,16 +317,24 @@ export function PerformanceAnalyst() {
               .select("id, contact_id")
               .in("id", holdingIds)
           : Promise.resolve({ data: [], error: null }),
+        storehouseIds.length
+          ? (supabase.from("storehouses" as any) as any)
+              .select("id, contact_id")
+              .in("id", storehouseIds)
+          : Promise.resolve({ data: [], error: null }),
       ]);
 
       if (vineyardCheck.error) throw vineyardCheck.error;
       if (holdingCheck.error) throw holdingCheck.error;
+      if (storehouseCheck.error) throw storehouseCheck.error;
 
       const vineyardOwners = new Map((vineyardCheck.data || []).map((a: any) => [a.id, a.contact_id]));
       const holdingOwners = new Map((holdingCheck.data || []).map((a: any) => [a.id, a.contact_id]));
+      const storehouseOwners = new Map((storehouseCheck.data || []).map((a: any) => [a.id, a.contact_id]));
       const validRows = saveable.filter((r) => {
         if (r.vineyardAccountId) return vineyardOwners.get(r.vineyardAccountId) === r.contactId;
         if (r.holdingTankId) return holdingOwners.get(r.holdingTankId) === r.contactId;
+        if (r.storehouseId) return storehouseOwners.get(r.storehouseId) === r.contactId;
         return false;
       });
 
@@ -333,13 +342,15 @@ export function PerformanceAnalyst() {
         throw new Error("No rows could be saved because the linked accounts no longer match the selected contacts.");
       }
 
+      const keyFor = (r: ParsedRow) =>
+        r.vineyardAccountId
+          ? `vineyard:${r.vineyardAccountId}`
+          : r.holdingTankId
+            ? `holding:${r.holdingTankId}`
+            : `storehouse:${r.storehouseId}`;
+
       const snapshotRows = Array.from(
-        new Map(
-          validRows.map((r) => [
-            r.vineyardAccountId ? `vineyard:${r.vineyardAccountId}` : `holding:${r.holdingTankId}`,
-            r,
-          ])
-        ).values()
+        new Map(validRows.map((r) => [keyFor(r), r])).values()
       );
 
       const makeSnapshotPayload = (r: ParsedRow, includeCreatedBy: boolean) => {
@@ -362,15 +373,13 @@ export function PerformanceAnalyst() {
           ror_since_inception: r.rorSinceInception ?? null,
         };
         if (includeCreatedBy) base.created_by = user?.id || null;
-        if (r.vineyardAccountId) {
-          base.vineyard_account_id = r.vineyardAccountId;
-        } else if (r.holdingTankId) {
-          base.holding_tank_id = r.holdingTankId;
-        }
+        if (r.vineyardAccountId) base.vineyard_account_id = r.vineyardAccountId;
+        else if (r.holdingTankId) base.holding_tank_id = r.holdingTankId;
+        else if (r.storehouseId) base.storehouse_id = r.storehouseId;
         return base;
       };
 
-      const [existingVineyard, existingHolding] = await Promise.all([
+      const [existingVineyard, existingHolding, existingStorehouse] = await Promise.all([
         vineyardIds.length
           ? (supabase.from("account_harvest_snapshots" as any) as any)
               .select("id, vineyard_account_id")
@@ -383,20 +392,27 @@ export function PerformanceAnalyst() {
               .eq("snapshot_date", asOfDate)
               .in("holding_tank_id", holdingIds)
           : Promise.resolve({ data: [], error: null }),
+        storehouseIds.length
+          ? (supabase.from("account_harvest_snapshots" as any) as any)
+              .select("id, storehouse_id")
+              .eq("snapshot_date", asOfDate)
+              .in("storehouse_id", storehouseIds)
+          : Promise.resolve({ data: [], error: null }),
       ]);
 
       if (existingVineyard.error) throw existingVineyard.error;
       if (existingHolding.error) throw existingHolding.error;
+      if (existingStorehouse.error) throw existingStorehouse.error;
 
       const existingSnapshotIds = new Map<string, string>();
       (existingVineyard.data || []).forEach((s: any) => existingSnapshotIds.set(`vineyard:${s.vineyard_account_id}`, s.id));
       (existingHolding.data || []).forEach((s: any) => existingSnapshotIds.set(`holding:${s.holding_tank_id}`, s.id));
+      (existingStorehouse.data || []).forEach((s: any) => existingSnapshotIds.set(`storehouse:${s.storehouse_id}`, s.id));
 
       const inserts: any[] = [];
       const updates: Array<{ id: string; values: any }> = [];
       snapshotRows.forEach((r) => {
-        const key = r.vineyardAccountId ? `vineyard:${r.vineyardAccountId}` : `holding:${r.holdingTankId}`;
-        const existingId = existingSnapshotIds.get(key);
+        const existingId = existingSnapshotIds.get(keyFor(r));
         if (existingId) {
           updates.push({ id: existingId, values: makeSnapshotPayload(r, false) });
         } else {
@@ -415,21 +431,25 @@ export function PerformanceAnalyst() {
         if (error) throw error;
       }
 
-      // Auto-update current_value on linked Vineyard accounts and Holding Tank entries
-      const vineyardUpdates = snapshotRows.filter((r) => r.vineyardAccountId);
-      const holdingUpdates = snapshotRows.filter((r) => !r.vineyardAccountId && r.holdingTankId);
+      // Auto-update current_value on the linked records
       let updated = 0;
-      for (const r of vineyardUpdates) {
-        const { error: upErr } = await (supabase.from("vineyard_accounts" as any) as any)
-          .update({ book_value: r.boyValue, current_value: r.currentValue })
-          .eq("id", r.vineyardAccountId);
-        if (!upErr) updated++;
-      }
-      for (const r of holdingUpdates) {
-        const { error: upErr } = await (supabase.from("holding_tank" as any) as any)
-          .update({ book_value: r.boyValue, current_value: r.currentValue })
-          .eq("id", r.holdingTankId);
-        if (!upErr) updated++;
+      for (const r of snapshotRows) {
+        if (r.vineyardAccountId) {
+          const { error: upErr } = await (supabase.from("vineyard_accounts" as any) as any)
+            .update({ book_value: r.boyValue, current_value: r.currentValue })
+            .eq("id", r.vineyardAccountId);
+          if (!upErr) updated++;
+        } else if (r.holdingTankId) {
+          const { error: upErr } = await (supabase.from("holding_tank" as any) as any)
+            .update({ book_value: r.boyValue, current_value: r.currentValue })
+            .eq("id", r.holdingTankId);
+          if (!upErr) updated++;
+        } else if (r.storehouseId) {
+          const { error: upErr } = await (supabase.from("storehouses" as any) as any)
+            .update({ book_value: r.boyValue, current_value: r.currentValue })
+            .eq("id", r.storehouseId);
+          if (!upErr) updated++;
+        }
       }
       const skipped = saveable.length - validRows.length;
       toast.success(`Saved ${snapshotRows.length} snapshot${snapshotRows.length === 1 ? "" : "s"} (${inserts.length} new, ${updates.length} updated) and updated ${updated} account value${updated === 1 ? "" : "s"}${skipped ? `; skipped ${skipped} mismatched row${skipped === 1 ? "" : "s"}` : ""}.`);
