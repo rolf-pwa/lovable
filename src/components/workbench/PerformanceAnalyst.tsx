@@ -165,6 +165,14 @@ export function PerformanceAnalyst() {
       }>;
       setHoldingTanks(holdingTanks);
 
+      // Pull storehouses (selectable by user; no contract auto-match)
+      const { data: shData } = await (supabase.from("storehouses" as any) as any)
+        .select("id, contact_id, label, storehouse_number");
+      const storehouses = (shData || []) as Array<{
+        id: string; contact_id: string; label: string; storehouse_number: number;
+      }>;
+      setStorehouses(storehouses);
+
       const out: ParsedRow[] = dataRows.map((r, i) => {
         const lastName = get(r, idx.last).trim();
         const firstName = get(r, idx.first).trim();
