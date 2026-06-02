@@ -250,6 +250,7 @@ export function PerformanceAnalyst() {
           contactLabel,
           vineyardAccountId,
           holdingTankId,
+          storehouseId: null,
           matchStatus,
         };
       }).filter(Boolean) as ParsedRow[];
