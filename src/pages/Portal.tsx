@@ -36,6 +36,7 @@ interface PortalData {
   vineyard_accounts: any[];
   storehouses: any[];
   holding_tank?: any[];
+  household_holding_tank?: any[];
   audit_trail: any[];
   portal_requests: any[];
   meetings: any[];
@@ -566,7 +567,7 @@ const Portal = () => {
     );
   }
 
-  const { contact, charter, vineyard_accounts, storehouses, holding_tank = [], audit_trail, portal_requests, meetings, family, household, household_members, hierarchy, corporations = [], quarterly_reviews = [] } = data;
+  const { contact, charter, vineyard_accounts, storehouses, holding_tank = [], household_holding_tank = [], audit_trail, portal_requests, meetings, family, household, household_members, hierarchy, corporations = [], quarterly_reviews = [] } = data;
   const portalToken = token || data.portal_token || "";
   const hierarchyLevel = hierarchy?.level || "individual";
 
@@ -931,8 +932,8 @@ const Portal = () => {
         {/* Right Sidebar: Household-Shared Territory */}
         <div className="space-y-4">
           {/* Household Holding Tank */}
-          {holding_tank.length > 0 && (
-            <PortalHoldingTank accounts={holding_tank} />
+          {household_holding_tank.length > 0 && (
+            <PortalHoldingTank accounts={household_holding_tank} />
           )}
 
           <PortalTerritory

@@ -382,11 +382,11 @@ if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders }
       contact: contactRes.data,
       vineyard_accounts: accountsRes.data || [],
       storehouses: storehousesRes.data || [],
-      holding_tank: (() => {
+      holding_tank: holdingTankRes.data || [],
+      household_holding_tank: (() => {
         const individual = holdingTankRes.data || [];
         const individualIds = new Set(individual.map((r: any) => r.id));
-        const merged = [...individual, ...householdHoldingTank.filter((r: any) => !individualIds.has(r.id))];
-        return merged;
+        return [...individual, ...householdHoldingTank.filter((r: any) => !individualIds.has(r.id))];
       })(),
       audit_trail: auditRes.data || [],
       portal_requests: requestsRes.data || [],
