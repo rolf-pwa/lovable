@@ -710,13 +710,16 @@ function ContactAccountPicker({
   const contactHoldingTanks = row.contactId ? holdingTanks.filter((h) => h.contact_id === row.contactId) : [];
   const contactStorehouses = row.contactId ? storehouses.filter((s) => s.contact_id === row.contactId) : [];
 
-  const currentKind: AccountKind = row.vineyardAccountId
+  const derivedKind: AccountKind = row.vineyardAccountId
     ? "vineyard"
     : row.holdingTankId
       ? "holding"
       : row.storehouseId
         ? "storehouse"
         : (contactAccounts.length > 0 ? "vineyard" : contactHoldingTanks.length > 0 ? "holding" : "storehouse");
+
+  const [kindOverride, setKindOverride] = useState<AccountKind | null>(null);
+  const currentKind: AccountKind = kindOverride ?? derivedKind;
 
   const currentId =
     currentKind === "vineyard" ? row.vineyardAccountId || "" :
@@ -759,7 +762,7 @@ function ContactAccountPicker({
         <div className="flex items-center gap-1.5">
           <Select
             value={currentKind}
-            onValueChange={(v) => onLinkChange(v as AccountKind, null)}
+            onValueChange={(v) => { setKindOverride(v as AccountKind); onLinkChange(v as AccountKind, null); }}
           >
             <SelectTrigger className="h-7 text-xs w-[120px]">
               <SelectValue />
