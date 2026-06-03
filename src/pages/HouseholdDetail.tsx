@@ -425,8 +425,7 @@ const HouseholdDetail = () => {
                           <thead>
                             <tr className="border-b border-border text-[10px] uppercase tracking-widest text-muted-foreground">
                               <th className="text-left font-medium px-6 py-3">Member Name</th>
-                              <th className="text-left font-medium px-3 py-3">Jurisdiction / Location</th>
-                              <th className="text-left font-medium px-3 py-3">E-mail Connection</th>
+                              <th className="text-left font-medium px-3 py-3">Email</th>
                               <th className="text-left font-medium px-3 py-3">Contact Phone</th>
                               <th className="text-right font-medium px-3 py-3">Holding Tank</th>
                               <th className="text-right font-medium px-3 py-3">Vineyard</th>
