@@ -26,6 +26,7 @@ import { Loader2, UserPlus, ArrowRight, Check, TreesIcon, FileText, Info, X } fr
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { PageBreadcrumbs } from "@/components/PageBreadcrumbs";
+import { CrmTabs } from "@/components/CrmTabs";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -194,6 +195,7 @@ export default function Leads() {
             { label: "Discovery Leads" },
           ]}
         />
+        <CrmTabs />
         <div>
           <h1 className="text-3xl font-bold text-foreground">Discovery Leads</h1>
           <p className="mt-1 text-sm text-muted-foreground">

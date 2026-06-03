@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PageBreadcrumbs } from "@/components/PageBreadcrumbs";
+import { CrmTabs } from "@/components/CrmTabs";
 import {
   Collapsible,
   CollapsibleContent,
@@ -489,6 +490,7 @@ const Families = () => {
           { label: "Dashboard", href: "/dashboard" },
           { label: "Family Tree" },
         ]} />
+        <CrmTabs />
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
