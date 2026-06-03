@@ -40,6 +40,8 @@ interface HouseholdListItem {
   totalAssets: number;
   holdingTankTotal: number;
   holdingTankCount: number;
+  governance_status: string | null;
+  fiduciary_entity: string | null;
 }
 
 const formatCurrency = (value: number) =>
