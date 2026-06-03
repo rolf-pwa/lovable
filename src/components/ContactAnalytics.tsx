@@ -68,7 +68,7 @@ export function ContactAnalytics({ contactId, contactIds }: Props) {
         <Collapsible defaultOpen={false}>
           <Card>
             <CollapsibleTrigger asChild>
-              <CardHeader className="pb-2 flex flex-row items-center gap-2 cursor-pointer select-none">
+              <CardHeader className="pb-2 flex flex-row items-center gap-2 cursor-pointer select-none group">
                 <LogIn className="h-4 w-4 text-primary" />
                 <CardTitle className="text-sm font-medium text-muted-foreground flex-1">Portal Logins</CardTitle>
                 <span className="text-2xl font-bold">{logins.length}</span>
@@ -89,7 +89,7 @@ export function ContactAnalytics({ contactId, contactIds }: Props) {
         <Collapsible defaultOpen={false}>
           <Card>
             <CollapsibleTrigger asChild>
-              <CardHeader className="pb-2 flex flex-row items-center gap-2 cursor-pointer select-none">
+              <CardHeader className="pb-2 flex flex-row items-center gap-2 cursor-pointer select-none group">
                 <Eye className="h-4 w-4 text-primary" />
                 <CardTitle className="text-sm font-medium text-muted-foreground flex-1">Updates Opened</CardTitle>
                 <span className="text-2xl font-bold">{reads.length}</span>
@@ -110,7 +110,7 @@ export function ContactAnalytics({ contactId, contactIds }: Props) {
         <Collapsible defaultOpen={false}>
           <Card>
             <CollapsibleTrigger asChild>
-              <CardHeader className="pb-2 flex flex-row items-center gap-2 cursor-pointer select-none">
+              <CardHeader className="pb-2 flex flex-row items-center gap-2 cursor-pointer select-none group">
                 <MousePointerClick className="h-4 w-4 text-primary" />
                 <CardTitle className="text-sm font-medium text-muted-foreground flex-1">Task Interactions</CardTitle>
                 <span className="text-2xl font-bold">{interactions.length}</span>
