@@ -128,7 +128,14 @@ const HouseholdDetail = () => {
     ]);
 
     setFamilyName(family?.name || "Unknown");
-    setMembers(contacts || []);
+    const roleRank = (r: string | null | undefined) => {
+      const v = (r || "").toLowerCase();
+      if (v === "hof" || v === "head_of_family" || v.includes("head of family")) return 0;
+      if (v === "hoh" || v === "head_of_household" || v.includes("head of household")) return 1;
+      return 2;
+    };
+    const sorted = [...(contacts || [])].sort((a: any, b: any) => roleRank(a.family_role) - roleRank(b.family_role));
+    setMembers(sorted);
 
     const memberIds = (contacts || []).map((c: any) => c.id);
     if (memberIds.length > 0) {
@@ -407,17 +414,7 @@ const HouseholdDetail = () => {
                 {/* Household Registered Members Directory */}
                 <Card>
                   <CardHeader className="pb-4">
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <CardTitle className="text-lg">Household Registered Members Directory</CardTitle>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Click any member row to navigate to their individual contact profile ledger.
-                        </p>
-                      </div>
-                      <Badge variant="outline" className="shrink-0 rounded-full px-3 py-1 text-xs font-mono">
-                        {members.length} Member{members.length === 1 ? "" : "s"}
-                      </Badge>
-                    </div>
+                    <CardTitle className="text-lg">Members Directory</CardTitle>
                   </CardHeader>
                   <CardContent className="px-0 pb-0">
                     {members.length === 0 ? (
@@ -428,8 +425,7 @@ const HouseholdDetail = () => {
                           <thead>
                             <tr className="border-b border-border text-[10px] uppercase tracking-widest text-muted-foreground">
                               <th className="text-left font-medium px-6 py-3">Member Name</th>
-                              <th className="text-left font-medium px-3 py-3">Jurisdiction / Location</th>
-                              <th className="text-left font-medium px-3 py-3">E-mail Connection</th>
+                              <th className="text-left font-medium px-3 py-3">Email</th>
                               <th className="text-left font-medium px-3 py-3">Contact Phone</th>
                               <th className="text-right font-medium px-3 py-3">Holding Tank</th>
                               <th className="text-right font-medium px-3 py-3">Vineyard</th>
@@ -448,14 +444,6 @@ const HouseholdDetail = () => {
                               const storeTotal = storehouses
                                 .filter((s) => s.contact_id === m.id)
                                 .reduce((sum, s) => sum + (Number(s.current_value) || 0), 0);
-                              const jurisdiction =
-                                m.governance_status === "sovereign"
-                                  ? "Sovereign Enclave"
-                                  : m.governance_status === "stabilization"
-                                    ? "Stabilization Phase"
-                                    : m.governance_status === "core"
-                                      ? "Core"
-                                      : m.address || "—";
                               return (
                                 <tr
                                   key={m.id}
@@ -472,7 +460,7 @@ const HouseholdDetail = () => {
                                       </span>
                                     </div>
                                   </td>
-                                  <td className="px-3 py-4 italic text-muted-foreground">{jurisdiction}</td>
+                                  <td className="px-3 py-4 text-foreground/80">{m.email || "—"}</td>
                                   <td className="px-3 py-4 text-foreground/80">{m.email || "—"}</td>
                                   <td className="px-3 py-4 text-foreground/80">{m.phone || "—"}</td>
                                   <td className="px-3 py-4 text-right font-medium text-foreground">
