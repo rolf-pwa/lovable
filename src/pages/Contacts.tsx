@@ -138,17 +138,6 @@ const Contacts = () => {
           </div>
         </div>
 
-        <div>
-          <h1 className="text-3xl font-bold">
-            {view === "general" ? "General / Vendors" : "Individuals"}
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {view === "general"
-              ? "Professionals, vendors, and non-client contacts"
-              : `The Sovereignty Engine — ${filtered.length} contacts`}
-          </p>
-        </div>
-
         {/* Filter bar */}
         <Card>
           <CardContent className="grid gap-3 p-4 md:grid-cols-4">
