@@ -461,7 +461,6 @@ const HouseholdDetail = () => {
                                     </div>
                                   </td>
                                   <td className="px-3 py-4 text-foreground/80">{m.email || "—"}</td>
-                                  <td className="px-3 py-4 text-foreground/80">{m.email || "—"}</td>
                                   <td className="px-3 py-4 text-foreground/80">{m.phone || "—"}</td>
                                   <td className="px-3 py-4 text-right font-medium text-foreground">
                                     {formatCurrency(tankTotal)}
