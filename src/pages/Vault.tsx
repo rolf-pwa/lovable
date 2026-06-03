@@ -1014,6 +1014,43 @@ export function VaultView({ forcedHouseholdId, embedded = false }: { forcedHouse
       )}
 
       {householdId && rootId && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Vault root folder</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="text-xs text-muted-foreground">
+              Current root: <code className="font-mono">{rootId}</code>
+            </div>
+            <Input
+              placeholder="Drive folder URL or ID"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+            />
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" onClick={setRootFolder} disabled={provisioning}>
+                Use as root
+              </Button>
+              <Button variant="outline" onClick={() => provision(true)} disabled={provisioning}>
+                {provisioning ? (
+                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Working…</>
+                ) : (
+                  "Re-provision new folder"
+                )}
+              </Button>
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              "Use as root" points the household at an existing Drive folder. "Re-provision" creates a fresh
+              vault folder (with template subfolders) under the parent you entered. The old root is left in
+              Drive but unlinked.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+
+
+      {householdId && rootId && (
         <CollaboratorsPanel
           householdId={householdId}
           rootId={rootId}
