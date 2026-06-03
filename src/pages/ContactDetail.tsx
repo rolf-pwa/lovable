@@ -9,12 +9,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
-import { 
-  ArrowLeft, Bell, BellOff, Trash2, Clock, AlertCircle, Shield, 
+import {
+  ArrowLeft, Bell, BellOff, Trash2, Clock, AlertCircle, Shield,
   ExternalLink, Bot, Grape, FileUp, Loader2, Building2, Users, Plus, X,
   Folder, FolderOpen, CheckSquare, ShieldCheck, Landmark, ChevronDown, ListChecks,
-  Mail, Phone, MapPin, Home, Calendar
+  Mail, Phone, MapPin, Home, Calendar, Pencil, MessageSquare, Send
 } from "lucide-react";
+import {
+  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator
+} from "@/components/ui/dropdown-menu";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { toast } from "sonner";
 import { format, differenceInDays, addDays } from "date-fns";
