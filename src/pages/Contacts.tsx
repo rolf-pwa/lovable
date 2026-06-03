@@ -1,11 +1,19 @@
-import { useEffect, useState, useCallback } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useState, useCallback, useMemo } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/AppLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { CrmTabs } from "@/components/CrmTabs";
 import { ContactCsvImport } from "@/components/ContactCsvImport";
 import { dialViaQuo } from "@/lib/quo-dial";
 import {
@@ -67,10 +75,32 @@ const Contacts = () => {
     fetchContacts();
   }, [fetchContacts]);
 
-  const filtered = contacts.filter((c) => {
-    const name = `${c.first_name} ${c.last_name || ""}`.toLowerCase();
-    return name.includes(search.toLowerCase());
-  });
+  const [searchParams] = useSearchParams();
+  const view = searchParams.get("view") === "general" ? "general" : "individuals";
+  const [tier, setTier] = useState<string>("all");
+  const [stage, setStage] = useState<string>("all");
+  const [sort, setSort] = useState<string>("name-asc");
+
+  const filtered = useMemo(() => {
+    const clientEntities = new Set(["pwa", "pws"]);
+    const base = contacts.filter((c) =>
+      view === "general"
+        ? !clientEntities.has((c.fiduciary_entity || "").toLowerCase())
+        : clientEntities.has((c.fiduciary_entity || "").toLowerCase())
+    );
+    const searched = base.filter((c) => {
+      const name = `${c.first_name} ${c.last_name || ""}`.toLowerCase();
+      return name.includes(search.toLowerCase());
+    });
+    const sorted = [...searched].sort((a, b) => {
+      const an = `${a.last_name || a.first_name}`.toLowerCase();
+      const bn = `${b.last_name || b.first_name}`.toLowerCase();
+      if (sort === "name-desc") return bn.localeCompare(an);
+      if (sort === "recent") return (b.updated_at || "").localeCompare(a.updated_at || "");
+      return an.localeCompare(bn);
+    });
+    return sorted;
+  }, [contacts, search, view, sort]);
 
   // Group by first letter of last name
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
@@ -91,20 +121,15 @@ const Contacts = () => {
           { label: "Dashboard", href: "/dashboard" },
           { label: "Contacts" },
         ]} />
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">Contacts</h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              The Sovereignty Engine — {contacts.length} contacts
-            </p>
-          </div>
+
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <CrmTabs />
           <div className="flex items-center gap-2">
             <ContactCsvImport onImported={fetchContacts} />
             <Link to="/contacts/new">
               <Button
                 type="button"
                 className="bg-sanctuary-bronze text-sanctuary-charcoal hover:bg-sanctuary-bronze/90"
-                onClick={(e) => e.stopPropagation()}
               >
                 <Plus className="mr-2 h-4 w-4" />
                 New Contact
@@ -113,15 +138,71 @@ const Contacts = () => {
           </div>
         </div>
 
-        <div className="relative max-w-sm">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search contacts..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
-          />
+        <div>
+          <h1 className="text-3xl font-bold">
+            {view === "general" ? "General / Vendors" : "Individuals"}
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {view === "general"
+              ? "Professionals, vendors, and non-client contacts"
+              : `The Sovereignty Engine — ${filtered.length} contacts`}
+          </p>
         </div>
+
+        {/* Filter bar */}
+        <Card>
+          <CardContent className="grid gap-3 p-4 md:grid-cols-4">
+            <div>
+              <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-sanctuary-bronze">
+                Search Directory
+              </p>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Type to search..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+            </div>
+            <div>
+              <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                Membership Tier
+              </p>
+              <Select value={tier} onValueChange={setTier}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Tiers</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                Pipeline Stage
+              </p>
+              <Select value={stage} onValueChange={setStage}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Pipeline Stages</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                Sort Order
+              </p>
+              <Select value={sort} onValueChange={setSort}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="name-asc">Name (A → Z)</SelectItem>
+                  <SelectItem value="name-desc">Name (Z → A)</SelectItem>
+                  <SelectItem value="recent">Recently Updated</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Alphabet nav */}
         {!loading && filtered.length > 0 && (
