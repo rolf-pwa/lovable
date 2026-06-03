@@ -55,6 +55,8 @@ const formatCurrency = (value: number) =>
 const Households = () => {
   const [households, setHouseholds] = useState<HouseholdListItem[]>([]);
   const [search, setSearch] = useState("");
+  const [governanceFilter, setGovernanceFilter] = useState<string>("all");
+  const [fiduciaryFilter, setFiduciaryFilter] = useState<string>("all");
   const [loading, setLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
