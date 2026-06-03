@@ -125,11 +125,14 @@ const Households = () => {
     fetchData();
   }, [fetchData]);
 
-  const filtered = households.filter(
-    (hh) =>
+  const filtered = households.filter((hh) => {
+    const matchesSearch =
       hh.label.toLowerCase().includes(search.toLowerCase()) ||
-      hh.familyName.toLowerCase().includes(search.toLowerCase())
-  );
+      hh.familyName.toLowerCase().includes(search.toLowerCase());
+    const matchesGovernance = governanceFilter === "all" || hh.governance_status === governanceFilter;
+    const matchesFiduciary = fiduciaryFilter === "all" || hh.fiduciary_entity === fiduciaryFilter;
+    return matchesSearch && matchesGovernance && matchesFiduciary;
+  });
 
   return (
     <AppLayout>
