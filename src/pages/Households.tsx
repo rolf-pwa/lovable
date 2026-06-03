@@ -21,7 +21,6 @@ import {
   ChevronRight,
   Anchor,
   Lock,
-  ShieldCheck,
   X,
 } from "lucide-react";
 import {
