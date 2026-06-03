@@ -404,90 +404,93 @@ const HouseholdDetail = () => {
           <TabsContent value="overview" className="mt-4">
             <div className="grid gap-6 lg:grid-cols-3">
               <div className="space-y-6 lg:col-span-2">
-                {/* Governance */}
+                {/* Household Registered Members Directory */}
                 <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">Governance & Fiduciary</CardTitle>
+                  <CardHeader className="pb-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <CardTitle className="text-lg">Household Registered Members Directory</CardTitle>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Click any member row to navigate to their individual contact profile ledger.
+                        </p>
+                      </div>
+                      <Badge variant="outline" className="shrink-0 rounded-full px-3 py-1 text-xs font-mono">
+                        {members.length} Member{members.length === 1 ? "" : "s"}
+                      </Badge>
+                    </div>
                   </CardHeader>
-                  <CardContent className="grid gap-4 sm:grid-cols-2">
-                    <div>
-                      <Label className="text-xs text-muted-foreground">Governance Status</Label>
-                      <Select
-                        value={household.governance_status || "stabilization"}
-                        onValueChange={async (v) => {
-                          await supabase.from("households").update({ governance_status: v as any }).eq("id", household.id);
-                          const memberIds = members.map((m: any) => m.id);
-                          if (memberIds.length > 0) {
-                            await supabase.from("contacts").update({ governance_status: v as any }).in("id", memberIds);
-                          }
-                          setHousehold({ ...household, governance_status: v });
-                          toast.success("Governance status updated for household");
-                        }}
-                      >
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">— None —</SelectItem>
-                          <SelectItem value="core">Core</SelectItem>
-                          <SelectItem value="stabilization">Stabilization Phase (Pre-Charter)</SelectItem>
-                          <SelectItem value="sovereign">Sovereign Phase (Ratified Charter)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label className="text-xs text-muted-foreground">Fiduciary Entity</Label>
-                      <Select
-                        value={household.fiduciary_entity || "pws"}
-                        onValueChange={async (v) => {
-                          await supabase.from("households").update({ fiduciary_entity: v as any }).eq("id", household.id);
-                          const memberIds = members.map((m: any) => m.id);
-                          if (memberIds.length > 0) {
-                            await supabase.from("contacts").update({ fiduciary_entity: v as any }).in("id", memberIds);
-                          }
-                          setHousehold({ ...household, fiduciary_entity: v });
-                          toast.success("Fiduciary entity updated for household");
-                        }}
-                      >
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="pws">PWS — Strategy / Architect</SelectItem>
-                          <SelectItem value="pwa">PWA — Advisors / Builder</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Members */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">Members</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {members.map((m) => {
-                        const RoleIcon = ROLE_ICONS[m.family_role] || User;
-                        return (
-                          <Link
-                            key={m.id}
-                            to={`/contacts/${m.id}`}
-                            className="flex items-center gap-3 rounded-lg border border-border bg-muted/30 px-4 py-3 hover:bg-muted/60 transition-colors"
-                          >
-                            <RoleIcon className="h-4 w-4 text-primary shrink-0" />
-                            <div className="min-w-0">
-                              <p className="text-sm font-medium text-foreground truncate">
-                                {m.first_name} {m.last_name || ""}
-                              </p>
-                              <p className="text-[10px] text-muted-foreground">
-                                {ROLE_LABELS[m.family_role] || m.family_role}
-                              </p>
-                            </div>
-                          </Link>
-                        );
-                      })}
-                      {members.length === 0 && (
-                        <p className="text-sm text-muted-foreground col-span-full">No members in this household.</p>
-                      )}
-                    </div>
+                  <CardContent className="px-0 pb-0">
+                    {members.length === 0 ? (
+                      <p className="px-6 pb-6 text-sm text-muted-foreground">No members in this household.</p>
+                    ) : (
+                      <div className="overflow-x-auto border-t border-border">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-border text-[10px] uppercase tracking-widest text-muted-foreground">
+                              <th className="text-left font-medium px-6 py-3">Member Name</th>
+                              <th className="text-left font-medium px-3 py-3">Jurisdiction / Location</th>
+                              <th className="text-left font-medium px-3 py-3">E-mail Connection</th>
+                              <th className="text-left font-medium px-3 py-3">Contact Phone</th>
+                              <th className="text-right font-medium px-3 py-3">Holding Tank</th>
+                              <th className="text-right font-medium px-3 py-3">Vineyard</th>
+                              <th className="text-right font-medium px-6 py-3">Storehouses</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {members.map((m) => {
+                              const initials = `${(m.first_name?.[0] || "").toUpperCase()}${(m.last_name?.[0] || "").toUpperCase()}` || "—";
+                              const tankTotal = holdingTank
+                                .filter((t) => t.contact_id === m.id)
+                                .reduce((s, t) => s + (Number(t.current_value) || 0), 0);
+                              const vineTotal = vineyardAccounts
+                                .filter((v) => v.contact_id === m.id)
+                                .reduce((s, v) => s + (Number(v.current_value) || 0), 0);
+                              const storeTotal = storehouses
+                                .filter((s) => s.contact_id === m.id)
+                                .reduce((sum, s) => sum + (Number(s.current_value) || 0), 0);
+                              const jurisdiction =
+                                m.governance_status === "sovereign"
+                                  ? "Sovereign Enclave"
+                                  : m.governance_status === "stabilization"
+                                    ? "Stabilization Phase"
+                                    : m.governance_status === "core"
+                                      ? "Core"
+                                      : m.address || "—";
+                              return (
+                                <tr
+                                  key={m.id}
+                                  onClick={() => navigate(`/contacts/${m.id}`)}
+                                  className="border-b border-border last:border-0 cursor-pointer hover:bg-muted/40 transition-colors"
+                                >
+                                  <td className="px-6 py-4">
+                                    <div className="flex items-center gap-3 min-w-0">
+                                      <div className="h-8 w-8 shrink-0 rounded-full bg-muted text-muted-foreground flex items-center justify-center text-[11px] font-medium">
+                                        {initials}
+                                      </div>
+                                      <span className="font-semibold text-foreground truncate">
+                                        {m.first_name} {m.last_name || ""}
+                                      </span>
+                                    </div>
+                                  </td>
+                                  <td className="px-3 py-4 italic text-muted-foreground">{jurisdiction}</td>
+                                  <td className="px-3 py-4 text-foreground/80">{m.email || "—"}</td>
+                                  <td className="px-3 py-4 text-foreground/80">{m.phone || "—"}</td>
+                                  <td className="px-3 py-4 text-right font-medium text-foreground">
+                                    {formatCurrency(tankTotal)}
+                                  </td>
+                                  <td className="px-3 py-4 text-right font-medium text-primary">
+                                    {formatCurrency(vineTotal)}
+                                  </td>
+                                  <td className="px-6 py-4 text-right font-medium text-accent">
+                                    {formatCurrency(storeTotal)}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </div>
