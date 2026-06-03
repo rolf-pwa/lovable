@@ -7,7 +7,8 @@ import { LogIn, Eye, MousePointerClick, BarChart3 } from "lucide-react";
 import { format } from "date-fns";
 
 interface Props {
-  contactId: string;
+  contactId?: string;
+  contactIds?: string[];
 }
 
 interface LoginRow { id: string; created_at: string; login_method: string; }
@@ -15,7 +16,8 @@ interface ReadRow { id: string; read_at: string; update_id: string; }
 interface InteractionRow { id: string; interacted_at: string; task_gid: string; }
 interface UpdateRow { id: string; title: string; url: string | null; created_at: string; }
 
-export function ContactAnalytics({ contactId }: Props) {
+export function ContactAnalytics({ contactId, contactIds }: Props) {
+  const ids = contactIds && contactIds.length > 0 ? contactIds : contactId ? [contactId] : [];
   const [logins, setLogins] = useState<LoginRow[]>([]);
   const [reads, setReads] = useState<ReadRow[]>([]);
   const [interactions, setInteractions] = useState<InteractionRow[]>([]);
@@ -23,12 +25,13 @@ export function ContactAnalytics({ contactId }: Props) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (ids.length === 0) { setLoading(false); return; }
     let cancelled = false;
     setLoading(true);
     Promise.all([
-      supabase.from("portal_logins" as any).select("*").eq("contact_id", contactId).order("created_at", { ascending: false }),
-      supabase.from("marketing_update_reads").select("*").eq("contact_id", contactId).order("read_at", { ascending: false }),
-      supabase.from("portal_task_interactions").select("*").eq("contact_id", contactId).order("interacted_at", { ascending: false }),
+      supabase.from("portal_logins" as any).select("*").in("contact_id", ids).order("created_at", { ascending: false }),
+      supabase.from("marketing_update_reads").select("*").in("contact_id", ids).order("read_at", { ascending: false }),
+      supabase.from("portal_task_interactions").select("*").in("contact_id", ids).order("interacted_at", { ascending: false }),
     ]).then(async ([loginsRes, readsRes, interactionsRes]) => {
       if (cancelled) return;
       const loginsData = (loginsRes.data as any) || [];
@@ -53,7 +56,7 @@ export function ContactAnalytics({ contactId }: Props) {
       setLoading(false);
     });
     return () => { cancelled = true; };
-  }, [contactId]);
+  }, [ids.join(",")]);
 
   const lastLogin = logins[0]?.created_at;
   const lastRead = reads[0]?.read_at;

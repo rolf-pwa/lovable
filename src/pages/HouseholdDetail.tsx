@@ -51,6 +51,7 @@ import {
   ListChecks,
   Users,
 } from "lucide-react";
+import { ContactAnalytics } from "@/components/ContactAnalytics";
 
 const ROLE_ICONS: Record<string, typeof Crown> = {
   head_of_family: Crown,
@@ -404,6 +405,10 @@ const HouseholdDetail = () => {
             <TabsTrigger value="vineyard" className="flex-1">
               <Grape className="mr-1.5 h-3.5 w-3.5" />
               The Vineyard
+            </TabsTrigger>
+            <TabsTrigger value="analytics" className="flex-1">
+              <BarChart3 className="mr-1.5 h-3.5 w-3.5" />
+              Analytics
             </TabsTrigger>
           </TabsList>
 
@@ -822,6 +827,11 @@ const HouseholdDetail = () => {
                 })}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Analytics */}
+          <TabsContent value="analytics" className="space-y-6 mt-4">
+            <ContactAnalytics contactIds={members.map((m) => m.id)} />
           </TabsContent>
         </Tabs>
       </div>
