@@ -124,7 +124,7 @@ const HouseholdDetail = () => {
       { data: contacts },
     ] = await Promise.all([
       supabase.from("families").select("name").eq("id", hh.family_id).single(),
-      supabase.from("contacts").select("id, first_name, last_name, family_role, email, phone, address, governance_status, is_minor, asana_url").eq("household_id", id),
+      supabase.from("contacts").select("id, first_name, last_name, family_role, email, phone, address, governance_status, is_minor, asana_url, lawyer_name, lawyer_firm, accountant_name, accountant_firm, executor_name, executor_firm, poa_name, poa_firm").eq("household_id", id),
     ]);
 
     setFamilyName(family?.name || "Unknown");
@@ -543,9 +543,54 @@ const HouseholdDetail = () => {
                     </Link>
                   </CardContent>
                 </Card>
+
+                {/* Professional Team — household roll-up */}
+                {(() => {
+                  const rows: { member: any; role: string; name: string; firm: string | null }[] = [];
+                  members.forEach((m: any) => {
+                    [
+                      { role: "Lawyer", name: m.lawyer_name, firm: m.lawyer_firm },
+                      { role: "Accountant", name: m.accountant_name, firm: m.accountant_firm },
+                      { role: "Executor", name: m.executor_name, firm: m.executor_firm },
+                      { role: "Power of Attorney", name: m.poa_name, firm: m.poa_firm },
+                    ].forEach((p) => {
+                      if (p.name) rows.push({ member: m, role: p.role, name: p.name, firm: p.firm });
+                    });
+                  });
+                  return (
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-base">Professional Team</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        {rows.length > 0 ? (
+                          <ul className="space-y-1.5 text-sm">
+                            {rows.map((r, i) => (
+                              <li key={i} className="rounded-md bg-muted/50 px-3 py-2">
+                                <div className="flex items-center justify-between gap-2">
+                                  <span className="font-medium truncate">{r.name}{r.firm ? ` — ${r.firm}` : ""}</span>
+                                  <span className="text-xs text-muted-foreground shrink-0">{r.role}</span>
+                                </div>
+                                <Link
+                                  to={`/contacts/${r.member.id}`}
+                                  className="text-[11px] text-muted-foreground hover:underline"
+                                >
+                                  for {`${r.member.first_name} ${r.member.last_name || ""}`.trim()}
+                                </Link>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p className="text-sm text-muted-foreground">No professionals linked.</p>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })()}
               </div>
             </div>
           </TabsContent>
+
 
           {/* Vault */}
           <TabsContent value="vault" className="space-y-4 mt-4">
