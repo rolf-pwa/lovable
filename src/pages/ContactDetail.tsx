@@ -527,13 +527,14 @@ const ContactDetail = () => {
                     <Pencil className="h-4 w-4" />
                   </Link>
                 </Button>
-                <PortalMagicLinkButton contactId={id!} />
-                <ContactMerge
-                  contactId={id!}
-                  contactName={`${contact.first_name} ${contact.last_name || ""}`.trim()}
-                  onMerged={fetchData}
-                />
-
+                <Button
+                  className="bg-sanctuary-green text-sanctuary-bronze hover:bg-sanctuary-green/90 gap-1.5"
+                  onClick={handleViewPortal}
+                  disabled={viewPortalLoading}
+                >
+                  {viewPortalLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Eye className="h-4 w-4" />}
+                  View Portal
+                </Button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline">
@@ -567,36 +568,18 @@ const ContactDetail = () => {
                         <Phone className="mr-2 h-4 w-4" /> Call via Quo
                       </DropdownMenuItem>
                     )}
+                    <DropdownMenuItem onSelect={handleCopyPortalLink} disabled={copyLoading}>
+                      {copyLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Link2 className="mr-2 h-4 w-4" />}
+                      Copy Portal Link
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => setMergeOpen(true)}>
+                      <Merge className="mr-2 h-4 w-4" /> Merge Contact
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
                     <DropdownMenuItem asChild>
                       <Link to={`/contacts/${id}/edit`}>
                         <Pencil className="mr-2 h-4 w-4" /> Edit Contact
                       </Link>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button className="bg-sanctuary-green text-sanctuary-bronze hover:bg-sanctuary-green/90">
-                      <Send className="mr-1.5 h-4 w-4" />
-                      Send Message
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-48">
-                    <DropdownMenuItem
-                      disabled={!contact.phone}
-                      onSelect={() => {
-                        document.getElementById("contact-comms")?.scrollIntoView({ behavior: "smooth", block: "start" });
-                      }}
-                    >
-                      <MessageSquare className="mr-2 h-4 w-4" /> Send SMS (Quo)
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      disabled={!contact.email}
-                      onSelect={() => {
-                        if (contact.email) window.location.href = `mailto:${contact.email}`;
-                      }}
-                    >
-                      <Mail className="mr-2 h-4 w-4" /> Send Email
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
