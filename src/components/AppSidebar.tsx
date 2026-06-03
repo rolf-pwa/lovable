@@ -12,7 +12,6 @@ import {
   Calendar,
   Mail,
   FolderOpen,
-  UserPlus,
   ChevronDown,
   PanelLeftClose,
   PanelLeft,
