@@ -985,13 +985,14 @@ export function VaultView({ forcedHouseholdId, embedded = false }: { forcedHouse
               Load
             </Button>
             {householdId && (
-              <Button variant="outline" onClick={provision} disabled={provisioning}>
+              <Button variant="outline" onClick={() => provision(false)} disabled={provisioning}>
                 {provisioning ? (
                   <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Provisioning…</>
                 ) : (
                   "Provision"
                 )}
               </Button>
+
             )}
           </CardContent>
         </Card>
