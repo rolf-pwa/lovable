@@ -101,6 +101,7 @@ const HouseholdDetail = () => {
   const [vineyardAccounts, setVineyardAccounts] = useState<any[]>([]);
   const [storehouses, setStorehouses] = useState<any[]>([]);
   const [corporations, setCorporations] = useState<any[]>([]);
+  const [holdingTank, setHoldingTank] = useState<any[]>([]);
 
   const fetchData = useCallback(async () => {
     if (!id) return;
@@ -123,7 +124,7 @@ const HouseholdDetail = () => {
       { data: contacts },
     ] = await Promise.all([
       supabase.from("families").select("name").eq("id", hh.family_id).single(),
-      supabase.from("contacts").select("id, first_name, last_name, family_role, email, is_minor, asana_url").eq("household_id", id),
+      supabase.from("contacts").select("id, first_name, last_name, family_role, email, phone, address, governance_status, is_minor, asana_url").eq("household_id", id),
     ]);
 
     setFamilyName(family?.name || "Unknown");
@@ -131,15 +132,16 @@ const HouseholdDetail = () => {
 
     const memberIds = (contacts || []).map((c: any) => c.id);
     if (memberIds.length > 0) {
-      const [{ data: vine }, { data: store }, { data: shareholders }] = await Promise.all([
+      const [{ data: vine }, { data: store }, { data: shareholders }, { data: tank }] = await Promise.all([
         supabase.from("vineyard_accounts").select("*").in("contact_id", memberIds),
         supabase.from("storehouses").select("*").in("contact_id", memberIds),
         supabase.from("shareholders").select("contact_id, corporation_id, ownership_percentage, share_class, role_title").in("contact_id", memberIds).eq("is_active", true),
+        supabase.from("holding_tank").select("contact_id, current_value").in("contact_id", memberIds),
       ]);
       setVineyardAccounts(vine || []);
       setStorehouses(store || []);
+      setHoldingTank(tank || []);
 
-      // Fetch corporations and their vineyard accounts
       if (shareholders && shareholders.length > 0) {
         const corpIds = [...new Set(shareholders.map((s: any) => s.corporation_id))];
         const [{ data: corps }, { data: corpVineyard }] = await Promise.all([
