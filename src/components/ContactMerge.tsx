@@ -26,6 +26,8 @@ interface ContactMergeProps {
   contactName: string;
   onMerged: () => void;
   trigger?: React.ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 interface ContactOption {
@@ -36,8 +38,13 @@ interface ContactOption {
   household_id: string | null;
 }
 
-export function ContactMerge({ contactId, contactName, onMerged, trigger }: ContactMergeProps) {
-  const [open, setOpen] = useState(false);
+export function ContactMerge({ contactId, contactName, onMerged, trigger, open: controlledOpen, onOpenChange }: ContactMergeProps) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen ?? internalOpen;
+  const setOpen = (value: boolean) => {
+    setInternalOpen(value);
+    onOpenChange?.(value);
+  };
   const [contacts, setContacts] = useState<ContactOption[]>([]);
   const [selectedId, setSelectedId] = useState("");
   const [merging, setMerging] = useState(false);

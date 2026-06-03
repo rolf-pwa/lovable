@@ -9,7 +9,7 @@ interface Props {
   contactId: string;
 }
 
-async function getOrCreateToken(contactId: string, userId: string): Promise<string> {
+export async function getOrCreateToken(contactId: string, userId: string): Promise<string> {
   // Check for existing valid token
   const { data: existing } = await supabase
     .from("portal_tokens" as any)

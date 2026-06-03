@@ -13,7 +13,7 @@ import {
   ArrowLeft, Bell, BellOff, Trash2, Clock, AlertCircle, Shield,
   ExternalLink, Bot, Grape, FileUp, Loader2, Building2, Users, Plus, X,
   Folder, FolderOpen, CheckSquare, ShieldCheck, Landmark, ChevronDown, ListChecks,
-  Mail, Phone, MapPin, Home, Calendar, Pencil, MessageSquare, Send
+  Mail, Phone, MapPin, Home, Calendar, Pencil, Eye, Merge, Link2
 } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator
@@ -23,7 +23,8 @@ import { toast } from "sonner";
 import { format, differenceInDays, addDays } from "date-fns";
 import { PageBreadcrumbs } from "@/components/PageBreadcrumbs";
 import { ContactMerge } from "@/components/ContactMerge";
-import { PortalMagicLinkButton } from "@/components/portal/PortalMagicLinkButton";
+import { getOrCreateToken } from "@/components/portal/PortalMagicLinkButton";
+import { useAuth } from "@/hooks/useAuth";
 import { ContactTaskList } from "@/components/ContactTaskList";
 import { ContactRequests } from "@/components/ContactRequests";
 import { ContactCalendar } from "@/components/ContactCalendar";
@@ -165,6 +166,11 @@ const ContactDetail = () => {
     }>;
   }>>([]);
 
+  const { user } = useAuth();
+  const [viewPortalLoading, setViewPortalLoading] = useState(false);
+  const [copyLoading, setCopyLoading] = useState(false);
+  const [mergeOpen, setMergeOpen] = useState(false);
+
   const fetchData = useCallback(async () => {
     if (!id) return;
     const [contactRes, storehouseRes, , , accountsRes, harvestRes] = await Promise.all([
@@ -250,6 +256,37 @@ const ContactDetail = () => {
     }
     setLoading(false);
   }, [id]);
+
+  const handleViewPortal = async () => {
+    if (!user || !id) return;
+    setViewPortalLoading(true);
+    const newWindow = window.open("about:blank", "_blank");
+    try {
+      const token = await getOrCreateToken(id, user.id);
+      if (newWindow) newWindow.location.href = `/portal/${token}`;
+      else window.location.href = `/portal/${token}`;
+    } catch {
+      if (newWindow) newWindow.close();
+      toast.error("Failed to open portal.");
+    } finally {
+      setViewPortalLoading(false);
+    }
+  };
+
+  const handleCopyPortalLink = async () => {
+    if (!user || !id) return;
+    setCopyLoading(true);
+    try {
+      const token = await getOrCreateToken(id, user.id);
+      const url = `${window.location.origin}/portal/${token}`;
+      await navigator.clipboard.writeText(url);
+      toast.success("Portal link copied to clipboard — valid for 7 days.");
+    } catch {
+      toast.error("Failed to generate portal link.");
+    } finally {
+      setCopyLoading(false);
+    }
+  };
 
   useEffect(() => {
     fetchData();
@@ -490,13 +527,14 @@ const ContactDetail = () => {
                     <Pencil className="h-4 w-4" />
                   </Link>
                 </Button>
-                <PortalMagicLinkButton contactId={id!} />
-                <ContactMerge
-                  contactId={id!}
-                  contactName={`${contact.first_name} ${contact.last_name || ""}`.trim()}
-                  onMerged={fetchData}
-                />
-
+                <Button
+                  className="bg-sanctuary-green text-sanctuary-bronze hover:bg-sanctuary-green/90 gap-1.5"
+                  onClick={handleViewPortal}
+                  disabled={viewPortalLoading}
+                >
+                  {viewPortalLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Eye className="h-4 w-4" />}
+                  View Portal
+                </Button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline">
@@ -530,36 +568,18 @@ const ContactDetail = () => {
                         <Phone className="mr-2 h-4 w-4" /> Call via Quo
                       </DropdownMenuItem>
                     )}
+                    <DropdownMenuItem onSelect={handleCopyPortalLink} disabled={copyLoading}>
+                      {copyLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Link2 className="mr-2 h-4 w-4" />}
+                      Copy Portal Link
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => setMergeOpen(true)}>
+                      <Merge className="mr-2 h-4 w-4" /> Merge Contact
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
                     <DropdownMenuItem asChild>
                       <Link to={`/contacts/${id}/edit`}>
                         <Pencil className="mr-2 h-4 w-4" /> Edit Contact
                       </Link>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button className="bg-sanctuary-green text-sanctuary-bronze hover:bg-sanctuary-green/90">
-                      <Send className="mr-1.5 h-4 w-4" />
-                      Send Message
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-48">
-                    <DropdownMenuItem
-                      disabled={!contact.phone}
-                      onSelect={() => {
-                        document.getElementById("contact-comms")?.scrollIntoView({ behavior: "smooth", block: "start" });
-                      }}
-                    >
-                      <MessageSquare className="mr-2 h-4 w-4" /> Send SMS (Quo)
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      disabled={!contact.email}
-                      onSelect={() => {
-                        if (contact.email) window.location.href = `mailto:${contact.email}`;
-                      }}
-                    >
-                      <Mail className="mr-2 h-4 w-4" /> Send Email
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -608,7 +628,13 @@ const ContactDetail = () => {
             </div>
           </CardContent>
         </Card>
-
+        <ContactMerge
+          contactId={id!}
+          contactName={`${contact.first_name} ${contact.last_name || ""}`.trim()}
+          onMerged={fetchData}
+          open={mergeOpen}
+          onOpenChange={setMergeOpen}
+        />
 
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Main Content */}
