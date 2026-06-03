@@ -12,7 +12,6 @@ import {
   Calendar,
   Mail,
   FolderOpen,
-  UserPlus,
   ChevronDown,
   PanelLeftClose,
   PanelLeft,
@@ -64,6 +63,7 @@ export function SidebarCollapseProvider({ children }: { children: React.ReactNod
 
 const topItems = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { to: "/contacts", label: "CRM", icon: Users },
   { to: "/inbox", label: "Inbox", icon: InboxIcon, inboxBadge: true },
   { to: "/requests", label: "Client Requests", icon: ClipboardList, requestsBadge: true },
 ];
@@ -75,7 +75,6 @@ const marketingItems = [
 
 const growthItems = [
   { to: "/pipeline", label: "Pipeline", icon: TrendingUp },
-  { to: "/leads", label: "Leads", icon: UserPlus },
   { to: "/holding-tank", label: "Holding Tank", icon: Anchor },
 ];
 
@@ -254,15 +253,6 @@ export function AppSidebar() {
                 })}
               </CollapsibleContent>
             </Collapsible>
-          )}
-
-          {renderNavLink(
-            "/contacts",
-            "CRM",
-            Users,
-            null,
-            location.pathname === "/contacts" || location.pathname.startsWith("/contacts/"),
-            collapsed
           )}
 
           {/* Admin group: Onboarding, Review Queue, Knowledge Base, Workbench */}
