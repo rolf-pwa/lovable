@@ -6,6 +6,7 @@ import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { PageBreadcrumbs } from "@/components/PageBreadcrumbs";
+import { CrmTabs } from "@/components/CrmTabs";
 import {
   Home,
   Search,
@@ -124,6 +125,7 @@ const Households = () => {
             { label: "Households" },
           ]}
         />
+        <CrmTabs />
 
         <div className="flex items-center justify-between">
           <div>
