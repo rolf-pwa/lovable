@@ -15,11 +15,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { PageBreadcrumbs } from "@/components/PageBreadcrumbs";
 import { Progress } from "@/components/ui/progress";
 import { HouseholdTaskRollup } from "@/components/HouseholdTaskRollup";
 import { HoldingTank } from "@/components/HoldingTank";
+import { VaultView } from "@/pages/Vault";
 import {
   Home,
   User,
@@ -37,6 +45,11 @@ import {
   MapPin,
   Building2,
   BarChart3,
+  ChevronDown,
+  ShieldCheck,
+  ExternalLink,
+  ListChecks,
+  Users,
 } from "lucide-react";
 
 const ROLE_ICONS: Record<string, typeof Crown> = {
