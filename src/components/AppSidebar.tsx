@@ -3,9 +3,7 @@ import prosperwiseLogoColor from "@/assets/prosperwise-logo-color.png";
 import { useAuth } from "@/hooks/useAuth";
 import {
   LayoutDashboard,
-  Home,
   Users,
-  Folder,
   CheckSquare,
   ShieldCheck,
   ExternalLink,
@@ -14,12 +12,10 @@ import {
   Calendar,
   Mail,
   FolderOpen,
-  TreesIcon,
   UserPlus,
   ChevronDown,
   PanelLeftClose,
   PanelLeft,
-  Building2,
   Megaphone,
   Cpu,
   TrendingUp,
@@ -75,13 +71,6 @@ const topItems = [
 const marketingItems = [
   { to: "/marketing-updates", label: "Marketing Updates", icon: Megaphone },
   { to: "/analytics", label: "Analytics", icon: BarChart3 },
-];
-
-const directoryItems = [
-  { to: "/families", label: "Families", icon: TreesIcon },
-  { to: "/households", label: "Households", icon: Home },
-  { to: "/corporations", label: "Corporations", icon: Building2 },
-  { to: "/contacts", label: "Contacts", icon: Users },
 ];
 
 const growthItems = [
@@ -267,26 +256,13 @@ export function AppSidebar() {
             </Collapsible>
           )}
 
-          {/* Directory group: Families, Households, Corporations, Contacts */}
-          {collapsed ? (
-            directoryItems.map(({ to, label, icon: Icon }) => {
-              const active = location.pathname === to || location.pathname.startsWith(to + "/");
-              return renderNavLink(to, label, Icon, null, active, collapsed);
-            })
-          ) : (
-            <Collapsible defaultOpen={directoryItems.some(({ to }) => location.pathname === to || location.pathname.startsWith(to + "/"))}>
-              <CollapsibleTrigger className="flex w-full items-center gap-4 rounded-lg px-5 py-3 text-[15px] font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
-                <Folder className="h-5 w-5 shrink-0" />
-                <span className="flex-1 text-left">Directory</span>
-                <ChevronDown className="h-4 w-4 transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
-              </CollapsibleTrigger>
-              <CollapsibleContent className="space-y-0.5 pl-4">
-                {directoryItems.map(({ to, label, icon: Icon }) => {
-                  const active = location.pathname === to || location.pathname.startsWith(to + "/");
-                  return renderNavLink(to, label, Icon, null, active, false, true);
-                })}
-              </CollapsibleContent>
-            </Collapsible>
+          {renderNavLink(
+            "/contacts",
+            "CRM",
+            Users,
+            null,
+            location.pathname === "/contacts" || location.pathname.startsWith("/contacts/"),
+            collapsed
           )}
 
           {/* Admin group: Onboarding, Review Queue, Knowledge Base, Workbench */}
