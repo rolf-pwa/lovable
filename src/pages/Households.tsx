@@ -154,14 +154,49 @@ const Households = () => {
           </div>
         </div>
 
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search households or families…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
-          />
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative w-full sm:w-72">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search households or families…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <Select value={governanceFilter} onValueChange={setGovernanceFilter}>
+            <SelectTrigger className="w-44">
+              <SelectValue placeholder="Governance" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Governance</SelectItem>
+              <SelectItem value="none">None</SelectItem>
+              <SelectItem value="core">Core</SelectItem>
+              <SelectItem value="stabilization">Stabilization</SelectItem>
+              <SelectItem value="sovereign">Sovereign</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={fiduciaryFilter} onValueChange={setFiduciaryFilter}>
+            <SelectTrigger className="w-44">
+              <SelectValue placeholder="Fiduciary" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Fiduciaries</SelectItem>
+              <SelectItem value="pws">PWS — Strategy</SelectItem>
+              <SelectItem value="pwa">PWA — Advisors</SelectItem>
+            </SelectContent>
+          </Select>
+          {(governanceFilter !== "all" || fiduciaryFilter !== "all") && (
+            <button
+              onClick={() => {
+                setGovernanceFilter("all");
+                setFiduciaryFilter("all");
+              }}
+              className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <X className="h-3 w-3" /> Clear
+            </button>
+          )}
         </div>
 
         {loading ? (
