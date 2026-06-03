@@ -51,6 +51,7 @@ import {
   ListChecks,
   Users,
 } from "lucide-react";
+import { ContactAnalytics } from "@/components/ContactAnalytics";
 
 const ROLE_ICONS: Record<string, typeof Crown> = {
   head_of_family: Crown,
