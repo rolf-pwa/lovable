@@ -13,8 +13,9 @@ import {
   ArrowLeft, Bell, BellOff, Trash2, Clock, AlertCircle, Shield,
   ExternalLink, Bot, Grape, FileUp, Loader2, Building2, Users, Plus, X,
   Folder, FolderOpen, CheckSquare, ShieldCheck, Landmark, ChevronDown, ListChecks,
-  Mail, Phone, MapPin, Home, Calendar, Pencil, Eye, Merge, Link2
+  Mail, Phone, MapPin, Home, Calendar, Pencil, Eye, Merge, Link2, BarChart3
 } from "lucide-react";
+import { ContactAnalytics } from "@/components/ContactAnalytics";
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
