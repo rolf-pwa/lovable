@@ -13,8 +13,9 @@ import {
   ArrowLeft, Bell, BellOff, Trash2, Clock, AlertCircle, Shield,
   ExternalLink, Bot, Grape, FileUp, Loader2, Building2, Users, Plus, X,
   Folder, FolderOpen, CheckSquare, ShieldCheck, Landmark, ChevronDown, ListChecks,
-  Mail, Phone, MapPin, Home, Calendar, Pencil, Eye, Merge, Link2
+  Mail, Phone, MapPin, Home, Calendar, Pencil, Eye, Merge, Link2, BarChart3
 } from "lucide-react";
+import { ContactAnalytics } from "@/components/ContactAnalytics";
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
@@ -687,6 +688,10 @@ const ContactDetail = () => {
                   <Grape className="mr-1.5 h-3.5 w-3.5" />
                   The Vineyard
                 </TabsTrigger>
+                <TabsTrigger value="analytics" className="flex-1">
+                  <BarChart3 className="mr-1.5 h-3.5 w-3.5" />
+                  Analytics
+                </TabsTrigger>
               </TabsList>
 
               {/* Communications Tab — Messaging first, above the fold */}
@@ -1030,6 +1035,11 @@ const ContactDetail = () => {
                     />
                   );
                 })}
+              </TabsContent>
+
+              {/* Analytics Tab */}
+              <TabsContent value="analytics" className="space-y-4 mt-4">
+                <ContactAnalytics contactId={contact.id} />
               </TabsContent>
             </Tabs>
           </div>
