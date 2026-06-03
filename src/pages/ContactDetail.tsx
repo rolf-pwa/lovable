@@ -688,6 +688,10 @@ const ContactDetail = () => {
                   <Grape className="mr-1.5 h-3.5 w-3.5" />
                   The Vineyard
                 </TabsTrigger>
+                <TabsTrigger value="analytics" className="flex-1">
+                  <BarChart3 className="mr-1.5 h-3.5 w-3.5" />
+                  Analytics
+                </TabsTrigger>
               </TabsList>
 
               {/* Communications Tab — Messaging first, above the fold */}
