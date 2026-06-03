@@ -1008,267 +1008,55 @@ const ContactDetail = () => {
             </Tabs>
           </div>
 
-          {/* Right Sidebar */}
+          {/* Right Sidebar — Individual AUM */}
           <div className="space-y-4">
-            {/* AI Assistant */}
-            <Collapsible defaultOpen={false}>
-              <Card>
-                <CollapsibleTrigger className="w-full group">
-                  <CardHeader className="flex flex-row items-center justify-between py-3">
-                    <CardTitle className="flex items-center gap-2 text-base">
-                      <Bot className="h-4 w-4 text-sanctuary-bronze" />
-                      AI Assistant
+            {(() => {
+              const totalVineyard = vineyardAccounts.reduce((s, a) => s + (Number(a.current_value) || 0), 0);
+              const totalStorehouses = storehouses.reduce((s, a) => s + (Number(a.current_value) || 0), 0);
+              const totalCorpAssets = corporateStakes.reduce((s, st) =>
+                s + (Number(st.pro_rata) || 0) + st.subsidiaries.reduce((ss, sub) => ss + (Number(sub.indirect_pro_rata) || 0), 0)
+              , 0);
+              const total = totalVineyard + totalStorehouses + totalCorpAssets;
+              return (
+                <Card className="border-sanctuary-bronze/30">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm uppercase tracking-widest text-sanctuary-bronze">
+                      Assets Under Management
                     </CardTitle>
-                    <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
                   </CardHeader>
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <CardContent className="pt-0">
-                    <SovereigntyAssistant
-                      variant="embedded"
-                      contactId={id}
-                      contactContext={{
-                        id: contact.id,
-                        name: `${contact.first_name} ${contact.last_name || ""}`.trim(),
-                        email: contact.email,
-                        phone: contact.phone,
-                        governance_status: contact.governance_status,
-                        fiduciary_entity: contact.fiduciary_entity,
-                        vineyard_ebitda: contact.vineyard_ebitda,
-                        vineyard_operating_income: contact.vineyard_operating_income,
-                        vineyard_balance_sheet_summary: contact.vineyard_balance_sheet_summary,
-                        storehouses: storehouses.map((s) => ({
-                          number: s.storehouse_number,
-                          label: s.label,
-                          asset_type: s.asset_type,
-                          risk_cap: s.risk_cap,
-                          charter_alignment: s.charter_alignment,
-                        })),
-                        quiet_period_start_date: contact.quiet_period_start_date,
-                        asana_url: contact.asana_url,
-                        google_drive_url: contact.google_drive_url,
-                      }}
-                    />
-                  </CardContent>
-                </CollapsibleContent>
-              </Card>
-            </Collapsible>
-
-            {/* Family > Household > Members (nested collapsibles) */}
-            {(familyName || householdLabel || householdMembers.length > 0) && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Users className="h-4 w-4 text-sanctuary-bronze" />
-                    Family
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  {familyName && contact.family_id ? (
-                    <Collapsible defaultOpen={false}>
-                      <div className="group/fam flex items-center gap-2 rounded-md bg-muted/50 pr-1 transition-colors hover:bg-muted">
-                        <CollapsibleTrigger className="group flex flex-1 items-center gap-2 px-3 py-2 text-sm font-medium text-left">
-                          <ChevronDown className="h-3.5 w-3.5 text-muted-foreground transition-transform group-data-[state=closed]:-rotate-90" />
-                          <span className="flex-1">{familyName}</span>
-                        </CollapsibleTrigger>
-                        <Link
-                          to="/families"
-                          className="rounded-md p-1.5 text-muted-foreground hover:text-foreground transition-colors"
-                          title="Open Families"
-                        >
-                          <ExternalLink className="h-3.5 w-3.5" />
-                        </Link>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Total Individual AUM</p>
+                      <p className="text-3xl font-bold text-foreground">{formatCurrency(total)}</p>
+                    </div>
+                    <div className="space-y-2 pt-2 border-t border-border">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="flex items-center gap-2 text-muted-foreground">
+                          <Grape className="h-3.5 w-3.5" /> Portfolio
+                        </span>
+                        <span className="font-semibold text-primary">{formatCurrency(totalVineyard)}</span>
                       </div>
-                      <CollapsibleContent className="pl-4 pt-2 space-y-2">
-                        {householdLabel && contact.household_id ? (
-                          <Collapsible defaultOpen={false}>
-                            <div className="group/hh flex items-center gap-2 rounded-md bg-muted/50 pr-1 transition-colors hover:bg-muted">
-                              <CollapsibleTrigger className="group flex flex-1 items-center gap-2 px-3 py-2 text-sm font-medium text-left">
-                                <ChevronDown className="h-3.5 w-3.5 text-muted-foreground transition-transform group-data-[state=closed]:-rotate-90" />
-                                <Home className="h-3.5 w-3.5 text-muted-foreground" />
-                                <span className="flex-1">{householdLabel}</span>
-                              </CollapsibleTrigger>
-                              <Link
-                                to={`/households/${contact.household_id}`}
-                                className="rounded-md p-1.5 text-muted-foreground hover:text-foreground transition-colors"
-                                title="Open Household"
-                              >
-                                <ExternalLink className="h-3.5 w-3.5" />
-                              </Link>
-                            </div>
-                            <CollapsibleContent className="pl-4 pt-2">
-                              {householdMembers.length > 0 ? (
-                                <ul className="space-y-1 text-sm">
-                                  {householdMembers.map((hm) => (
-                                    <li key={hm.id}>
-                                      <Link
-                                        to={`/contacts/${hm.id}`}
-                                        className="flex items-center justify-between rounded-md bg-muted/50 px-3 py-2 transition-colors hover:bg-muted"
-                                      >
-                                        <span className="font-medium">{`${hm.first_name} ${hm.last_name || ""}`.trim()}</span>
-                                        <span className="text-xs text-muted-foreground capitalize">{hm.family_role.replace(/_/g, " ")}</span>
-                                      </Link>
-                                    </li>
-                                  ))}
-                                </ul>
-                              ) : (
-                                <p className="text-xs text-muted-foreground">No other household members.</p>
-                              )}
-                            </CollapsibleContent>
-                          </Collapsible>
-                        ) : (
-                          <p className="text-xs text-muted-foreground px-3">No household linked.</p>
-                        )}
-                      </CollapsibleContent>
-                    </Collapsible>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">No family linked.</p>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Contact Info */}
-            <Card>
-              <Collapsible defaultOpen={false}>
-                <CollapsibleTrigger className="flex w-full items-center justify-between p-6 hover:opacity-80 group">
-                  <CardTitle className="text-base">Contact Info</CardTitle>
-                  <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=closed]:-rotate-90" />
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-              <CardContent className="space-y-2 text-sm">
-                {contact.email && (
-                  <a href={`mailto:${contact.email}`} className="flex items-center gap-2 hover:underline">
-                    <Mail className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                    <span className="font-medium break-all">{contact.email}</span>
-                  </a>
-                )}
-                {contact.phone && (
-                  <button
-                    type="button"
-                    onClick={() => dialViaQuo(contact.phone!)}
-                    title="Call via Quo"
-                    className="flex items-center gap-2 hover:underline text-left"
-                  >
-                    <Phone className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                    <span className="font-medium">{contact.phone}</span>
-                  </button>
-                )}
-                {contact.address && (
-                  <div className="flex items-start gap-2">
-                    <MapPin className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-0.5" />
-                    <span className="font-medium">{contact.address}</span>
-                  </div>
-                )}
-                {resourceLinks.some((l) => l.url) && (
-                  <div className="pt-2 mt-2 border-t border-border/50 space-y-1.5">
-                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground/70">Apps</p>
-                    {resourceLinks.filter((l) => l.url).map((link) => {
-                      const Icon = link.icon;
-                      return (
-                        <a
-                          key={link.label}
-                          href={link.url!}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground hover:underline transition-colors"
-                        >
-                          <Icon className="h-3.5 w-3.5 shrink-0" />
-                          <span>{link.label}</span>
-                        </a>
-                      );
-                    })}
-                  </div>
-                )}
-                {!contact.email && !contact.phone && !contact.address && (
-                  <p className="text-muted-foreground">No contact info on file.</p>
-                )}
-                <div className="pt-2 mt-2 border-t border-border/50 space-y-2">
-                  <PortalMagicLinkButton contactId={id!} />
-                  <div className="flex flex-col gap-1">
-                    <button
-                      type="button"
-                      onClick={() => navigate(`/contacts/${id}/edit`)}
-                      className="text-left text-xs font-medium text-muted-foreground hover:text-foreground hover:underline transition-colors"
-                    >
-                      Edit Contact
-                    </button>
-                    <ContactMerge
-                      contactId={id!}
-                      contactName={`${contact.first_name} ${contact.last_name || ""}`.trim()}
-                      onMerged={fetchData}
-                      trigger={
-                        <button
-                          type="button"
-                          className="text-left text-xs font-medium text-muted-foreground hover:text-foreground hover:underline transition-colors"
-                        >
-                          Merge Contact
-                        </button>
-                      }
-                    />
-                  </div>
-                </div>
-              </CardContent>
-                </CollapsibleContent>
-              </Collapsible>
-            </Card>
-
-            {/* Professional Team */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Professional Team</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {[
-                  { role: "Lawyer", name: contact.lawyer_name, firm: contact.lawyer_firm },
-                  { role: "Accountant", name: contact.accountant_name, firm: contact.accountant_firm },
-                  { role: "Executor", name: contact.executor_name, firm: contact.executor_firm },
-                  { role: "Power of Attorney", name: contact.poa_name, firm: contact.poa_firm },
-                ].filter(({ name }) => name).length > 0 ? (
-                  <ul className="space-y-1 text-sm">
-                    {[
-                      { role: "Lawyer", nameCol: "lawyer_name", firmCol: "lawyer_firm", name: contact.lawyer_name, firm: contact.lawyer_firm },
-                      { role: "Accountant", nameCol: "accountant_name", firmCol: "accountant_firm", name: contact.accountant_name, firm: contact.accountant_firm },
-                      { role: "Executor", nameCol: "executor_name", firmCol: "executor_firm", name: contact.executor_name, firm: contact.executor_firm },
-                      { role: "Power of Attorney", nameCol: "poa_name", firmCol: "poa_firm", name: contact.poa_name, firm: contact.poa_firm },
-                    ].map(({ role, nameCol, firmCol, name, firm }) => {
-                      if (!name) return null;
-                      const matched = professionalContacts[name];
-                      return (
-                        <li key={role} className="flex items-center gap-1">
-                          <Link
-                            to={matched ? `/contacts/${matched.id}` : `/contacts/new?full_name=${encodeURIComponent(name)}`}
-                            className="flex flex-1 items-center justify-between rounded-md bg-muted/50 px-3 py-2 transition-colors hover:bg-muted"
-                          >
-                            <span className="font-medium flex items-center gap-1">
-                              {name}{firm ? ` — ${firm}` : ""}
-                              {!matched && <Plus className="h-3 w-3" />}
-                            </span>
-                            <span className="text-xs text-muted-foreground">{role}</span>
-                          </Link>
-                          <button
-                            onClick={async () => {
-                              await supabase.from("contacts").update({ [nameCol]: null, [firmCol]: null }).eq("id", id!);
-                              toast.success(`${role} removed.`);
-                              fetchData();
-                            }}
-                            className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-                          >
-                            <X className="h-3.5 w-3.5" />
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                ) : (
-                  <p className="text-sm text-muted-foreground">
-                    No professionals linked.
-                  </p>
-                )}
-                <ProfessionalLinker contactId={id!} contact={contact} onLinked={fetchData} />
-              </CardContent>
-            </Card>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="flex items-center gap-2 text-muted-foreground">
+                          <Landmark className="h-3.5 w-3.5" /> Storehouses
+                        </span>
+                        <span className="font-semibold text-accent">{formatCurrency(totalStorehouses)}</span>
+                      </div>
+                      {corporateStakes.length > 0 && (
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="flex items-center gap-2 text-muted-foreground">
+                            <Building2 className="h-3.5 w-3.5" /> Corp Assets
+                          </span>
+                          <span className="font-semibold text-foreground">{formatCurrency(totalCorpAssets)}</span>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })()}
           </div>
+
         </div>
       </div>
     </AppLayout>
