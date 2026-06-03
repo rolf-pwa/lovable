@@ -460,7 +460,7 @@ const HouseholdDetail = () => {
                                       </span>
                                     </div>
                                   </td>
-                                  <td className="px-3 py-4 italic text-muted-foreground">{jurisdiction}</td>
+                                  <td className="px-3 py-4 text-foreground/80">{m.email || "—"}</td>
                                   <td className="px-3 py-4 text-foreground/80">{m.email || "—"}</td>
                                   <td className="px-3 py-4 text-foreground/80">{m.phone || "—"}</td>
                                   <td className="px-3 py-4 text-right font-medium text-foreground">
