@@ -257,6 +257,37 @@ const ContactDetail = () => {
     setLoading(false);
   }, [id]);
 
+  const handleViewPortal = async () => {
+    if (!user || !id) return;
+    setViewPortalLoading(true);
+    const newWindow = window.open("about:blank", "_blank");
+    try {
+      const token = await getOrCreateToken(id, user.id);
+      if (newWindow) newWindow.location.href = `/portal/${token}`;
+      else window.location.href = `/portal/${token}`;
+    } catch {
+      if (newWindow) newWindow.close();
+      toast.error("Failed to open portal.");
+    } finally {
+      setViewPortalLoading(false);
+    }
+  };
+
+  const handleCopyPortalLink = async () => {
+    if (!user || !id) return;
+    setCopyLoading(true);
+    try {
+      const token = await getOrCreateToken(id, user.id);
+      const url = `${window.location.origin}/portal/${token}`;
+      await navigator.clipboard.writeText(url);
+      toast.success("Portal link copied to clipboard — valid for 7 days.");
+    } catch {
+      toast.error("Failed to generate portal link.");
+    } finally {
+      setCopyLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchData();
   }, [fetchData]);
