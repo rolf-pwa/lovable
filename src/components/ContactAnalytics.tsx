@@ -7,7 +7,8 @@ import { LogIn, Eye, MousePointerClick, BarChart3 } from "lucide-react";
 import { format } from "date-fns";
 
 interface Props {
-  contactId: string;
+  contactId?: string;
+  contactIds?: string[];
 }
 
 interface LoginRow { id: string; created_at: string; login_method: string; }
