@@ -648,7 +648,7 @@ serve(async (req) => {
     if (action === "provisionVault") {
       if (actor.kind !== "staff")
         return new Response(JSON.stringify({ error: "staff_only" }), { status: 403, headers: { ...cors, "Content-Type": "application/json" } });
-      const { householdId, contactId, parentFolderId } = body;
+      const { householdId, contactId, parentFolderId, force } = body;
       if (!parentFolderId || (!householdId && !contactId))
         return new Response(JSON.stringify({ error: "householdId (or contactId) and parentFolderId required" }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
 
@@ -667,7 +667,7 @@ serve(async (req) => {
         .eq("id", hhId)
         .maybeSingle();
       if (!hh) return new Response(JSON.stringify({ error: "household_not_found" }), { status: 404, headers: { ...cors, "Content-Type": "application/json" } });
-      if (hh.vault_root_folder_id) {
+      if (hh.vault_root_folder_id && !force) {
         return new Response(JSON.stringify({ ok: true, folderId: hh.vault_root_folder_id, alreadyExists: true }), { headers: { ...cors, "Content-Type": "application/json" } });
       }
 
@@ -684,11 +684,41 @@ serve(async (req) => {
         await driveCreateFolder(t.display_name, root.id, accessToken);
       }
 
+      const previousRoot = hh.vault_root_folder_id ?? null;
       await supabaseAdmin.from("households").update({ vault_root_folder_id: root.id }).eq("id", hhId);
-      await audit(actor, "provision", contactId ?? null, root.id, root.name, req, { household_id: hhId });
+      await audit(actor, force && previousRoot ? "reprovision" : "provision", contactId ?? null, root.id, root.name, req, { household_id: hhId, previous_root: previousRoot });
 
-      return new Response(JSON.stringify({ ok: true, folderId: root.id, householdId: hhId }), { headers: { ...cors, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ ok: true, folderId: root.id, householdId: hhId, previousRoot }), { headers: { ...cors, "Content-Type": "application/json" } });
     }
+
+    // ─── SET VAULT ROOT (staff only) ───
+    // Point a household at an existing Drive folder. Useful when a vault was
+    // mis-provisioned or the team wants to reuse an existing folder structure.
+    if (action === "setVaultRoot") {
+      if (actor.kind !== "staff")
+        return new Response(JSON.stringify({ error: "staff_only" }), { status: 403, headers: { ...cors, "Content-Type": "application/json" } });
+      const { householdId, folderId } = body;
+      if (!householdId || !folderId)
+        return new Response(JSON.stringify({ error: "householdId and folderId required" }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
+      // Validate the folder exists and is a folder
+      const r = await fetch(
+        `https://www.googleapis.com/drive/v3/files/${folderId}?fields=id,name,mimeType,trashed&supportsAllDrives=true`,
+        { headers: { Authorization: `Bearer ${accessToken}` } },
+      );
+      if (!r.ok) {
+        return new Response(JSON.stringify({ error: "folder_not_accessible", detail: await r.text() }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
+      }
+      const meta = await r.json();
+      if (meta.mimeType !== "application/vnd.google-apps.folder" || meta.trashed) {
+        return new Response(JSON.stringify({ error: "not_a_folder" }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
+      }
+      const { data: hh } = await supabaseAdmin.from("households").select("vault_root_folder_id").eq("id", householdId).maybeSingle();
+      const previousRoot = hh?.vault_root_folder_id ?? null;
+      await supabaseAdmin.from("households").update({ vault_root_folder_id: folderId }).eq("id", householdId);
+      await audit(actor, "set_root", null, folderId, meta.name, req, { household_id: householdId, previous_root: previousRoot });
+      return new Response(JSON.stringify({ ok: true, folderId, name: meta.name, previousRoot }), { headers: { ...cors, "Content-Type": "application/json" } });
+    }
+
 
     // ─── ENSURE SHOEBOX (client or staff) ───
     // Finds-or-creates the "00 Shoebox (Client Uploads)" folder under the
