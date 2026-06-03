@@ -113,6 +113,8 @@ const Households = () => {
       totalAssets: householdAssets.get(hh.id) || 0,
       holdingTankTotal: hhHoldingTotal.get(hh.id) || 0,
       holdingTankCount: hhHoldingCount.get(hh.id) || 0,
+      governance_status: hh.governance_status,
+      fiduciary_entity: hh.fiduciary_entity,
     }));
 
     setHouseholds(result);
