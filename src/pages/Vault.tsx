@@ -869,7 +869,7 @@ export function VaultView({ forcedHouseholdId, embedded = false }: { forcedHouse
 
   
 
-  const provision = async () => {
+  const provision = async (force = false) => {
     if (!householdId) {
       toast.error("Open this vault from a household.");
       return;
@@ -880,10 +880,11 @@ export function VaultView({ forcedHouseholdId, embedded = false }: { forcedHouse
       toast.error("Enter a Drive folder URL or ID first.");
       return;
     }
+    if (force && !window.confirm("Create a NEW vault folder for this household? The old root will be left in Drive but unlinked.")) return;
     setProvisioning(true);
     try {
-      const res = await callVault("provisionVault", { householdId, parentFolderId });
-      toast.success("Vault provisioned");
+      const res = await callVault("provisionVault", { householdId, parentFolderId, force });
+      toast.success(force ? "New vault provisioned" : "Vault provisioned");
       setRootId(res.folderId);
     } catch (e: any) {
       toast.error(e.message);
@@ -891,6 +892,31 @@ export function VaultView({ forcedHouseholdId, embedded = false }: { forcedHouse
       setProvisioning(false);
     }
   };
+
+  const setRootFolder = async () => {
+    if (!householdId) {
+      toast.error("Open this vault from a household.");
+      return;
+    }
+    const raw = input.trim();
+    const folderId = raw.match(/\/folders\/([a-zA-Z0-9_-]+)/)?.[1] ?? raw;
+    if (!folderId) {
+      toast.error("Enter a Drive folder URL or ID.");
+      return;
+    }
+    if (!window.confirm("Point this household's vault at this existing folder?")) return;
+    setProvisioning(true);
+    try {
+      const res = await callVault("setVaultRoot", { householdId, folderId });
+      toast.success(`Vault root set to "${res.name}"`);
+      setRootId(res.folderId);
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setProvisioning(false);
+    }
+  };
+
 
   const openPreview = async (file: DriveFile) => {
     setPreviewLoading(true);
