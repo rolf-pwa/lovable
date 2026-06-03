@@ -444,14 +444,6 @@ const HouseholdDetail = () => {
                               const storeTotal = storehouses
                                 .filter((s) => s.contact_id === m.id)
                                 .reduce((sum, s) => sum + (Number(s.current_value) || 0), 0);
-                              const jurisdiction =
-                                m.governance_status === "sovereign"
-                                  ? "Sovereign Enclave"
-                                  : m.governance_status === "stabilization"
-                                    ? "Stabilization Phase"
-                                    : m.governance_status === "core"
-                                      ? "Core"
-                                      : m.address || "—";
                               return (
                                 <tr
                                   key={m.id}
