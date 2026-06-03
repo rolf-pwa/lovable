@@ -490,6 +490,13 @@ const ContactDetail = () => {
                     <Pencil className="h-4 w-4" />
                   </Link>
                 </Button>
+                <PortalMagicLinkButton contactId={id!} />
+                <ContactMerge
+                  contactId={id!}
+                  contactName={`${contact.first_name} ${contact.last_name || ""}`.trim()}
+                  onMerged={fetchData}
+                />
+
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline">
