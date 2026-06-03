@@ -827,6 +827,11 @@ const HouseholdDetail = () => {
               </CardContent>
             </Card>
           </TabsContent>
+
+          {/* Analytics */}
+          <TabsContent value="analytics" className="space-y-6 mt-4">
+            <ContactAnalytics contactIds={members.map((m) => m.id)} />
+          </TabsContent>
         </Tabs>
       </div>
     </AppLayout>
