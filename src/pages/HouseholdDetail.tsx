@@ -304,7 +304,7 @@ const HouseholdDetail = () => {
             </div>
 
             {/* Info grid */}
-            <div className="mt-6 grid gap-6 sm:grid-cols-3">
+            <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
               <div>
                 <p className="text-xs text-muted-foreground mb-1">Address</p>
                 {household.address ? (
@@ -317,11 +317,48 @@ const HouseholdDetail = () => {
                 )}
               </div>
               <div>
-                <p className="text-xs text-muted-foreground mb-1">Members</p>
-                <div className="flex items-center gap-2 text-sm font-medium">
-                  <User className="h-3.5 w-3.5 text-muted-foreground" />
-                  {members.length}
-                </div>
+                <p className="text-xs text-muted-foreground mb-1">Governance Status</p>
+                <Select
+                  value={household.governance_status || "stabilization"}
+                  onValueChange={async (v) => {
+                    await supabase.from("households").update({ governance_status: v as any }).eq("id", household.id);
+                    const memberIds = members.map((m: any) => m.id);
+                    if (memberIds.length > 0) {
+                      await supabase.from("contacts").update({ governance_status: v as any }).in("id", memberIds);
+                    }
+                    setHousehold({ ...household, governance_status: v });
+                    toast.success("Governance status updated for household");
+                  }}
+                >
+                  <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">— None —</SelectItem>
+                    <SelectItem value="core">Core</SelectItem>
+                    <SelectItem value="stabilization">Stabilization Phase</SelectItem>
+                    <SelectItem value="sovereign">Sovereign Phase</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Fiduciary Entity</p>
+                <Select
+                  value={household.fiduciary_entity || "pws"}
+                  onValueChange={async (v) => {
+                    await supabase.from("households").update({ fiduciary_entity: v as any }).eq("id", household.id);
+                    const memberIds = members.map((m: any) => m.id);
+                    if (memberIds.length > 0) {
+                      await supabase.from("contacts").update({ fiduciary_entity: v as any }).in("id", memberIds);
+                    }
+                    setHousehold({ ...household, fiduciary_entity: v });
+                    toast.success("Fiduciary entity updated for household");
+                  }}
+                >
+                  <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pws">PWS — Strategy / Architect</SelectItem>
+                    <SelectItem value="pwa">PWA — Advisors / Builder</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground mb-1">Quiet Period Start</p>
