@@ -3,8 +3,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { LogIn, Eye, MousePointerClick, BarChart3 } from "lucide-react";
+import { LogIn, Eye, MousePointerClick, BarChart3, ChevronDown } from "lucide-react";
 import { format } from "date-fns";
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 
 interface Props {
   contactId?: string;
