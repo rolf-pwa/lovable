@@ -1036,6 +1036,11 @@ const ContactDetail = () => {
                   );
                 })}
               </TabsContent>
+
+              {/* Analytics Tab */}
+              <TabsContent value="analytics" className="space-y-4 mt-4">
+                <ContactAnalytics contactId={contact.id} />
+              </TabsContent>
             </Tabs>
           </div>
 
