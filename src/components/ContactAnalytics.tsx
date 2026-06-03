@@ -72,7 +72,7 @@ export function ContactAnalytics({ contactId, contactIds }: Props) {
                 <LogIn className="h-4 w-4 text-primary" />
                 <CardTitle className="text-sm font-medium text-muted-foreground flex-1">Portal Logins</CardTitle>
                 <span className="text-2xl font-bold">{logins.length}</span>
-                <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200" />
+                <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
               </CardHeader>
             </CollapsibleTrigger>
             <CollapsibleContent>
@@ -93,7 +93,7 @@ export function ContactAnalytics({ contactId, contactIds }: Props) {
                 <Eye className="h-4 w-4 text-primary" />
                 <CardTitle className="text-sm font-medium text-muted-foreground flex-1">Updates Opened</CardTitle>
                 <span className="text-2xl font-bold">{reads.length}</span>
-                <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200" />
+                <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
               </CardHeader>
             </CollapsibleTrigger>
             <CollapsibleContent>
@@ -114,7 +114,7 @@ export function ContactAnalytics({ contactId, contactIds }: Props) {
                 <MousePointerClick className="h-4 w-4 text-primary" />
                 <CardTitle className="text-sm font-medium text-muted-foreground flex-1">Task Interactions</CardTitle>
                 <span className="text-2xl font-bold">{interactions.length}</span>
-                <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200" />
+                <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
               </CardHeader>
             </CollapsibleTrigger>
             <CollapsibleContent>
