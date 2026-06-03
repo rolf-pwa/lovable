@@ -215,13 +215,38 @@ const Households = () => {
                       <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 shrink-0">
                         <Home className="h-5 w-5 text-primary" />
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <CardTitle className="text-base">{hh.label}</CardTitle>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          {hh.familyName} Family
-                          {hh.address && ` · ${hh.address}`}
-                        </p>
-                      </div>
+                        <div className="flex-1 min-w-0">
+                          <CardTitle className="text-base">{hh.label}</CardTitle>
+                          <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                            <span className="text-xs text-muted-foreground">
+                              {hh.familyName} Family
+                              {hh.address && ` · ${hh.address}`}
+                            </span>
+                            {hh.governance_status && hh.governance_status !== "none" && (
+                              <Badge
+                                variant="outline"
+                                className={
+                                  hh.governance_status === "stabilization"
+                                    ? "text-[10px] border-sanctuary-green/30 text-sanctuary-green bg-sanctuary-green/10"
+                                    : hh.governance_status === "sovereign"
+                                      ? "text-[10px] border-sanctuary-bronze/30 text-sanctuary-bronze bg-sanctuary-bronze/10"
+                                      : "text-[10px]"
+                                }
+                              >
+                                {hh.governance_status === "stabilization"
+                                  ? "Stabilization"
+                                  : hh.governance_status === "sovereign"
+                                    ? "Sovereign"
+                                    : "Core"}
+                              </Badge>
+                            )}
+                            {hh.fiduciary_entity && (
+                              <Badge variant="outline" className="text-[10px]">
+                                {hh.fiduciary_entity.toUpperCase()}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
                       <div className="flex items-center gap-4">
                         <div className="text-right">
                           <p className="text-sm font-semibold text-foreground">
