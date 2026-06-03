@@ -16,7 +16,8 @@ interface ReadRow { id: string; read_at: string; update_id: string; }
 interface InteractionRow { id: string; interacted_at: string; task_gid: string; }
 interface UpdateRow { id: string; title: string; url: string | null; created_at: string; }
 
-export function ContactAnalytics({ contactId }: Props) {
+export function ContactAnalytics({ contactId, contactIds }: Props) {
+  const ids = contactIds && contactIds.length > 0 ? contactIds : contactId ? [contactId] : [];
   const [logins, setLogins] = useState<LoginRow[]>([]);
   const [reads, setReads] = useState<ReadRow[]>([]);
   const [interactions, setInteractions] = useState<InteractionRow[]>([]);
