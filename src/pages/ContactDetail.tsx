@@ -166,6 +166,11 @@ const ContactDetail = () => {
     }>;
   }>>([]);
 
+  const { user } = useAuth();
+  const [viewPortalLoading, setViewPortalLoading] = useState(false);
+  const [copyLoading, setCopyLoading] = useState(false);
+  const [mergeOpen, setMergeOpen] = useState(false);
+
   const fetchData = useCallback(async () => {
     if (!id) return;
     const [contactRes, storehouseRes, , , accountsRes, harvestRes] = await Promise.all([
