@@ -628,7 +628,13 @@ const ContactDetail = () => {
             </div>
           </CardContent>
         </Card>
-
+        <ContactMerge
+          contactId={id!}
+          contactName={`${contact.first_name} ${contact.last_name || ""}`.trim()}
+          onMerged={fetchData}
+          open={mergeOpen}
+          onOpenChange={setMergeOpen}
+        />
 
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Main Content */}
