@@ -8,12 +8,20 @@ import { Input } from "@/components/ui/input";
 import { PageBreadcrumbs } from "@/components/PageBreadcrumbs";
 import { CrmTabs } from "@/components/CrmTabs";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Home,
   Search,
   Loader2,
   ChevronRight,
   Anchor,
   Lock,
+  X,
 } from "lucide-react";
 import {
   Tooltip,
@@ -31,6 +39,8 @@ interface HouseholdListItem {
   totalAssets: number;
   holdingTankTotal: number;
   holdingTankCount: number;
+  governance_status: string | null;
+  fiduciary_entity: string | null;
 }
 
 const formatCurrency = (value: number) =>
@@ -44,6 +54,8 @@ const formatCurrency = (value: number) =>
 const Households = () => {
   const [households, setHouseholds] = useState<HouseholdListItem[]>([]);
   const [search, setSearch] = useState("");
+  const [governanceFilter, setGovernanceFilter] = useState<string>("all");
+  const [fiduciaryFilter, setFiduciaryFilter] = useState<string>("all");
   const [loading, setLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
@@ -100,6 +112,8 @@ const Households = () => {
       totalAssets: householdAssets.get(hh.id) || 0,
       holdingTankTotal: hhHoldingTotal.get(hh.id) || 0,
       holdingTankCount: hhHoldingCount.get(hh.id) || 0,
+      governance_status: hh.governance_status,
+      fiduciary_entity: hh.fiduciary_entity,
     }));
 
     setHouseholds(result);
@@ -110,11 +124,14 @@ const Households = () => {
     fetchData();
   }, [fetchData]);
 
-  const filtered = households.filter(
-    (hh) =>
+  const filtered = households.filter((hh) => {
+    const matchesSearch =
       hh.label.toLowerCase().includes(search.toLowerCase()) ||
-      hh.familyName.toLowerCase().includes(search.toLowerCase())
-  );
+      hh.familyName.toLowerCase().includes(search.toLowerCase());
+    const matchesGovernance = governanceFilter === "all" || hh.governance_status === governanceFilter;
+    const matchesFiduciary = fiduciaryFilter === "all" || hh.fiduciary_entity === fiduciaryFilter;
+    return matchesSearch && matchesGovernance && matchesFiduciary;
+  });
 
   return (
     <AppLayout>
@@ -136,14 +153,49 @@ const Households = () => {
           </div>
         </div>
 
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search households or families…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
-          />
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative w-full sm:w-72">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search households or families…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <Select value={governanceFilter} onValueChange={setGovernanceFilter}>
+            <SelectTrigger className="w-44">
+              <SelectValue placeholder="Governance" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Governance</SelectItem>
+              <SelectItem value="none">None</SelectItem>
+              <SelectItem value="core">Core</SelectItem>
+              <SelectItem value="stabilization">Stabilization</SelectItem>
+              <SelectItem value="sovereign">Sovereign</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={fiduciaryFilter} onValueChange={setFiduciaryFilter}>
+            <SelectTrigger className="w-44">
+              <SelectValue placeholder="Fiduciary" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Fiduciaries</SelectItem>
+              <SelectItem value="pws">PWS — Strategy</SelectItem>
+              <SelectItem value="pwa">PWA — Advisors</SelectItem>
+            </SelectContent>
+          </Select>
+          {(governanceFilter !== "all" || fiduciaryFilter !== "all") && (
+            <button
+              onClick={() => {
+                setGovernanceFilter("all");
+                setFiduciaryFilter("all");
+              }}
+              className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <X className="h-3 w-3" /> Clear
+            </button>
+          )}
         </div>
 
         {loading ? (
@@ -162,13 +214,38 @@ const Households = () => {
                       <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 shrink-0">
                         <Home className="h-5 w-5 text-primary" />
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <CardTitle className="text-base">{hh.label}</CardTitle>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          {hh.familyName} Family
-                          {hh.address && ` · ${hh.address}`}
-                        </p>
-                      </div>
+                        <div className="flex-1 min-w-0">
+                          <CardTitle className="text-base">{hh.label}</CardTitle>
+                          <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                            <span className="text-xs text-muted-foreground">
+                              {hh.familyName} Family
+                              {hh.address && ` · ${hh.address}`}
+                            </span>
+                            {hh.governance_status && hh.governance_status !== "none" && (
+                              <Badge
+                                variant="outline"
+                                className={
+                                  hh.governance_status === "stabilization"
+                                    ? "text-[10px] border-sanctuary-green/30 text-sanctuary-green bg-sanctuary-green/10"
+                                    : hh.governance_status === "sovereign"
+                                      ? "text-[10px] border-sanctuary-bronze/30 text-sanctuary-bronze bg-sanctuary-bronze/10"
+                                      : "text-[10px]"
+                                }
+                              >
+                                {hh.governance_status === "stabilization"
+                                  ? "Stabilization"
+                                  : hh.governance_status === "sovereign"
+                                    ? "Sovereign"
+                                    : "Core"}
+                              </Badge>
+                            )}
+                            {hh.fiduciary_entity && (
+                              <Badge variant="outline" className="text-[10px]">
+                                {hh.fiduciary_entity.toUpperCase()}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
                       <div className="flex items-center gap-4">
                         <div className="text-right">
                           <p className="text-sm font-semibold text-foreground">
