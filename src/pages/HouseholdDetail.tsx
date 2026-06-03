@@ -414,17 +414,7 @@ const HouseholdDetail = () => {
                 {/* Household Registered Members Directory */}
                 <Card>
                   <CardHeader className="pb-4">
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <CardTitle className="text-lg">Household Registered Members Directory</CardTitle>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Click any member row to navigate to their individual contact profile ledger.
-                        </p>
-                      </div>
-                      <Badge variant="outline" className="shrink-0 rounded-full px-3 py-1 text-xs font-mono">
-                        {members.length} Member{members.length === 1 ? "" : "s"}
-                      </Badge>
-                    </div>
+                    <CardTitle className="text-lg">Members Directory</CardTitle>
                   </CardHeader>
                   <CardContent className="px-0 pb-0">
                     {members.length === 0 ? (
