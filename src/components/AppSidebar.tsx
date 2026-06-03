@@ -63,6 +63,7 @@ export function SidebarCollapseProvider({ children }: { children: React.ReactNod
 
 const topItems = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { to: "/contacts", label: "CRM", icon: Users },
   { to: "/inbox", label: "Inbox", icon: InboxIcon, inboxBadge: true },
   { to: "/requests", label: "Client Requests", icon: ClipboardList, requestsBadge: true },
 ];
