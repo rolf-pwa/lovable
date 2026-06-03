@@ -255,15 +255,6 @@ export function AppSidebar() {
             </Collapsible>
           )}
 
-          {renderNavLink(
-            "/contacts",
-            "CRM",
-            Users,
-            null,
-            location.pathname === "/contacts" || location.pathname.startsWith("/contacts/"),
-            collapsed
-          )}
-
           {/* Admin group: Onboarding, Review Queue, Knowledge Base, Workbench */}
           {collapsed ? (
             adminItems.map(({ to, label, icon: Icon, ...rest }: any) => {
