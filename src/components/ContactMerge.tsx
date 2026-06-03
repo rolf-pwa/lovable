@@ -26,6 +26,8 @@ interface ContactMergeProps {
   contactName: string;
   onMerged: () => void;
   trigger?: React.ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 interface ContactOption {
