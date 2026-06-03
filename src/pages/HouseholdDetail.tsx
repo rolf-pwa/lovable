@@ -124,7 +124,7 @@ const HouseholdDetail = () => {
       { data: contacts },
     ] = await Promise.all([
       supabase.from("families").select("name").eq("id", hh.family_id).single(),
-      supabase.from("contacts").select("id, first_name, last_name, family_role, email, phone, address, governance_status, is_minor, asana_url").eq("household_id", id),
+      supabase.from("contacts").select("id, first_name, last_name, family_role, email, phone, address, governance_status, is_minor, asana_url, lawyer_name, lawyer_firm, accountant_name, accountant_firm, executor_name, executor_firm, poa_name, poa_firm").eq("household_id", id),
     ]);
 
     setFamilyName(family?.name || "Unknown");
