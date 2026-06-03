@@ -75,13 +75,6 @@ const marketingItems = [
   { to: "/analytics", label: "Analytics", icon: BarChart3 },
 ];
 
-const directoryItems = [
-  { to: "/families", label: "Families", icon: TreesIcon },
-  { to: "/households", label: "Households", icon: Home },
-  { to: "/corporations", label: "Corporations", icon: Building2 },
-  { to: "/contacts", label: "Contacts", icon: Users },
-];
-
 const growthItems = [
   { to: "/pipeline", label: "Pipeline", icon: TrendingUp },
   { to: "/leads", label: "Leads", icon: UserPlus },
