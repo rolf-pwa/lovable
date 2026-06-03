@@ -74,7 +74,6 @@ const marketingItems = [
 
 const growthItems = [
   { to: "/pipeline", label: "Pipeline", icon: TrendingUp },
-  { to: "/leads", label: "Leads", icon: UserPlus },
   { to: "/holding-tank", label: "Holding Tank", icon: Anchor },
 ];
 
