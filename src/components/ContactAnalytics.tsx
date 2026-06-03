@@ -65,43 +65,65 @@ export function ContactAnalytics({ contactId, contactIds }: Props) {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader className="pb-2 flex flex-row items-center gap-2">
-            <LogIn className="h-4 w-4 text-primary" />
-            <CardTitle className="text-sm font-medium text-muted-foreground">Portal Logins</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{logins.length}</p>
-            {lastLogin && (
-              <p className="text-xs text-muted-foreground mt-1">
-                Last: {format(new Date(lastLogin), "MMM d, yyyy")}
-              </p>
-            )}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2 flex flex-row items-center gap-2">
-            <Eye className="h-4 w-4 text-primary" />
-            <CardTitle className="text-sm font-medium text-muted-foreground">Updates Opened</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{reads.length}</p>
-            {lastRead && (
-              <p className="text-xs text-muted-foreground mt-1">
-                Last: {format(new Date(lastRead), "MMM d, yyyy")}
-              </p>
-            )}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2 flex flex-row items-center gap-2">
-            <MousePointerClick className="h-4 w-4 text-primary" />
-            <CardTitle className="text-sm font-medium text-muted-foreground">Task Interactions</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{interactions.length}</p>
-          </CardContent>
-        </Card>
+        <Collapsible defaultOpen={false}>
+          <Card>
+            <CollapsibleTrigger asChild>
+              <CardHeader className="pb-2 flex flex-row items-center gap-2 cursor-pointer select-none">
+                <LogIn className="h-4 w-4 text-primary" />
+                <CardTitle className="text-sm font-medium text-muted-foreground flex-1">Portal Logins</CardTitle>
+                <span className="text-2xl font-bold">{logins.length}</span>
+                <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200" />
+              </CardHeader>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <CardContent>
+                {lastLogin && (
+                  <p className="text-xs text-muted-foreground">
+                    Last: {format(new Date(lastLogin), "MMM d, yyyy")}
+                  </p>
+                )}
+              </CardContent>
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
+        <Collapsible defaultOpen={false}>
+          <Card>
+            <CollapsibleTrigger asChild>
+              <CardHeader className="pb-2 flex flex-row items-center gap-2 cursor-pointer select-none">
+                <Eye className="h-4 w-4 text-primary" />
+                <CardTitle className="text-sm font-medium text-muted-foreground flex-1">Updates Opened</CardTitle>
+                <span className="text-2xl font-bold">{reads.length}</span>
+                <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200" />
+              </CardHeader>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <CardContent>
+                {lastRead && (
+                  <p className="text-xs text-muted-foreground">
+                    Last: {format(new Date(lastRead), "MMM d, yyyy")}
+                  </p>
+                )}
+              </CardContent>
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
+        <Collapsible defaultOpen={false}>
+          <Card>
+            <CollapsibleTrigger asChild>
+              <CardHeader className="pb-2 flex flex-row items-center gap-2 cursor-pointer select-none">
+                <MousePointerClick className="h-4 w-4 text-primary" />
+                <CardTitle className="text-sm font-medium text-muted-foreground flex-1">Task Interactions</CardTitle>
+                <span className="text-2xl font-bold">{interactions.length}</span>
+                <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200" />
+              </CardHeader>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <CardContent>
+                <p className="text-xs text-muted-foreground">Click to expand details.</p>
+              </CardContent>
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
       </div>
 
       <Card>
