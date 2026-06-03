@@ -3,9 +3,7 @@ import prosperwiseLogoColor from "@/assets/prosperwise-logo-color.png";
 import { useAuth } from "@/hooks/useAuth";
 import {
   LayoutDashboard,
-  Home,
   Users,
-  Folder,
   CheckSquare,
   ShieldCheck,
   ExternalLink,
