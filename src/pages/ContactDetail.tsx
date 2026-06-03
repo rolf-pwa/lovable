@@ -437,35 +437,171 @@ const ContactDetail = () => {
           { label: "Contacts", href: "/contacts" },
           { label: `${contact.first_name} ${contact.last_name || ""}`.trim() },
         ]} />
-        {/* Header */}
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/contacts")}>
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <div>
-              <h1 className="text-2xl font-bold">{contact.first_name} {contact.last_name}</h1>
-              <div className="mt-1 flex items-center gap-2">
-                <Badge variant="outline" className="text-xs uppercase">
-                  {contact.fiduciary_entity}
-                </Badge>
-                {contact.governance_status !== "none" && (
-                  <Badge
-                    className={
-                      isStabilization
-                         ? "bg-sanctuary-green/20 text-sanctuary-green border-sanctuary-green/30"
-                         : "bg-sanctuary-bronze/20 text-sanctuary-bronze border-sanctuary-bronze/30"
-                    }
+        {/* Header Card */}
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-start gap-4 min-w-0 flex-1">
+                <Button variant="ghost" size="icon" onClick={() => navigate("/contacts")} className="shrink-0 -ml-2">
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+                <div className="h-16 w-16 shrink-0 rounded-full bg-sanctuary-green text-sanctuary-bronze flex items-center justify-center text-xl font-semibold">
+                  {(contact.first_name?.[0] || "").toUpperCase()}{(contact.last_name?.[0] || "").toUpperCase()}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h1 className="text-2xl font-bold truncate">
+                    {contact.first_name} {contact.last_name}
+                  </h1>
+                  <div className="mt-1 flex flex-wrap items-center gap-2">
+                    {householdLabel && contact.household_id ? (
+                      <Link
+                        to={`/households/${contact.household_id}`}
+                        className="flex items-center gap-1.5 text-sm text-sanctuary-bronze hover:underline"
+                      >
+                        <Home className="h-3.5 w-3.5" />
+                        Household: {householdLabel}
+                      </Link>
+                    ) : (
+                      <span className="flex items-center gap-1.5 text-sm text-sanctuary-bronze">
+                        <Home className="h-3.5 w-3.5" />
+                        Household: —
+                      </span>
+                    )}
+                    <Badge variant="outline" className="text-[10px] uppercase">
+                      {contact.fiduciary_entity}
+                    </Badge>
+                    {contact.governance_status !== "none" && (
+                      <Badge
+                        className={
+                          isStabilization
+                            ? "bg-sanctuary-green/20 text-sanctuary-green border-sanctuary-green/30"
+                            : "bg-sanctuary-bronze/20 text-sanctuary-bronze border-sanctuary-bronze/30"
+                        }
+                      >
+                        {isStabilization ? "Stabilization Phase" : "Sovereign Phase"}
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <Button asChild variant="ghost" size="icon" title="Edit contact">
+                  <Link to={`/contacts/${id}/edit`}>
+                    <Pencil className="h-4 w-4" />
+                  </Link>
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline">
+                      More Actions
+                      <ChevronDown className="ml-1.5 h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    {contact.asana_url && (
+                      <DropdownMenuItem asChild>
+                        <a href={contact.asana_url} target="_blank" rel="noopener noreferrer">
+                          <CheckSquare className="mr-2 h-4 w-4" /> Open Asana
+                        </a>
+                      </DropdownMenuItem>
+                    )}
+                    {contact.google_drive_url && (
+                      <DropdownMenuItem asChild>
+                        <a href={contact.google_drive_url} target="_blank" rel="noopener noreferrer">
+                          <FolderOpen className="mr-2 h-4 w-4" /> Open Drive
+                        </a>
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuItem asChild>
+                      <Link to={`/vault/${contact.id}`}>
+                        <ShieldCheck className="mr-2 h-4 w-4" /> Open Vault
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    {contact.phone && (
+                      <DropdownMenuItem onSelect={() => dialViaQuo(contact.phone!)}>
+                        <Phone className="mr-2 h-4 w-4" /> Call via Quo
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuItem asChild>
+                      <Link to={`/contacts/${id}/edit`}>
+                        <Pencil className="mr-2 h-4 w-4" /> Edit Contact
+                      </Link>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button className="bg-sanctuary-green text-sanctuary-bronze hover:bg-sanctuary-green/90">
+                      <Send className="mr-1.5 h-4 w-4" />
+                      Send Message
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuItem
+                      disabled={!contact.phone}
+                      onSelect={() => {
+                        document.getElementById("contact-comms")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                      }}
+                    >
+                      <MessageSquare className="mr-2 h-4 w-4" /> Send SMS (Quo)
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      disabled={!contact.email}
+                      onSelect={() => {
+                        if (contact.email) window.location.href = `mailto:${contact.email}`;
+                      }}
+                    >
+                      <Mail className="mr-2 h-4 w-4" /> Send Email
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
+
+            {/* Contact info grid */}
+            <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Primary email</p>
+                {contact.email ? (
+                  <a href={`mailto:${contact.email}`} className="flex items-center gap-2 text-sm font-medium hover:underline break-all">
+                    <Mail className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                    {contact.email}
+                  </a>
+                ) : (
+                  <p className="text-sm text-muted-foreground">—</p>
+                )}
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Primary phone</p>
+                {contact.phone ? (
+                  <button
+                    type="button"
+                    onClick={() => dialViaQuo(contact.phone!)}
+                    className="flex items-center gap-2 text-sm font-medium hover:underline"
                   >
-                    {isStabilization ? "Stabilization Phase" : "Sovereign Phase"}
-                  </Badge>
+                    <Phone className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                    {contact.phone}
+                  </button>
+                ) : (
+                  <p className="text-sm text-muted-foreground">—</p>
+                )}
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Address</p>
+                {contact.address ? (
+                  <div className="flex items-start gap-2 text-sm font-medium">
+                    <MapPin className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-0.5" />
+                    <span>{contact.address}</span>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">—</p>
                 )}
               </div>
             </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-2" />
+          </CardContent>
+        </Card>
 
-        </div>
 
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Main Content */}
