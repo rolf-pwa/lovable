@@ -128,7 +128,14 @@ const HouseholdDetail = () => {
     ]);
 
     setFamilyName(family?.name || "Unknown");
-    setMembers(contacts || []);
+    const roleRank = (r: string | null | undefined) => {
+      const v = (r || "").toLowerCase();
+      if (v === "hof" || v === "head_of_family" || v.includes("head of family")) return 0;
+      if (v === "hoh" || v === "head_of_household" || v.includes("head of household")) return 1;
+      return 2;
+    };
+    const sorted = [...(contacts || [])].sort((a: any, b: any) => roleRank(a.family_role) - roleRank(b.family_role));
+    setMembers(sorted);
 
     const memberIds = (contacts || []).map((c: any) => c.id);
     if (memberIds.length > 0) {
