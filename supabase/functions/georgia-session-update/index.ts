@@ -21,7 +21,7 @@ function getCorsHeaders(req: Request) {
 
 const BodySchema = z.object({
   session_key: z.string().min(12).max(128),
-  source: z.enum(["discovery", "discovery/embed"]).optional(),
+  source: z.enum(["discovery", "discovery/embed", "discovery_embed"]).optional(),
   message_count: z.number().int().min(0).max(10000).optional(),
   reached_lead_capture: z.boolean().optional(),
   lead_captured: z.boolean().optional(),
