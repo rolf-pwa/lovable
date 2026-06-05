@@ -58,6 +58,7 @@ const App = () => (
             <Route path="/access-denied" element={<AccessDenied />} />
             <Route path="/discovery" element={<Discovery />} />
             <Route path="/discovery/embed" element={<DiscoveryEmbed />} />
+            <Route path="/discovery-embed" element={<DiscoveryEmbed />} />
             <Route path="/portal" element={<Portal />} />
             <Route path="/portal/:token" element={<Portal />} />
             <Route path="/google-callback" element={<ProtectedRoute><GoogleCallback /></ProtectedRoute>} />
