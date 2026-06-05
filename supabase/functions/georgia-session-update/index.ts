@@ -21,7 +21,7 @@ function getCorsHeaders(req: Request) {
 
 const BodySchema = z.object({
   session_key: z.string().min(12).max(128),
-  source: z.enum(["discovery", "discovery_embed"]).optional(),
+  source: z.enum(["discovery", "discovery/embed"]).optional(),
   message_count: z.number().int().min(0).max(10000).optional(),
   reached_lead_capture: z.boolean().optional(),
   lead_captured: z.boolean().optional(),
@@ -49,10 +49,10 @@ serve(async (req) => {
 
     const parsed = BodySchema.safeParse(raw);
     if (!parsed.success) {
-      return new Response(
-        JSON.stringify({ error: parsed.error.flatten().fieldErrors }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+      return new Response(JSON.stringify({ error: parsed.error.flatten().fieldErrors }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const { session_key, message_count, reached_lead_capture, lead_captured, final_phase, ended } = parsed.data;
@@ -72,10 +72,7 @@ serve(async (req) => {
     if (final_phase) patch.final_phase = final_phase;
     if (ended) patch.ended_at = nowIso;
 
-    const { error } = await supabase
-      .from("georgia_session_starts")
-      .update(patch)
-      .eq("session_key", session_key);
+    const { error } = await supabase.from("georgia_session_starts").update(patch).eq("session_key", session_key);
 
     if (error) throw error;
 
@@ -85,9 +82,9 @@ serve(async (req) => {
     });
   } catch (error) {
     console.error("georgia-session-update error:", error);
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    );
+    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });
