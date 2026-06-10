@@ -763,6 +763,7 @@ const ContactDetail = () => {
                       </Link>
                     </Button>
                   )}
+                  </div>
                 </div>
                 {contact.household_id ? (
                   <VaultView forcedHouseholdId={contact.household_id} embedded />
