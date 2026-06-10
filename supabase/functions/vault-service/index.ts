@@ -876,6 +876,21 @@ serve(async (req) => {
           .in("drive_id", ids.length ? ids : ["__none__"]);
         const visMap = new Map((visRows ?? []).map((r) => [r.drive_id, r.client_visible]));
         docs = docs.filter((d: any) => visMap.get(d.id) !== false);
+
+        // Shoebox-only firewall: hide every folder except the Shoebox subtree,
+        // and hide every file that lives outside the Shoebox.
+        if (actor.shoeboxOnly) {
+          const shoeboxId = await getShoeboxFolderId(actor.householdId, actor.vaultRootId, accessToken);
+          if (!shoeboxId) {
+            folders = [];
+            docs = [];
+          } else if (folderId === actor.vaultRootId) {
+            folders = folders.filter((f: any) => f.id === shoeboxId);
+            docs = []; // no loose files at the root for shoebox-only clients
+          }
+          // For folderId === shoeboxId or any descendant, ensureAccess already
+          // gated the request, so no extra filtering is needed here.
+        }
       }
 
       // Collaborator view: only files/folders inside one of their grants
