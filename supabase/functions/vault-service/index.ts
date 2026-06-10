@@ -141,7 +141,7 @@ function googleExportMime(mime: string) {
 // ───── Actor resolution ─────
 type Actor =
   | { kind: "staff"; userId: string }
-  | { kind: "client"; contactId: string; householdId: string | null; vaultRootId: string }
+  | { kind: "client"; contactId: string; householdId: string | null; vaultRootId: string; shoeboxOnly: boolean }
   | {
       kind: "collaborator";
       collaboratorId: string;
@@ -267,12 +267,12 @@ async function resolveActor(req: Request): Promise<Actor | null> {
     if (!tok || tok.revoked || new Date(tok.expires_at) <= new Date()) return null;
     const { data: contact } = await supabaseAdmin
       .from("contacts")
-      .select("household_id, vault_root_folder_id, households(vault_root_folder_id)")
+      .select("household_id, vault_root_folder_id, vault_shoebox_only, households(vault_root_folder_id)")
       .eq("id", tok.contact_id)
       .maybeSingle();
     const vaultRootId = (contact as any)?.households?.vault_root_folder_id ?? contact?.vault_root_folder_id;
     if (!vaultRootId) return null;
-    return { kind: "client", contactId: tok.contact_id, householdId: contact?.household_id ?? null, vaultRootId };
+    return { kind: "client", contactId: tok.contact_id, householdId: contact?.household_id ?? null, vaultRootId, shoeboxOnly: !!(contact as any)?.vault_shoebox_only };
   }
 
   // 4. Staff JWT
