@@ -9,6 +9,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import {
   ArrowLeft, Bell, BellOff, Trash2, Clock, AlertCircle, Shield,
   ExternalLink, Bot, Grape, FileUp, Loader2, Building2, Users, Plus, X,
@@ -710,11 +712,33 @@ const ContactDetail = () => {
 
               {/* Vault Tab */}
               <TabsContent value="vault" className="space-y-4 mt-4">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between flex-wrap gap-3">
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <ShieldCheck className="h-4 w-4 text-accent" />
                     Household document vault — manage visibility and share with collaborators.
                   </div>
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2 rounded-md border border-border/60 bg-muted/30 px-3 py-1.5">
+                      <Switch
+                        id="shoebox-only"
+                        checked={!!(contact as any).vault_shoebox_only}
+                        onCheckedChange={async (checked) => {
+                          const { error } = await supabase
+                            .from("contacts")
+                            .update({ vault_shoebox_only: checked } as any)
+                            .eq("id", contact.id);
+                          if (error) {
+                            toast.error("Failed to update vault visibility");
+                            return;
+                          }
+                          setContact((c: any) => c ? { ...c, vault_shoebox_only: checked } : c);
+                          toast.success(checked ? "Client now sees Shoebox only" : "Full vault restored");
+                        }}
+                      />
+                      <Label htmlFor="shoebox-only" className="text-xs cursor-pointer whitespace-nowrap">
+                        Shoebox only (portal)
+                      </Label>
+                    </div>
                   {householdVaultRootId ? (
                     <Button
                       size="sm"
