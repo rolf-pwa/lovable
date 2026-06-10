@@ -141,7 +141,7 @@ function googleExportMime(mime: string) {
 // ───── Actor resolution ─────
 type Actor =
   | { kind: "staff"; userId: string }
-  | { kind: "client"; contactId: string; householdId: string | null; vaultRootId: string }
+  | { kind: "client"; contactId: string; householdId: string | null; vaultRootId: string; shoeboxOnly: boolean }
   | {
       kind: "collaborator";
       collaboratorId: string;
@@ -267,12 +267,12 @@ async function resolveActor(req: Request): Promise<Actor | null> {
     if (!tok || tok.revoked || new Date(tok.expires_at) <= new Date()) return null;
     const { data: contact } = await supabaseAdmin
       .from("contacts")
-      .select("household_id, vault_root_folder_id, households(vault_root_folder_id)")
+      .select("household_id, vault_root_folder_id, vault_shoebox_only, households(vault_root_folder_id)")
       .eq("id", tok.contact_id)
       .maybeSingle();
     const vaultRootId = (contact as any)?.households?.vault_root_folder_id ?? contact?.vault_root_folder_id;
     if (!vaultRootId) return null;
-    return { kind: "client", contactId: tok.contact_id, householdId: contact?.household_id ?? null, vaultRootId };
+    return { kind: "client", contactId: tok.contact_id, householdId: contact?.household_id ?? null, vaultRootId, shoeboxOnly: !!(contact as any)?.vault_shoebox_only };
   }
 
   // 4. Staff JWT
@@ -357,6 +357,47 @@ async function effectiveClientPermission(
   return cap;
 }
 
+// Resolve (and cache) the Shoebox child folder for a household. Returns null
+// if the household has no vault root or the Shoebox folder cannot be located.
+async function getShoeboxFolderId(
+  householdId: string | null,
+  vaultRootId: string,
+  accessToken: string,
+): Promise<string | null> {
+  if (!householdId) return null;
+  const { data: hh } = await supabaseAdmin
+    .from("households")
+    .select("vault_shoebox_folder_id")
+    .eq("id", householdId)
+    .maybeSingle();
+  if (hh?.vault_shoebox_folder_id) return hh.vault_shoebox_folder_id;
+
+  // Resolve display name from active templates (position=0 = Shoebox)
+  const { data: tmpl } = await supabaseAdmin
+    .from("vault_folder_templates")
+    .select("display_name")
+    .eq("slug", "shoebox")
+    .maybeSingle();
+  const shoeboxName = tmpl?.display_name ?? "00 Shoebox (Client Uploads)";
+
+  try {
+    const children = await driveListChildren(vaultRootId, accessToken);
+    const match = (children ?? []).find(
+      (f: any) =>
+        f.mimeType === "application/vnd.google-apps.folder" &&
+        (f.name === shoeboxName || /shoebox/i.test(f.name)),
+    );
+    if (!match) return null;
+    await supabaseAdmin
+      .from("households")
+      .update({ vault_shoebox_folder_id: match.id })
+      .eq("id", householdId);
+    return match.id;
+  } catch {
+    return null;
+  }
+}
+
 type Need = false | "upload" | "rename" | "delete" | "create_folder";
 
 async function ensureAccess(
@@ -372,6 +413,18 @@ async function ensureAccess(
 
   if (actor.kind === "client") {
     if (!chain.includes(actor.vaultRootId)) return { ok: false, reason: "outside_vault_root" };
+
+    // Shoebox-only firewall: client may only see/touch items inside the Shoebox subtree
+    if (actor.shoeboxOnly) {
+      const shoeboxId = await getShoeboxFolderId(actor.householdId, actor.vaultRootId, accessToken);
+      // If shoebox can't be resolved, deny everything except the root listing itself
+      if (!shoeboxId) {
+        if (driveId !== actor.vaultRootId) return { ok: false, reason: "shoebox_only" };
+      } else if (driveId !== actor.vaultRootId && !chain.includes(shoeboxId)) {
+        return { ok: false, reason: "shoebox_only" };
+      }
+    }
+
     const cap = await effectiveClientPermission(actor.contactId, chain);
 
     // For files, check client_visible unless explicit grant covers
@@ -823,6 +876,21 @@ serve(async (req) => {
           .in("drive_id", ids.length ? ids : ["__none__"]);
         const visMap = new Map((visRows ?? []).map((r) => [r.drive_id, r.client_visible]));
         docs = docs.filter((d: any) => visMap.get(d.id) !== false);
+
+        // Shoebox-only firewall: hide every folder except the Shoebox subtree,
+        // and hide every file that lives outside the Shoebox.
+        if (actor.shoeboxOnly) {
+          const shoeboxId = await getShoeboxFolderId(actor.householdId, actor.vaultRootId, accessToken);
+          if (!shoeboxId) {
+            folders = [];
+            docs = [];
+          } else if (folderId === actor.vaultRootId) {
+            folders = folders.filter((f: any) => f.id === shoeboxId);
+            docs = []; // no loose files at the root for shoebox-only clients
+          }
+          // For folderId === shoeboxId or any descendant, ensureAccess already
+          // gated the request, so no extra filtering is needed here.
+        }
       }
 
       // Collaborator view: only files/folders inside one of their grants

@@ -262,6 +262,7 @@ export type Database = {
           quiet_period_start_date: string | null
           updated_at: string
           vault_root_folder_id: string | null
+          vault_shoebox_only: boolean
           vineyard_balance_sheet_summary: string | null
           vineyard_ebitda: number | null
           vineyard_operating_income: number | null
@@ -300,6 +301,7 @@ export type Database = {
           quiet_period_start_date?: string | null
           updated_at?: string
           vault_root_folder_id?: string | null
+          vault_shoebox_only?: boolean
           vineyard_balance_sheet_summary?: string | null
           vineyard_ebitda?: number | null
           vineyard_operating_income?: number | null
@@ -338,6 +340,7 @@ export type Database = {
           quiet_period_start_date?: string | null
           updated_at?: string
           vault_root_folder_id?: string | null
+          vault_shoebox_only?: boolean
           vineyard_balance_sheet_summary?: string | null
           vineyard_ebitda?: number | null
           vineyard_operating_income?: number | null
@@ -1094,6 +1097,7 @@ export type Database = {
           quiet_period_start_date: string | null
           updated_at: string
           vault_root_folder_id: string | null
+          vault_shoebox_folder_id: string | null
         }
         Insert: {
           address?: string | null
@@ -1107,6 +1111,7 @@ export type Database = {
           quiet_period_start_date?: string | null
           updated_at?: string
           vault_root_folder_id?: string | null
+          vault_shoebox_folder_id?: string | null
         }
         Update: {
           address?: string | null
@@ -1120,6 +1125,7 @@ export type Database = {
           quiet_period_start_date?: string | null
           updated_at?: string
           vault_root_folder_id?: string | null
+          vault_shoebox_folder_id?: string | null
         }
         Relationships: [
           {
