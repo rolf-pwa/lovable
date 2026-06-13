@@ -18,6 +18,7 @@ import Portal from "./pages/Portal";
 import Families from "./pages/Families";
 import Discovery from "./pages/Discovery";
 import DiscoveryEmbed from "./pages/DiscoveryEmbed";
+import VfoOnboardingEmbed from "./pages/VfoOnboardingEmbed";
 import Leads from "./pages/Leads";
 import ReviewQueue from "./pages/ReviewQueue";
 import Requests from "./pages/Requests";
@@ -59,6 +60,8 @@ const App = () => (
             <Route path="/discovery" element={<Discovery />} />
             <Route path="/discovery/embed" element={<DiscoveryEmbed />} />
             <Route path="/discovery-embed" element={<DiscoveryEmbed />} />
+            <Route path="/vfo-onboarding" element={<VfoOnboardingEmbed />} />
+            <Route path="/vfo-onboarding/embed" element={<VfoOnboardingEmbed />} />
             <Route path="/portal" element={<Portal />} />
             <Route path="/portal/:token" element={<Portal />} />
             <Route path="/google-callback" element={<ProtectedRoute><GoogleCallback /></ProtectedRoute>} />
