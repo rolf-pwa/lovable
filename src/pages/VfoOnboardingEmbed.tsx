@@ -33,9 +33,7 @@ const C = {
 const WELCOME: Message = {
   role: "assistant",
   content:
-    "Welcome. I’m Georgia, and I’ll help guide this conversation with discretion and care. ProsperWise’s Virtual Family Office is designed for important transitions, and I’ll keep this simple and private.
-
-If you’d like, tell me what has changed and whether anything is creating immediate pressure on your personal or business side.",
+    "Welcome. I’m Georgia, and I’ll help guide this conversation with discretion and care. ProsperWise’s Virtual Family Office is designed for important transitions, and I’ll keep this simple and private.\n\nIf you’d like, tell me what has changed and whether anything is creating immediate pressure on your personal or business side.",
 };
 
 export default function VfoOnboardingEmbed() {
