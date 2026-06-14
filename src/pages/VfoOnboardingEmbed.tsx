@@ -33,7 +33,9 @@ const C = {
 const WELCOME: Message = {
   role: "assistant",
   content:
-    "First, take a breath. You are in a safe, confidential environment, and there are absolutely no decisions that need to be made today.\n\nMy name is Georgia. I help Rolf Issler, our Managing Director and Family CFO, coordinate our Virtual Family Office.\n\nBefore we discuss your transition, please know that your data is fully protected. It resides on secure servers physically pinned within Canadian borders, fully compliant with PIPEDA and BC PIPA. It is never shared with public AI models.\n\nIf you feel comfortable sharing — what was the nature of the transition you are navigating, and are you experiencing any immediate pressures from your personal or corporate environment?",
+    "Welcome. I’m Georgia, and I’ll help guide this conversation with discretion and care. ProsperWise’s Virtual Family Office is designed for important transitions, and I’ll keep this simple and private.
+
+If you’d like, tell me what has changed and whether anything is creating immediate pressure on your personal or business side.",
 };
 
 export default function VfoOnboardingEmbed() {
