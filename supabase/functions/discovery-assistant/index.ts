@@ -459,6 +459,13 @@ serve(async (req) => {
     if (!aiResponse.ok) {
       const errText = await aiResponse.text();
       console.error(`[discovery-assistant] Vertex AI error ${aiResponse.status}:`, errText);
+      const isRateLimit = aiResponse.status === 429 || errText.toLowerCase().includes("resource_exhausted") || errText.toLowerCase().includes("quota");
+      if (isRateLimit) {
+        return new Response(JSON.stringify({ fallback: true, text: "Georgia is briefly at capacity right now. Please wait a moment and try again — she's here when you're ready." }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
       return new Response(JSON.stringify({ error: "Georgia is temporarily unavailable. Please try again." }), {
         status: 502,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
