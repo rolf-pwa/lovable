@@ -181,6 +181,12 @@ export default function DiscoveryEmbed() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to connect");
 
+      if (data.fallback) {
+        const assistantMsg: Message = { role: "assistant", content: data.text || "Georgia is briefly at capacity right now. Please wait a moment and try again." };
+        setMessages((prev) => [...prev, assistantMsg]);
+        return;
+      }
+
       const assistantMsg: Message = { role: "assistant", content: data.text };
       if (isGreeting) {
         setMessages([assistantMsg]);
