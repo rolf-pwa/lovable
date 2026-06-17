@@ -58,7 +58,7 @@ export default function Discovery() {
   const saved = loadSavedState();
   const welcomeMessage: Message = {
     role: "assistant",
-    content: "Hi. I'm Georgia.\n\nBefore you share anything: this conversation is completely private. I am the ProsperWise AI Transition Assistant. Nothing you tell me is stored or shared unless you choose to take a next step with us. Your data stays in Canada.\n\nPlease tell me in your own words about the wealth transfer you are experiencing."
+    content: "Hi. I'm Georgia, the ProsperWise AI Transition Assistant.\n\nBefore you share anything: this conversation is completely private. Nothing you tell me is stored or shared unless you choose to take a next step with us. Your data stays in Canada.\n\nTo point you in the right direction — is what's bringing you here today a personal wealth transition (an inheritance, divorce, or sudden liquidity), or a business one (a sale, pre-exit, or founder capital)?"
   };
   const [messages, setMessages] = useState<Message[]>(saved?.messages?.length ? saved.messages : [welcomeMessage]);
   const [input, setInput] = useState("");
