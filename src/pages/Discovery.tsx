@@ -424,7 +424,7 @@ export default function Discovery() {
                   </h3>
                 </div>
                 <p className="mb-5 text-sm" style={{ color: "#6B7070" }}>
-                  Provide your details to schedule your Transition Session.
+                  Provide your details to schedule your Sovereignty Audit.
                 </p>
 
                 <div className="space-y-3">
