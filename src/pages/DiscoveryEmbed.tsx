@@ -490,10 +490,10 @@ export default function DiscoveryEmbed() {
                   <ShieldCheck className="h-4.5 w-4.5" style={{ color: C.bronze }} />
                 </div>
                 <p className="text-xs font-semibold font-serif" style={{ color: C.green }}>
-                  {completionCta ? "Complimentary Guide" : "Stabilisation Session"}
+                  {completionCta ? "Complimentary Guide" : "Sovereignty Audit"}
                 </p>
                 <p className="mt-1 text-[10px]" style={{ color: C.muted }}>
-                  {completionCta ? "Your resource is ready. Open it whenever you like." : "Book your session with Rolf — choose a time that works for you."}
+                  {completionCta ? "Your resource is ready. Open it whenever you like." : "Learn more about the Sovereignty Audit with Rolf."}
                 </p>
                 {completionCta && (
                   <a
