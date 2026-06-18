@@ -470,7 +470,7 @@ export default function DiscoveryEmbed() {
                       Submitting...
                     </span>
                   ) : (
-                    "Request Transition Session"
+                    "Request Sovereignty Audit"
                   )}
                 </button>
               </div>
