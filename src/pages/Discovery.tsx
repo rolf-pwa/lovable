@@ -501,7 +501,7 @@ export default function Discovery() {
                         Submitting...
                       </>
                     ) : (
-                      "Request Transition Session →"
+                      "Request Sovereignty Audit →"
                     )}
                   </Button>
                 </div>
