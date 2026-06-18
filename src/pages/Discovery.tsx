@@ -526,7 +526,7 @@ export default function Discovery() {
                   <ShieldCheck className="h-7 w-7" style={{ color: "#2A4034" }} />
                 </div>
                 <p className="font-serif text-lg font-semibold" style={{ color: "#2A4034" }}>
-                  {completionCta ? "Complimentary Guide Ready" : "Transition Session Requested"}
+                  {completionCta ? "Complimentary Guide Ready" : "Sovereignty Audit Requested"}
                 </p>
                 <p className="mt-2 text-sm" style={{ color: "#6B7070" }}>
                   {completionCta ? "Your guide is ready below. You can review it now and return whenever you're ready for the next conversation." : "Rolf Issler will reach out within 1–2 business days."}
