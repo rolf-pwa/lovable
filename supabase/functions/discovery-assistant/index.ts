@@ -277,7 +277,7 @@ const TOOLS = [
     functionDeclarations: [
       {
         name: "register_discovery_lead",
-          description: "MUST be called when the visitor agrees to book a Stabilisation Session with Rolf OR asks to receive the complimentary guide. This triggers the lead capture form.",
+          description: "MUST be called when the visitor agrees to book a Sovereignty Audit with Rolf OR asks to receive the complimentary guide. This triggers the lead capture form.",
         parameters: {
           type: "OBJECT",
           properties: {
