@@ -259,7 +259,7 @@ export default function DiscoveryEmbed() {
           role: "assistant",
           content: requestedGuide
             ? "Thank you. I have your details now. Your complimentary guide is ready below whenever you'd like to open it."
-            : "Thank you. Your information has been received. You can book your Stabilisation Session with Rolf directly using the link below — choose a time that works for you.",
+            : "Thank you. Your information has been received. You can learn more about the Sovereignty Audit with Rolf using the link below.",
           cta: requestedGuide ? { label: "Open complimentary guide", href: data.guideUrl } : undefined,
         },
       ]);
@@ -414,7 +414,7 @@ export default function DiscoveryEmbed() {
                   <span className="text-[11px] font-semibold font-serif" style={{ color: C.green }}>Connect with Rolf</span>
                 </div>
                 <p className="text-[10px]" style={{ color: C.muted }}>
-                  Provide your details to schedule your Transition Session.
+                  Provide your details to schedule your Sovereignty Audit.
                 </p>
 
                 {[
@@ -470,7 +470,7 @@ export default function DiscoveryEmbed() {
                       Submitting...
                     </span>
                   ) : (
-                    "Request Transition Session"
+                    "Request Sovereignty Audit"
                   )}
                 </button>
               </div>
@@ -490,10 +490,10 @@ export default function DiscoveryEmbed() {
                   <ShieldCheck className="h-4.5 w-4.5" style={{ color: C.bronze }} />
                 </div>
                 <p className="text-xs font-semibold font-serif" style={{ color: C.green }}>
-                  {completionCta ? "Complimentary Guide" : "Stabilisation Session"}
+                  {completionCta ? "Complimentary Guide" : "Sovereignty Audit"}
                 </p>
                 <p className="mt-1 text-[10px]" style={{ color: C.muted }}>
-                  {completionCta ? "Your resource is ready. Open it whenever you like." : "Book your session with Rolf — choose a time that works for you."}
+                  {completionCta ? "Your resource is ready. Open it whenever you like." : "Learn more about the Sovereignty Audit with Rolf."}
                 </p>
                 {completionCta && (
                   <a
@@ -509,13 +509,13 @@ export default function DiscoveryEmbed() {
                 )}
                 {!completionCta && (
                   <a
-                    href="https://www.prosperwise.ca/stabilization"
+                    href="https://www.prosperwise.ca/sovereignty-audit"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="mt-3 inline-flex items-center justify-center gap-2 rounded-lg px-5 py-2.5 text-xs font-semibold tracking-wide transition-opacity hover:opacity-90"
                     style={{ backgroundColor: C.green, color: C.vellum, border: `1px solid ${C.border}` }}
                   >
-                    Book Stabilisation Session — $249
+                    Learn about the Sovereignty Audit
                     <ArrowUpRight className="h-3.5 w-3.5" />
                   </a>
                 )}

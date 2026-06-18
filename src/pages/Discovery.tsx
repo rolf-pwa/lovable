@@ -246,7 +246,7 @@ export default function Discovery() {
           role: "assistant",
           content: requestedGuide
             ? "Thank you. I have your details now. Your complimentary guide is ready below whenever you'd like to open it."
-            : "Thank you. Your information has been received. Rolf Issler will be in touch within 1–2 business days to schedule your Transition Session. In the meantime, take a breath — you have taken an important first step toward sovereignty.",
+            : "Thank you. Your information has been received. Rolf Issler will be in touch within 1–2 business days to schedule your Sovereignty Audit. In the meantime, take a breath — you have taken an important first step toward sovereignty.",
           cta: requestedGuide ? { label: "Open complimentary guide", href: data.guideUrl } : undefined,
         },
       ]);
@@ -424,7 +424,7 @@ export default function Discovery() {
                   </h3>
                 </div>
                 <p className="mb-5 text-sm" style={{ color: "#6B7070" }}>
-                  Provide your details to schedule your Transition Session.
+                  Provide your details to schedule your Sovereignty Audit.
                 </p>
 
                 <div className="space-y-3">
@@ -501,7 +501,7 @@ export default function Discovery() {
                         Submitting...
                       </>
                     ) : (
-                      "Request Transition Session →"
+                      "Request Sovereignty Audit →"
                     )}
                   </Button>
                 </div>
@@ -526,7 +526,7 @@ export default function Discovery() {
                   <ShieldCheck className="h-7 w-7" style={{ color: "#2A4034" }} />
                 </div>
                 <p className="font-serif text-lg font-semibold" style={{ color: "#2A4034" }}>
-                  {completionCta ? "Complimentary Guide Ready" : "Transition Session Requested"}
+                  {completionCta ? "Complimentary Guide Ready" : "Sovereignty Audit Requested"}
                 </p>
                 <p className="mt-2 text-sm" style={{ color: "#6B7070" }}>
                   {completionCta ? "Your guide is ready below. You can review it now and return whenever you're ready for the next conversation." : "Rolf Issler will reach out within 1–2 business days."}
@@ -545,13 +545,13 @@ export default function Discovery() {
                 )}
                 {!completionCta && (
                   <a
-                    href="https://www.prosperwise.ca/stabilization"
+                    href="https://www.prosperwise.ca/sovereignty-audit"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="mx-auto mt-5 inline-flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold transition-opacity hover:opacity-90"
                     style={{ backgroundColor: "#2A4034", color: "#F8F6F2" }}
                   >
-                    Book Stabilisation Session — $249
+                    Learn about the Sovereignty Audit
                     <ArrowUpRight className="h-4 w-4" />
                   </a>
                 )}
