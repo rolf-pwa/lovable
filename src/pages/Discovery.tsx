@@ -246,7 +246,7 @@ export default function Discovery() {
           role: "assistant",
           content: requestedGuide
             ? "Thank you. I have your details now. Your complimentary guide is ready below whenever you'd like to open it."
-            : "Thank you. Your information has been received. Rolf Issler will be in touch within 1–2 business days to schedule your Transition Session. In the meantime, take a breath — you have taken an important first step toward sovereignty.",
+            : "Thank you. Your information has been received. Rolf Issler will be in touch within 1–2 business days to schedule your Sovereignty Audit. In the meantime, take a breath — you have taken an important first step toward sovereignty.",
           cta: requestedGuide ? { label: "Open complimentary guide", href: data.guideUrl } : undefined,
         },
       ]);
