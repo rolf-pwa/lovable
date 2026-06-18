@@ -259,7 +259,7 @@ export default function DiscoveryEmbed() {
           role: "assistant",
           content: requestedGuide
             ? "Thank you. I have your details now. Your complimentary guide is ready below whenever you'd like to open it."
-            : "Thank you. Your information has been received. You can book your Stabilisation Session with Rolf directly using the link below — choose a time that works for you.",
+            : "Thank you. Your information has been received. You can learn more about the Sovereignty Audit with Rolf using the link below.",
           cta: requestedGuide ? { label: "Open complimentary guide", href: data.guideUrl } : undefined,
         },
       ]);
