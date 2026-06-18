@@ -277,7 +277,7 @@ const TOOLS = [
     functionDeclarations: [
       {
         name: "register_discovery_lead",
-          description: "MUST be called when the visitor agrees to book a Sovereignty Audit with Rolf OR asks to receive the complimentary guide. This triggers the lead capture form.",
+          description: "MUST be called ONLY when the visitor has explicitly agreed to book a Sovereignty Audit with Rolf OR has explicitly asked to receive the complimentary guide. For corporate/business visitors, vague interest or questions about the audit do NOT count — only clear affirmative booking language triggers this. This triggers the lead capture form.",
         parameters: {
           type: "OBJECT",
           properties: {
