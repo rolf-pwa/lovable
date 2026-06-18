@@ -545,13 +545,13 @@ export default function Discovery() {
                 )}
                 {!completionCta && (
                   <a
-                    href="https://www.prosperwise.ca/stabilization"
+                    href="https://www.prosperwise.ca/sovereignty-audit"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="mx-auto mt-5 inline-flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold transition-opacity hover:opacity-90"
                     style={{ backgroundColor: "#2A4034", color: "#F8F6F2" }}
                   >
-                    Book Stabilisation Session — $249
+                    Learn about the Sovereignty Audit
                     <ArrowUpRight className="h-4 w-4" />
                   </a>
                 )}
