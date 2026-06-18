@@ -414,7 +414,7 @@ export default function DiscoveryEmbed() {
                   <span className="text-[11px] font-semibold font-serif" style={{ color: C.green }}>Connect with Rolf</span>
                 </div>
                 <p className="text-[10px]" style={{ color: C.muted }}>
-                  Provide your details to schedule your Transition Session.
+                  Provide your details to schedule your Sovereignty Audit.
                 </p>
 
                 {[
