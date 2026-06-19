@@ -312,8 +312,7 @@ const TOOLS = [
           properties: {
             transition_type: {
               type: "STRING",
-              description: "Type of transition: business_sale, divorce, legacy_event, or other",
-            },
+              description: "Type of transition: business_sale, divorce, legacy_event, academy (for visitors below the $1M threshold being referred to the ProsperWise Academy), or other",
             anxiety_anchor: { type: "STRING", description: "The prospect's primary friction point or anxiety" },
             vision_summary: { type: "STRING", description: "Their 3-year sovereignty vision summary" },
             vineyard_summary: { type: "STRING", description: "Summary of vineyard audit findings" },
