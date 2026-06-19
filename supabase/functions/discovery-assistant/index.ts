@@ -91,10 +91,39 @@ ProsperWise's minimum engagement threshold is **$1M CAD** in transitioning or tr
 
 "To make sure I point you toward the right next step — are we roughly in the seven-figure range or above? Our work is designed for transitions of about $1M and up."
 
-- If clearly **below $1M**: be gracious. Thank them, acknowledge the situation is still real and significant, and offer the complimentary guide ("The First 90 Days — What Not to Do") via register_discovery_lead with requested_guide=true. Do **not** route them to a Sovereignty Audit.
+- If clearly **below $1M (either track)**: follow the **Academy Referral Protocol** below. Do **not** route them to a Sovereignty Audit.
 - If **at or above $1M (or unclear/likely above)**: proceed into the appropriate track below.
 
-### Track A — PERSONAL wealth transition
+### Academy Referral Protocol — for ANY visitor below $1M (personal or corporate)
+When the visitor is clearly below the $1M threshold, send EXACTLY this message (verbatim — do not paraphrase, do not add or remove lines):
+
+"That's really helpful context — thank you for sharing it.
+
+To be honest with you: the full ProsperWise engagement is built for situations with a lot of moving parts — multiple entities, significant tax complexity, the kind of structure that needs active coordination over time. What you're describing doesn't need that level of scaffolding right now, and it wouldn't be right to charge you for it.
+
+But here's what I do know: the moment life-changing money arrives — at any amount — the risks are real. Advisors show up fast. Family dynamics shift. Decisions that feel small turn out not to be. The size of the number doesn't change how disorienting that feels.
+
+What you actually need right now is a clear head and the right information. Rolf has put together the ProsperWise Academy specifically for this — a library of guides that cover exactly where you are:
+
+How to set a personal spending boundary before you deploy a single dollar
+
+How to protect your privacy from unsolicited financial outreach
+
+How to understand what the Family Law Act says about assets you've received
+
+How to build a simple Storehouse framework on your own terms
+
+It's free. No catch.
+
+Would this be helpful to you?"
+
+Then **wait for an affirmative reply** ("yes", "sure", "please", "that would help", etc.). Do NOT call register_discovery_lead before they affirm.
+
+Once they affirm, respond briefly (one or two sentences) letting them know you'll pull up a short form so you can send them the Academy link, and IMMEDIATELY call register_discovery_lead with transition_type="academy", requested_guide=true, and a clear discovery_notes summary. Do NOT paste the Academy URL into the chat — the interface reveals it after the form is completed.
+
+If they decline, thank them warmly and leave the door open without pushing.
+
+### Track A — PERSONAL wealth transition (at or above $1M)
 Follow the full Sudden Wealth Syndrome (SWS) flow described in the rest of this prompt (Phases 1–4, trauma-informed design, Sovereignty Audit handoff with Rolf).
 
 ### Track B — BUSINESS wealth transition
@@ -283,7 +312,7 @@ const TOOLS = [
           properties: {
             transition_type: {
               type: "STRING",
-              description: "Type of transition: business_sale, divorce, legacy_event, or other",
+              description: "Type of transition: business_sale, divorce, legacy_event, academy (for visitors below the $1M threshold being referred to the ProsperWise Academy), or other",
             },
             anxiety_anchor: { type: "STRING", description: "The prospect's primary friction point or anxiety" },
             vision_summary: { type: "STRING", description: "Their 3-year sovereignty vision summary" },
@@ -381,15 +410,30 @@ serve(async (req) => {
       }
 
       const normalizedNotes = `${discoveryData.discovery_notes || ""}`.toLowerCase();
+      const isAcademyReferral = `${discoveryData.transition_type || ""}`.toLowerCase() === "academy"
+        || normalizedNotes.includes("academy");
       const requestedGuide = Boolean(
         discoveryData.requested_guide === true ||
         discoveryData.requested_guide === "true" ||
+        isAcademyReferral ||
         normalizedNotes.includes("first 90 days") ||
         normalizedNotes.includes("guide") ||
         normalizedNotes.includes("quiet period")
       );
 
-      return new Response(JSON.stringify({ success: true, leadId: data.id, requestedGuide, guideUrl: requestedGuide ? GUIDE_URL : null }), {
+      const ACADEMY_URL = "https://www.prosperwise.ca/academy";
+      const guideUrl = requestedGuide
+        ? (isAcademyReferral ? ACADEMY_URL : GUIDE_URL)
+        : null;
+
+      return new Response(JSON.stringify({
+        success: true,
+        leadId: data.id,
+        requestedGuide,
+        guideUrl,
+        academyReferral: isAcademyReferral,
+        academyUrl: isAcademyReferral ? ACADEMY_URL : null,
+      }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
