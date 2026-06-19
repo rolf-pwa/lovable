@@ -235,8 +235,12 @@ export default function Discovery() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Submission failed");
 
+      const isAcademy = Boolean(data.academyReferral && data.academyUrl);
       const requestedGuide = Boolean(data.requestedGuide && data.guideUrl);
-      setCompletionCta(requestedGuide ? { label: "Open complimentary guide", href: data.guideUrl } : null);
+      const ctaLabel = isAcademy ? "Open the ProsperWise Academy" : "Open complimentary guide";
+      const ctaHref = isAcademy ? data.academyUrl : data.guideUrl;
+      const showCta = isAcademy || requestedGuide;
+      setCompletionCta(showCta ? { label: ctaLabel, href: ctaHref } : null);
       setPhase("complete");
       leadCapturedRef.current = true;
       trackSessionUpdate({ lead_captured: true, reached_lead_capture: true, final_phase: "complete" });
@@ -244,10 +248,12 @@ export default function Discovery() {
         ...prev,
         {
           role: "assistant",
-          content: requestedGuide
+          content: isAcademy
+            ? "Thank you. The ProsperWise Academy is ready for you below — open it whenever you're ready."
+            : requestedGuide
             ? "Thank you. I have your details now. Your complimentary guide is ready below whenever you'd like to open it."
             : "Thank you. Your information has been received. Rolf Issler will be in touch within 1–2 business days to schedule your Sovereignty Audit. In the meantime, take a breath — you have taken an important first step toward sovereignty.",
-          cta: requestedGuide ? { label: "Open complimentary guide", href: data.guideUrl } : undefined,
+          cta: showCta ? { label: ctaLabel, href: ctaHref } : undefined,
         },
       ]);
     } catch (err) {
