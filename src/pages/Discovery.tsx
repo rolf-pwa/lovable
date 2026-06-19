@@ -513,13 +513,14 @@ export default function Discovery() {
                         Submitting...
                       </>
                     ) : (
-                      "Request Sovereignty Audit →"
+                      isAcademy ? "Send me the Academy →" : "Request Sovereignty Audit →"
                     )}
                   </Button>
                 </div>
               </div>
             </motion.div>
-          )}
+            );
+          })()}
 
           {phase === "complete" && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>
