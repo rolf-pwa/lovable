@@ -409,7 +409,14 @@ export default function DiscoveryEmbed() {
           )}
 
           {/* Lead Capture Form */}
-          {phase === "lead_capture" && (
+          {phase === "lead_capture" && (() => {
+            const isAcademy = `${(discoveryData as any)?.transition_type || ""}`.toLowerCase() === "academy";
+            const formTitle = isAcademy ? "Send me the Academy" : "Connect with Rolf";
+            const formSubtitle = isAcademy
+              ? "Provide your details and we'll send you the ProsperWise Academy link."
+              : "Provide your details to schedule your Sovereignty Audit.";
+            const submitLabel = isAcademy ? "Send me the Academy" : "Request Sovereignty Audit";
+            return (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
               <div
                 className="rounded-xl p-3 space-y-2.5"
@@ -417,10 +424,10 @@ export default function DiscoveryEmbed() {
               >
                 <div className="flex items-center gap-1.5">
                   <ShieldCheck className="h-3.5 w-3.5" style={{ color: C.bronze }} />
-                  <span className="text-[11px] font-semibold font-serif" style={{ color: C.green }}>Connect with Rolf</span>
+                  <span className="text-[11px] font-semibold font-serif" style={{ color: C.green }}>{formTitle}</span>
                 </div>
                 <p className="text-[10px]" style={{ color: C.muted }}>
-                  Provide your details to schedule your Sovereignty Audit.
+                  {formSubtitle}
                 </p>
 
                 {[
@@ -476,12 +483,13 @@ export default function DiscoveryEmbed() {
                       Submitting...
                     </span>
                   ) : (
-                    "Request Sovereignty Audit"
+                    submitLabel
                   )}
                 </button>
               </div>
             </motion.div>
-          )}
+            );
+          })()}
 
           {phase === "complete" && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>
