@@ -410,15 +410,30 @@ serve(async (req) => {
       }
 
       const normalizedNotes = `${discoveryData.discovery_notes || ""}`.toLowerCase();
+      const isAcademyReferral = `${discoveryData.transition_type || ""}`.toLowerCase() === "academy"
+        || normalizedNotes.includes("academy");
       const requestedGuide = Boolean(
         discoveryData.requested_guide === true ||
         discoveryData.requested_guide === "true" ||
+        isAcademyReferral ||
         normalizedNotes.includes("first 90 days") ||
         normalizedNotes.includes("guide") ||
         normalizedNotes.includes("quiet period")
       );
 
-      return new Response(JSON.stringify({ success: true, leadId: data.id, requestedGuide, guideUrl: requestedGuide ? GUIDE_URL : null }), {
+      const ACADEMY_URL = "https://www.prosperwise.ca/academy";
+      const guideUrl = requestedGuide
+        ? (isAcademyReferral ? ACADEMY_URL : GUIDE_URL)
+        : null;
+
+      return new Response(JSON.stringify({
+        success: true,
+        leadId: data.id,
+        requestedGuide,
+        guideUrl,
+        academyReferral: isAcademyReferral,
+        academyUrl: isAcademyReferral ? ACADEMY_URL : null,
+      }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
