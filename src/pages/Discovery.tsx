@@ -413,7 +413,13 @@ export default function Discovery() {
           )}
 
           {/* Lead Capture Form */}
-          {phase === "lead_capture" && (
+          {phase === "lead_capture" && (() => {
+            const isAcademy = `${(discoveryData as any)?.transition_type || ""}`.toLowerCase() === "academy";
+            const formTitle = isAcademy ? "Send me the Academy" : "Connect with Rolf";
+            const formSubtitle = isAcademy
+              ? "Provide your details and we'll send you the ProsperWise Academy link."
+              : "Provide your details to schedule your Sovereignty Audit.";
+            return (
             <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
               <div
                 className="rounded-2xl p-6"
@@ -426,11 +432,11 @@ export default function Discovery() {
                 <div className="mb-1 flex items-center gap-2">
                   <ShieldCheck className="h-5 w-5" style={{ color: "#2A4034" }} />
                   <h3 className="font-serif text-base font-semibold" style={{ color: "#2A4034" }}>
-                    Connect with Rolf
+                    {formTitle}
                   </h3>
                 </div>
                 <p className="mb-5 text-sm" style={{ color: "#6B7070" }}>
-                  Provide your details to schedule your Sovereignty Audit.
+                  {formSubtitle}
                 </p>
 
                 <div className="space-y-3">
