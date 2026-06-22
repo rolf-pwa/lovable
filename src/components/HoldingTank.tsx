@@ -474,13 +474,50 @@ function HoldingTankRow({
           </div>
         </div>
         <div className="text-right shrink-0">
-          {account.current_value != null && (
-            <p className="text-sm font-semibold">{formatCurrency(account.current_value)}</p>
+          {editingValue ? (
+            <div className="flex items-center gap-1">
+              <Input
+                autoFocus
+                type="number"
+                value={valueDraft}
+                onChange={(e) => setValueDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") { e.preventDefault(); saveValue(); }
+                  if (e.key === "Escape") { e.preventDefault(); setEditingValue(false); }
+                }}
+                className="h-7 w-28 text-xs"
+                disabled={savingValue}
+              />
+              <button
+                type="button"
+                onClick={saveValue}
+                disabled={savingValue}
+                className="text-[10px] text-primary hover:underline"
+              >
+                Save
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditingValue(false)}
+                className="text-[10px] text-muted-foreground hover:underline"
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <p
+              role="button"
+              tabIndex={0}
+              onClick={() => {
+                setValueDraft(account.current_value == null ? "" : String(account.current_value));
+                setEditingValue(true);
+              }}
+              className="text-sm font-semibold cursor-text px-1 rounded hover:bg-muted inline-block"
+              title="Click to edit balance"
+            >
+              {account.current_value != null ? formatCurrency(account.current_value) : "—"}
+            </p>
           )}
-          {account.book_value != null && (
-            <p className="text-xs text-muted-foreground">Beginning of Year: {formatCurrency(account.book_value)}</p>
-          )}
-        </div>
       </div>
 
       <div className="flex items-center gap-2">
