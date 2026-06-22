@@ -214,13 +214,37 @@ function fmt(n: number) {
   return `${sign}$${Math.abs(Math.round(n)).toLocaleString()}`;
 }
 
-function AccountRow({ acc, moveTargets, onMoveAccount, updateVisibilityScope, deleteAccount }: AccountRowProps) {
+function AccountRow({ acc, moveTargets, onMoveAccount, updateVisibilityScope, deleteAccount, onRefresh }: AccountRowProps) {
   const [expanded, setExpanded] = useState(false);
   const [snapshots, setSnapshots] = useState<SnapshotRow[] | null>(null);
   const [loading, setLoading] = useState(false);
+  const [editingValue, setEditingValue] = useState(false);
+  const [valueDraft, setValueDraft] = useState<string>("");
+  const [savingValue, setSavingValue] = useState(false);
 
   const current = Number(acc.currentValue) || 0;
   const target = Number(acc.targetValue) || 0;
+
+  const saveValue = async () => {
+    const parsed = valueDraft.trim() === "" ? null : Number(valueDraft.replace(/[^0-9.\-]/g, ""));
+    if (parsed !== null && Number.isNaN(parsed)) {
+      toast.error("Enter a valid number.");
+      return;
+    }
+    setSavingValue(true);
+    const { error } = await supabase
+      .from(acc.sourceTable as any)
+      .update({ current_value: parsed } as any)
+      .eq("id", acc.id);
+    setSavingValue(false);
+    if (error) {
+      toast.error("Failed to update balance.");
+    } else {
+      toast.success("Balance updated.");
+      setEditingValue(false);
+      onRefresh();
+    }
+  };
 
   useEffect(() => {
     if (!expanded || snapshots !== null) return;
