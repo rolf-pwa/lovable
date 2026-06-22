@@ -406,6 +406,7 @@ if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders }
         const individualIds = new Set(individual.map((r: any) => r.id));
         return [...individual, ...householdHoldingTank.filter((r: any) => !individualIds.has(r.id))];
       })(),
+      family_holding_tank: familyHoldingTank,
       audit_trail: auditRes.data || [],
       portal_requests: requestsRes.data || [],
       meetings,
