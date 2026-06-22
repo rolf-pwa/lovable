@@ -157,7 +157,7 @@ The Storehouse ($100k): The immediate Assuris-protected safety buffer.
 
 The Vineyard ($900k): The growth-oriented economic engine.
 
-The Vault: Real estate and foundational hard assets.
+Legacy Trust: Real estate and foundational hard assets.
 
 The Tributary: Acknowledge the $20k/year in government benefits (CPP/OAS/Survivor).
 
@@ -167,7 +167,7 @@ Define the annual Harvest Date (e.g., October 1st).
 
 Establish the Sovereignty Threshold logic ($120k total: $100k from Vineyard + $20k from Tributary).
 
-Detail the replenishment of the Granary (Cash) and Armoury (Children's Future).
+Detail the replenishment of the Philanthropic Trust (Cash) and Strategic Reserve (Children's Future).
 
 5. Ratification
 
