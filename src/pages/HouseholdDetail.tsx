@@ -70,10 +70,10 @@ const ROLE_LABELS: Record<string, string> = {
 };
 
 const STOREHOUSE_CONFIG = [
-  { num: 1, name: "The Keep", subtitle: "Liquidity Reserve", icon: Castle },
-  { num: 2, name: "The Armoury", subtitle: "Strategic Reserve", icon: Sword },
-  { num: 3, name: "The Granary", subtitle: "Philanthropic Trust", icon: Wheat },
-  { num: 4, name: "The Vault", subtitle: "Legacy Trust", icon: Lock },
+  { num: 1, name: "Liquidity Reserve", icon: Castle },
+  { num: 2, name: "Strategic Reserve", icon: Sword },
+  { num: 3, name: "Philanthropic Trust", icon: Wheat },
+  { num: 4, name: "Legacy Trust", icon: Lock },
 ];
 
 const TYPE_LABELS: Record<string, string> = {

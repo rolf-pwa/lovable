@@ -52,7 +52,7 @@ import {
   AlertDialogTitle, AlertDialogTrigger 
 } from "@/components/ui/alert-dialog";
 
-const STOREHOUSE_NAMES = ["The Keep", "The Armoury", "The Granary", "The Vault"];
+const STOREHOUSE_NAMES = ["Liquidity Reserve", "Strategic Reserve", "Philanthropic Trust", "Legacy Trust"];
 
 interface Storehouse {
   id: string;
