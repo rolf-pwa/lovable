@@ -522,6 +522,9 @@ function HoldingTankRow({
             <p className="text-xs text-muted-foreground">Beginning of Year: {formatCurrency(account.book_value)}</p>
           )}
         </div>
+      </div>
+
+
 
       <div className="flex items-center gap-2">
         <CalendarDays className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
