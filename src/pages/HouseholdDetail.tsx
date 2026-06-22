@@ -639,6 +639,8 @@ const HouseholdDetail = () => {
 
           {/* Vineyard / Financials */}
           <TabsContent value="vineyard" className="space-y-6 mt-4">
+            <HoldingTank householdId={id!} onAccountMoved={() => fetchData()} />
+
             {/* The Vineyard */}
             <Card>
               <CardHeader>
