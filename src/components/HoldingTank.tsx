@@ -429,6 +429,29 @@ function HoldingTankRow({
   onDateChange: (id: string, date: string) => void;
 }) {
   const [destination, setDestination] = useState<string>("");
+  const [editingValue, setEditingValue] = useState(false);
+  const [valueDraft, setValueDraft] = useState<string>("");
+  const [savingValue, setSavingValue] = useState(false);
+
+  const saveValue = async () => {
+    const parsed = valueDraft.trim() === "" ? null : Number(valueDraft.replace(/[^0-9.\-]/g, ""));
+    if (parsed !== null && Number.isNaN(parsed)) {
+      toast.error("Enter a valid number.");
+      return;
+    }
+    setSavingValue(true);
+    const { error } = await (supabase.from("holding_tank" as any) as any)
+      .update({ current_value: parsed })
+      .eq("id", account.id);
+    setSavingValue(false);
+    if (error) {
+      toast.error("Failed to update balance.");
+    } else {
+      toast.success("Balance updated.");
+      account.current_value = parsed;
+      setEditingValue(false);
+    }
+  };
 
   return (
     <div className="flex flex-col gap-2 rounded-md border border-border bg-background p-3">
