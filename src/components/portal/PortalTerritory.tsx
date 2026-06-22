@@ -324,7 +324,6 @@ export function PortalTerritory({ vineyardAccounts, storehouses, contact, family
                   <div className="flex items-center gap-2">
                     <Icon className="h-4 w-4 text-accent" />
                     <h4 className="text-sm font-medium text-foreground">{name}</h4>
-                    <span className="text-xs text-muted-foreground">· {subtitle}</span>
                   </div>
                   <span className="text-sm font-semibold text-foreground">
                     ${total.toLocaleString()}
