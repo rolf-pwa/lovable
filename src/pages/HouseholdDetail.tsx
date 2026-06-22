@@ -70,10 +70,10 @@ const ROLE_LABELS: Record<string, string> = {
 };
 
 const STOREHOUSE_CONFIG = [
-  { num: 1, name: "The Keep", subtitle: "Liquidity Reserve", icon: Castle },
-  { num: 2, name: "The Armoury", subtitle: "Strategic Reserve", icon: Sword },
-  { num: 3, name: "The Granary", subtitle: "Philanthropic Trust", icon: Wheat },
-  { num: 4, name: "The Vault", subtitle: "Legacy Trust", icon: Lock },
+  { num: 1, name: "Liquidity Reserve", icon: Castle },
+  { num: 2, name: "Strategic Reserve", icon: Sword },
+  { num: 3, name: "Philanthropic Trust", icon: Wheat },
+  { num: 4, name: "Legacy Trust", icon: Lock },
 ];
 
 const TYPE_LABELS: Record<string, string> = {
@@ -776,7 +776,7 @@ const HouseholdDetail = () => {
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                {STOREHOUSE_CONFIG.map(({ num, name, subtitle, icon: Icon }) => {
+                {STOREHOUSE_CONFIG.map(({ num, name, icon: Icon }) => {
                   const accounts = storehouses.filter((s) => s.storehouse_number === num);
                   const total = accounts.reduce((sum, s) => sum + (Number(s.current_value) || 0), 0);
                   const targetTotal = accounts.reduce((sum, s) => sum + (Number(s.target_value) || 0), 0);
@@ -788,7 +788,6 @@ const HouseholdDetail = () => {
                         <div className="flex items-center gap-2">
                           <Icon className="h-4 w-4 text-accent" />
                           <h4 className="text-sm font-medium text-foreground">{name}</h4>
-                          <span className="text-xs text-muted-foreground">· {subtitle}</span>
                         </div>
                         <span className="text-sm font-semibold text-foreground">{formatCurrency(total)}</span>
                       </div>

@@ -6,10 +6,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 const STOREHOUSE_CONFIG = [
-  { num: 1, name: "The Keep", subtitle: "Liquidity Reserve", icon: Castle },
-  { num: 2, name: "The Armoury", subtitle: "Strategic Reserve", icon: Sword },
-  { num: 3, name: "The Granary", subtitle: "Philanthropic Trust", icon: Wheat },
-  { num: 4, name: "The Vault", subtitle: "Legacy Trust", icon: Lock },
+  { num: 1, name: "Liquidity Reserve", icon: Castle },
+  { num: 2, name: "Strategic Reserve", icon: Sword },
+  { num: 3, name: "Philanthropic Trust", icon: Wheat },
+  { num: 4, name: "Legacy Trust", icon: Lock },
 ];
 
 const ROLE_LABELS: Record<string, string> = {
@@ -311,7 +311,7 @@ export function PortalTerritory({ vineyardAccounts, storehouses, contact, family
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          {STOREHOUSE_CONFIG.map(({ num, name, subtitle, icon: Icon }) => {
+          {STOREHOUSE_CONFIG.map(({ num, name, icon: Icon }) => {
             const accounts = visibleStorehouses.filter((s: any) => s.storehouse_number === num);
             const privateAccounts = storehouses.filter((s: any) => s.storehouse_number === num && s.visibility_scope === "private");
             const total = accounts.reduce((sum: number, s: any) => sum + (Number(s.current_value) || 0), 0);
@@ -324,7 +324,6 @@ export function PortalTerritory({ vineyardAccounts, storehouses, contact, family
                   <div className="flex items-center gap-2">
                     <Icon className="h-4 w-4 text-accent" />
                     <h4 className="text-sm font-medium text-foreground">{name}</h4>
-                    <span className="text-xs text-muted-foreground">· {subtitle}</span>
                   </div>
                   <span className="text-sm font-semibold text-foreground">
                     ${total.toLocaleString()}

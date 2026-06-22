@@ -65,10 +65,10 @@ const formatCurrency = (value: number) =>
   }).format(value);
 
 const STOREHOUSE_CONFIG = [
-  { num: 1, name: "The Keep", icon: Castle },
-  { num: 2, name: "The Armoury", icon: Sword },
-  { num: 3, name: "The Granary", icon: Wheat },
-  { num: 4, name: "The Vault", icon: Lock },
+  { num: 1, name: "Liquidity Reserve", icon: Castle },
+  { num: 2, name: "Strategic Reserve", icon: Sword },
+  { num: 3, name: "Philanthropic Trust", icon: Wheat },
+  { num: 4, name: "Legacy Trust", icon: Lock },
 ];
 
 export function HoldingTank({ contactId, householdId, onAccountMoved }: HoldingTankProps) {

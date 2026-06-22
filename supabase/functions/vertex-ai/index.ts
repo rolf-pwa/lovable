@@ -128,13 +128,13 @@ When the Personal CFO uploads a Sovereignty Charter PDF:
    - **account_type**: Map to "Portfolio" for investment accounts, "Business Venture", "Real Estate", "Insurance", or "Other" as appropriate.
    - **current_value**: The dollar value shown.
    - **notes**: Capture the harvest classification (e.g. "Eligible Harvest", "Protected (Growth)") in the notes field — this indicates whether the asset produces harvestable income or is growth-protected.
-   Rows categorized as **"Storehouse"** (The Keep, The Armoury, The Granary, The Vault) should NOT go to vineyard_accounts — those map to the **storehouses** table via propose_storehouse_update.
-   Use the **ingest_vineyard_accounts** tool to propose Vineyard rows as a batch.
-2. **Storehouse Balance Extraction**: For each Storehouse row in the balance sheet, extract the **current_value** (dollar balance) and **target_value** (funding goal/floor) and include them in the **propose_storehouse_update** tool call. Do NOT put balances in the notes field — use the dedicated current_value and target_value fields.
-3. **Storehouse Rule Generation**: Look for "Storehouse Funding Goals" or similar sections. Extract funding floors (e.g. The Keep's $48,000 floor), funding ceilings, governance clauses (e.g. Secondary Quiet Period for inflows >$50,000), and quiet period rules. Use the **ingest_storehouse_rules** tool.
-4. **Sovereign Waterfall**: Look for priority allocation order (e.g. 1. Replenish Keep, 2. Debt Reduction, 3. Replanting). Use the **ingest_waterfall_priorities** tool.
-5. Always extract ALL four categories from a charter document in a single response.
-5. Map storehouse labels to standard numbers: The Keep=1, The Armoury=2, The Granary=3, The Vault=4.
+    Rows categorized as **"Storehouse"** (Liquidity Reserve, Strategic Reserve, Philanthropic Trust, Legacy Trust) should NOT go to vineyard_accounts — those map to the **storehouses** table via propose_storehouse_update.
+    Use the **ingest_vineyard_accounts** tool to propose Vineyard rows as a batch.
+  2. **Storehouse Balance Extraction**: For each Storehouse row in the balance sheet, extract the **current_value** (dollar balance) and **target_value** (funding goal/floor) and include them in the **propose_storehouse_update** tool call. Do NOT put balances in the notes field — use the dedicated current_value and target_value fields.
+  3. **Storehouse Rule Generation**: Look for "Storehouse Funding Goals" or similar sections. Extract funding floors (e.g. Liquidity Reserve's $48,000 floor), funding ceilings, governance clauses (e.g. Secondary Quiet Period for inflows >$50,000), and quiet period rules. Use the **ingest_storehouse_rules** tool.
+  4. **Sovereign Waterfall**: Look for priority allocation order (e.g. 1. Replenish Liquidity Reserve, 2. Debt Reduction, 3. Replanting). Use the **ingest_waterfall_priorities** tool.
+  5. Always extract ALL four categories from a charter document in a single response.
+  5. Map storehouse labels to standard numbers: Liquidity Reserve=1, Strategic Reserve=2, Philanthropic Trust=3, Legacy Trust=4.
 
 ## Audit / Info Request Ingestion
 When the Personal CFO uploads a "Sovereignty Audit", "Info Request", or "Sovereignty Vault" PDF:
@@ -319,7 +319,7 @@ const TOOLS = [
               items: {
                 type: "OBJECT",
                 properties: {
-                  storehouse_label: { type: "STRING", description: "e.g. The Keep, The Armoury, The Granary, The Vault" },
+                  storehouse_label: { type: "STRING", description: "e.g. Liquidity Reserve, Strategic Reserve, Philanthropic Trust, Legacy Trust" },
                   storehouse_number: { type: "INTEGER", description: "1=Keep, 2=Armoury, 3=Granary, 4=Vault" },
                   rule_type: { type: "STRING", description: "funding_floor, funding_ceiling, governance_clause, quiet_period" },
                   rule_description: { type: "STRING", description: "Human-readable rule text" },
@@ -347,7 +347,7 @@ const TOOLS = [
                 type: "OBJECT",
                 properties: {
                   priority_order: { type: "INTEGER", description: "Priority sequence number (1 = highest)" },
-                  priority_label: { type: "STRING", description: "e.g. Replenish The Keep, Debt Reduction, Replanting" },
+                  priority_label: { type: "STRING", description: "e.g. Replenish Liquidity Reserve, Debt Reduction, Replanting" },
                   priority_description: { type: "STRING", description: "Details of the allocation rule" },
                   target_amount: { type: "NUMBER", description: "Target amount if specified" },
                 },
