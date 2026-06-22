@@ -836,10 +836,10 @@ const ContactDetail = () => {
                     sourceTable: "vineyard_accounts" as const,
                   }))}
                   moveTargets={[
-                    { label: "The Keep", key: "storehouse-1" },
-                    { label: "The Armoury", key: "storehouse-2" },
-                    { label: "The Granary", key: "storehouse-3" },
-                    { label: "The Vault", key: "storehouse-4" },
+                    { label: "Liquidity Reserve", key: "storehouse-1" },
+                    { label: "Strategic Reserve", key: "storehouse-2" },
+                    { label: "Philanthropic Trust", key: "storehouse-3" },
+                    { label: "Legacy Trust", key: "storehouse-4" },
                   ]}
                   onMoveAccount={async (account, targetKey) => {
                     const storehouseNum = parseInt(targetKey.split("-")[1]);
