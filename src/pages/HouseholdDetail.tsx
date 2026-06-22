@@ -776,7 +776,7 @@ const HouseholdDetail = () => {
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                {STOREHOUSE_CONFIG.map(({ num, name, subtitle, icon: Icon }) => {
+                {STOREHOUSE_CONFIG.map(({ num, name, icon: Icon }) => {
                   const accounts = storehouses.filter((s) => s.storehouse_number === num);
                   const total = accounts.reduce((sum, s) => sum + (Number(s.current_value) || 0), 0);
                   const targetTotal = accounts.reduce((sum, s) => sum + (Number(s.target_value) || 0), 0);
@@ -788,7 +788,6 @@ const HouseholdDetail = () => {
                         <div className="flex items-center gap-2">
                           <Icon className="h-4 w-4 text-accent" />
                           <h4 className="text-sm font-medium text-foreground">{name}</h4>
-                          <span className="text-xs text-muted-foreground">· {subtitle}</span>
                         </div>
                         <span className="text-sm font-semibold text-foreground">{formatCurrency(total)}</span>
                       </div>
