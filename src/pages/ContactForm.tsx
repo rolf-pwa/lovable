@@ -306,22 +306,22 @@ const ContactForm = () => {
         .eq("id", householdId);
     }
 
-    // Mirror HOH contact info onto the household record so the household
-    // address and label stay in sync with the Head of Household.
-    if (
-      householdId &&
-      (form.family_role === "head_of_household" || form.family_role === "head_of_family")
-    ) {
+    // Mirror contact info onto the household record so the household
+    // address (and label, when this is the Head of Household) stay in sync.
+    if (householdId) {
       const householdUpdate: Record<string, any> = {};
-      if (form.address) householdUpdate.address = form.address;
-      const lastName = form.last_name?.trim();
-      if (lastName) householdUpdate.label = `${lastName} Household`;
-      if (Object.keys(householdUpdate).length > 0) {
-        await supabase
-          .from("households")
-          .update(householdUpdate)
-          .eq("id", householdId);
+      householdUpdate.address = form.address?.trim() || null;
+      if (
+        form.family_role === "head_of_household" ||
+        form.family_role === "head_of_family"
+      ) {
+        const lastName = form.last_name?.trim();
+        if (lastName) householdUpdate.label = `${lastName} Household`;
       }
+      await supabase
+        .from("households")
+        .update(householdUpdate)
+        .eq("id", householdId);
     }
 
     // Upload statements and trigger ingestion for each file
