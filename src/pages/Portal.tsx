@@ -745,6 +745,9 @@ const Portal = () => {
 
         {/* Right Sidebar: Family-Shared Territory */}
         <div className="space-y-4">
+          {family_holding_tank.length > 0 && (
+            <PortalHoldingTank accounts={family_holding_tank} />
+          )}
           <PortalTerritory
             vineyardAccounts={familyAssets.vineyard}
             storehouses={familyAssets.storehouses}
