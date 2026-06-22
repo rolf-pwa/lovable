@@ -338,6 +338,24 @@ if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders }
       householdHoldingTank = hhHolding || [];
     }
 
+    // Fetch family-wide holding tank for all family members across households
+    let familyHoldingTank: any[] = [];
+    if (hierarchy.level === "family" && Array.isArray(hierarchy.households)) {
+      const familyMemberIds = hierarchy.households.flatMap((hh: any) =>
+        (hh.members || []).map((m: any) => m.id)
+      );
+      const uniqueFamilyMemberIds = [...new Set(familyMemberIds)];
+      if (uniqueFamilyMemberIds.length > 0) {
+        const { data: famHolding } = await supabase
+          .from("holding_tank")
+          .select("*")
+          .in("contact_id", uniqueFamilyMemberIds)
+          .eq("status", "holding")
+          .order("created_at");
+        familyHoldingTank = famHolding || [];
+      }
+    }
+
     // Fetch corporations via shareholders for all household members + self
     let corporations: any[] = [];
     const allMemberIds = [contactId, ...householdMembers.map((m: any) => m.id)];
