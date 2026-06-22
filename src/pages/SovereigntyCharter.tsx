@@ -220,10 +220,10 @@ const isProtectedAccount = (account: VineyardAccount) =>
 const pageWrap = "stab-doc bg-white shadow-lg print:shadow-none";
 
 const STOREHOUSE_CONFIG = [
-  { num: 1, name: "The Keep", subtitle: "Liquidity Reserve" },
-  { num: 2, name: "The Armoury", subtitle: "Strategic Reserve" },
-  { num: 3, name: "The Granary", subtitle: "Philanthropic Trust" },
-  { num: 4, name: "The Vault", subtitle: "Legacy Trust" },
+  { num: 1, name: "Liquidity Reserve" },
+  { num: 2, name: "Strategic Reserve" },
+  { num: 3, name: "Philanthropic Trust" },
+  { num: 4, name: "Legacy Trust" },
 ];
 
 const newCustomContainer = (): CustomContainer => ({
