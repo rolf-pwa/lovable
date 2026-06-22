@@ -87,8 +87,20 @@ export function HoldingTank({ contactId, householdId, onAccountMoved }: HoldingT
       .eq("status", "holding")
       .order("created_at", { ascending: false });
 
-    if (contactId) query = query.eq("contact_id", contactId);
-    if (householdId) query = query.eq("household_id", householdId);
+    if (contactId) {
+      query = query.eq("contact_id", contactId);
+    } else if (householdId) {
+      // Roll up: include rows tagged to the household OR belonging to any contact in the household
+      const { data: members } = await (supabase.from("contacts") as any)
+        .select("id")
+        .eq("household_id", householdId);
+      const memberIds = (members || []).map((c: any) => c.id);
+      if (memberIds.length > 0) {
+        query = query.or(`household_id.eq.${householdId},contact_id.in.(${memberIds.join(",")})`);
+      } else {
+        query = query.eq("household_id", householdId);
+      }
+    }
 
     const { data, error } = await query;
     if (!error && data) setAccounts(data as HoldingTankAccount[]);
