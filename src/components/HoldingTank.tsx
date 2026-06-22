@@ -429,6 +429,29 @@ function HoldingTankRow({
   onDateChange: (id: string, date: string) => void;
 }) {
   const [destination, setDestination] = useState<string>("");
+  const [editingValue, setEditingValue] = useState(false);
+  const [valueDraft, setValueDraft] = useState<string>("");
+  const [savingValue, setSavingValue] = useState(false);
+
+  const saveValue = async () => {
+    const parsed = valueDraft.trim() === "" ? null : Number(valueDraft.replace(/[^0-9.\-]/g, ""));
+    if (parsed !== null && Number.isNaN(parsed)) {
+      toast.error("Enter a valid number.");
+      return;
+    }
+    setSavingValue(true);
+    const { error } = await (supabase.from("holding_tank" as any) as any)
+      .update({ current_value: parsed })
+      .eq("id", account.id);
+    setSavingValue(false);
+    if (error) {
+      toast.error("Failed to update balance.");
+    } else {
+      toast.success("Balance updated.");
+      account.current_value = parsed;
+      setEditingValue(false);
+    }
+  };
 
   return (
     <div className="flex flex-col gap-2 rounded-md border border-border bg-background p-3">
@@ -451,14 +474,57 @@ function HoldingTankRow({
           </div>
         </div>
         <div className="text-right shrink-0">
-          {account.current_value != null && (
-            <p className="text-sm font-semibold">{formatCurrency(account.current_value)}</p>
+          {editingValue ? (
+            <div className="flex items-center gap-1">
+              <Input
+                autoFocus
+                type="number"
+                value={valueDraft}
+                onChange={(e) => setValueDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") { e.preventDefault(); saveValue(); }
+                  if (e.key === "Escape") { e.preventDefault(); setEditingValue(false); }
+                }}
+                className="h-7 w-28 text-xs"
+                disabled={savingValue}
+              />
+              <button
+                type="button"
+                onClick={saveValue}
+                disabled={savingValue}
+                className="text-[10px] text-primary hover:underline"
+              >
+                Save
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditingValue(false)}
+                className="text-[10px] text-muted-foreground hover:underline"
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <p
+              role="button"
+              tabIndex={0}
+              onClick={() => {
+                setValueDraft(account.current_value == null ? "" : String(account.current_value));
+                setEditingValue(true);
+              }}
+              className="text-sm font-semibold cursor-text px-1 rounded hover:bg-muted inline-block"
+              title="Click to edit balance"
+            >
+              {account.current_value != null ? formatCurrency(account.current_value) : "—"}
+            </p>
           )}
           {account.book_value != null && (
             <p className="text-xs text-muted-foreground">Beginning of Year: {formatCurrency(account.book_value)}</p>
           )}
         </div>
       </div>
+
+
 
       <div className="flex items-center gap-2">
         <CalendarDays className="h-3.5 w-3.5 text-muted-foreground shrink-0" />

@@ -214,13 +214,37 @@ function fmt(n: number) {
   return `${sign}$${Math.abs(Math.round(n)).toLocaleString()}`;
 }
 
-function AccountRow({ acc, moveTargets, onMoveAccount, updateVisibilityScope, deleteAccount }: AccountRowProps) {
+function AccountRow({ acc, moveTargets, onMoveAccount, updateVisibilityScope, deleteAccount, onRefresh }: AccountRowProps) {
   const [expanded, setExpanded] = useState(false);
   const [snapshots, setSnapshots] = useState<SnapshotRow[] | null>(null);
   const [loading, setLoading] = useState(false);
+  const [editingValue, setEditingValue] = useState(false);
+  const [valueDraft, setValueDraft] = useState<string>("");
+  const [savingValue, setSavingValue] = useState(false);
 
   const current = Number(acc.currentValue) || 0;
   const target = Number(acc.targetValue) || 0;
+
+  const saveValue = async () => {
+    const parsed = valueDraft.trim() === "" ? null : Number(valueDraft.replace(/[^0-9.\-]/g, ""));
+    if (parsed !== null && Number.isNaN(parsed)) {
+      toast.error("Enter a valid number.");
+      return;
+    }
+    setSavingValue(true);
+    const { error } = await supabase
+      .from(acc.sourceTable as any)
+      .update({ current_value: parsed } as any)
+      .eq("id", acc.id);
+    setSavingValue(false);
+    if (error) {
+      toast.error("Failed to update balance.");
+    } else {
+      toast.success("Balance updated.");
+      setEditingValue(false);
+      onRefresh();
+    }
+  };
 
   useEffect(() => {
     if (!expanded || snapshots !== null) return;
@@ -264,7 +288,51 @@ function AccountRow({ acc, moveTargets, onMoveAccount, updateVisibilityScope, de
             {acc.type && <span className="ml-1 text-[10px] text-muted-foreground">{acc.type}</span>}
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="text-xs font-medium tabular-nums">${current.toLocaleString()}</span>
+            {editingValue ? (
+              <span onClick={(e) => e.stopPropagation()} className="flex items-center gap-1">
+                <Input
+                  autoFocus
+                  type="number"
+                  value={valueDraft}
+                  onChange={(e) => setValueDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") { e.preventDefault(); saveValue(); }
+                    if (e.key === "Escape") { e.preventDefault(); setEditingValue(false); }
+                  }}
+                  className="h-6 w-24 text-xs"
+                  disabled={savingValue}
+                />
+                <button
+                  type="button"
+                  onClick={saveValue}
+                  disabled={savingValue}
+                  className="text-[10px] text-primary hover:underline"
+                >
+                  Save
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditingValue(false)}
+                  className="text-[10px] text-muted-foreground hover:underline"
+                >
+                  Cancel
+                </button>
+              </span>
+            ) : (
+              <span
+                role="button"
+                tabIndex={0}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setValueDraft(acc.currentValue == null ? "" : String(acc.currentValue));
+                  setEditingValue(true);
+                }}
+                className="text-xs font-medium tabular-nums px-1 rounded hover:bg-muted cursor-text"
+                title="Click to edit balance"
+              >
+                ${current.toLocaleString()}
+              </span>
+            )}
             {onMoveAccount && moveTargets.length > 0 && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
