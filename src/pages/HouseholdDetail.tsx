@@ -210,6 +210,10 @@ const HouseholdDetail = () => {
     (sum, c) => sum + (c.total_assets || 0),
     0
   );
+  const totalHoldingTank = holdingTank.reduce(
+    (sum, h) => sum + (Number(h.current_value) || 0),
+    0
+  );
 
   // Group vineyard by type
   const byType: Record<string, { accounts: any[]; total: number }> = {};
