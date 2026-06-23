@@ -1076,10 +1076,11 @@ const ContactDetail = () => {
             {(() => {
               const totalVineyard = vineyardAccounts.reduce((s, a) => s + (Number(a.current_value) || 0), 0);
               const totalStorehouses = storehouses.reduce((s, a) => s + (Number(a.current_value) || 0), 0);
+              const totalHoldingTank = holdingTankAccounts.reduce((s, a) => s + (Number(a.current_value) || 0), 0);
               const totalCorpAssets = corporateStakes.reduce((s, st) =>
                 s + (Number(st.pro_rata) || 0) + st.subsidiaries.reduce((ss, sub) => ss + (Number(sub.indirect_pro_rata) || 0), 0)
               , 0);
-              const total = totalVineyard + totalStorehouses + totalCorpAssets;
+              const total = totalVineyard + totalStorehouses + totalHoldingTank + totalCorpAssets;
               return (
                 <Card className="border-sanctuary-bronze/30">
                   <CardHeader className="pb-3">
