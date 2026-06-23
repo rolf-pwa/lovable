@@ -15,7 +15,7 @@ import {
   ArrowLeft, Bell, BellOff, Trash2, Clock, AlertCircle, Shield,
   ExternalLink, Bot, Grape, FileUp, Loader2, Building2, Users, Plus, X,
   Folder, FolderOpen, CheckSquare, ShieldCheck, Landmark, ChevronDown, ListChecks,
-  Mail, Phone, MapPin, Home, Calendar, Pencil, Eye, Merge, Link2, BarChart3
+  Mail, Phone, MapPin, Home, Calendar, Pencil, Eye, Merge, Link2, BarChart3, Anchor
 } from "lucide-react";
 import { ContactAnalytics } from "@/components/ContactAnalytics";
 import {
@@ -168,6 +168,7 @@ const ContactDetail = () => {
       indirect_pro_rata: number;
     }>;
   }>>([]);
+  const [holdingTankAccounts, setHoldingTankAccounts] = useState<any[]>([]);
 
   const { user } = useAuth();
   const [viewPortalLoading, setViewPortalLoading] = useState(false);
@@ -176,16 +177,17 @@ const ContactDetail = () => {
 
   const fetchData = useCallback(async () => {
     if (!id) return;
-    const [contactRes, storehouseRes, , , accountsRes, harvestRes] = await Promise.all([
+    const [contactRes, storehouseRes, holdingRes, , accountsRes, harvestRes] = await Promise.all([
       supabase.from("contacts").select("*").eq("id", id).maybeSingle(),
       supabase.from("storehouses").select("*").eq("contact_id", id).order("storehouse_number"),
-      Promise.resolve({ data: [] }),
+      supabase.from("holding_tank").select("*").eq("contact_id", id).order("created_at"),
       supabase.from("family_relationships").select("id, member_contact_id, relationship_label, contact:contacts!family_relationships_member_contact_id_fkey(id, first_name, last_name)").eq("contact_id", id),
       supabase.from("vineyard_accounts" as any).select("*").eq("contact_id", id).order("created_at"),
       supabase.from("account_harvest_snapshots").select("*").eq("contact_id", id).order("snapshot_date", { ascending: false }),
     ]);
     setContact(contactRes.data);
     setStorehouses(storehouseRes.data || []);
+    setHoldingTankAccounts((holdingRes.data as any) || []);
     setVineyardAccounts((accountsRes.data as any) || []);
     setHarvestSnapshots((harvestRes.data as any) || []);
 
@@ -1074,10 +1076,11 @@ const ContactDetail = () => {
             {(() => {
               const totalVineyard = vineyardAccounts.reduce((s, a) => s + (Number(a.current_value) || 0), 0);
               const totalStorehouses = storehouses.reduce((s, a) => s + (Number(a.current_value) || 0), 0);
+              const totalHoldingTank = holdingTankAccounts.reduce((s, a) => s + (Number(a.current_value) || 0), 0);
               const totalCorpAssets = corporateStakes.reduce((s, st) =>
                 s + (Number(st.pro_rata) || 0) + st.subsidiaries.reduce((ss, sub) => ss + (Number(sub.indirect_pro_rata) || 0), 0)
               , 0);
-              const total = totalVineyard + totalStorehouses + totalCorpAssets;
+              const total = totalVineyard + totalStorehouses + totalHoldingTank + totalCorpAssets;
               return (
                 <Card className="border-sanctuary-bronze/30">
                   <CardHeader className="pb-3">
@@ -1096,6 +1099,12 @@ const ContactDetail = () => {
                           <Grape className="h-3.5 w-3.5" /> Portfolio
                         </span>
                         <span className="font-semibold text-primary">{formatCurrency(totalVineyard)}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="flex items-center gap-2 text-muted-foreground">
+                          <Anchor className="h-3.5 w-3.5" /> Holding Tank
+                        </span>
+                        <span className="font-semibold text-accent">{formatCurrency(totalHoldingTank)}</span>
                       </div>
                       <div className="flex items-center justify-between text-sm">
                         <span className="flex items-center gap-2 text-muted-foreground">
