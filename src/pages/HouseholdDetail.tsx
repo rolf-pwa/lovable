@@ -50,6 +50,7 @@ import {
   ExternalLink,
   ListChecks,
   Users,
+  Anchor,
 } from "lucide-react";
 import { ContactAnalytics } from "@/components/ContactAnalytics";
 
