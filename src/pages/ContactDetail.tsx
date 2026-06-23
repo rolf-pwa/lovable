@@ -187,6 +187,7 @@ const ContactDetail = () => {
     ]);
     setContact(contactRes.data);
     setStorehouses(storehouseRes.data || []);
+    setHoldingTankAccounts((holdingRes.data as any) || []);
     setVineyardAccounts((accountsRes.data as any) || []);
     setHarvestSnapshots((harvestRes.data as any) || []);
 
