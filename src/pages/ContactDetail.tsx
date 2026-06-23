@@ -168,6 +168,7 @@ const ContactDetail = () => {
       indirect_pro_rata: number;
     }>;
   }>>([]);
+  const [holdingTankAccounts, setHoldingTankAccounts] = useState<any[]>([]);
 
   const { user } = useAuth();
   const [viewPortalLoading, setViewPortalLoading] = useState(false);
