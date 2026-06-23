@@ -254,10 +254,13 @@ const HouseholdDetail = () => {
                 <div className="min-w-0 flex-1">
                   <h1 className="text-2xl font-bold truncate">{household.label}</h1>
                   <div className="mt-1 flex flex-wrap items-center gap-2">
-                    <span className="flex items-center gap-1.5 text-sm text-sanctuary-bronze">
+                    <Link
+                      to="/families"
+                      className="flex items-center gap-1.5 text-sm text-sanctuary-bronze hover:underline"
+                    >
                       <Users className="h-3.5 w-3.5" />
                       {familyName} Family
-                    </span>
+                    </Link>
                     <Badge variant="outline" className="text-[10px] uppercase">
                       {household.fiduciary_entity}
                     </Badge>
