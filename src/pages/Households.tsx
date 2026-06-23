@@ -109,7 +109,7 @@ const Households = () => {
       family_id: hh.family_id,
       familyName: familyMap.get(hh.family_id) || "Unknown",
       memberCount: (contacts || []).filter((c: any) => c.household_id === hh.id).length,
-      totalAssets: householdAssets.get(hh.id) || 0,
+      totalAssets: (householdAssets.get(hh.id) || 0) + (hhHoldingTotal.get(hh.id) || 0),
       holdingTankTotal: hhHoldingTotal.get(hh.id) || 0,
       holdingTankCount: hhHoldingCount.get(hh.id) || 0,
       governance_status: hh.governance_status,
@@ -251,7 +251,7 @@ const Households = () => {
                           <p className="text-sm font-semibold text-foreground">
                             {formatCurrency(hh.totalAssets)}
                           </p>
-                          <p className="text-[10px] text-muted-foreground">Portfolio Assets</p>
+                          <p className="text-[10px] text-muted-foreground">Assets Under Management</p>
                         </div>
                         {hh.holdingTankCount > 0 && (
                           <div className="text-right">
