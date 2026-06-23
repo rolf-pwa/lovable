@@ -255,7 +255,7 @@ const HouseholdDetail = () => {
                   <h1 className="text-2xl font-bold truncate">{household.label}</h1>
                   <div className="mt-1 flex flex-wrap items-center gap-2">
                     <Link
-                      to="/families"
+                      to={household.family_id ? `/families/${household.family_id}` : "/families"}
                       className="flex items-center gap-1.5 text-sm text-sanctuary-bronze hover:underline"
                     >
                       <Users className="h-3.5 w-3.5" />
