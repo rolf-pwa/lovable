@@ -42,6 +42,7 @@ import StabilizationMap from "./pages/StabilizationMap";
 import StabilizationMapResolver from "./pages/StabilizationMapResolver";
 import QuarterlySystemReview from "./pages/QuarterlySystemReview";
 import QuarterlySystemReviewResolver from "./pages/QuarterlySystemReviewResolver";
+import QuarterlyAccountSync from "./pages/QuarterlyAccountSync";
 import SovereigntyCharter from "./pages/SovereigntyCharter";
 import Inbox from "./pages/Inbox";
 
@@ -101,6 +102,7 @@ const App = () => (
             <Route path="/stabilization-map/:id" element={<ProtectedRoute><StabilizationMap /></ProtectedRoute>} />
             <Route path="/quarterly-system-review/contact/:contactId" element={<ProtectedRoute><QuarterlySystemReviewResolver /></ProtectedRoute>} />
             <Route path="/quarterly-system-review/:id" element={<ProtectedRoute><QuarterlySystemReview /></ProtectedRoute>} />
+            <Route path="/quarterly-account-sync" element={<ProtectedRoute><QuarterlyAccountSync /></ProtectedRoute>} />
             <Route path="/sovereignty-charter/contact/:contactId" element={<ProtectedRoute><SovereigntyCharter /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
