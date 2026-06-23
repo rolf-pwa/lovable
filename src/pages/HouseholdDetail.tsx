@@ -504,7 +504,7 @@ const HouseholdDetail = () => {
                     <div>
                       <p className="text-xs text-muted-foreground">Total Household AUM</p>
                       <p className="text-3xl font-bold text-foreground">
-                        {formatCurrency(totalVineyard + totalStorehouses + totalCorpAssets)}
+                        {formatCurrency(totalVineyard + totalStorehouses + totalCorpAssets + totalHoldingTank)}
                       </p>
                     </div>
                     <div className="space-y-2 pt-2 border-t border-border">
