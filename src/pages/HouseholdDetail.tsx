@@ -50,6 +50,7 @@ import {
   ExternalLink,
   ListChecks,
   Users,
+  Anchor,
 } from "lucide-react";
 import { ContactAnalytics } from "@/components/ContactAnalytics";
 
@@ -207,6 +208,10 @@ const HouseholdDetail = () => {
   );
   const totalCorpAssets = corporations.reduce(
     (sum, c) => sum + (c.total_assets || 0),
+    0
+  );
+  const totalHoldingTank = holdingTank.reduce(
+    (sum, h) => sum + (Number(h.current_value) || 0),
     0
   );
 
@@ -499,7 +504,7 @@ const HouseholdDetail = () => {
                     <div>
                       <p className="text-xs text-muted-foreground">Total Household AUM</p>
                       <p className="text-3xl font-bold text-foreground">
-                        {formatCurrency(totalVineyard + totalStorehouses + totalCorpAssets)}
+                        {formatCurrency(totalVineyard + totalStorehouses + totalCorpAssets + totalHoldingTank)}
                       </p>
                     </div>
                     <div className="space-y-2 pt-2 border-t border-border">
@@ -515,6 +520,14 @@ const HouseholdDetail = () => {
                         </span>
                         <span className="font-semibold text-accent">{formatCurrency(totalStorehouses)}</span>
                       </div>
+                      {totalHoldingTank > 0 && (
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="flex items-center gap-2 text-muted-foreground">
+                            <Anchor className="h-3.5 w-3.5" /> Holding Tank
+                          </span>
+                          <span className="font-semibold text-amber-600">{formatCurrency(totalHoldingTank)}</span>
+                        </div>
+                      )}
                       {corporations.length > 0 && (
                         <div className="flex items-center justify-between text-sm">
                           <span className="flex items-center gap-2 text-muted-foreground">
