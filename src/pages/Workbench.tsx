@@ -15,7 +15,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { BarChart3, Loader2, Cpu } from "lucide-react";
+import { BarChart3, Loader2, Cpu, FileSpreadsheet } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 
 const Workbench = () => {
   const [searchParams] = useSearchParams();
@@ -65,6 +67,12 @@ const Workbench = () => {
               AI-powered operational intelligence for the Personal Sanctuary
             </p>
           </div>
+          <Button asChild variant="outline">
+            <Link to="/quarterly-account-sync">
+              <FileSpreadsheet className="h-4 w-4 mr-2" />
+              Bulk Account Sync
+            </Link>
+          </Button>
         </div>
 
         {/* Household Selector */}
