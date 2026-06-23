@@ -16,6 +16,7 @@ import NotFound from "./pages/NotFound";
 import GoogleCallback from "./pages/GoogleCallback";
 import Portal from "./pages/Portal";
 import Families from "./pages/Families";
+import FamilyDetail from "./pages/FamilyDetail";
 import Discovery from "./pages/Discovery";
 import DiscoveryEmbed from "./pages/DiscoveryEmbed";
 import VfoOnboardingEmbed from "./pages/VfoOnboardingEmbed";
@@ -72,6 +73,7 @@ const App = () => (
             <Route path="/onboarding/bulk" element={<ProtectedRoute><BulkOnboarding /></ProtectedRoute>} />
             
             <Route path="/families" element={<ProtectedRoute><Families /></ProtectedRoute>} />
+            <Route path="/families/:id" element={<ProtectedRoute><FamilyDetail /></ProtectedRoute>} />
             <Route path="/households" element={<ProtectedRoute><Households /></ProtectedRoute>} />
             <Route path="/households/:id" element={<ProtectedRoute><HouseholdDetail /></ProtectedRoute>} />
             <Route path="/corporations" element={<ProtectedRoute><Corporations /></ProtectedRoute>} />
