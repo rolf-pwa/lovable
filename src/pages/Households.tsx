@@ -109,7 +109,7 @@ const Households = () => {
       family_id: hh.family_id,
       familyName: familyMap.get(hh.family_id) || "Unknown",
       memberCount: (contacts || []).filter((c: any) => c.household_id === hh.id).length,
-      totalAssets: householdAssets.get(hh.id) || 0,
+      totalAssets: (householdAssets.get(hh.id) || 0) + (hhHoldingTotal.get(hh.id) || 0),
       holdingTankTotal: hhHoldingTotal.get(hh.id) || 0,
       holdingTankCount: hhHoldingCount.get(hh.id) || 0,
       governance_status: hh.governance_status,
