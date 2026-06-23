@@ -251,7 +251,7 @@ const Households = () => {
                           <p className="text-sm font-semibold text-foreground">
                             {formatCurrency(hh.totalAssets)}
                           </p>
-                          <p className="text-[10px] text-muted-foreground">Portfolio Assets</p>
+                          <p className="text-[10px] text-muted-foreground">Assets Under Management</p>
                         </div>
                         {hh.holdingTankCount > 0 && (
                           <div className="text-right">
