@@ -520,6 +520,14 @@ const HouseholdDetail = () => {
                         </span>
                         <span className="font-semibold text-accent">{formatCurrency(totalStorehouses)}</span>
                       </div>
+                      {totalHoldingTank > 0 && (
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="flex items-center gap-2 text-muted-foreground">
+                            <Anchor className="h-3.5 w-3.5" /> Holding Tank
+                          </span>
+                          <span className="font-semibold text-amber-600">{formatCurrency(totalHoldingTank)}</span>
+                        </div>
+                      )}
                       {corporations.length > 0 && (
                         <div className="flex items-center justify-between text-sm">
                           <span className="flex items-center gap-2 text-muted-foreground">
