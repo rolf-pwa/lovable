@@ -1102,6 +1102,12 @@ const ContactDetail = () => {
                       </div>
                       <div className="flex items-center justify-between text-sm">
                         <span className="flex items-center gap-2 text-muted-foreground">
+                          <Anchor className="h-3.5 w-3.5" /> Holding Tank
+                        </span>
+                        <span className="font-semibold text-accent">{formatCurrency(totalHoldingTank)}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="flex items-center gap-2 text-muted-foreground">
                           <Landmark className="h-3.5 w-3.5" /> Storehouses
                         </span>
                         <span className="font-semibold text-accent">{formatCurrency(totalStorehouses)}</span>
