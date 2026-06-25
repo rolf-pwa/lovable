@@ -25,20 +25,23 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
 type TargetField =
-  | "__skip__" | "account_number" | "client_name" | "custodian" | "account_type" | "product"
+  | "__skip__" | "account_number" | "client_name" | "first_name" | "last_name"
+  | "custodian" | "account_type" | "product"
   | "boy_value" | "current_value" | "as_of_date"
   | "ror_ytd" | "ror_6m" | "ror_1y" | "ror_3y" | "ror_5y" | "ror_since_inception";
 
 const FIELDS: { value: TargetField; label: string; required?: boolean }[] = [
   { value: "__skip__", label: "— Skip —" },
-  { value: "account_number", label: "Account Number", required: true },
-  { value: "client_name", label: "Client Name" },
+  { value: "account_number", label: "Account / Contract Number", required: true },
+  { value: "client_name", label: "Client Name (full)" },
+  { value: "first_name", label: "First Name" },
+  { value: "last_name", label: "Last Name" },
   { value: "custodian", label: "Custodian" },
-  { value: "account_type", label: "Account Type" },
+  { value: "account_type", label: "Account Type / Registration" },
   { value: "product", label: "Product" },
   { value: "boy_value", label: "BOY Balance", required: true },
   { value: "current_value", label: "Current Balance", required: true },
-  { value: "as_of_date", label: "As-of Date", required: true },
+  { value: "as_of_date", label: "As-of Date" },
   { value: "ror_ytd", label: "RoR YTD" },
   { value: "ror_6m", label: "RoR 6M" },
   { value: "ror_1y", label: "RoR 1Y" },
@@ -50,26 +53,34 @@ const FIELDS: { value: TargetField; label: string; required?: boolean }[] = [
 function guessField(header: string): TargetField {
   const h = header.toLowerCase().replace(/[_\-\s]+/g, "");
   if (h.includes("accountnumber") || h.includes("contract") || h === "acct" || h === "accountno" || h === "account") return "account_number";
-  if (h.includes("client") || h.includes("owner") || h.includes("lastname") || h === "name") return "client_name";
+  if (h === "firstname" || h === "givenname" || h.endsWith("firstname")) return "first_name";
+  if (h === "lastname" || h === "surname" || h === "familyname" || h.endsWith("lastname")) return "last_name";
+  if (h.includes("client") || h.includes("owner") || h === "name" || h === "fullname") return "client_name";
   if (h.includes("custodian") || h.includes("institution") || h.includes("firm")) return "custodian";
   if (h.includes("accounttype") || h.includes("registration") || h === "type") return "account_type";
   if (h.includes("product")) return "product";
-  if (h.includes("boy") || h.includes("beginningof") || h.includes("openingbalance") || h.includes("marketvaluebeg")) return "boy_value";
+  // Handle "Begining of the year" typo + "Beginning of year" + "BOY"
+  if (h === "boy" || h.includes("beginingof") || h.includes("beginningof") || h.includes("openingbalance") || h.includes("marketvaluebeg") || h.startsWith("begining") || h.startsWith("beginning")) return "boy_value";
+  // "As of YYYY-MM-DD" in IAG exports is the current balance column
+  if (/^asof\d/.test(h) || h.startsWith("asof20") || h.startsWith("asof19")) return "current_value";
+  if (h === "asof" || h === "asofdate" || h.includes("statementdate")) return "as_of_date";
   if (h.includes("current") || h.includes("closing") || h.includes("ending") || h.includes("marketvalueasof") || h === "balance") return "current_value";
-  if (h.includes("asof") || h.includes("statementdate") || h === "date") return "as_of_date";
+  if (h.includes("issuedate")) return "__skip__";
   if (h.includes("yeartodate") || h === "ytd" || h.includes("rorytd")) return "ror_ytd";
-  if (h.includes("6month") || h.includes("6m")) return "ror_6m";
-  if (h.includes("1year") || h === "1y") return "ror_1y";
-  if (h.includes("3year") || h === "3y") return "ror_3y";
-  if (h.includes("5year") || h === "5y") return "ror_5y";
-  if (h.includes("inception") || h.includes("sinceinit")) return "ror_since_inception";
+  if (h.includes("6month") || h === "6m" || h === "6mo") return "ror_6m";
+  if (h.includes("1year") || h === "1y" || h === "1yr") return "ror_1y";
+  if (h.includes("3year") || h === "3y" || h === "3yr") return "ror_3y";
+  if (h.includes("5year") || h === "5y" || h === "5yr") return "ror_5y";
+  if (h.includes("inception") || h.includes("sinceinit") || h.includes("sincepurchase")) return "ror_since_inception";
+  if (h.includes("date")) return "as_of_date";
   return "__skip__";
 }
 
 function parseDate(v: string): string | null {
   const s = (v || "").trim();
   if (!s) return null;
-  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  const iso = s.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (iso) return `${iso[1]}-${iso[2].padStart(2, "0")}-${iso[3].padStart(2, "0")}`;
   const m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
   if (m) {
     let [, mo, d, y] = m;
@@ -79,11 +90,15 @@ function parseDate(v: string): string | null {
   return null;
 }
 
-const num = (v: any): number => {
-  if (v === null || v === undefined) return 0;
-  const s = String(v).replace(/[$,\s%]/g, "").replace(/[()]/g, (m) => m === "(" ? "-" : "");
+// Returns null for blank/n/a/—; otherwise a number. Strips currency, spaces, %, and uses ()=negative.
+const num = (v: any): number | null => {
+  if (v === null || v === undefined) return null;
+  const raw = String(v).trim();
+  if (!raw) return null;
+  if (/^(n\/?a|na|—|-+|null)$/i.test(raw)) return null;
+  const s = raw.replace(/[$,\s%]/g, "").replace(/[()]/g, (m) => m === "(" ? "-" : "");
   const n = parseFloat(s);
-  return Number.isFinite(n) ? n : 0;
+  return Number.isFinite(n) ? n : null;
 };
 
 const fmt$ = (n: number) =>
