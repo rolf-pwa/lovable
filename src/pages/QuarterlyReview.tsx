@@ -425,12 +425,22 @@ export default function QuarterlyReview() {
                   </div>
                 ))}
               </div>
+              <div className="flex items-center gap-3 pt-2 border-t border-border">
+                <Label className="text-xs w-1/2">Default As-of Date (used when no column maps)</Label>
+                <Input
+                  type="date"
+                  value={defaultAsOfDate}
+                  onChange={(e) => setDefaultAsOfDate(e.target.value)}
+                  className="h-8 text-xs"
+                />
+              </div>
               {requiredMissing.length > 0 && (
                 <div className="flex items-center gap-2 text-xs text-rose-600 dark:text-rose-400">
                   <AlertTriangle className="h-4 w-4" />
                   Required fields not mapped: {requiredMissing.map((f) => f.label).join(", ")}
                 </div>
               )}
+
               <div className="flex gap-2">
                 <Button variant="ghost" onClick={() => setStep("upload")}>Back</Button>
                 <Button disabled={requiredMissing.length > 0 || busy} onClick={goToPreview}>
