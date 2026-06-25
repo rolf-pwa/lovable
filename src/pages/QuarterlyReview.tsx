@@ -293,6 +293,44 @@ export default function QuarterlyReview() {
     }
   };
 
+  const [committingRows, setCommittingRows] = useState<Set<number>>(new Set());
+
+  const commitSingleRow = async (rowNum: number) => {
+    const row = normalized.find((n) => n.csv_row_number === rowNum);
+    if (!row) return;
+    setCommittingRows((prev) => {
+      const next = new Set(prev);
+      next.add(rowNum);
+      return next;
+    });
+    try {
+      const payload = {
+        mode: "commit",
+        source_file: fileName,
+        rows: [{ ...row, override: overrides[rowNum] || null }],
+      };
+      const { data, error } = await supabase.functions.invoke("quarterly-account-sync", { body: payload });
+      if (error) throw error;
+      const newRow: RowResult | undefined = data?.results?.[0];
+      if (newRow) {
+        setResults((prev) => prev ? prev.map((r) => r.csv_row_number === rowNum ? newRow : r) : prev);
+        toast({
+          title: newRow.applied ? `Row ${rowNum} committed` : `Row ${rowNum} not applied`,
+          description: newRow.message || newRow.destination,
+          variant: newRow.applied ? "default" : "destructive",
+        });
+      }
+    } catch (err: any) {
+      toast({ title: `Row ${rowNum} failed`, description: err.message, variant: "destructive" });
+    } finally {
+      setCommittingRows((prev) => {
+        const next = new Set(prev);
+        next.delete(rowNum);
+        return next;
+      });
+    }
+  };
+
   const requiredMissing = useMemo(() => {
     const mapped = new Set(Object.values(mapping));
     const missing: { label: string }[] = [];
@@ -500,10 +538,6 @@ export default function QuarterlyReview() {
                       <Button variant="outline" onClick={() => callSync("preview", normalized)} disabled={busy}>
                         Re-run Preview
                       </Button>
-                      <Button onClick={() => callSync("commit", normalized)} disabled={busy}>
-                        {busy ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
-                        Commit ({summary.vineyard_update + summary.holding_tank_update + summary.storehouse_update + summary.holding_tank_new} rows)
-                      </Button>
                     </>
                   )}
                   {step === "done" && (
@@ -526,8 +560,14 @@ export default function QuarterlyReview() {
 
             {/* Row table with inline resolver */}
             <Card>
-              <CardHeader>
+              <CardHeader className="flex flex-row items-center justify-between gap-2">
                 <CardTitle className="text-sm">Row-by-row</CardTitle>
+                {step === "preview" && (
+                  <Button size="sm" onClick={() => callSync("commit", normalized)} disabled={busy}>
+                    {busy ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+                    Commit All ({summary.vineyard_update + summary.holding_tank_update + summary.storehouse_update + summary.holding_tank_new} rows)
+                  </Button>
+                )}
               </CardHeader>
               <CardContent>
                 <div className="max-h-[560px] overflow-auto">
@@ -542,6 +582,7 @@ export default function QuarterlyReview() {
                         <TableHead className="text-right">Current</TableHead>
                         <TableHead className="text-right">Δ $</TableHead>
                         <TableHead className="min-w-[280px]">Resolve / Override</TableHead>
+                        {step === "preview" && <TableHead className="w-[110px] text-right">Commit</TableHead>}
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -581,6 +622,32 @@ export default function QuarterlyReview() {
                                 />
                               )}
                             </TableCell>
+                            {step === "preview" && (
+                              <TableCell className="text-right">
+                                {r.applied ? (
+                                  <span className="inline-flex items-center gap-1 text-[11px] text-emerald-600">
+                                    <CheckCircle2 className="h-3.5 w-3.5" /> Applied
+                                  </span>
+                                ) : (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-7 px-2 text-xs"
+                                    disabled={
+                                      committingRows.has(r.csv_row_number) ||
+                                      busy ||
+                                      !["vineyard_update", "holding_tank_update", "storehouse_update", "holding_tank_new"].includes(r.destination)
+                                    }
+                                    onClick={() => commitSingleRow(r.csv_row_number)}
+                                  >
+                                    {committingRows.has(r.csv_row_number)
+                                      ? <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                      : <Save className="h-3 w-3 mr-1" />}
+                                    Commit
+                                  </Button>
+                                )}
+                              </TableCell>
+                            )}
                           </TableRow>
                         );
                       })}
