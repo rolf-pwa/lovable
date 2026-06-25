@@ -85,7 +85,8 @@ export function CharterRatificationTile({ householdId }: { householdId?: string 
 
   useEffect(() => {
     load();
-  }, [load]);
+  }, [load, householdId]);
+
 
   const ratify = async (row: CharterRow) => {
     setWorking(row.id);
