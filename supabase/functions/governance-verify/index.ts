@@ -193,7 +193,34 @@ Deno.serve(async (req) => {
       });
     }
 
-    // 5. Upsert review row
+    // 4b. Charter presence — referral opportunity if missing
+    const { data: hohRow } = await supabase
+      .from("contacts").select("id, first_name, last_name, family_role")
+      .in("id", contactIds);
+    const hoh = (hohRow ?? []).find((c: any) => c.family_role === "Head of Household") ?? (hohRow ?? [])[0];
+    let charterMissing = false;
+    if (hoh) {
+      const { data: charter } = await supabase
+        .from("sovereignty_charters")
+        .select("id, mission_of_capital, vision_20_year, growth_principles, liquidity_principles, esign_status")
+        .eq("contact_id", hoh.id)
+        .order("updated_at", { ascending: false })
+        .limit(1).maybeSingle();
+      const hasContent = !!charter && [
+        charter.mission_of_capital, charter.vision_20_year,
+        charter.growth_principles, charter.liquidity_principles,
+      ].some((v) => typeof v === "string" && v.trim().length > 0);
+      if (!hasContent) {
+        charterMissing = true;
+        findings.push({
+          severity: "info",
+          code: "charter_missing",
+          message: `No ratified Sovereignty Charter on file for ${hoh.first_name ?? ""} ${hoh.last_name ?? ""}. Refer the family to the Sovereignty Operating System to draft one before the next review.`,
+          account_ref: { contact_id: hoh.id, referral: "sovereignty_operating_system", esign_status: charter?.esign_status ?? null },
+        });
+      }
+    }
+
     const { data: review, error: rErr } = await supabase
       .from("monthly_governance_reviews")
       .upsert({
