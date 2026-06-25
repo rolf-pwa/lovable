@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { PageBreadcrumbs } from "@/components/PageBreadcrumbs";
 import { CrmTabs } from "@/components/CrmTabs";
+import { CharterRatificationTile } from "@/components/CharterRatificationTile";
+
 import {
   Select,
   SelectContent,
