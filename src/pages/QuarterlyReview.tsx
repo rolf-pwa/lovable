@@ -472,24 +472,8 @@ export default function QuarterlyReview() {
                     tone={totals.delta >= 0 ? "emerald" : "rose"}
                   />
                 </div>
-                <div className="rounded-lg border border-border bg-muted/20 p-4">
-                  <div className="text-xs font-medium text-muted-foreground mb-2">
-                    Variation ($) — top 25 by absolute change
-                  </div>
-                  <ResponsiveContainer width="100%" height={240}>
-                    <BarChart data={chartData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                      <XAxis dataKey="name" tick={{ fontSize: 10 }} interval={0} angle={-35} textAnchor="end" height={70} />
-                      <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
-                      <RTooltip
-                        contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", fontSize: 12 }}
-                        formatter={(v: any) => fmt$(Number(v))}
-                      />
-                      <Bar dataKey="variation" fill="hsl(var(--primary))" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
               </CardContent>
+
             </Card>
 
             {/* Routing summary + actions */}
