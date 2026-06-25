@@ -168,6 +168,7 @@ export default function QuarterlyReview() {
   const [vineyardAccts, setVineyardAccts] = useState<DirectoryAccount[]>([]);
   const [holdingAccts, setHoldingAccts] = useState<DirectoryAccount[]>([]);
   const [storehouses, setStorehouses] = useState<DirectoryStorehouse[]>([]);
+  const [defaultAsOfDate, setDefaultAsOfDate] = useState<string>("");
   const fileRef = useRef<HTMLInputElement>(null);
 
   // Preload directory once entering map step (needed for resolver later)
@@ -200,6 +201,20 @@ export default function QuarterlyReview() {
         (r.some((c) => /last\s*name/i.test(c || "")) && r.some((c) => /first\s*name/i.test(c || "")))
       );
       if (headerIdx < 0) headerIdx = 0;
+
+      // Look for a global as-of date in title rows above the header, or inside any header cell
+      // (IAG exports: "Client investment data as at 2026-05-29" or column "As of 2026-05-29").
+      const scanRows = [...all.slice(0, headerIdx), all[headerIdx] || []];
+      let detectedDate = "";
+      for (const r of scanRows) {
+        for (const cell of r) {
+          const d = parseDate(String(cell || ""));
+          if (d) { detectedDate = d; break; }
+        }
+        if (detectedDate) break;
+      }
+      setDefaultAsOfDate(detectedDate);
+
       const hdrs = (all[headerIdx] || []).map((h, i) => (h || "").trim() || `col_${i}`);
       const data = all.slice(headerIdx + 1).filter((r) => r.some((c) => (c || "").trim() !== ""));
       setHeaders(hdrs);
@@ -224,28 +239,33 @@ export default function QuarterlyReview() {
     };
     return rawRows.map((row, i) => {
       const acctRaw = (get(row, "account_number") || "").trim();
-      const nameRaw = (get(row, "client_name") || "").trim();
-      // Skip rows without any identifying data (footer/total rows)
-      if (!acctRaw && !nameRaw) return null as any;
+      const firstRaw = (get(row, "first_name") || "").trim();
+      const lastRaw = (get(row, "last_name") || "").trim();
+      const fullRaw = (get(row, "client_name") || "").trim();
+      const combinedName = fullRaw || [firstRaw, lastRaw].filter(Boolean).join(" ") || null;
+      // Skip rows without any identifying data (footer/total/note rows)
+      if (!acctRaw && !combinedName) return null as any;
+      const rowDate = parseDate(get(row, "as_of_date") || "") || defaultAsOfDate || null;
       return {
         csv_row_number: i + 2,
         account_number: acctRaw || null,
-        client_name: nameRaw || null,
+        client_name: combinedName,
         custodian: (get(row, "custodian") || "").trim() || null,
         account_type: (get(row, "account_type") || "").trim() || null,
         product: (get(row, "product") || "").trim() || null,
-        boy_value: get(row, "boy_value") !== undefined ? num(get(row, "boy_value")) : null,
-        current_value: get(row, "current_value") !== undefined ? num(get(row, "current_value")) : null,
-        as_of_date: parseDate(get(row, "as_of_date") || ""),
-        ror_ytd: get(row, "ror_ytd") !== undefined ? num(get(row, "ror_ytd")) : null,
-        ror_6m: get(row, "ror_6m") !== undefined ? num(get(row, "ror_6m")) : null,
-        ror_1y: get(row, "ror_1y") !== undefined ? num(get(row, "ror_1y")) : null,
-        ror_3y: get(row, "ror_3y") !== undefined ? num(get(row, "ror_3y")) : null,
-        ror_5y: get(row, "ror_5y") !== undefined ? num(get(row, "ror_5y")) : null,
-        ror_since_inception: get(row, "ror_since_inception") !== undefined ? num(get(row, "ror_since_inception")) : null,
+        boy_value: num(get(row, "boy_value")),
+        current_value: num(get(row, "current_value")),
+        as_of_date: rowDate,
+        ror_ytd: num(get(row, "ror_ytd")),
+        ror_6m: num(get(row, "ror_6m")),
+        ror_1y: num(get(row, "ror_1y")),
+        ror_3y: num(get(row, "ror_3y")),
+        ror_5y: num(get(row, "ror_5y")),
+        ror_since_inception: num(get(row, "ror_since_inception")),
       };
     }).filter(Boolean);
   };
+
 
   const callSync = async (mode: "preview" | "commit", rows: NormalizedRow[]) => {
     setBusy(true);
