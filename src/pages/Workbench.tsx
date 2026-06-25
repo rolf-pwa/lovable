@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/AppLayout";
 import { PageBreadcrumbs } from "@/components/PageBreadcrumbs";
 import { CashflowAnalyst } from "@/components/workbench/CashflowAnalyst";
-import { PerformanceAnalyst } from "@/components/workbench/PerformanceAnalyst";
+
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -68,9 +68,9 @@ const Workbench = () => {
             </p>
           </div>
           <Button asChild variant="outline">
-            <Link to="/quarterly-account-sync">
+            <Link to="/workbench/quarterly-review">
               <FileSpreadsheet className="h-4 w-4 mr-2" />
-              Bulk Account Sync
+              Quarterly Review
             </Link>
           </Button>
         </div>
@@ -100,8 +100,6 @@ const Workbench = () => {
           </CardContent>
         </Card>
 
-        {/* Cross-client agent — no household required */}
-        <PerformanceAnalyst />
 
         {/* Household-scoped agents */}
         {selectedHousehold && currentHH ? (
