@@ -578,6 +578,7 @@ export default function QuarterlyReview() {
                         <TableHead>Destination</TableHead>
                         <TableHead>Account #</TableHead>
                         <TableHead>Client</TableHead>
+                        <TableHead>Account Type</TableHead>
                         <TableHead className="text-right">BOY</TableHead>
                         <TableHead className="text-right">Current</TableHead>
                         <TableHead className="text-right">Δ $</TableHead>
