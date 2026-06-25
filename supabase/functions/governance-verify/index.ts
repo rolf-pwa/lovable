@@ -252,7 +252,7 @@ Deno.serve(async (req) => {
       if (fErr) throw fErr;
     }
 
-    return json({ review_id: review.id, accounts: accounts.length, findings });
+    return json({ review_id: review.id, accounts: accounts.length, findings, charter_missing: charterMissing });
   } catch (e) {
     return json({ error: e instanceof Error ? e.message : String(e) }, 500);
   }
