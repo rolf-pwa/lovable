@@ -25,20 +25,23 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
 type TargetField =
-  | "__skip__" | "account_number" | "client_name" | "custodian" | "account_type" | "product"
+  | "__skip__" | "account_number" | "client_name" | "first_name" | "last_name"
+  | "custodian" | "account_type" | "product"
   | "boy_value" | "current_value" | "as_of_date"
   | "ror_ytd" | "ror_6m" | "ror_1y" | "ror_3y" | "ror_5y" | "ror_since_inception";
 
 const FIELDS: { value: TargetField; label: string; required?: boolean }[] = [
   { value: "__skip__", label: "— Skip —" },
-  { value: "account_number", label: "Account Number", required: true },
-  { value: "client_name", label: "Client Name" },
+  { value: "account_number", label: "Account / Contract Number", required: true },
+  { value: "client_name", label: "Client Name (full)" },
+  { value: "first_name", label: "First Name" },
+  { value: "last_name", label: "Last Name" },
   { value: "custodian", label: "Custodian" },
-  { value: "account_type", label: "Account Type" },
+  { value: "account_type", label: "Account Type / Registration" },
   { value: "product", label: "Product" },
   { value: "boy_value", label: "BOY Balance", required: true },
   { value: "current_value", label: "Current Balance", required: true },
-  { value: "as_of_date", label: "As-of Date", required: true },
+  { value: "as_of_date", label: "As-of Date" },
   { value: "ror_ytd", label: "RoR YTD" },
   { value: "ror_6m", label: "RoR 6M" },
   { value: "ror_1y", label: "RoR 1Y" },
@@ -50,26 +53,34 @@ const FIELDS: { value: TargetField; label: string; required?: boolean }[] = [
 function guessField(header: string): TargetField {
   const h = header.toLowerCase().replace(/[_\-\s]+/g, "");
   if (h.includes("accountnumber") || h.includes("contract") || h === "acct" || h === "accountno" || h === "account") return "account_number";
-  if (h.includes("client") || h.includes("owner") || h.includes("lastname") || h === "name") return "client_name";
+  if (h === "firstname" || h === "givenname" || h.endsWith("firstname")) return "first_name";
+  if (h === "lastname" || h === "surname" || h === "familyname" || h.endsWith("lastname")) return "last_name";
+  if (h.includes("client") || h.includes("owner") || h === "name" || h === "fullname") return "client_name";
   if (h.includes("custodian") || h.includes("institution") || h.includes("firm")) return "custodian";
   if (h.includes("accounttype") || h.includes("registration") || h === "type") return "account_type";
   if (h.includes("product")) return "product";
-  if (h.includes("boy") || h.includes("beginningof") || h.includes("openingbalance") || h.includes("marketvaluebeg")) return "boy_value";
+  // Handle "Begining of the year" typo + "Beginning of year" + "BOY"
+  if (h === "boy" || h.includes("beginingof") || h.includes("beginningof") || h.includes("openingbalance") || h.includes("marketvaluebeg") || h.startsWith("begining") || h.startsWith("beginning")) return "boy_value";
+  // "As of YYYY-MM-DD" in IAG exports is the current balance column
+  if (/^asof\d/.test(h) || h.startsWith("asof20") || h.startsWith("asof19")) return "current_value";
+  if (h === "asof" || h === "asofdate" || h.includes("statementdate")) return "as_of_date";
   if (h.includes("current") || h.includes("closing") || h.includes("ending") || h.includes("marketvalueasof") || h === "balance") return "current_value";
-  if (h.includes("asof") || h.includes("statementdate") || h === "date") return "as_of_date";
+  if (h.includes("issuedate")) return "__skip__";
   if (h.includes("yeartodate") || h === "ytd" || h.includes("rorytd")) return "ror_ytd";
-  if (h.includes("6month") || h.includes("6m")) return "ror_6m";
-  if (h.includes("1year") || h === "1y") return "ror_1y";
-  if (h.includes("3year") || h === "3y") return "ror_3y";
-  if (h.includes("5year") || h === "5y") return "ror_5y";
-  if (h.includes("inception") || h.includes("sinceinit")) return "ror_since_inception";
+  if (h.includes("6month") || h === "6m" || h === "6mo") return "ror_6m";
+  if (h.includes("1year") || h === "1y" || h === "1yr") return "ror_1y";
+  if (h.includes("3year") || h === "3y" || h === "3yr") return "ror_3y";
+  if (h.includes("5year") || h === "5y" || h === "5yr") return "ror_5y";
+  if (h.includes("inception") || h.includes("sinceinit") || h.includes("sincepurchase")) return "ror_since_inception";
+  if (h.includes("date")) return "as_of_date";
   return "__skip__";
 }
 
 function parseDate(v: string): string | null {
   const s = (v || "").trim();
   if (!s) return null;
-  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  const iso = s.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (iso) return `${iso[1]}-${iso[2].padStart(2, "0")}-${iso[3].padStart(2, "0")}`;
   const m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
   if (m) {
     let [, mo, d, y] = m;
@@ -79,11 +90,15 @@ function parseDate(v: string): string | null {
   return null;
 }
 
-const num = (v: any): number => {
-  if (v === null || v === undefined) return 0;
-  const s = String(v).replace(/[$,\s%]/g, "").replace(/[()]/g, (m) => m === "(" ? "-" : "");
+// Returns null for blank/n/a/—; otherwise a number. Strips currency, spaces, %, and uses ()=negative.
+const num = (v: any): number | null => {
+  if (v === null || v === undefined) return null;
+  const raw = String(v).trim();
+  if (!raw) return null;
+  if (/^(n\/?a|na|—|-+|null)$/i.test(raw)) return null;
+  const s = raw.replace(/[$,\s%]/g, "").replace(/[()]/g, (m) => m === "(" ? "-" : "");
   const n = parseFloat(s);
-  return Number.isFinite(n) ? n : 0;
+  return Number.isFinite(n) ? n : null;
 };
 
 const fmt$ = (n: number) =>
@@ -153,6 +168,7 @@ export default function QuarterlyReview() {
   const [vineyardAccts, setVineyardAccts] = useState<DirectoryAccount[]>([]);
   const [holdingAccts, setHoldingAccts] = useState<DirectoryAccount[]>([]);
   const [storehouses, setStorehouses] = useState<DirectoryStorehouse[]>([]);
+  const [defaultAsOfDate, setDefaultAsOfDate] = useState<string>("");
   const fileRef = useRef<HTMLInputElement>(null);
 
   // Preload directory once entering map step (needed for resolver later)
@@ -185,6 +201,20 @@ export default function QuarterlyReview() {
         (r.some((c) => /last\s*name/i.test(c || "")) && r.some((c) => /first\s*name/i.test(c || "")))
       );
       if (headerIdx < 0) headerIdx = 0;
+
+      // Look for a global as-of date in title rows above the header, or inside any header cell
+      // (IAG exports: "Client investment data as at 2026-05-29" or column "As of 2026-05-29").
+      const scanRows = [...all.slice(0, headerIdx), all[headerIdx] || []];
+      let detectedDate = "";
+      for (const r of scanRows) {
+        for (const cell of r) {
+          const d = parseDate(String(cell || ""));
+          if (d) { detectedDate = d; break; }
+        }
+        if (detectedDate) break;
+      }
+      setDefaultAsOfDate(detectedDate);
+
       const hdrs = (all[headerIdx] || []).map((h, i) => (h || "").trim() || `col_${i}`);
       const data = all.slice(headerIdx + 1).filter((r) => r.some((c) => (c || "").trim() !== ""));
       setHeaders(hdrs);
@@ -209,28 +239,33 @@ export default function QuarterlyReview() {
     };
     return rawRows.map((row, i) => {
       const acctRaw = (get(row, "account_number") || "").trim();
-      const nameRaw = (get(row, "client_name") || "").trim();
-      // Skip rows without any identifying data (footer/total rows)
-      if (!acctRaw && !nameRaw) return null as any;
+      const firstRaw = (get(row, "first_name") || "").trim();
+      const lastRaw = (get(row, "last_name") || "").trim();
+      const fullRaw = (get(row, "client_name") || "").trim();
+      const combinedName = fullRaw || [firstRaw, lastRaw].filter(Boolean).join(" ") || null;
+      // Skip rows without any identifying data (footer/total/note rows)
+      if (!acctRaw && !combinedName) return null as any;
+      const rowDate = parseDate(get(row, "as_of_date") || "") || defaultAsOfDate || null;
       return {
         csv_row_number: i + 2,
         account_number: acctRaw || null,
-        client_name: nameRaw || null,
+        client_name: combinedName,
         custodian: (get(row, "custodian") || "").trim() || null,
         account_type: (get(row, "account_type") || "").trim() || null,
         product: (get(row, "product") || "").trim() || null,
-        boy_value: get(row, "boy_value") !== undefined ? num(get(row, "boy_value")) : null,
-        current_value: get(row, "current_value") !== undefined ? num(get(row, "current_value")) : null,
-        as_of_date: parseDate(get(row, "as_of_date") || ""),
-        ror_ytd: get(row, "ror_ytd") !== undefined ? num(get(row, "ror_ytd")) : null,
-        ror_6m: get(row, "ror_6m") !== undefined ? num(get(row, "ror_6m")) : null,
-        ror_1y: get(row, "ror_1y") !== undefined ? num(get(row, "ror_1y")) : null,
-        ror_3y: get(row, "ror_3y") !== undefined ? num(get(row, "ror_3y")) : null,
-        ror_5y: get(row, "ror_5y") !== undefined ? num(get(row, "ror_5y")) : null,
-        ror_since_inception: get(row, "ror_since_inception") !== undefined ? num(get(row, "ror_since_inception")) : null,
+        boy_value: num(get(row, "boy_value")),
+        current_value: num(get(row, "current_value")),
+        as_of_date: rowDate,
+        ror_ytd: num(get(row, "ror_ytd")),
+        ror_6m: num(get(row, "ror_6m")),
+        ror_1y: num(get(row, "ror_1y")),
+        ror_3y: num(get(row, "ror_3y")),
+        ror_5y: num(get(row, "ror_5y")),
+        ror_since_inception: num(get(row, "ror_since_inception")),
       };
     }).filter(Boolean);
   };
+
 
   const callSync = async (mode: "preview" | "commit", rows: NormalizedRow[]) => {
     setBusy(true);
@@ -260,8 +295,14 @@ export default function QuarterlyReview() {
 
   const requiredMissing = useMemo(() => {
     const mapped = new Set(Object.values(mapping));
-    return FIELDS.filter((f) => f.required && !mapped.has(f.value));
-  }, [mapping]);
+    const missing: { label: string }[] = [];
+    if (!mapped.has("account_number")) missing.push({ label: "Account / Contract Number" });
+    if (!mapped.has("boy_value")) missing.push({ label: "BOY Balance" });
+    if (!mapped.has("current_value")) missing.push({ label: "Current Balance" });
+    if (!mapped.has("as_of_date") && !defaultAsOfDate) missing.push({ label: "As-of Date (column or default)" });
+    return missing;
+  }, [mapping, defaultAsOfDate]);
+
 
   const totals = useMemo(() => {
     const boy = normalized.reduce((s, r) => s + (r.boy_value || 0), 0);
@@ -384,12 +425,22 @@ export default function QuarterlyReview() {
                   </div>
                 ))}
               </div>
+              <div className="flex items-center gap-3 pt-2 border-t border-border">
+                <Label className="text-xs w-1/2">Default As-of Date (used when no column maps)</Label>
+                <Input
+                  type="date"
+                  value={defaultAsOfDate}
+                  onChange={(e) => setDefaultAsOfDate(e.target.value)}
+                  className="h-8 text-xs"
+                />
+              </div>
               {requiredMissing.length > 0 && (
                 <div className="flex items-center gap-2 text-xs text-rose-600 dark:text-rose-400">
                   <AlertTriangle className="h-4 w-4" />
                   Required fields not mapped: {requiredMissing.map((f) => f.label).join(", ")}
                 </div>
               )}
+
               <div className="flex gap-2">
                 <Button variant="ghost" onClick={() => setStep("upload")}>Back</Button>
                 <Button disabled={requiredMissing.length > 0 || busy} onClick={goToPreview}>
