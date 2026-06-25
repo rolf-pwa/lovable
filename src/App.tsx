@@ -104,6 +104,7 @@ const App = () => (
             <Route path="/quarterly-system-review/contact/:contactId" element={<ProtectedRoute><QuarterlySystemReviewResolver /></ProtectedRoute>} />
             <Route path="/quarterly-system-review/:id" element={<ProtectedRoute><QuarterlySystemReview /></ProtectedRoute>} />
             <Route path="/workbench/quarterly-review" element={<ProtectedRoute><QuarterlyReview /></ProtectedRoute>} />
+            <Route path="/workbench/governance-review" element={<ProtectedRoute><GovernanceReview /></ProtectedRoute>} />
             <Route path="/quarterly-account-sync" element={<ProtectedRoute><QuarterlyReview /></ProtectedRoute>} />
             <Route path="/sovereignty-charter/contact/:contactId" element={<ProtectedRoute><SovereigntyCharter /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
