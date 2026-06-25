@@ -295,8 +295,14 @@ export default function QuarterlyReview() {
 
   const requiredMissing = useMemo(() => {
     const mapped = new Set(Object.values(mapping));
-    return FIELDS.filter((f) => f.required && !mapped.has(f.value));
-  }, [mapping]);
+    const missing: { label: string }[] = [];
+    if (!mapped.has("account_number")) missing.push({ label: "Account / Contract Number" });
+    if (!mapped.has("boy_value")) missing.push({ label: "BOY Balance" });
+    if (!mapped.has("current_value")) missing.push({ label: "Current Balance" });
+    if (!mapped.has("as_of_date") && !defaultAsOfDate) missing.push({ label: "As-of Date (column or default)" });
+    return missing;
+  }, [mapping, defaultAsOfDate]);
+
 
   const totals = useMemo(() => {
     const boy = normalized.reduce((s, r) => s + (r.boy_value || 0), 0);
