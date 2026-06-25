@@ -1,0 +1,3 @@
+CREATE UNIQUE INDEX IF NOT EXISTS account_harvest_snapshots_vineyard_date_uidx ON public.account_harvest_snapshots (vineyard_account_id, snapshot_date) WHERE vineyard_account_id IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS account_harvest_snapshots_storehouse_date_uidx ON public.account_harvest_snapshots (storehouse_id, snapshot_date) WHERE storehouse_id IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS account_harvest_snapshots_holding_date_uidx ON public.account_harvest_snapshots (holding_tank_id, snapshot_date) WHERE holding_tank_id IS NOT NULL;
