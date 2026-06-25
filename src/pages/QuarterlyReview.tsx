@@ -578,6 +578,7 @@ export default function QuarterlyReview() {
                         <TableHead>Destination</TableHead>
                         <TableHead>Account #</TableHead>
                         <TableHead>Client</TableHead>
+                        <TableHead>Account Type</TableHead>
                         <TableHead className="text-right">BOY</TableHead>
                         <TableHead className="text-right">Current</TableHead>
                         <TableHead className="text-right">Δ $</TableHead>
@@ -604,6 +605,7 @@ export default function QuarterlyReview() {
                             <TableCell className="text-xs">
                               {r.matched_contact_name || r.client_name}
                             </TableCell>
+                            <TableCell className="text-xs">{norm?.account_type}</TableCell>
                             <TableCell className="text-right text-xs tabular-nums">{fmt$(norm?.boy_value || 0)}</TableCell>
                             <TableCell className="text-right text-xs tabular-nums">{fmt$(norm?.current_value || 0)}</TableCell>
                             <TableCell className={`text-right text-xs tabular-nums ${delta >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
