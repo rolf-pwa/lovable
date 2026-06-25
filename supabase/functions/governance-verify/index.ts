@@ -235,6 +235,7 @@ Deno.serve(async (req) => {
           findings: findings.length,
           critical: findings.filter((f) => f.severity === "critical").length,
           warn: findings.filter((f) => f.severity === "warn").length,
+          charter_missing: charterMissing ? 1 : 0,
         },
         generation_error: null,
       }, { onConflict: "scope_type,scope_id,period_end" })
