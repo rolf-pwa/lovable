@@ -27,7 +27,7 @@ interface Counts {
   none: number;
 }
 
-export function CharterRatificationTile() {
+export function CharterRatificationTile({ householdId }: { householdId?: string } = {}) {
   const [counts, setCounts] = useState<Counts>({ draft: 0, sent: 0, signed: 0, ratified: 0, none: 0 });
   const [queue, setQueue] = useState<CharterRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -35,12 +35,17 @@ export function CharterRatificationTile() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [{ data: charters }, { data: contacts }] = await Promise.all([
-      supabase
-        .from("sovereignty_charters")
-        .select("id, contact_id, esign_status, draft_status, esign_doc_url, esign_signed_at"),
-      supabase.from("contacts").select("id, first_name, last_name, household_id"),
-    ]);
+    const contactsQuery = supabase.from("contacts").select("id, first_name, last_name, household_id");
+    if (householdId) contactsQuery.eq("household_id", householdId);
+    const { data: contacts } = await contactsQuery;
+    const contactIds = (contacts || []).map((c: any) => c.id);
+
+    const chartersQuery = supabase
+      .from("sovereignty_charters")
+      .select("id, contact_id, esign_status, draft_status, esign_doc_url, esign_signed_at");
+    if (householdId) chartersQuery.in("contact_id", contactIds.length ? contactIds : ["00000000-0000-0000-0000-000000000000"]);
+    const { data: charters } = await chartersQuery;
+
 
     const contactMap = new Map(
       (contacts || []).map((c: any) => [
@@ -80,7 +85,8 @@ export function CharterRatificationTile() {
 
   useEffect(() => {
     load();
-  }, [load]);
+  }, [load, householdId]);
+
 
   const ratify = async (row: CharterRow) => {
     setWorking(row.id);
