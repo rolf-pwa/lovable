@@ -970,6 +970,115 @@ export type Database = {
         }
         Relationships: []
       }
+      governance_alignment_results: {
+        Row: {
+          advisor_note: string | null
+          advisor_override: string | null
+          alignment_status: string
+          charter_principle: string
+          charter_section_key: string | null
+          created_at: string
+          evidence_source: Json
+          exception_reason: string | null
+          fact_key: string
+          id: string
+          performance_fact: Json
+          recommended_action: string | null
+          review_id: string
+          updated_at: string
+        }
+        Insert: {
+          advisor_note?: string | null
+          advisor_override?: string | null
+          alignment_status?: string
+          charter_principle?: string
+          charter_section_key?: string | null
+          created_at?: string
+          evidence_source?: Json
+          exception_reason?: string | null
+          fact_key: string
+          id?: string
+          performance_fact?: Json
+          recommended_action?: string | null
+          review_id: string
+          updated_at?: string
+        }
+        Update: {
+          advisor_note?: string | null
+          advisor_override?: string | null
+          alignment_status?: string
+          charter_principle?: string
+          charter_section_key?: string | null
+          created_at?: string
+          evidence_source?: Json
+          exception_reason?: string | null
+          fact_key?: string
+          id?: string
+          performance_fact?: Json
+          recommended_action?: string | null
+          review_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "governance_alignment_results_review_id_fkey"
+            columns: ["review_id"]
+            isOneToOne: false
+            referencedRelation: "monthly_governance_reviews"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      governance_review_findings: {
+        Row: {
+          account_ref: Json
+          code: string
+          created_at: string
+          id: string
+          message: string
+          resolved_at: string | null
+          resolved_by: string | null
+          review_id: string
+          severity: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          account_ref?: Json
+          code: string
+          created_at?: string
+          id?: string
+          message: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          review_id: string
+          severity?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          account_ref?: Json
+          code?: string
+          created_at?: string
+          id?: string
+          message?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          review_id?: string
+          severity?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "governance_review_findings_review_id_fkey"
+            columns: ["review_id"]
+            isOneToOne: false
+            referencedRelation: "monthly_governance_reviews"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       holding_tank: {
         Row: {
           account_name: string
@@ -1293,6 +1402,63 @@ export type Database = {
           target_household_ids?: string[] | null
           title?: string
           url?: string
+        }
+        Relationships: []
+      }
+      monthly_governance_reviews: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          briefing_markdown: string | null
+          briefing_principal_markdown: string | null
+          charter_checked_at: string | null
+          counts: Json
+          created_at: string
+          created_by: string | null
+          generation_error: string | null
+          id: string
+          period_end: string
+          scope_id: string
+          scope_type: string
+          status: string
+          updated_at: string
+          verified_at: string | null
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          briefing_markdown?: string | null
+          briefing_principal_markdown?: string | null
+          charter_checked_at?: string | null
+          counts?: Json
+          created_at?: string
+          created_by?: string | null
+          generation_error?: string | null
+          id?: string
+          period_end: string
+          scope_id: string
+          scope_type: string
+          status?: string
+          updated_at?: string
+          verified_at?: string | null
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          briefing_markdown?: string | null
+          briefing_principal_markdown?: string | null
+          charter_checked_at?: string | null
+          counts?: Json
+          created_at?: string
+          created_by?: string | null
+          generation_error?: string | null
+          id?: string
+          period_end?: string
+          scope_id?: string
+          scope_type?: string
+          status?: string
+          updated_at?: string
+          verified_at?: string | null
         }
         Relationships: []
       }

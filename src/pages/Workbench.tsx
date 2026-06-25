@@ -67,12 +67,20 @@ const Workbench = () => {
               AI-powered operational intelligence for the Personal Sanctuary
             </p>
           </div>
-          <Button asChild variant="outline">
-            <Link to="/workbench/quarterly-review">
-              <FileSpreadsheet className="h-4 w-4 mr-2" />
-              Quarterly Review
-            </Link>
-          </Button>
+          <div className="flex gap-2">
+            <Button asChild variant="outline">
+              <Link to="/workbench/quarterly-review">
+                <FileSpreadsheet className="h-4 w-4 mr-2" />
+                Quarterly Review
+              </Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link to="/workbench/governance-review">
+                <FileSpreadsheet className="h-4 w-4 mr-2" />
+                Governance Review
+              </Link>
+            </Button>
+          </div>
         </div>
 
         {/* Household Selector */}

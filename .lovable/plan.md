@@ -1,60 +1,110 @@
+# Monthly Governance Review — Build Plan
 
-# Quarterly Account CSV Ingest
+Extend the existing Periodic Account Review (Performance Engine) with a Verification layer and a new Charter Alignment Engine, then surface both in a unified "Monthly Governance Review" object. The existing reconciliation flow stays untouched; we layer on top.
 
-Add a "Bulk Account Sync" step to the Quarterly System Review workbench that ingests a CSV of accounts, auto-routes each row to the correct destination by account number, updates balances and metadata, writes BOY/current snapshots for performance math, and stages anything unrecognised in the Holding Tank for later classification.
-
-## Flow
+## Architecture
 
 ```text
-Upload CSV
-   │
-   ▼
-Header mapping (auto-guess + confirm)
-   │
-   ▼
-Lookup account_number across:
-   vineyard_accounts → storehouses → holding_tank
-   │
-   ├── Match ───► Update current_value, metadata (custodian, type) if changed
-   │              Insert account_harvest_snapshot (BOY + current, reporting_year)
-   │
-   └── No match ─► Insert into holding_tank (flagged needs_review)
-                   Insert account_harvest_snapshot against the new row
-   │
-   ▼
-Summary screen: matched / updated / staged / errors  +  downloadable report
+Periodic Review (today)            NEW
+─────────────────────────         ────────────────────────────────
+Upload → Map → Preview →   ──►   [Verification Layer]
+Resolve → Commit                  stale-date / variance /
+   │                              unresolved exception checks
+   ├─ live balances                       │
+   ├─ account_harvest_snapshots           ▼
+   └─ sovereignty_audit_trail     [Charter Alignment Engine]
+                                  retrieve charter sections →
+                                  compare facts vs principles
+                                          │
+                                          ▼
+                                  monthly_governance_reviews
+                                  (status pipeline)
+                                          │
+                                          ▼
+                                  Briefing Pack (advisor/principal)
 ```
 
-## UI
+State machine on each monthly review row:
+`ingested → committed → verified → charter_checked → approved_for_reporting`
 
-New page `src/pages/QuarterlyAccountSync.tsx`, linked from a "Bulk Account Sync" button on `QuarterlySystemReview.tsx`.
+## Scope (this build)
 
-Three steps reusing the pattern from `ContactCsvImport.tsx`:
-1. **Upload** — drag/drop CSV.
-2. **Map columns** — auto-guess headers (account number, client name, custodian, account type, BOY balance, current balance, as-of date); user confirms required fields (account number, current balance, BOY balance, as-of date).
-3. **Preview & confirm** — table of first 20 rows showing detected destination (Vineyard / Storehouse / Holding Tank / NEW → Holding Tank) and a totals strip. "Run sync" button commits.
+1. **Verification Layer** (post-commit, deterministic)
+   - New edge function `governance-verify` that, given `(household_id|contact_id, period)`, scans `account_harvest_snapshots` + live balances for that month and emits findings:
+     - Stale snapshot (no row for any tracked account in the period)
+     - Material variance vs prior period (> configurable %)
+     - Unresolved holding-tank rows / unmatched CSV remnants
+     - Missing as-of date / null values
+   - Findings written to `governance_review_findings` (jsonb per finding, severity, account ref).
+   - Auto-invoked at the end of `quarterly-account-sync` commit, and re-runnable from UI.
 
-Post-run summary card: counts by destination, list of staged-as-new rows with a link to the Holding Tank, downloadable CSV of any rows that failed validation.
+2. **Charter Intelligence Layer**
+   - New table `charter_sections`: `(id, charter_id, contact_id, section_key, title, body, ordinal, embedding vector(768), updated_at)`.
+   - One-time + on-charter-update edge function `charter-index` that chunks `sovereignty_charters` rows by section (liquidity policy, governance, decision rules, capital purpose, vision, etc.) and stores rows. Use Lovable AI Gateway `google/text-embedding-004` for embeddings (Montréal-pinned via existing Vertex helper).
+   - Retrieval helper: given a performance fact (e.g. "Vineyard down 12%"), return top-k cited sections.
 
-## Matching rules
+3. **Charter Alignment Engine**
+   - New edge function `governance-align` that, for each verified performance fact in the period, retrieves relevant charter sections and asks Gemini 2.5 Flash to classify `aligned | exception | needs_review` with a one-sentence rationale and a charter citation.
+   - Writes rows to `governance_alignment_results` matching the comparison schema from the blueprint:
+     `review_period, household_or_entity, performance_fact, charter_principle, alignment_status, evidence_source, exception_reason, recommended_action`.
 
-- Key: normalised `account_number` (trim, strip spaces and dashes, uppercase).
-- Lookup order: `vineyard_accounts` → `storehouses` → `holding_tank`. First hit wins.
-- Conflict (same number in two tables) → row goes to error report, not auto-applied.
-- Unmatched → insert into `holding_tank` with `needs_review = true`, copying client name, custodian, account type, balances.
+4. **Monthly Governance Review object**
+   - New table `monthly_governance_reviews` keyed by `(scope_type, scope_id, period_end)` with the status pipeline above, plus aggregate counts (aligned / exceptions / needs_review), `verified_at`, `charter_checked_at`, `approved_by`, `approved_at`.
+   - Children: `governance_review_findings`, `governance_alignment_results`.
 
-## Writes per matched row
+5. **Briefing Generator**
+   - Edge function `governance-briefing` that reads ONLY an `approved_for_reporting` review object and emits a markdown briefing (advisor note + principal note variant). Hard rule: it never touches raw uploads or unapproved rows.
 
-- Update `current_value` to CSV current balance.
-- Patch `custodian` and `account_type` only when CSV provides a non-empty value that differs.
-- Insert one `account_harvest_snapshots` row with `snapshot_date` = CSV as-of date, `boy_value`, `current_value`, and the correct `vineyard_account_id` / `storehouse_id` / `holding_tank_id` (the existing DB trigger enforces exactly one and back-fills `reporting_year` + `contact_id` check).
+6. **UI**
+   - New page `/workbench/governance-review` (or tab inside existing Quarterly Review) with three steps after Commit:
+     a. **Verify** — finding list with severity, ack/resolve actions.
+     b. **Charter Alignment** — table of facts × charter principles with status chips and citation popovers; advisor can override status + add note.
+     c. **Approve & Brief** — gate to mark `approved_for_reporting`, then "Generate Briefing" producing markdown preview + copy/download.
+   - Surface a "Latest Governance Review" card on `/households/:id` and `/families/:id`.
 
-## Backend
+## Data model (migration)
 
-New edge function `quarterly-account-sync` (service-role) that accepts the parsed + mapped rows and performs all writes in a single batched transaction-style sequence, returning per-row results. Keeps RLS-sensitive table writes off the client and lets us reuse the same logic if we later add a scheduled importer.
+```sql
+-- charter chunks (pgvector already used elsewhere? if not, fall back to jsonb text + lexical retrieval)
+create table public.charter_sections (...);
 
-## Out of scope (flag for a follow-up)
+create table public.monthly_governance_reviews (
+  id uuid pk, scope_type text, scope_id uuid, period_end date,
+  status text default 'ingested',
+  counts jsonb default '{}'::jsonb,
+  verified_at timestamptz, charter_checked_at timestamptz,
+  approved_by uuid, approved_at timestamptz,
+  briefing_markdown text,
+  created_at, updated_at
+);
 
-- Mapping by custodian + account number pair.
-- Auto-classification of staged Holding Tank rows into Vineyard/Storehouse (still a manual review step).
-- Multi-quarter back-fill in one upload — this run targets a single as-of date per file.
+create table public.governance_review_findings (
+  id, review_id fk, severity text, code text, account_ref jsonb,
+  message text, status text default 'open', created_at
+);
+
+create table public.governance_alignment_results (
+  id, review_id fk,
+  performance_fact jsonb,
+  charter_section_id fk, charter_principle text,
+  alignment_status text, exception_reason text,
+  recommended_action text, evidence_source jsonb,
+  advisor_override text, advisor_note text, created_at
+);
+```
+All four tables: `GRANT` to `authenticated` + `service_role`, RLS scoped to staff (existing pattern), advisor-only writes.
+
+## Out of scope (defer)
+
+- Auto-creating Asana action tasks from findings/recommendations (hook ready, wired later).
+- Client portal exposure of the briefing (staff-only first).
+- Replacing the existing `quarterly_system_reviews` flow — that stays as the per-contact narrative; the new object is period-scoped and household/family aware.
+
+## Open questions
+
+1. **Scope** — should reviews be generated at **household** level (matches AUM tiles) or **contact** level (matches existing quarterly_system_reviews)? Blueprint says "household_or_entity"; I'd default to household with optional contact rollup.
+2. **Variance thresholds** — default to ±10% MoM and stale > 35 days, configurable per family later?
+3. **Charter chunking** — Sovereignty Charters today are stored as long-form fields in `sovereignty_charters`. Want me to chunk by the existing field groups (purpose, vision, liquidity, governance, etc.) or introduce a true section parser?
+4. **Briefing destination** — markdown preview + copy only for v1, or also save as a Google Doc via the existing `google-docs` function?
+
+Confirm answers (or "use defaults") and I'll build.
