@@ -791,7 +791,7 @@ const ContactDetail = () => {
                     <QuarterlySystemReviewButton contactId={id!} />
                     <Button
                       variant="outline"
-                      onClick={() => navigate(`/workbench/governance-review?household=${contact.household_id ?? ""}`)}
+                      onClick={() => navigate(`/workbench/governance-review?scope_id=${contact.household_id ?? ""}`)}
                       disabled={!contact.household_id}
                     >
                       <ShieldCheck className="mr-2 h-4 w-4" />
