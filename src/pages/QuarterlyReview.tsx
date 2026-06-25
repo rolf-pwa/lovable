@@ -293,6 +293,44 @@ export default function QuarterlyReview() {
     }
   };
 
+  const [committingRows, setCommittingRows] = useState<Set<number>>(new Set());
+
+  const commitSingleRow = async (rowNum: number) => {
+    const row = normalized.find((n) => n.csv_row_number === rowNum);
+    if (!row) return;
+    setCommittingRows((prev) => {
+      const next = new Set(prev);
+      next.add(rowNum);
+      return next;
+    });
+    try {
+      const payload = {
+        mode: "commit",
+        source_file: fileName,
+        rows: [{ ...row, override: overrides[rowNum] || null }],
+      };
+      const { data, error } = await supabase.functions.invoke("quarterly-account-sync", { body: payload });
+      if (error) throw error;
+      const newRow: RowResult | undefined = data?.results?.[0];
+      if (newRow) {
+        setResults((prev) => prev ? prev.map((r) => r.csv_row_number === rowNum ? newRow : r) : prev);
+        toast({
+          title: newRow.applied ? `Row ${rowNum} committed` : `Row ${rowNum} not applied`,
+          description: newRow.message || newRow.destination,
+          variant: newRow.applied ? "default" : "destructive",
+        });
+      }
+    } catch (err: any) {
+      toast({ title: `Row ${rowNum} failed`, description: err.message, variant: "destructive" });
+    } finally {
+      setCommittingRows((prev) => {
+        const next = new Set(prev);
+        next.delete(rowNum);
+        return next;
+      });
+    }
+  };
+
   const requiredMissing = useMemo(() => {
     const mapped = new Set(Object.values(mapping));
     const missing: { label: string }[] = [];
