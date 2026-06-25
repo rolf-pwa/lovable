@@ -560,8 +560,14 @@ export default function QuarterlyReview() {
 
             {/* Row table with inline resolver */}
             <Card>
-              <CardHeader>
+              <CardHeader className="flex flex-row items-center justify-between gap-2">
                 <CardTitle className="text-sm">Row-by-row</CardTitle>
+                {step === "preview" && (
+                  <Button size="sm" onClick={() => callSync("commit", normalized)} disabled={busy}>
+                    {busy ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+                    Commit All ({summary.vineyard_update + summary.holding_tank_update + summary.storehouse_update + summary.holding_tank_new} rows)
+                  </Button>
+                )}
               </CardHeader>
               <CardContent>
                 <div className="max-h-[560px] overflow-auto">
