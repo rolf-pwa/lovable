@@ -498,6 +498,7 @@ const HouseholdDetail = () => {
 
               {/* Right rail: AUM Stats */}
               <div className="space-y-4">
+                <CharterRatificationTile householdId={id} />
                 <Card className="border-sanctuary-bronze/30">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-sm uppercase tracking-widest text-sanctuary-bronze">
