@@ -582,6 +582,7 @@ export default function QuarterlyReview() {
                         <TableHead className="text-right">Current</TableHead>
                         <TableHead className="text-right">Δ $</TableHead>
                         <TableHead className="min-w-[280px]">Resolve / Override</TableHead>
+                        {step === "preview" && <TableHead className="w-[110px] text-right">Commit</TableHead>}
                       </TableRow>
                     </TableHeader>
                     <TableBody>
