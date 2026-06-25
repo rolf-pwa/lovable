@@ -538,10 +538,6 @@ export default function QuarterlyReview() {
                       <Button variant="outline" onClick={() => callSync("preview", normalized)} disabled={busy}>
                         Re-run Preview
                       </Button>
-                      <Button onClick={() => callSync("commit", normalized)} disabled={busy}>
-                        {busy ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
-                        Commit ({summary.vineyard_update + summary.holding_tank_update + summary.storehouse_update + summary.holding_tank_new} rows)
-                      </Button>
                     </>
                   )}
                   {step === "done" && (
