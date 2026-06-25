@@ -28,6 +28,7 @@ import { Progress } from "@/components/ui/progress";
 import { HouseholdTaskRollup } from "@/components/HouseholdTaskRollup";
 import { HoldingTank } from "@/components/HoldingTank";
 import { VaultView } from "@/pages/Vault";
+import { CharterRatificationTile } from "@/components/CharterRatificationTile";
 import {
   Home,
   User,
