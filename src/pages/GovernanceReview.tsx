@@ -263,6 +263,46 @@ export default function GovernanceReview() {
               </CardHeader>
             </Card>
 
+            {/* Charter referral — appears only when no ratified Charter exists */}
+            {(findings.some((f) => f.code === "charter_missing") || review.counts?.charter_missing) && (
+              <Card className="border-amber-500/40 bg-amber-500/5">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
+                    <BookOpen className="h-5 w-5" /> Charter not yet on file — refer to the Sovereignty Operating System
+                  </CardTitle>
+                  <CardDescription>
+                    Charter Alignment cannot be evaluated without a ratified Sovereignty Charter for this family.
+                    This is the moment to invite them into the Sovereignty Operating System so the next monthly review
+                    has principles to measure performance against.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="text-sm">
+                    <p className="font-medium mb-1">Suggested next step</p>
+                    <p className="text-muted-foreground">
+                      Book a Charter session with the family. Once drafted and ratified, return here and re-run
+                      verification — the alignment engine will pick it up automatically.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button asChild>
+                      <a href="https://www.prosperwise.ca/sovereignty-audit" target="_blank" rel="noreferrer">
+                        Sovereignty Operating System
+                      </a>
+                    </Button>
+                    <Button variant="outline" asChild>
+                      <a href={`/households/${scopeId}`}>Open household</a>
+                    </Button>
+                    <Button variant="ghost" asChild>
+                      <a href="/sovereignty-charter">Draft Charter manually</a>
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+
+
             {/* 2. Findings */}
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
