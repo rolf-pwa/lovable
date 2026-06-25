@@ -194,10 +194,40 @@ Deno.serve(async (req) => {
         storehouse_id: null,
       };
       payload[keyField] = keyId;
+
+      const existing = await admin
+        .from("account_harvest_snapshots")
+        .select("id")
+        .eq(keyField, keyId)
+        .eq("snapshot_date", snapshotDate)
+        .limit(1);
+      if (existing.error) return existing.error;
+
+      if (existing.data?.[0]?.id) {
+        const { error } = await admin
+          .from("account_harvest_snapshots")
+          .update(payload)
+          .eq("id", existing.data[0].id);
+        return error;
+      }
+
       const { error } = await admin
         .from("account_harvest_snapshots")
-        .upsert(payload, { onConflict: `${keyField},snapshot_date` });
+        .insert(payload);
       return error;
+    };
+
+    const findExistingHoldingTank = async (contactId: string, accountNumber?: string | null) => {
+      const acct = accountNumber?.trim();
+      if (!acct) return null;
+      const { data, error } = await admin
+        .from("holding_tank")
+        .select("id")
+        .eq("contact_id", contactId)
+        .eq("account_number", acct)
+        .limit(1);
+      if (error) throw error;
+      return data?.[0] || null;
     };
 
     for (const row of rows) {
@@ -316,24 +346,40 @@ Deno.serve(async (req) => {
             matched_contact_id: contact.id, matched_contact_name: contactName(contact),
           };
           if (mode === "commit") {
-            const insert = {
-              contact_id: contact.id,
-              household_id: contact.household_id || null,
-              account_name: row.client_name ? `${row.client_name} — ${row.account_number || "new"}` : `Account ${row.account_number || "new"}`,
-              account_number: row.account_number || null,
-              account_type: row.account_type || row.product || "Portfolio",
-              custodian: row.custodian || null,
-              current_value: current,
-              book_value: boy,
-              status: "holding",
-              source_file: sourceFile,
-              notes: "Auto-staged via Quarterly Review — needs review.",
-            };
-            const { data: inserted, error } = await admin.from("holding_tank").insert(insert).select("id").single();
-            if (error || !inserted) { result.message = `Insert failed: ${error?.message}`; results.push(result); continue; }
-            result.matched_id = inserted.id;
+            let holdingId: string | null = null;
+            const existingHolding = await findExistingHoldingTank(contact.id, row.account_number);
+            if (existingHolding) {
+              holdingId = existingHolding.id;
+              const updates: Record<string, unknown> = {};
+              if (current !== null) updates.current_value = current;
+              if (boy !== null) updates.book_value = boy;
+              if (row.custodian) updates.custodian = row.custodian;
+              if (row.account_type || row.product) updates.account_type = row.account_type || row.product;
+              if (Object.keys(updates).length) {
+                const { error } = await admin.from("holding_tank").update(updates).eq("id", holdingId);
+                if (error) { result.message = `Update failed: ${error.message}`; results.push(result); continue; }
+              }
+            } else {
+              const insert = {
+                contact_id: contact.id,
+                household_id: contact.household_id || null,
+                account_name: row.client_name ? `${row.client_name} — ${row.account_number || "new"}` : `Account ${row.account_number || "new"}`,
+                account_number: row.account_number || null,
+                account_type: row.account_type || row.product || "Portfolio",
+                custodian: row.custodian || null,
+                current_value: current,
+                book_value: boy,
+                status: "holding",
+                source_file: sourceFile,
+                notes: "Auto-staged via Quarterly Review — needs review.",
+              };
+              const { data: inserted, error } = await admin.from("holding_tank").insert(insert).select("id").single();
+              if (error || !inserted) { result.message = `Insert failed: ${error?.message}`; results.push(result); continue; }
+              holdingId = inserted.id;
+            }
+            result.matched_id = holdingId;
             result.matched_table = "holding_tank";
-            const snapErr = await writeSnapshot(contact.id, "holding_tank_id", inserted.id, row, snapshotDate, boy, current);
+            const snapErr = await writeSnapshot(contact.id, "holding_tank_id", holdingId, row, snapshotDate, boy, current);
             if (snapErr) { result.message = `Snapshot failed: ${snapErr.message}`; results.push(result); continue; }
             result.applied = true;
           }
@@ -428,24 +474,40 @@ Deno.serve(async (req) => {
       };
 
       if (mode === "commit") {
-        const insert = {
-          contact_id: contact.id,
-          household_id: contact.household_id || null,
-          account_name: row.client_name ? `${row.client_name} — ${row.account_number}` : `Account ${row.account_number}`,
-          account_number: row.account_number,
-          account_type: row.account_type || row.product || "Portfolio",
-          custodian: row.custodian || null,
-          current_value: current,
-          book_value: boy,
-          status: "holding",
-          source_file: sourceFile,
-          notes: "Auto-staged via Quarterly Review — needs review.",
-        };
-        const { data: inserted, error } = await admin.from("holding_tank").insert(insert).select("id").single();
-        if (error || !inserted) { result.message = `Insert failed: ${error?.message}`; results.push(result); continue; }
-        result.matched_id = inserted.id;
+        let holdingId: string | null = null;
+        const existingHolding = await findExistingHoldingTank(contact.id, row.account_number);
+        if (existingHolding) {
+          holdingId = existingHolding.id;
+          const updates: Record<string, unknown> = {};
+          if (current !== null) updates.current_value = current;
+          if (boy !== null) updates.book_value = boy;
+          if (row.custodian) updates.custodian = row.custodian;
+          if (row.account_type || row.product) updates.account_type = row.account_type || row.product;
+          if (Object.keys(updates).length) {
+            const { error } = await admin.from("holding_tank").update(updates).eq("id", holdingId);
+            if (error) { result.message = `Update failed: ${error.message}`; results.push(result); continue; }
+          }
+        } else {
+          const insert = {
+            contact_id: contact.id,
+            household_id: contact.household_id || null,
+            account_name: row.client_name ? `${row.client_name} — ${row.account_number}` : `Account ${row.account_number}`,
+            account_number: row.account_number,
+            account_type: row.account_type || row.product || "Portfolio",
+            custodian: row.custodian || null,
+            current_value: current,
+            book_value: boy,
+            status: "holding",
+            source_file: sourceFile,
+            notes: "Auto-staged via Quarterly Review — needs review.",
+          };
+          const { data: inserted, error } = await admin.from("holding_tank").insert(insert).select("id").single();
+          if (error || !inserted) { result.message = `Insert failed: ${error?.message}`; results.push(result); continue; }
+          holdingId = inserted.id;
+        }
+        result.matched_id = holdingId;
         result.matched_table = "holding_tank";
-        const snapErr = await writeSnapshot(contact.id, "holding_tank_id", inserted.id, row, snapshotDate, boy, current);
+        const snapErr = await writeSnapshot(contact.id, "holding_tank_id", holdingId, row, snapshotDate, boy, current);
         if (snapErr) { result.message = `Snapshot failed: ${snapErr.message}`; results.push(result); continue; }
         result.applied = true;
       }
