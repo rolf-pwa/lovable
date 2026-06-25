@@ -622,6 +622,32 @@ export default function QuarterlyReview() {
                                 />
                               )}
                             </TableCell>
+                            {step === "preview" && (
+                              <TableCell className="text-right">
+                                {r.applied ? (
+                                  <span className="inline-flex items-center gap-1 text-[11px] text-emerald-600">
+                                    <CheckCircle2 className="h-3.5 w-3.5" /> Applied
+                                  </span>
+                                ) : (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-7 px-2 text-xs"
+                                    disabled={
+                                      committingRows.has(r.csv_row_number) ||
+                                      busy ||
+                                      !["vineyard_update", "holding_tank_update", "storehouse_update", "holding_tank_new"].includes(r.destination)
+                                    }
+                                    onClick={() => commitSingleRow(r.csv_row_number)}
+                                  >
+                                    {committingRows.has(r.csv_row_number)
+                                      ? <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                      : <Save className="h-3 w-3 mr-1" />}
+                                    Commit
+                                  </Button>
+                                )}
+                              </TableCell>
+                            )}
                           </TableRow>
                         );
                       })}
