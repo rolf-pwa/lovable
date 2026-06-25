@@ -166,21 +166,20 @@ async function pollOne(
     else console.error("PDF upload failed:", upErr);
   }
 
-  const ratifiedAt = new Date().toISOString();
+  const signedAt = new Date().toISOString();
+  // Mark as 'signed' and queue for advisor ratification review (HITL gate).
   await supabaseAdmin
     .from("sovereignty_charters")
     .update({
-      esign_status: "ratified",
-      esign_signed_at: ratifiedAt,
+      esign_status: "signed",
+      esign_signed_at: signedAt,
       esign_signed_pdf_path: storedPath,
       esign_doc_id: signed.id,
       esign_doc_url: `https://drive.google.com/file/d/${signed.id}/view`,
-      esign_last_checked_at: ratifiedAt,
+      esign_last_checked_at: signedAt,
       esign_error: null,
-      draft_status: "ratified",
-      ratified_at: ratifiedAt,
-      ratified_by: userId,
-      footer_status: "Ratified / Sovereign phase",
+      draft_status: "signed",
+      footer_status: "Signed — awaiting advisor ratification",
     })
     .eq("id", charter.id);
 
@@ -190,8 +189,9 @@ async function pollOne(
     .update({ charter_url: `/sovereignty-charter/contact/${charter.contact_id}` })
     .eq("id", charter.contact_id);
 
-  return { id: charter.id, status: "ratified", note: signed.name };
+  return { id: charter.id, status: "signed", note: signed.name };
 }
+
 
 serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
