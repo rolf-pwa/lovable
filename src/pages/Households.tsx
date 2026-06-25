@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { PageBreadcrumbs } from "@/components/PageBreadcrumbs";
 import { CrmTabs } from "@/components/CrmTabs";
+import { CharterRatificationTile } from "@/components/CharterRatificationTile";
+
 import {
   Select,
   SelectContent,
@@ -198,96 +200,104 @@ const Households = () => {
           )}
         </div>
 
-        {loading ? (
-          <div className="flex justify-center py-16">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-          </div>
-        ) : filtered.length === 0 ? (
-          <p className="text-center text-muted-foreground py-16">No households found.</p>
-        ) : (
-          <div className="space-y-2">
-            {filtered.map((hh) => (
-              <Link key={hh.id} to={`/households/${hh.id}`}>
-                <Card className="hover:bg-muted/30 transition-colors cursor-pointer">
-                  <CardHeader className="py-4">
-                    <div className="flex items-center gap-4">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 shrink-0">
-                        <Home className="h-5 w-5 text-primary" />
-                      </div>
-                        <div className="flex-1 min-w-0">
-                          <CardTitle className="text-base">{hh.label}</CardTitle>
-                          <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                            <span className="text-xs text-muted-foreground">
-                              {hh.familyName} Family
-                              {hh.address && ` · ${hh.address}`}
-                            </span>
-                            {hh.governance_status && hh.governance_status !== "none" && (
-                              <Badge
-                                variant="outline"
-                                className={
-                                  hh.governance_status === "stabilization"
-                                    ? "text-[10px] border-sanctuary-green/30 text-sanctuary-green bg-sanctuary-green/10"
-                                    : hh.governance_status === "sovereign"
-                                      ? "text-[10px] border-sanctuary-bronze/30 text-sanctuary-bronze bg-sanctuary-bronze/10"
-                                      : "text-[10px]"
-                                }
-                              >
-                                {hh.governance_status === "stabilization"
-                                  ? "Stabilization"
-                                  : hh.governance_status === "sovereign"
-                                    ? "Sovereign"
-                                    : "Core"}
-                              </Badge>
+        <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+          <div>
+            {loading ? (
+              <div className="flex justify-center py-16">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : filtered.length === 0 ? (
+              <p className="text-center text-muted-foreground py-16">No households found.</p>
+            ) : (
+              <div className="space-y-2">
+                {filtered.map((hh) => (
+                  <Link key={hh.id} to={`/households/${hh.id}`}>
+                    <Card className="hover:bg-muted/30 transition-colors cursor-pointer">
+                      <CardHeader className="py-4">
+                        <div className="flex items-center gap-4">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 shrink-0">
+                            <Home className="h-5 w-5 text-primary" />
+                          </div>
+                            <div className="flex-1 min-w-0">
+                              <CardTitle className="text-base">{hh.label}</CardTitle>
+                              <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                                <span className="text-xs text-muted-foreground">
+                                  {hh.familyName} Family
+                                  {hh.address && ` · ${hh.address}`}
+                                </span>
+                                {hh.governance_status && hh.governance_status !== "none" && (
+                                  <Badge
+                                    variant="outline"
+                                    className={
+                                      hh.governance_status === "stabilization"
+                                        ? "text-[10px] border-sanctuary-green/30 text-sanctuary-green bg-sanctuary-green/10"
+                                        : hh.governance_status === "sovereign"
+                                          ? "text-[10px] border-sanctuary-bronze/30 text-sanctuary-bronze bg-sanctuary-bronze/10"
+                                          : "text-[10px]"
+                                    }
+                                  >
+                                    {hh.governance_status === "stabilization"
+                                      ? "Stabilization"
+                                      : hh.governance_status === "sovereign"
+                                        ? "Sovereign"
+                                        : "Core"}
+                                  </Badge>
+                                )}
+                                {hh.fiduciary_entity && (
+                                  <Badge variant="outline" className="text-[10px]">
+                                    {hh.fiduciary_entity.toUpperCase()}
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                          <div className="flex items-center gap-4">
+                            <div className="text-right">
+                              <p className="text-sm font-semibold text-foreground">
+                                {formatCurrency(hh.totalAssets)}
+                              </p>
+                              <p className="text-[10px] text-muted-foreground">Assets Under Management</p>
+                            </div>
+                            {hh.holdingTankCount > 0 && (
+                              <div className="text-right">
+                                <p className="text-sm font-semibold text-amber-600">
+                                  {formatCurrency(hh.holdingTankTotal)}
+                                </p>
+                                <p className="text-[10px] text-amber-600/70 flex items-center gap-0.5 justify-end">
+                                  <Anchor className="h-2.5 w-2.5" />
+                                  {hh.holdingTankCount} staged
+                                </p>
+                              </div>
                             )}
-                            {hh.fiduciary_entity && (
-                              <Badge variant="outline" className="text-[10px]">
-                                {hh.fiduciary_entity.toUpperCase()}
-                              </Badge>
-                            )}
+                            <Badge variant="secondary" className="shrink-0">
+                              {hh.memberCount} member{hh.memberCount !== 1 ? "s" : ""}
+                            </Badge>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Link
+                                  to={`/vault/household/${hh.id}`}
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="p-1.5 rounded-md text-sanctuary-bronze hover:bg-sanctuary-bronze/10 transition-colors"
+                                >
+                                  <Lock className="h-3.5 w-3.5" />
+                                </Link>
+                              </TooltipTrigger>
+                              <TooltipContent side="bottom" className="text-xs">Household Vault</TooltipContent>
+                            </Tooltip>
+                            <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
                           </div>
                         </div>
-                      <div className="flex items-center gap-4">
-                        <div className="text-right">
-                          <p className="text-sm font-semibold text-foreground">
-                            {formatCurrency(hh.totalAssets)}
-                          </p>
-                          <p className="text-[10px] text-muted-foreground">Assets Under Management</p>
-                        </div>
-                        {hh.holdingTankCount > 0 && (
-                          <div className="text-right">
-                            <p className="text-sm font-semibold text-amber-600">
-                              {formatCurrency(hh.holdingTankTotal)}
-                            </p>
-                            <p className="text-[10px] text-amber-600/70 flex items-center gap-0.5 justify-end">
-                              <Anchor className="h-2.5 w-2.5" />
-                              {hh.holdingTankCount} staged
-                            </p>
-                          </div>
-                        )}
-                        <Badge variant="secondary" className="shrink-0">
-                          {hh.memberCount} member{hh.memberCount !== 1 ? "s" : ""}
-                        </Badge>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Link
-                              to={`/vault/household/${hh.id}`}
-                              onClick={(e) => e.stopPropagation()}
-                              className="p-1.5 rounded-md text-sanctuary-bronze hover:bg-sanctuary-bronze/10 transition-colors"
-                            >
-                              <Lock className="h-3.5 w-3.5" />
-                            </Link>
-                          </TooltipTrigger>
-                          <TooltipContent side="bottom" className="text-xs">Household Vault</TooltipContent>
-                        </Tooltip>
-                        <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
-                      </div>
-                    </div>
-                  </CardHeader>
-                </Card>
-              </Link>
-            ))}
+                      </CardHeader>
+                    </Card>
+                  </Link>
+                ))}
+              </div>
+            )}
           </div>
-        )}
+          <aside className="space-y-4">
+            <CharterRatificationTile />
+          </aside>
+        </div>
+
       </div>
     </AppLayout>
   );
