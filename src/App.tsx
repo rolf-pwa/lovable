@@ -43,6 +43,7 @@ import StabilizationMapResolver from "./pages/StabilizationMapResolver";
 import QuarterlySystemReview from "./pages/QuarterlySystemReview";
 import QuarterlySystemReviewResolver from "./pages/QuarterlySystemReviewResolver";
 import QuarterlyReview from "./pages/QuarterlyReview";
+import GovernanceReview from "./pages/GovernanceReview";
 import SovereigntyCharter from "./pages/SovereigntyCharter";
 import Inbox from "./pages/Inbox";
 
