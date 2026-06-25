@@ -789,6 +789,14 @@ const ContactDetail = () => {
                     <GenerateCharterDraftButton contactId={id!} />
                     <StabilizationMapButton contactId={id!} />
                     <QuarterlySystemReviewButton contactId={id!} />
+                    <Button
+                      variant="outline"
+                      onClick={() => navigate(`/workbench/governance-review?scope_id=${contact.household_id ?? ""}`)}
+                      disabled={!contact.household_id}
+                    >
+                      <ShieldCheck className="mr-2 h-4 w-4" />
+                      Governance Review
+                    </Button>
                   </CardContent>
                 </Card>
                 <ContactTaskList asanaUrl={contact.asana_url} contactId={contact.id} householdMembers={householdMembers} />
