@@ -763,6 +763,50 @@ export type Database = {
         }
         Relationships: []
       }
+      engagement_messages: {
+        Row: {
+          attachments: Json
+          body: string
+          created_at: string
+          engagement_id: string
+          id: string
+          read_by_pro_at: string | null
+          read_by_staff_at: string | null
+          sender_id: string | null
+          sender_type: string
+        }
+        Insert: {
+          attachments?: Json
+          body: string
+          created_at?: string
+          engagement_id: string
+          id?: string
+          read_by_pro_at?: string | null
+          read_by_staff_at?: string | null
+          sender_id?: string | null
+          sender_type: string
+        }
+        Update: {
+          attachments?: Json
+          body?: string
+          created_at?: string
+          engagement_id?: string
+          id?: string
+          read_by_pro_at?: string | null
+          read_by_staff_at?: string | null
+          sender_id?: string | null
+          sender_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "engagement_messages_engagement_id_fkey"
+            columns: ["engagement_id"]
+            isOneToOne: false
+            referencedRelation: "professional_engagements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       families: {
         Row: {
           annual_savings: number
@@ -1837,6 +1881,172 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "portal_trusted_devices_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pro_portal_tokens: {
+        Row: {
+          created_at: string
+          device_fingerprint: string | null
+          id: string
+          last_used_at: string | null
+          otp_code_hash: string | null
+          otp_expires_at: string | null
+          professional_id: string
+          session_expires_at: string
+          token_hash: string
+        }
+        Insert: {
+          created_at?: string
+          device_fingerprint?: string | null
+          id?: string
+          last_used_at?: string | null
+          otp_code_hash?: string | null
+          otp_expires_at?: string | null
+          professional_id: string
+          session_expires_at: string
+          token_hash: string
+        }
+        Update: {
+          created_at?: string
+          device_fingerprint?: string | null
+          id?: string
+          last_used_at?: string | null
+          otp_code_hash?: string | null
+          otp_expires_at?: string | null
+          professional_id?: string
+          session_expires_at?: string
+          token_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pro_portal_tokens_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      professional_engagements: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          pillar: string
+          professional_id: string
+          scope_id: string
+          scope_type: string
+          started_at: string | null
+          status: string
+          title: string
+          updated_at: string
+          vault_share_link_id: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          pillar: string
+          professional_id: string
+          scope_id: string
+          scope_type: string
+          started_at?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+          vault_share_link_id?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          pillar?: string
+          professional_id?: string
+          scope_id?: string
+          scope_type?: string
+          started_at?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+          vault_share_link_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_engagements_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_engagements_vault_share_link_id_fkey"
+            columns: ["vault_share_link_id"]
+            isOneToOne: false
+            referencedRelation: "vault_share_links"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      professionals: {
+        Row: {
+          contact_id: string | null
+          created_at: string
+          created_by: string | null
+          credentials: string | null
+          email: string
+          firm: string | null
+          full_name: string
+          id: string
+          last_login_at: string | null
+          phone: string | null
+          pro_portal_enabled: boolean
+          professional_type: string
+          updated_at: string
+        }
+        Insert: {
+          contact_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          credentials?: string | null
+          email: string
+          firm?: string | null
+          full_name: string
+          id?: string
+          last_login_at?: string | null
+          phone?: string | null
+          pro_portal_enabled?: boolean
+          professional_type: string
+          updated_at?: string
+        }
+        Update: {
+          contact_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          credentials?: string | null
+          email?: string
+          firm?: string | null
+          full_name?: string
+          id?: string
+          last_login_at?: string | null
+          phone?: string | null
+          pro_portal_enabled?: boolean
+          professional_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professionals_contact_id_fkey"
             columns: ["contact_id"]
             isOneToOne: false
             referencedRelation: "contacts"
