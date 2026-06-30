@@ -144,11 +144,8 @@ const VfoPortal = () => {
             <div className="flex items-center gap-4 min-w-0">
               <img src={prosperwiseLogo} alt="" className="h-10 w-10 opacity-90" />
               <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] uppercase tracking-[0.25em] text-amber-500/80">Virtual Family Office</span>
-                </div>
-                <h1 className="font-serif text-3xl md:text-4xl text-foreground leading-tight mt-1 truncate">
-                  {familyName}
+                <h1 className="font-serif text-3xl md:text-4xl text-foreground leading-tight truncate">
+                  {familyName} Family Office
                 </h1>
                 <p className="text-sm text-muted-foreground mt-1">
                   {householdLabel && <span>{householdLabel}</span>}
