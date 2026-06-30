@@ -49,21 +49,22 @@ async function resolveScopeLabel(
 
 async function resolveSharedFiles(supabase: any, share_link_id: string | null) {
   if (!share_link_id) return [];
-  // For v1, expose only file metadata + a signed download URL via the share link.
+  // V1: surface only the share-link metadata; secure download proxy is
+  // wired up in a follow-up phase (vault-service proPortalReadFile action).
   const { data: link } = await supabase
     .from("vault_share_links")
-    .select("id, file_ids, expires_at, revoked_at")
+    .select("id, drive_id, scope_type, expires_at, revoked_at")
     .eq("id", share_link_id)
     .maybeSingle();
   if (!link || link.revoked_at) return [];
   if (link.expires_at && new Date(link.expires_at) <= new Date()) return [];
-  const fileIds: string[] = Array.isArray(link.file_ids) ? link.file_ids : [];
-  if (fileIds.length === 0) return [];
-  const { data: files } = await supabase
-    .from("vault_files")
-    .select("id, name, mime_type, size_bytes, created_at")
-    .in("id", fileIds);
-  return files || [];
+  return [{
+    id: link.id,
+    name: `Shared ${link.scope_type} drive`,
+    mime_type: "application/vnd.prosperwise.vault-share",
+    size_bytes: null,
+    created_at: null,
+  }];
 }
 
 serve(async (req) => {
