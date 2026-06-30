@@ -148,11 +148,11 @@ All writes mirror to `sovereignty_audit_trail`. PII Shield runs on every outboun
 
 ## Rollout Order
 
-1. Schema + grants + RLS + pilot flag gating.
-2. Staff: `ProfessionalLinker` extension + `/professionals` directory.
-3. Engagement creation flow + Vault share-link bundling.
-4. Pro portal scaffold (OTP + engagements list + read-only Vault).
-5. Threaded messaging (`engagement_messages` + Wix relay notifications).
+1. ✅ Schema + grants + RLS + pilot flag gating.
+2. ✅ Staff: `/professionals` directory + `ProfessionalDetail` engagement creation.
+3. Engagement creation flow + Vault share-link bundling (deferred — share-link binding TBD).
+4. ✅ Pro portal scaffold (OTP via Gmail relay + engagements list + read-only Vault placeholder).
+5. ✅ Threaded messaging (`engagement_messages` + Gmail relay notifications via `send-admin-email`). **Note: Wix relay replaced with Gmail relay per latest direction.**
 6. VFO Portal "Your Team" card + Professionals tab + per-pillar attachments.
 7. Flip pilot ON for one household, observe, iterate.
 
