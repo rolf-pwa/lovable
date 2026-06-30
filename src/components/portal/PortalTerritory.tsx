@@ -298,13 +298,14 @@ export function PortalTerritory({ vineyardAccounts, storehouses, contact, family
             </div>
           )}
         </CardContent>
+        )}
       </Card>
       )}
 
       {/* Storehouses */}
       {showStorehouses && (
       <Card>
-        <CardHeader>
+        <CardHeader className="cursor-pointer select-none" onClick={() => setStorehousesOpen((o) => !o)}>
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent/10">
               <Landmark className="h-5 w-5 text-accent" />
@@ -313,14 +314,22 @@ export function PortalTerritory({ vineyardAccounts, storehouses, contact, family
               <CardTitle className="text-lg font-serif">The Storehouses</CardTitle>
               <p className="text-xs text-muted-foreground">Strategic Asset Allocation</p>
             </div>
-            <div className="ml-auto text-right">
-              <p className="text-2xl font-bold text-accent">
-                ${visibleStorehouses.reduce((sum: number, s: any) => sum + (Number(s.current_value) || 0), 0).toLocaleString()}
-              </p>
-              <p className="text-xs text-muted-foreground">Total Value</p>
+            <div className="ml-auto flex items-center gap-3">
+              <div className="text-right">
+                <p className="text-2xl font-bold text-accent">
+                  ${visibleStorehouses.reduce((sum: number, s: any) => sum + (Number(s.current_value) || 0), 0).toLocaleString()}
+                </p>
+                <p className="text-xs text-muted-foreground">Total Value</p>
+              </div>
+              {storehousesOpen ? (
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              ) : (
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              )}
             </div>
           </div>
         </CardHeader>
+        {storehousesOpen && (
         <CardContent className="space-y-4">
           {STOREHOUSE_CONFIG.map(({ num, name, icon: Icon }) => {
             const accounts = visibleStorehouses.filter((s: any) => s.storehouse_number === num);
