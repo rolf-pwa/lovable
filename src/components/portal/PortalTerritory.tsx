@@ -401,6 +401,7 @@ export function PortalTerritory({ vineyardAccounts, storehouses, contact, family
             );
           })}
         </CardContent>
+        )}
       </Card>
       )}
     </div>
