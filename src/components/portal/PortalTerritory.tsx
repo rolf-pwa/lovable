@@ -145,9 +145,11 @@ function ScopeBadge({
   );
 }
 
-export function PortalTerritory({ vineyardAccounts, storehouses, contact, family, household, householdMembers = [], scopeLabel, portalToken, onScopeChange, corporations = [], section = "all" }: Props) {
+export function PortalTerritory({ vineyardAccounts, storehouses, contact, family, household, householdMembers = [], scopeLabel, portalToken, onScopeChange, corporations = [], section = "all", defaultCollapsed = false }: Props) {
   const showVineyard = section === "all" || section === "vineyard";
   const showStorehouses = section === "all" || section === "storehouses";
+  const [vineyardOpen, setVineyardOpen] = useState(!defaultCollapsed);
+  const [storehousesOpen, setStorehousesOpen] = useState(!defaultCollapsed);
   const isIndividualSelf = scopeLabel === "My Territory";
   
   // If scopeLabel is provided, assets are already pre-filtered by the parent; show all
