@@ -589,7 +589,7 @@ const Portal = () => {
         {hierarchyLevel === "family" && (drilldown.level === "household" || drilldown.level === "individual") && (
           <button
             onClick={() => setDrilldown({ level: "family" })}
-            className="flex items-center gap-1 text-accent hover:underline"
+            className="flex items-center gap-1 text-primary hover:underline"
           >
             <ChevronLeft className="h-3.5 w-3.5" />
             {family?.name || "Family"}
@@ -600,7 +600,7 @@ const Portal = () => {
             <span className="text-muted-foreground">/</span>
             <button
               onClick={() => setDrilldown({ level: "household", householdId: drilldown.householdId })}
-              className="text-accent hover:underline"
+              className="text-primary hover:underline"
             >
               {currentHousehold?.label || "Household"}
             </button>
@@ -823,13 +823,13 @@ const Portal = () => {
                     }
                     className={`text-left rounded-lg p-4 transition-colors group ${
                       isSelf
-                        ? "border border-accent/30 bg-accent/5 hover:bg-accent/10"
-                        : "border border-border bg-card hover:border-accent/30 hover:bg-muted/30"
+                        ? "border border-primary/30 bg-primary/5 hover:bg-primary/10"
+                        : "border border-border bg-card hover:border-primary/30 hover:bg-muted/30"
                     }`}
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className={`flex h-8 w-8 items-center justify-center rounded-full ${isSelf ? "bg-accent/20" : "bg-muted"}`}>
+                        <div className={`flex h-8 w-8 items-center justify-center rounded-full ${isSelf ? "bg-primary/20" : "bg-muted"}`}>
                           {isSelf ? <img src={prosperwiseLogo} alt="" className="h-4 w-4" /> : <Users className="h-4 w-4 text-muted-foreground" />}
                         </div>
                         <div>
@@ -1061,7 +1061,7 @@ const Portal = () => {
                     href="https://calendar.app.google/EwH29qfci75yedju8"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 rounded-md bg-accent/10 px-3 py-1.5 text-xs font-medium text-accent hover:bg-accent/20 transition-colors border border-accent/20"
+                    className="inline-flex items-center gap-1.5 rounded-md bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/20 transition-colors border border-primary/20"
                   >
                     <MapPin className="h-3.5 w-3.5" />
                     In Person
@@ -1070,7 +1070,7 @@ const Portal = () => {
                     href="https://calendar.app.google/HgYuTusrWbomsfsC8"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 rounded-md bg-accent/10 px-3 py-1.5 text-xs font-medium text-accent hover:bg-accent/20 transition-colors border border-accent/20"
+                    className="inline-flex items-center gap-1.5 rounded-md bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/20 transition-colors border border-primary/20"
                   >
                     <Video className="h-3.5 w-3.5" />
                     Video
@@ -1110,9 +1110,9 @@ const Portal = () => {
                             href={href}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="flex items-start gap-2 rounded-md border border-border bg-card px-2.5 py-2 hover:border-accent/40 hover:bg-accent/5 transition-colors"
+                            className="flex items-start gap-2 rounded-md border border-border bg-card px-2.5 py-2 hover:border-primary/40 hover:bg-primary/5 transition-colors"
                           >
-                            <FileBarChart className="h-3.5 w-3.5 text-accent mt-0.5 shrink-0" />
+                            <FileBarChart className="h-3.5 w-3.5 text-primary mt-0.5 shrink-0" />
                             <div className="flex-1 min-w-0">
                               <p className="text-xs font-medium text-foreground truncate">{review.title}</p>
                               {(dateLabel || memberName) && (
@@ -1224,7 +1224,7 @@ const Portal = () => {
                           setDrilldown({ level: "household", householdId: contact.household_id });
                         }
                       }}
-                      className="w-full flex items-center justify-center gap-2 rounded-md border border-accent/20 bg-accent/5 px-3 py-2 text-xs font-medium text-accent hover:bg-accent/10 transition-colors"
+                      className="w-full flex items-center justify-center gap-2 rounded-md border border-primary/20 bg-primary/5 px-3 py-2 text-xs font-medium text-primary hover:bg-primary/10 transition-colors"
                     >
                       <Users className="h-3.5 w-3.5" />
                       {hierarchyLevel === "family" ? "View Family Overview" : "View Household"}
@@ -1253,7 +1253,7 @@ const Portal = () => {
                   <Megaphone className="h-4 w-4 text-accent" />
                   <h3 className="text-sm font-semibold text-foreground font-serif">Updates</h3>
                   {unreadUpdateCount > 0 && (
-                    <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-accent text-[10px] font-bold text-accent-foreground px-1">
+                    <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground px-1">
                       {unreadUpdateCount > 99 ? "99+" : unreadUpdateCount}
                     </span>
                   )}
@@ -1324,16 +1324,16 @@ const Portal = () => {
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* Header */}
-      <header className="border-b border-border bg-background/80 backdrop-blur-sm sticky top-0 z-10">
+      <header className="border-b border-primary-foreground/10 bg-primary sticky top-0 z-10">
         <div className="mx-auto max-w-6xl px-4 py-4 sm:px-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <img src={prosperwiseLogo} alt="ProsperWise" className="h-9 w-9" />
               <div>
-                <h1 className="text-lg font-semibold text-foreground font-serif">
+                <h1 className="text-lg font-semibold text-primary-foreground font-serif">
                   {contact.first_name} {contact.last_name || ""}
                 </h1>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-primary-foreground/70">
                   {getHeaderSubtitle()}
                 </p>
               </div>
@@ -1349,7 +1349,7 @@ const Portal = () => {
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-muted-foreground hover:text-foreground"
+                className="text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary-foreground/10"
                 onClick={handleToggleNotifications}
                 disabled={togglingNotif}
                 title={notificationsEnabled ? "Email notifications on" : "Email notifications off"}
@@ -1363,7 +1363,7 @@ const Portal = () => {
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-muted-foreground hover:text-foreground"
+                className="text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary-foreground/10"
                 onClick={handleLogout}
               >
                 <LogOut className="h-4 w-4 mr-1.5" />

@@ -170,11 +170,11 @@ export function PortalNotificationBell({ requests, contactId, portalToken, onNav
     <div ref={ref} className="relative">
       <button
         onClick={handleOpen}
-        className="relative rounded-md p-1.5 text-muted-foreground hover:text-foreground transition-colors"
+        className="relative rounded-md p-1.5 text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary-foreground/10 transition-colors"
       >
         <Bell className="h-4 w-4" />
         {unreadCount > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent text-[9px] font-bold text-accent-foreground px-1">
+          <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary-foreground text-[9px] font-bold text-primary px-1">
             {unreadCount > 99 ? "99+" : unreadCount}
           </span>
         )}
@@ -187,7 +187,7 @@ export function PortalNotificationBell({ requests, contactId, portalToken, onNav
             {unreadCount > 0 && (
               <button
                 onClick={handleMarkAllRead}
-                className="text-xs text-accent hover:text-accent/80 font-medium"
+                className="text-xs text-primary hover:text-primary/80 font-medium"
               >
                 Mark all read
               </button>
@@ -204,7 +204,7 @@ export function PortalNotificationBell({ requests, contactId, portalToken, onNav
                 <button
                   key={notif.id}
                   onClick={() => handleClickNotif(notif)}
-                  className="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/50 border-b border-border last:border-0 bg-accent/5"
+                  className="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/50 border-b border-border last:border-0 bg-primary/5"
                 >
                   <span className="text-base mt-0.5">{notif.icon}</span>
                   <div className="flex-1 min-w-0">
@@ -220,7 +220,7 @@ export function PortalNotificationBell({ requests, contactId, portalToken, onNav
                       {format(new Date(notif.created_at), "MMM d, h:mm a")}
                     </p>
                   </div>
-                  <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-accent" />
+                  <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary" />
                 </button>
               ))
             )}
