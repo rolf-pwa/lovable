@@ -23,6 +23,8 @@ import { PortalUpdates } from "@/components/portal/PortalUpdates";
 import { PortalGeorgiaChat } from "@/components/portal/PortalGeorgiaChat";
 import { PortalYourTeam } from "@/components/portal/PortalYourTeam";
 import { PortalProfessionals } from "@/components/portal/PortalProfessionals";
+import { PortalDynamicLinks } from "@/components/portal/PortalDynamicLinks";
+
 import { Briefcase } from "lucide-react";
 import prosperwiseLogo from "@/assets/prosperwise-logo.png";
 
@@ -626,17 +628,8 @@ const VfoPortal = () => {
           </Card>
 
 
-          {charter && (
-            <Card className="border-amber-500/15">
-              <CardContent className="p-5 space-y-2">
-                <div className="flex items-center gap-2">
-                  <ScrollText className="h-4 w-4 text-amber-500" />
-                  <h3 className="font-serif text-sm text-foreground">Sovereignty Charter</h3>
-                </div>
-                <PortalCharter charterUrl={(charter as any).charter_document_url || null} />
-              </CardContent>
-            </Card>
-          )}
+          {isSelf && <PortalDynamicLinks />}
+
 
           <PortalYourTeam
             professionals={professionals}
