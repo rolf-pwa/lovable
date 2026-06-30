@@ -196,6 +196,16 @@ const FamilyDetail = () => {
   const contactTotal = (cid: string) =>
     (vineyardByContact[cid] || 0) + (storehouseByContact[cid] || 0) + (holdingByContact[cid] || 0);
 
+  const storehouseName = (num: number) => {
+    const names: Record<number, string> = {
+      1: "Liquidity Reserve",
+      2: "Strategic Reserve",
+      3: "Philanthropic Trust",
+      4: "Legacy Trust",
+    };
+    return names[num] || "Storehouse";
+  };
+
   return (
     <AppLayout>
       <div className="space-y-6">
