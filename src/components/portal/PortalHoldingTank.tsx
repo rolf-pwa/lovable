@@ -17,6 +17,7 @@ interface PortalHoldingTankProps {
     visibility_scope?: string;
     expected_deposit_date?: string | null;
   }>;
+  defaultCollapsed?: boolean;
 }
 
 const formatCurrency = (value: number) =>
