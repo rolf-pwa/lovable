@@ -242,40 +242,11 @@ const FamilyDetail = () => {
               </div>
             </div>
 
-            {/* AUM Tiles */}
-            <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <div className="rounded-lg border border-border bg-card/50 p-4">
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Wallet className="h-3.5 w-3.5" />
-                  Total Family AUM
-                </div>
-                <p className="mt-2 text-2xl font-bold text-sanctuary-bronze">
-                  {formatCurrency(totalAUM)}
-                </p>
-              </div>
-              <div className="rounded-lg border border-border bg-card/50 p-4">
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Grape className="h-3.5 w-3.5" />
-                  The Vineyard
-                </div>
-                <p className="mt-2 text-2xl font-bold">{formatCurrency(totalVineyard)}</p>
-              </div>
-              <div className="rounded-lg border border-border bg-card/50 p-4">
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Landmark className="h-3.5 w-3.5" />
-                  Storehouses
-                </div>
-                <p className="mt-2 text-2xl font-bold">{formatCurrency(totalStorehouses)}</p>
-              </div>
-              <div className="rounded-lg border border-border bg-card/50 p-4">
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Anchor className="h-3.5 w-3.5" />
-                  Holding Tank
-                </div>
-                <p className="mt-2 text-2xl font-bold text-amber-600">
-                  {formatCurrency(totalHolding)}
-                </p>
-              </div>
+            {/* Total AUM */}
+            <div className="mt-6 flex items-center gap-3">
+              <Wallet className="h-4 w-4 text-sanctuary-bronze" />
+              <span className="text-sm text-muted-foreground">Total Family AUM</span>
+              <span className="text-lg font-bold text-sanctuary-bronze">{formatCurrency(totalAUM)}</span>
             </div>
           </CardContent>
         </Card>
