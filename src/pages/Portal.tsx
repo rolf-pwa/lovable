@@ -823,13 +823,13 @@ const Portal = () => {
                     }
                     className={`text-left rounded-lg p-4 transition-colors group ${
                       isSelf
-                        ? "border border-accent/30 bg-accent/5 hover:bg-accent/10"
-                        : "border border-border bg-card hover:border-accent/30 hover:bg-muted/30"
+                        ? "border border-primary/30 bg-primary/5 hover:bg-primary/10"
+                        : "border border-border bg-card hover:border-primary/30 hover:bg-muted/30"
                     }`}
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className={`flex h-8 w-8 items-center justify-center rounded-full ${isSelf ? "bg-accent/20" : "bg-muted"}`}>
+                        <div className={`flex h-8 w-8 items-center justify-center rounded-full ${isSelf ? "bg-primary/20" : "bg-muted"}`}>
                           {isSelf ? <img src={prosperwiseLogo} alt="" className="h-4 w-4" /> : <Users className="h-4 w-4 text-muted-foreground" />}
                         </div>
                         <div>

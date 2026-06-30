@@ -204,7 +204,7 @@ export function PortalNotificationBell({ requests, contactId, portalToken, onNav
                 <button
                   key={notif.id}
                   onClick={() => handleClickNotif(notif)}
-                  className="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/50 border-b border-border last:border-0 bg-accent/5"
+                  className="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/50 border-b border-border last:border-0 bg-primary/5"
                 >
                   <span className="text-base mt-0.5">{notif.icon}</span>
                   <div className="flex-1 min-w-0">
@@ -220,7 +220,7 @@ export function PortalNotificationBell({ requests, contactId, portalToken, onNav
                       {format(new Date(notif.created_at), "MMM d, h:mm a")}
                     </p>
                   </div>
-                  <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-accent" />
+                  <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary" />
                 </button>
               ))
             )}
