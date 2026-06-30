@@ -48,6 +48,8 @@ import QuarterlyReview from "./pages/QuarterlyReview";
 import GovernanceReview from "./pages/GovernanceReview";
 import SovereigntyCharter from "./pages/SovereigntyCharter";
 import Inbox from "./pages/Inbox";
+import Professionals from "./pages/Professionals";
+import ProfessionalDetail from "./pages/ProfessionalDetail";
 
 const queryClient = new QueryClient();
 
