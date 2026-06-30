@@ -23,6 +23,8 @@ import { PortalUpdates } from "@/components/portal/PortalUpdates";
 import { PortalGeorgiaChat } from "@/components/portal/PortalGeorgiaChat";
 import { PortalYourTeam } from "@/components/portal/PortalYourTeam";
 import { PortalProfessionals } from "@/components/portal/PortalProfessionals";
+import { PortalDynamicLinks } from "@/components/portal/PortalDynamicLinks";
+
 import { Briefcase } from "lucide-react";
 import prosperwiseLogo from "@/assets/prosperwise-logo.png";
 
