@@ -70,8 +70,8 @@ export default function ProfessionalDetail() {
       (supabase as any).from("professionals").select("*").eq("id", id).maybeSingle(),
       (supabase as any).from("professional_engagements")
         .select("*").eq("professional_id", id).order("created_at", { ascending: false }),
-      supabase.from("families").select("id, family_name").order("family_name"),
-      supabase.from("households").select("id, household_name").order("household_name"),
+      supabase.from("families").select("id, name").order("name"),
+      supabase.from("households").select("id, label").order("label"),
       supabase.from("contacts").select("id, full_name").order("full_name").limit(500),
     ]);
     setPro(p);
