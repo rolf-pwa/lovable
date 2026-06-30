@@ -1349,7 +1349,7 @@ const Portal = () => {
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-muted-foreground hover:text-foreground"
+                className="text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary-foreground/10"
                 onClick={handleToggleNotifications}
                 disabled={togglingNotif}
                 title={notificationsEnabled ? "Email notifications on" : "Email notifications off"}
@@ -1363,7 +1363,7 @@ const Portal = () => {
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-muted-foreground hover:text-foreground"
+                className="text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary-foreground/10"
                 onClick={handleLogout}
               >
                 <LogOut className="h-4 w-4 mr-1.5" />

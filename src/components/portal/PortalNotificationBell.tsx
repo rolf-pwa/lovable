@@ -170,11 +170,11 @@ export function PortalNotificationBell({ requests, contactId, portalToken, onNav
     <div ref={ref} className="relative">
       <button
         onClick={handleOpen}
-        className="relative rounded-md p-1.5 text-muted-foreground hover:text-foreground transition-colors"
+        className="relative rounded-md p-1.5 text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary-foreground/10 transition-colors"
       >
         <Bell className="h-4 w-4" />
         {unreadCount > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent text-[9px] font-bold text-accent-foreground px-1">
+          <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary-foreground text-[9px] font-bold text-primary px-1">
             {unreadCount > 99 ? "99+" : unreadCount}
           </span>
         )}
