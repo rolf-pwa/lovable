@@ -69,6 +69,19 @@ verify_jwt = false
 [functions.vfo-onboarding]
 verify_jwt = false
 
+[functions.pro-portal-otp]
+verify_jwt = false
+
+[functions.pro-portal-engagements]
+verify_jwt = false
+
+[functions.engagement-message-send]
+verify_jwt = false
+
+
+
+
+
 
 
 
