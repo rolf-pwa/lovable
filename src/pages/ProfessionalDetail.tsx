@@ -27,6 +27,7 @@ import { Plus, ArrowLeft, Briefcase } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { format } from "date-fns";
+import EngagementThreadButton from "@/components/EngagementThreadButton";
 
 const PILLARS = [
   { value: "tax", label: "Tax" },
