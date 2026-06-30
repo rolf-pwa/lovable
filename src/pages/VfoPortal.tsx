@@ -54,7 +54,7 @@ const VfoPortal = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#05070a]">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-6 w-6 animate-spin text-amber-500" />
       </div>
     );
@@ -62,7 +62,7 @@ const VfoPortal = () => {
 
   if (error || !data) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#05070a] p-6">
+      <div className="min-h-screen flex items-center justify-center bg-background p-6">
         <Card className="max-w-md w-full border-amber-500/20 bg-card">
           <CardContent className="p-8 text-center space-y-3">
             <Crown className="h-8 w-8 text-amber-500 mx-auto" />
@@ -84,7 +84,7 @@ const VfoPortal = () => {
   // Gate: family must be VFO-enrolled
   if (!family?.vfo_enabled) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#05070a] p-6">
+      <div className="min-h-screen flex items-center justify-center bg-background p-6">
         <Card className="max-w-md w-full border-amber-500/20 bg-card">
           <CardContent className="p-8 text-center space-y-3">
             <Crown className="h-8 w-8 text-amber-500 mx-auto" />
@@ -136,7 +136,7 @@ const VfoPortal = () => {
   const displayHolding = family_holding_tank.length ? family_holding_tank : household_holding_tank.length ? household_holding_tank : holding_tank;
 
   return (
-    <div className="min-h-screen bg-[#05070a] text-foreground">
+    <div className="min-h-screen bg-background text-foreground">
       {/* Premium Header */}
       <header className="border-b border-amber-500/20 bg-gradient-to-b from-[#0a0d12] to-[#05070a]">
         <div className="max-w-7xl mx-auto px-6 py-8">
