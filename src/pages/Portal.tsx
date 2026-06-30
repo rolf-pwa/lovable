@@ -983,7 +983,8 @@ const Portal = () => {
     const ind = getIndividualData();
     const isSelf = !currentMember;
     const hasTerritory = (ind.vineyardAccounts?.length || 0) > 0 || (ind.memberStorehouses?.length || 0) > 0;
-    const effectiveTab = !hasTerritory && (activeTab === "vineyard" || activeTab === "storehouses") ? "tasks" : activeTab;
+    const hasFinancials = hasTerritory || (isSelf && holding_tank.length > 0);
+    const effectiveTab = !hasFinancials && activeTab === "financials" ? "tasks" : activeTab;
 
 
 
@@ -1017,24 +1018,11 @@ const Portal = () => {
                 <Calendar className="h-4 w-4" />
                 Meetings
               </TabsTrigger>
-              {isSelf && holding_tank.length > 0 && (
-                <TabsTrigger value="holding-tank" className="flex-1 gap-1.5">
+              {hasFinancials && (
+                <TabsTrigger value="financials" className="flex-1 gap-1.5">
                   <Landmark className="h-4 w-4" />
-                  <span className="hidden sm:inline">Holding Tank</span>
-                  <span className="sm:hidden">Tank</span>
+                  Financials
                 </TabsTrigger>
-              )}
-              {hasTerritory && (
-                <>
-                  <TabsTrigger value="vineyard" className="flex-1 gap-1.5">
-                    <Grape className="h-4 w-4" />
-                    Vineyard
-                  </TabsTrigger>
-                  <TabsTrigger value="storehouses" className="flex-1 gap-1.5">
-                    <Landmark className="h-4 w-4" />
-                    Storehouses
-                  </TabsTrigger>
-                </>
               )}
 
               {isSelf && (
@@ -1142,48 +1130,28 @@ const Portal = () => {
               )}
             </TabsContent>
 
-            {/* Holding Tank Tab */}
-            {isSelf && holding_tank.length > 0 && (
-              <TabsContent value="holding-tank" className="mt-4">
-                <PortalHoldingTank accounts={holding_tank} />
-              </TabsContent>
-            )}
-
-            {/* Vineyard Tab */}
-            {hasTerritory && (
-              <TabsContent value="vineyard" className="mt-4">
-                <PortalTerritory
-                  vineyardAccounts={ind.vineyardAccounts}
-                  storehouses={ind.memberStorehouses}
-                  contact={isSelf ? contact : currentMember}
-                  family={family}
-                  household={household}
-                  householdMembers={[]}
-                  scopeLabel={isSelf ? "My Territory" : `${currentMember?.first_name || ""}'s Territory`}
-                  portalToken={portalToken}
-                  onScopeChange={() => refreshData(portalToken)}
-                  corporations={corporations}
-                  section="vineyard"
-                />
-              </TabsContent>
-            )}
-
-            {/* Storehouses Tab */}
-            {hasTerritory && (
-              <TabsContent value="storehouses" className="mt-4">
-                <PortalTerritory
-                  vineyardAccounts={ind.vineyardAccounts}
-                  storehouses={ind.memberStorehouses}
-                  contact={isSelf ? contact : currentMember}
-                  family={family}
-                  household={household}
-                  householdMembers={[]}
-                  scopeLabel={isSelf ? "My Territory" : `${currentMember?.first_name || ""}'s Territory`}
-                  portalToken={portalToken}
-                  onScopeChange={() => refreshData(portalToken)}
-                  corporations={corporations}
-                  section="storehouses"
-                />
+            {/* Financials Tab — Holding Tank, Vineyard, Storehouses */}
+            {hasFinancials && (
+              <TabsContent value="financials" className="mt-4 space-y-6">
+                {isSelf && holding_tank.length > 0 && (
+                  <PortalHoldingTank accounts={holding_tank} defaultCollapsed />
+                )}
+                {hasTerritory && (
+                  <PortalTerritory
+                    vineyardAccounts={ind.vineyardAccounts}
+                    storehouses={ind.memberStorehouses}
+                    contact={isSelf ? contact : currentMember}
+                    family={family}
+                    household={household}
+                    householdMembers={[]}
+                    scopeLabel={isSelf ? "My Territory" : `${currentMember?.first_name || ""}'s Territory`}
+                    portalToken={portalToken}
+                    onScopeChange={() => refreshData(portalToken)}
+                    corporations={corporations}
+                    section="all"
+                    defaultCollapsed
+                  />
+                )}
               </TabsContent>
             )}
 

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Grape, Landmark, Castle, Sword, Wheat, Lock, Users, Home, Eye, EyeOff, Globe, Building2 } from "lucide-react";
+import { Grape, Landmark, Castle, Sword, Wheat, Lock, Users, Home, Eye, EyeOff, Globe, Building2, ChevronDown, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -51,6 +51,7 @@ interface Props {
   onScopeChange?: () => void;
   corporations?: any[];
   section?: "vineyard" | "storehouses" | "all";
+  defaultCollapsed?: boolean;
 }
 
 function ScopeBadge({
@@ -144,9 +145,11 @@ function ScopeBadge({
   );
 }
 
-export function PortalTerritory({ vineyardAccounts, storehouses, contact, family, household, householdMembers = [], scopeLabel, portalToken, onScopeChange, corporations = [], section = "all" }: Props) {
+export function PortalTerritory({ vineyardAccounts, storehouses, contact, family, household, householdMembers = [], scopeLabel, portalToken, onScopeChange, corporations = [], section = "all", defaultCollapsed = false }: Props) {
   const showVineyard = section === "all" || section === "vineyard";
   const showStorehouses = section === "all" || section === "storehouses";
+  const [vineyardOpen, setVineyardOpen] = useState(!defaultCollapsed);
+  const [storehousesOpen, setStorehousesOpen] = useState(!defaultCollapsed);
   const isIndividualSelf = scopeLabel === "My Territory";
   
   // If scopeLabel is provided, assets are already pre-filtered by the parent; show all
@@ -182,7 +185,7 @@ export function PortalTerritory({ vineyardAccounts, storehouses, contact, family
       {/* Vineyard Overview */}
       {showVineyard && (
       <Card>
-        <CardHeader>
+        <CardHeader className="cursor-pointer select-none" onClick={() => setVineyardOpen((o) => !o)}>
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
               <Grape className="h-5 w-5 text-primary" />
@@ -191,14 +194,22 @@ export function PortalTerritory({ vineyardAccounts, storehouses, contact, family
               <CardTitle className="text-lg font-serif">The Vineyard</CardTitle>
               <p className="text-xs text-muted-foreground">Total Asset Portfolio</p>
             </div>
-            <div className="ml-auto text-right">
-              <p className="text-2xl font-bold text-primary">
-                ${totalVineyard.toLocaleString()}
-              </p>
-              <p className="text-xs text-muted-foreground">Total Value</p>
+            <div className="ml-auto flex items-center gap-3">
+              <div className="text-right">
+                <p className="text-2xl font-bold text-primary">
+                  ${totalVineyard.toLocaleString()}
+                </p>
+                <p className="text-xs text-muted-foreground">Total Value</p>
+              </div>
+              {vineyardOpen ? (
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              ) : (
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              )}
             </div>
           </div>
         </CardHeader>
+        {vineyardOpen && (
         <CardContent className="space-y-4">
           {Object.entries(byType).length > 0 ? (
             Object.entries(byType).map(([type, { accounts, total }]) => (
@@ -287,13 +298,14 @@ export function PortalTerritory({ vineyardAccounts, storehouses, contact, family
             </div>
           )}
         </CardContent>
+        )}
       </Card>
       )}
 
       {/* Storehouses */}
       {showStorehouses && (
       <Card>
-        <CardHeader>
+        <CardHeader className="cursor-pointer select-none" onClick={() => setStorehousesOpen((o) => !o)}>
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent/10">
               <Landmark className="h-5 w-5 text-accent" />
@@ -302,14 +314,22 @@ export function PortalTerritory({ vineyardAccounts, storehouses, contact, family
               <CardTitle className="text-lg font-serif">The Storehouses</CardTitle>
               <p className="text-xs text-muted-foreground">Strategic Asset Allocation</p>
             </div>
-            <div className="ml-auto text-right">
-              <p className="text-2xl font-bold text-accent">
-                ${visibleStorehouses.reduce((sum: number, s: any) => sum + (Number(s.current_value) || 0), 0).toLocaleString()}
-              </p>
-              <p className="text-xs text-muted-foreground">Total Value</p>
+            <div className="ml-auto flex items-center gap-3">
+              <div className="text-right">
+                <p className="text-2xl font-bold text-accent">
+                  ${visibleStorehouses.reduce((sum: number, s: any) => sum + (Number(s.current_value) || 0), 0).toLocaleString()}
+                </p>
+                <p className="text-xs text-muted-foreground">Total Value</p>
+              </div>
+              {storehousesOpen ? (
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              ) : (
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              )}
             </div>
           </div>
         </CardHeader>
+        {storehousesOpen && (
         <CardContent className="space-y-4">
           {STOREHOUSE_CONFIG.map(({ num, name, icon: Icon }) => {
             const accounts = visibleStorehouses.filter((s: any) => s.storehouse_number === num);
@@ -381,6 +401,7 @@ export function PortalTerritory({ vineyardAccounts, storehouses, contact, family
             );
           })}
         </CardContent>
+        )}
       </Card>
       )}
     </div>
