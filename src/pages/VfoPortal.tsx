@@ -339,6 +339,7 @@ const VfoPortal = () => {
             portalToken={portalToken}
             onScopeChange={refreshData}
           />
+          <PortalYourTeam professionals={professionals} engagements={engagements} />
         </aside>
       </div>
     );
@@ -476,6 +477,7 @@ const VfoPortal = () => {
             onScopeChange={refreshData}
             corporations={corporations}
           />
+          <PortalYourTeam professionals={professionals} engagements={engagements} />
         </aside>
       </div>
     );
@@ -515,6 +517,11 @@ const VfoPortal = () => {
               <TabsTrigger value="requests" className="flex-1 gap-1.5 data-[state=active]:bg-amber-500/10 data-[state=active]:text-amber-500">
                 <ClipboardList className="h-4 w-4" />Requests
               </TabsTrigger>
+              {professionals.length > 0 && (
+                <TabsTrigger value="team" className="flex-1 gap-1.5 data-[state=active]:bg-amber-500/10 data-[state=active]:text-amber-500">
+                  <Briefcase className="h-4 w-4" />Professionals
+                </TabsTrigger>
+              )}
               <TabsTrigger value="updates" className="flex-1 gap-1.5 data-[state=active]:bg-amber-500/10 data-[state=active]:text-amber-500">
                 <Megaphone className="h-4 w-4" />Updates
               </TabsTrigger>
