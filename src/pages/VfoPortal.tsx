@@ -49,6 +49,8 @@ const VfoPortal = () => {
   const [drilldown, setDrilldown] = useState<DrilldownState>({ level: "individual" });
   const [expandedCorps, setExpandedCorps] = useState<Set<string>>(new Set());
   const [georgiaOpen, setGeorgiaOpen] = useState(false);
+  const [requestsOpen, setRequestsOpen] = useState(false);
+
 
   useEffect(() => {
     if (!token) { setError("Missing access token."); setLoading(false); return; }
