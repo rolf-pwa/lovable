@@ -1324,16 +1324,16 @@ const Portal = () => {
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* Header */}
-      <header className="border-b border-border bg-background/80 backdrop-blur-sm sticky top-0 z-10">
+      <header className="border-b border-primary-foreground/10 bg-primary sticky top-0 z-10">
         <div className="mx-auto max-w-6xl px-4 py-4 sm:px-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <img src={prosperwiseLogo} alt="ProsperWise" className="h-9 w-9" />
               <div>
-                <h1 className="text-lg font-semibold text-foreground font-serif">
+                <h1 className="text-lg font-semibold text-primary-foreground font-serif">
                   {contact.first_name} {contact.last_name || ""}
                 </h1>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-primary-foreground/70">
                   {getHeaderSubtitle()}
                 </p>
               </div>
