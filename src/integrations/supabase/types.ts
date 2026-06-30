@@ -775,6 +775,8 @@ export type Database = {
           name: string
           total_family_assets: number
           updated_at: string
+          vfo_enabled: boolean
+          vfo_enrolled_at: string | null
         }
         Insert: {
           annual_savings?: number
@@ -787,6 +789,8 @@ export type Database = {
           name: string
           total_family_assets?: number
           updated_at?: string
+          vfo_enabled?: boolean
+          vfo_enrolled_at?: string | null
         }
         Update: {
           annual_savings?: number
@@ -799,6 +803,8 @@ export type Database = {
           name?: string
           total_family_assets?: number
           updated_at?: string
+          vfo_enabled?: boolean
+          vfo_enrolled_at?: string | null
         }
         Relationships: []
       }

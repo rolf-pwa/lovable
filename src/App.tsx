@@ -15,6 +15,8 @@ import ContactForm from "./pages/ContactForm";
 import NotFound from "./pages/NotFound";
 import GoogleCallback from "./pages/GoogleCallback";
 import Portal from "./pages/Portal";
+import VfoPortal from "./pages/VfoPortal";
+import AdminVfo from "./pages/AdminVfo";
 import Families from "./pages/Families";
 import FamilyDetail from "./pages/FamilyDetail";
 import Discovery from "./pages/Discovery";
@@ -67,6 +69,8 @@ const App = () => (
             <Route path="/vfo-onboarding/embed" element={<VfoOnboardingEmbed />} />
             <Route path="/portal" element={<Portal />} />
             <Route path="/portal/:token" element={<Portal />} />
+            <Route path="/vfo/:token" element={<VfoPortal />} />
+            <Route path="/admin/vfo" element={<ProtectedRoute><AdminVfo /></ProtectedRoute>} />
             <Route path="/google-callback" element={<ProtectedRoute><GoogleCallback /></ProtectedRoute>} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/inbox" element={<ProtectedRoute><Inbox /></ProtectedRoute>} />

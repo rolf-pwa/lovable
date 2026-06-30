@@ -298,7 +298,7 @@ if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders }
       
       if (familyId) {
         extraQueries.push(
-          supabase.from("families").select("id, name, charter_document_url, fee_tier, total_family_assets").eq("id", familyId).maybeSingle()
+          supabase.from("families").select("id, name, charter_document_url, fee_tier, total_family_assets, vfo_enabled, vfo_enrolled_at").eq("id", familyId).maybeSingle()
         );
       } else {
         extraQueries.push(Promise.resolve({ data: null }));
