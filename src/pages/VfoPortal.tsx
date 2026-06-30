@@ -597,18 +597,34 @@ const VfoPortal = () => {
                 <h3 className="font-serif text-sm text-foreground">Your Concierge</h3>
               </div>
               <p className="text-xs text-muted-foreground leading-relaxed">
-                Your dedicated advisory team is one message away. Open a private request anytime.
+                Chat with Georgia for instant help, or open a private request for your advisory team.
               </p>
               <Button
-                variant="outline"
-                className="w-full border-amber-500/30 text-amber-600 hover:bg-amber-500/10"
+                className="w-full bg-amber-500 text-amber-950 hover:bg-amber-400"
                 onClick={() => setGeorgiaOpen(true)}
               >
                 <MessageCircle className="h-4 w-4 mr-2" />
-                Contact Concierge
+                Ask Georgia
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full border-amber-500/30 text-amber-600 hover:bg-amber-500/10 justify-between"
+                onClick={() => setRequestsOpen(true)}
+              >
+                <span className="flex items-center">
+                  <ClipboardList className="h-4 w-4 mr-2" />
+                  Requests
+                </span>
+                {(() => {
+                  const openCount = (portal_requests || []).filter((r: any) => r.status !== "resolved").length;
+                  return openCount > 0 ? (
+                    <Badge variant="secondary" className="bg-amber-500/15 text-amber-600 border-amber-500/30">{openCount} open</Badge>
+                  ) : null;
+                })()}
               </Button>
             </CardContent>
           </Card>
+
 
           {charter && (
             <Card className="border-amber-500/15">
