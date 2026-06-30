@@ -3,6 +3,9 @@ import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
+
 import { Button } from "@/components/ui/button";
 import {
   Loader2, Crown, ShieldCheck, Calendar, CheckSquare, Landmark, FolderLock,
@@ -46,6 +49,8 @@ const VfoPortal = () => {
   const [drilldown, setDrilldown] = useState<DrilldownState>({ level: "individual" });
   const [expandedCorps, setExpandedCorps] = useState<Set<string>>(new Set());
   const [georgiaOpen, setGeorgiaOpen] = useState(false);
+  const [requestsOpen, setRequestsOpen] = useState(false);
+
 
   useEffect(() => {
     if (!token) { setError("Missing access token."); setLoading(false); return; }
@@ -514,9 +519,6 @@ const VfoPortal = () => {
                   <FolderLock className="h-4 w-4" />Documents
                 </TabsTrigger>
               )}
-              <TabsTrigger value="requests" className="flex-1 gap-1.5 data-[state=active]:bg-amber-500/10 data-[state=active]:text-amber-500">
-                <ClipboardList className="h-4 w-4" />Requests
-              </TabsTrigger>
               {professionals.length > 0 && (
                 <TabsTrigger value="team" className="flex-1 gap-1.5 data-[state=active]:bg-amber-500/10 data-[state=active]:text-amber-500">
                   <Briefcase className="h-4 w-4" />Professionals
@@ -569,15 +571,6 @@ const VfoPortal = () => {
               </TabsContent>
             )}
 
-            <TabsContent value="requests" className="mt-4">
-              <PortalRequests
-                requests={portal_requests}
-                contactId={contact.id}
-                contactName={`${contact.first_name || ""} ${contact.last_name || ""}`.trim()}
-                portalToken={portalToken}
-                onUpdate={refreshData}
-              />
-            </TabsContent>
 
             <TabsContent value="updates" className="mt-4">
               <PortalUpdates
@@ -604,18 +597,34 @@ const VfoPortal = () => {
                 <h3 className="font-serif text-sm text-foreground">Your Concierge</h3>
               </div>
               <p className="text-xs text-muted-foreground leading-relaxed">
-                Your dedicated advisory team is one message away. Open a private request anytime.
+                Chat with Georgia for instant help, or open a private request for your advisory team.
               </p>
               <Button
-                variant="outline"
-                className="w-full border-amber-500/30 text-amber-600 hover:bg-amber-500/10"
+                className="w-full bg-amber-500 text-amber-950 hover:bg-amber-400"
                 onClick={() => setGeorgiaOpen(true)}
               >
                 <MessageCircle className="h-4 w-4 mr-2" />
-                Contact Concierge
+                Ask Georgia
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full border-amber-500/30 text-amber-600 hover:bg-amber-500/10 justify-between"
+                onClick={() => setRequestsOpen(true)}
+              >
+                <span className="flex items-center">
+                  <ClipboardList className="h-4 w-4 mr-2" />
+                  Requests
+                </span>
+                {(() => {
+                  const openCount = (portal_requests || []).filter((r: any) => r.status !== "resolved").length;
+                  return openCount > 0 ? (
+                    <Badge variant="secondary" className="bg-amber-500/15 text-amber-600 border-amber-500/30">{openCount} open</Badge>
+                  ) : null;
+                })()}
               </Button>
             </CardContent>
           </Card>
+
 
           {charter && (
             <Card className="border-amber-500/15">
@@ -717,8 +726,28 @@ const VfoPortal = () => {
         contactName={`${contact?.first_name || ""} ${contact?.last_name || ""}`.trim()}
         contactId={contact?.id}
         portalToken={portalToken}
+        onRequestSubmitted={refreshData}
       />
+
+      <Dialog open={requestsOpen} onOpenChange={setRequestsOpen}>
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="font-serif flex items-center gap-2">
+              <ClipboardList className="h-5 w-5 text-amber-500" />
+              Your Requests
+            </DialogTitle>
+          </DialogHeader>
+          <PortalRequests
+            requests={portal_requests}
+            contactId={contact.id}
+            contactName={`${contact.first_name || ""} ${contact.last_name || ""}`.trim()}
+            portalToken={portalToken}
+            onUpdate={refreshData}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
+
   );
 };
 
