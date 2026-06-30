@@ -138,7 +138,7 @@ const VfoPortal = () => {
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* Premium Header */}
-      <header className="border-b border-amber-500/20 bg-gradient-to-b from-[#0a0d12] to-background">
+      <header className="border-b border-amber-500/20 bg-background">
         <div className="max-w-7xl mx-auto px-6 py-8">
           <div className="flex items-start justify-between gap-6 flex-wrap">
             <div className="flex items-center gap-4 min-w-0">
