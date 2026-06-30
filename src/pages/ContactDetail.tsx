@@ -27,6 +27,23 @@ import { format, differenceInDays, addDays } from "date-fns";
 import { PageBreadcrumbs } from "@/components/PageBreadcrumbs";
 import { ContactMerge } from "@/components/ContactMerge";
 import { getOrCreateToken } from "@/components/portal/PortalMagicLinkButton";
+import { supabase as supabaseClient } from "@/integrations/supabase/client";
+
+async function resolvePortalBase(contactId: string): Promise<"portal" | "vfo"> {
+  const { data: contact } = await supabaseClient
+    .from("contacts")
+    .select("family_id, households:household_id(family_id)")
+    .eq("id", contactId)
+    .maybeSingle();
+  const familyId = (contact as any)?.family_id || (contact as any)?.households?.family_id;
+  if (!familyId) return "portal";
+  const { data: family } = await supabaseClient
+    .from("families")
+    .select("vfo_enabled")
+    .eq("id", familyId)
+    .maybeSingle();
+  return (family as any)?.vfo_enabled ? "vfo" : "portal";
+}
 import { useAuth } from "@/hooks/useAuth";
 import { ContactTaskList } from "@/components/ContactTaskList";
 import { ContactRequests } from "@/components/ContactRequests";
