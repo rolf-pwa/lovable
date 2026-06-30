@@ -22,6 +22,7 @@ import {
   Anchor,
   PackagePlus,
   BarChart3,
+  Crown,
   Inbox as InboxIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -83,6 +84,7 @@ const adminItems = [
   { to: "/review-queue", label: "Review Queue", icon: ClipboardCheck, reviewBadge: true },
   { to: "/knowledge-base", label: "Knowledge Base", icon: BookOpen },
   { to: "/workbench", label: "Workbench", icon: Cpu },
+  { to: "/admin/vfo", label: "VFO Roster", icon: Crown },
 ];
 
 const externalLinks = [
