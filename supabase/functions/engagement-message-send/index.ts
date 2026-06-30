@@ -149,8 +149,9 @@ serve(async (req) => {
     // Audit trail
     await supabase.from("sovereignty_audit_trail").insert({
       action_type: "engagement_message_sent",
-      summary: `${sender_type} sent a message on engagement "${engagement.title}"`,
-      metadata: { engagement_id, message_id: inserted.id, sender_type },
+      action_description: `${sender_type} sent a message on engagement "${engagement.title}"`,
+      proposed_data: { engagement_id, message_id: inserted.id, sender_type },
+      user_id: sender_type === "staff" ? sender_id : null,
     }).then(() => {}, () => {/* best-effort */});
 
     // Notify the other party via Gmail relay (link-only, no PII in email body)
