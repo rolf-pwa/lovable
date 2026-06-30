@@ -571,15 +571,6 @@ const VfoPortal = () => {
               </TabsContent>
             )}
 
-            <TabsContent value="requests" className="mt-4">
-              <PortalRequests
-                requests={portal_requests}
-                contactId={contact.id}
-                contactName={`${contact.first_name || ""} ${contact.last_name || ""}`.trim()}
-                portalToken={portalToken}
-                onUpdate={refreshData}
-              />
-            </TabsContent>
 
             <TabsContent value="updates" className="mt-4">
               <PortalUpdates
