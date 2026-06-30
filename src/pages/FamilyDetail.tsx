@@ -75,6 +75,9 @@ const FamilyDetail = () => {
   const [storehouses, setStorehouses] = useState<any[]>([]);
   const [holdingTank, setHoldingTank] = useState<any[]>([]);
   const [openHouseholds, setOpenHouseholds] = useState<Set<string>>(new Set());
+  const [openSidebarHoldingTank, setOpenSidebarHoldingTank] = useState(false);
+  const [openSidebarVineyard, setOpenSidebarVineyard] = useState(false);
+  const [openSidebarStorehouses, setOpenSidebarStorehouses] = useState(false);
 
   const fetchData = useCallback(async () => {
     if (!id) return;
@@ -108,9 +111,9 @@ const FamilyDetail = () => {
     const memberIds = (cs || []).map((c: any) => c.id);
     if (memberIds.length > 0) {
       const [{ data: v }, { data: s }, { data: t }] = await Promise.all([
-        supabase.from("vineyard_accounts").select("contact_id, current_value").in("contact_id", memberIds),
-        supabase.from("storehouses").select("contact_id, current_value").in("contact_id", memberIds),
-        supabase.from("holding_tank").select("contact_id, current_value").in("contact_id", memberIds),
+        supabase.from("vineyard_accounts").select("id, contact_id, account_name, account_type, current_value, book_value").in("contact_id", memberIds),
+        supabase.from("storehouses").select("id, contact_id, storehouse_number, label, current_value, book_value, asset_type").in("contact_id", memberIds),
+        supabase.from("holding_tank").select("id, contact_id, account_name, account_type, current_value, book_value, custodian, expected_deposit_date").in("contact_id", memberIds),
       ]);
       setVineyard(v || []);
       setStorehouses(s || []);
@@ -193,6 +196,16 @@ const FamilyDetail = () => {
   const contactTotal = (cid: string) =>
     (vineyardByContact[cid] || 0) + (storehouseByContact[cid] || 0) + (holdingByContact[cid] || 0);
 
+  const storehouseName = (num: number) => {
+    const names: Record<number, string> = {
+      1: "Liquidity Reserve",
+      2: "Strategic Reserve",
+      3: "Philanthropic Trust",
+      4: "Legacy Trust",
+    };
+    return names[num] || "Storehouse";
+  };
+
   return (
     <AppLayout>
       <div className="space-y-6">
@@ -239,40 +252,11 @@ const FamilyDetail = () => {
               </div>
             </div>
 
-            {/* AUM Tiles */}
-            <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <div className="rounded-lg border border-border bg-card/50 p-4">
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Wallet className="h-3.5 w-3.5" />
-                  Total Family AUM
-                </div>
-                <p className="mt-2 text-2xl font-bold text-sanctuary-bronze">
-                  {formatCurrency(totalAUM)}
-                </p>
-              </div>
-              <div className="rounded-lg border border-border bg-card/50 p-4">
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Grape className="h-3.5 w-3.5" />
-                  The Vineyard
-                </div>
-                <p className="mt-2 text-2xl font-bold">{formatCurrency(totalVineyard)}</p>
-              </div>
-              <div className="rounded-lg border border-border bg-card/50 p-4">
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Landmark className="h-3.5 w-3.5" />
-                  Storehouses
-                </div>
-                <p className="mt-2 text-2xl font-bold">{formatCurrency(totalStorehouses)}</p>
-              </div>
-              <div className="rounded-lg border border-border bg-card/50 p-4">
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Anchor className="h-3.5 w-3.5" />
-                  Holding Tank
-                </div>
-                <p className="mt-2 text-2xl font-bold text-amber-600">
-                  {formatCurrency(totalHolding)}
-                </p>
-              </div>
+            {/* Total AUM */}
+            <div className="mt-6 flex items-center gap-3">
+              <Wallet className="h-4 w-4 text-sanctuary-bronze" />
+              <span className="text-sm text-muted-foreground">Total Family AUM</span>
+              <span className="text-lg font-bold text-sanctuary-bronze">{formatCurrency(totalAUM)}</span>
             </div>
           </CardContent>
         </Card>
@@ -288,96 +272,273 @@ const FamilyDetail = () => {
           onRecalculated={fetchData}
         />
 
-        {/* Households + Individuals directory */}
-        <Card>
-          <CardHeader className="pb-4">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Home className="h-4 w-4 text-sanctuary-bronze" />
-              Households & Members
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="px-0 pb-0">
-            {households.length === 0 ? (
-              <p className="px-6 pb-6 text-sm text-muted-foreground">
-                No households in this family yet.
-              </p>
-            ) : (
-              <div className="border-t border-border divide-y divide-border">
-                {households.map((hh) => {
-                  const isOpen = openHouseholds.has(hh.id);
-                  const members = contactsByHousehold(hh.id);
-                  const hhTotal = householdTotal(hh.id);
-                  return (
-                    <Collapsible
-                      key={hh.id}
-                      open={isOpen}
-                      onOpenChange={() => toggleHousehold(hh.id)}
-                    >
-                      <div className="flex items-center gap-2 px-6 py-3 hover:bg-muted/30">
-                        <CollapsibleTrigger className="flex items-center gap-2 flex-1 text-left min-w-0">
-                          {isOpen ? (
-                            <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
-                          ) : (
-                            <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
-                          )}
-                          <Home className="h-4 w-4 text-sanctuary-bronze shrink-0" />
-                          <span className="font-medium truncate">{hh.label}</span>
-                          <Badge variant="outline" className="text-[10px] uppercase">
-                            {members.length} {members.length === 1 ? "member" : "members"}
+        <div className="flex gap-6 items-start">
+          {/* Sidebar */}
+          <div className="w-80 shrink-0 space-y-4">
+            {/* Holding Tank */}
+            <Card className="border-amber-500/20">
+              <CardHeader
+                className="pb-2 cursor-pointer select-none"
+                onClick={() => setOpenSidebarHoldingTank((o) => !o)}
+              >
+                <div className="flex items-center gap-3">
+                  <Anchor className="h-5 w-5 text-amber-600 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <CardTitle className="text-base font-serif">Holding Tank</CardTitle>
+                    <p className="text-xs text-muted-foreground">
+                      {holdingTank.length} account{holdingTank.length !== 1 ? "s" : ""}
+                    </p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-lg font-bold text-amber-600">{formatCurrency(totalHolding)}</p>
+                  </div>
+                  {openSidebarHoldingTank ? (
+                    <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                  )}
+                </div>
+              </CardHeader>
+              {openSidebarHoldingTank && (
+                <CardContent className="space-y-2 pt-0">
+                  {holdingTank.length === 0 ? (
+                    <p className="text-xs text-muted-foreground text-center py-2">No accounts</p>
+                  ) : (
+                    holdingTank.map((account) => (
+                      <div
+                        key={account.id}
+                        className="flex items-center justify-between rounded-md border border-border bg-muted/30 px-3 py-2"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium truncate">{account.account_name}</p>
+                          <Badge variant="outline" className="text-[9px] h-3.5 px-1">
+                            {account.account_type}
                           </Badge>
-                        </CollapsibleTrigger>
-                        <span className="text-sm font-semibold text-sanctuary-bronze shrink-0">
-                          {formatCurrency(hhTotal)}
-                        </span>
-                        <Button asChild variant="ghost" size="sm" className="shrink-0">
-                          <Link to={`/households/${hh.id}`}>
-                            Open <ExternalLink className="ml-1 h-3 w-3" />
-                          </Link>
-                        </Button>
+                        </div>
+                        <div className="text-right shrink-0 ml-3">
+                          <p className="text-sm font-semibold">{formatCurrency(account.current_value || 0)}</p>
+                          {account.book_value != null && (
+                            <p className="text-[10px] text-muted-foreground">
+                              BOY: {formatCurrency(account.book_value)}
+                            </p>
+                          )}
+                        </div>
                       </div>
-                      <CollapsibleContent>
-                        {members.length === 0 ? (
-                          <p className="px-12 pb-4 text-xs text-muted-foreground">
-                            No members assigned.
-                          </p>
-                        ) : (
-                          <div className="pb-2">
-                            {members.map((m) => {
-                              const Icon = ROLE_ICONS[m.family_role] || User;
-                              const cTotal = contactTotal(m.id);
-                              return (
-                                <div
-                                  key={m.id}
-                                  className="flex items-center gap-2 pl-14 pr-6 py-2 hover:bg-muted/20"
-                                >
-                                  <Icon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                                  <Link
-                                    to={`/contacts/${m.id}`}
-                                    className="text-sm font-medium hover:underline truncate flex-1"
-                                  >
-                                    {m.first_name} {m.last_name || ""}
-                                  </Link>
-                                  {m.family_role && (
-                                    <Badge variant="outline" className="text-[9px] uppercase">
-                                      {ROLE_LABELS[m.family_role] || m.family_role}
-                                    </Badge>
-                                  )}
-                                  <span className="text-xs text-muted-foreground shrink-0 w-32 text-right">
-                                    {formatCurrency(cTotal)}
-                                  </span>
-                                </div>
-                              );
-                            })}
+                    ))
+                  )}
+                </CardContent>
+              )}
+            </Card>
+
+            {/* Vineyard */}
+            <Card>
+              <CardHeader
+                className="pb-2 cursor-pointer select-none"
+                onClick={() => setOpenSidebarVineyard((o) => !o)}
+              >
+                <div className="flex items-center gap-3">
+                  <Grape className="h-5 w-5 text-accent shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <CardTitle className="text-base font-serif">The Vineyard</CardTitle>
+                    <p className="text-xs text-muted-foreground">
+                      {vineyard.length} account{vineyard.length !== 1 ? "s" : ""}
+                    </p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-lg font-bold">{formatCurrency(totalVineyard)}</p>
+                  </div>
+                  {openSidebarVineyard ? (
+                    <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                  )}
+                </div>
+              </CardHeader>
+              {openSidebarVineyard && (
+                <CardContent className="space-y-2 pt-0">
+                  {vineyard.length === 0 ? (
+                    <p className="text-xs text-muted-foreground text-center py-2">No accounts</p>
+                  ) : (
+                    vineyard.map((account) => (
+                      <div
+                        key={account.id}
+                        className="flex items-center justify-between rounded-md border border-border bg-muted/30 px-3 py-2"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium truncate">{account.account_name}</p>
+                          <Badge variant="outline" className="text-[9px] h-3.5 px-1">
+                            {account.account_type}
+                          </Badge>
+                        </div>
+                        <div className="text-right shrink-0 ml-3">
+                          <p className="text-sm font-semibold">{formatCurrency(account.current_value || 0)}</p>
+                          {account.book_value != null && (
+                            <p className="text-[10px] text-muted-foreground">
+                              BOY: {formatCurrency(account.book_value)}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </CardContent>
+              )}
+            </Card>
+
+            {/* Storehouses */}
+            <Card>
+              <CardHeader
+                className="pb-2 cursor-pointer select-none"
+                onClick={() => setOpenSidebarStorehouses((o) => !o)}
+              >
+                <div className="flex items-center gap-3">
+                  <Landmark className="h-5 w-5 text-accent shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <CardTitle className="text-base font-serif">Storehouses</CardTitle>
+                    <p className="text-xs text-muted-foreground">
+                      {storehouses.length} account{storehouses.length !== 1 ? "s" : ""}
+                    </p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-lg font-bold">{formatCurrency(totalStorehouses)}</p>
+                  </div>
+                  {openSidebarStorehouses ? (
+                    <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                  )}
+                </div>
+              </CardHeader>
+              {openSidebarStorehouses && (
+                <CardContent className="space-y-2 pt-0">
+                  {storehouses.length === 0 ? (
+                    <p className="text-xs text-muted-foreground text-center py-2">No accounts</p>
+                  ) : (
+                    storehouses.map((account) => (
+                      <div
+                        key={account.id}
+                        className="flex items-center justify-between rounded-md border border-border bg-muted/30 px-3 py-2"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium truncate">{account.label}</p>
+                          <div className="flex items-center gap-1.5">
+                            <Badge variant="outline" className="text-[9px] h-3.5 px-1">
+                              {storehouseName(account.storehouse_number)}
+                            </Badge>
+                            {account.asset_type && (
+                              <span className="text-[10px] text-muted-foreground">{account.asset_type}</span>
+                            )}
                           </div>
-                        )}
-                      </CollapsibleContent>
-                    </Collapsible>
-                  );
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                        </div>
+                        <div className="text-right shrink-0 ml-3">
+                          <p className="text-sm font-semibold">{formatCurrency(account.current_value || 0)}</p>
+                          {account.book_value != null && (
+                            <p className="text-[10px] text-muted-foreground">
+                              BOY: {formatCurrency(account.book_value)}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </CardContent>
+              )}
+            </Card>
+          </div>
+
+          {/* Main column — Households & Members */}
+          <div className="flex-1 min-w-0">
+            <Card>
+              <CardHeader className="pb-4">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Home className="h-4 w-4 text-sanctuary-bronze" />
+                  Households & Members
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="px-0 pb-0">
+                {households.length === 0 ? (
+                  <p className="px-6 pb-6 text-sm text-muted-foreground">
+                    No households in this family yet.
+                  </p>
+                ) : (
+                  <div className="border-t border-border divide-y divide-border">
+                    {households.map((hh) => {
+                      const isOpen = openHouseholds.has(hh.id);
+                      const members = contactsByHousehold(hh.id);
+                      const hhTotal = householdTotal(hh.id);
+                      return (
+                        <Collapsible
+                          key={hh.id}
+                          open={isOpen}
+                          onOpenChange={() => toggleHousehold(hh.id)}
+                        >
+                          <div className="flex items-center gap-2 px-6 py-3 hover:bg-muted/30">
+                            <CollapsibleTrigger className="flex items-center gap-2 flex-1 text-left min-w-0">
+                              {isOpen ? (
+                                <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
+                              ) : (
+                                <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                              )}
+                              <Home className="h-4 w-4 text-sanctuary-bronze shrink-0" />
+                              <span className="font-medium truncate">{hh.label}</span>
+                              <Badge variant="outline" className="text-[10px] uppercase">
+                                {members.length} {members.length === 1 ? "member" : "members"}
+                              </Badge>
+                            </CollapsibleTrigger>
+                            <span className="text-sm font-semibold text-sanctuary-bronze shrink-0">
+                              {formatCurrency(hhTotal)}
+                            </span>
+                            <Button asChild variant="ghost" size="sm" className="shrink-0">
+                              <Link to={`/households/${hh.id}`}>
+                                Open <ExternalLink className="ml-1 h-3 w-3" />
+                              </Link>
+                            </Button>
+                          </div>
+                          <CollapsibleContent>
+                            {members.length === 0 ? (
+                              <p className="px-12 pb-4 text-xs text-muted-foreground">
+                                No members assigned.
+                              </p>
+                            ) : (
+                              <div className="pb-2">
+                                {members.map((m) => {
+                                  const Icon = ROLE_ICONS[m.family_role] || User;
+                                  const cTotal = contactTotal(m.id);
+                                  return (
+                                    <div
+                                      key={m.id}
+                                      className="flex items-center gap-2 pl-14 pr-6 py-2 hover:bg-muted/20"
+                                    >
+                                      <Icon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                                      <Link
+                                        to={`/contacts/${m.id}`}
+                                        className="text-sm font-medium hover:underline truncate flex-1"
+                                      >
+                                        {m.first_name} {m.last_name || ""}
+                                      </Link>
+                                      {m.family_role && (
+                                        <Badge variant="outline" className="text-[9px] uppercase">
+                                          {ROLE_LABELS[m.family_role] || m.family_role}
+                                        </Badge>
+                                      )}
+                                      <span className="text-xs text-muted-foreground shrink-0 w-32 text-right">
+                                        {formatCurrency(cTotal)}
+                                      </span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </CollapsibleContent>
+                        </Collapsible>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
     </AppLayout>
   );
