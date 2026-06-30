@@ -24,6 +24,7 @@ import {
   BarChart3,
   Crown,
   Inbox as InboxIcon,
+  Briefcase,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
