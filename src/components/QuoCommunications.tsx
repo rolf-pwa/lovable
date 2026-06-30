@@ -94,10 +94,24 @@ export default function QuoCommunications({ contactId, contactPhone, contactName
       const { data, error } = await supabase.functions.invoke("quo-service", {
         body: { action: "sendSms", contactId, to: contactPhone, content: draft.trim() },
       });
-      if (error) throw error;
+      // supabase-js raises FunctionsHttpError on non-2xx; parse the body so
+      // PII Shield blocks (422) surface their real reason instead of a
+      // generic "Send failed".
+      if (error) {
+        let parsed: any = null;
+        try { parsed = await (error as any).context?.response?.json?.(); } catch {}
+        if (parsed?.blocked) {
+          toast.error(`PII Shield blocked: ${parsed.reason}`, {
+            description: "Rephrase without dollar amounts, account numbers, or health terms — or use the Sovereign Portal for sensitive details.",
+          });
+          load();
+          return;
+        }
+        throw new Error(parsed?.error || error.message);
+      }
       if (data?.blocked) {
         toast.error(`PII Shield blocked: ${data.reason}`, {
-          description: "Use the Sovereign Portal for sensitive details.",
+          description: "Rephrase without dollar amounts, account numbers, or health terms — or use the Sovereign Portal for sensitive details.",
         });
       } else {
         toast.success("SMS sent");
@@ -110,6 +124,7 @@ export default function QuoCommunications({ contactId, contactPhone, contactName
       setSending(false);
     }
   };
+
 
   const syncContact = async () => {
     try {
