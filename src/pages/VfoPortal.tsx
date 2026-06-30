@@ -592,7 +592,7 @@ const VfoPortal = () => {
               <Button
                 variant="outline"
                 className="w-full border-amber-500/30 text-amber-600 hover:bg-amber-500/10"
-                onClick={() => setTab("requests")}
+                onClick={() => setGeorgiaOpen(true)}
               >
                 <MessageCircle className="h-4 w-4 mr-2" />
                 Contact Concierge
@@ -687,6 +687,14 @@ const VfoPortal = () => {
           ProsperWise · Private Family Office
         </div>
       </main>
+
+      <PortalGeorgiaChat
+        open={georgiaOpen}
+        onOpenChange={setGeorgiaOpen}
+        contactName={`${contact?.first_name || ""} ${contact?.last_name || ""}`.trim()}
+        contactId={contact?.id}
+        portalToken={portalToken}
+      />
     </div>
   );
 };
