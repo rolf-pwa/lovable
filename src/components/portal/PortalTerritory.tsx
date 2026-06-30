@@ -185,7 +185,7 @@ export function PortalTerritory({ vineyardAccounts, storehouses, contact, family
       {/* Vineyard Overview */}
       {showVineyard && (
       <Card>
-        <CardHeader>
+        <CardHeader className="cursor-pointer select-none" onClick={() => setVineyardOpen((o) => !o)}>
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
               <Grape className="h-5 w-5 text-primary" />
@@ -194,14 +194,22 @@ export function PortalTerritory({ vineyardAccounts, storehouses, contact, family
               <CardTitle className="text-lg font-serif">The Vineyard</CardTitle>
               <p className="text-xs text-muted-foreground">Total Asset Portfolio</p>
             </div>
-            <div className="ml-auto text-right">
-              <p className="text-2xl font-bold text-primary">
-                ${totalVineyard.toLocaleString()}
-              </p>
-              <p className="text-xs text-muted-foreground">Total Value</p>
+            <div className="ml-auto flex items-center gap-3">
+              <div className="text-right">
+                <p className="text-2xl font-bold text-primary">
+                  ${totalVineyard.toLocaleString()}
+                </p>
+                <p className="text-xs text-muted-foreground">Total Value</p>
+              </div>
+              {vineyardOpen ? (
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              ) : (
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              )}
             </div>
           </div>
         </CardHeader>
+        {vineyardOpen && (
         <CardContent className="space-y-4">
           {Object.entries(byType).length > 0 ? (
             Object.entries(byType).map(([type, { accounts, total }]) => (
