@@ -17,6 +17,7 @@ import { PortalCharter } from "@/components/portal/PortalCharter";
 import { PortalTasks } from "@/components/portal/PortalTasks";
 import { PortalVault } from "@/components/portal/PortalVault";
 import { PortalUpdates } from "@/components/portal/PortalUpdates";
+import { PortalGeorgiaChat } from "@/components/portal/PortalGeorgiaChat";
 import prosperwiseLogo from "@/assets/prosperwise-logo.png";
 
 const ROLE_LABELS: Record<string, string> = {
@@ -41,6 +42,7 @@ const VfoPortal = () => {
   const [tab, setTab] = useState("tasks");
   const [drilldown, setDrilldown] = useState<DrilldownState>({ level: "individual" });
   const [expandedCorps, setExpandedCorps] = useState<Set<string>>(new Set());
+  const [georgiaOpen, setGeorgiaOpen] = useState(false);
 
   useEffect(() => {
     if (!token) { setError("Missing access token."); setLoading(false); return; }
@@ -641,28 +643,28 @@ const VfoPortal = () => {
             <div className="flex items-center gap-4 min-w-0">
               <img src={prosperwiseLogo} alt="" className="h-10 w-10 opacity-90" />
               <div className="min-w-0">
-                <h1 className="font-serif text-3xl md:text-4xl text-foreground leading-tight truncate">
+                <h1 className="font-serif text-3xl md:text-4xl text-primary-foreground leading-tight truncate">
                   {familyName} Family Office
                 </h1>
-                <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>
+                <p className="text-sm text-primary-foreground/70 mt-1">{subtitle}</p>
               </div>
             </div>
-            <div className="flex items-center gap-6 border-l border-amber-500/15 pl-6">
+            <div className="flex items-center gap-6 border-l border-primary-foreground/15 pl-6">
               <div>
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Total Family AUM</p>
-                <p className="font-serif text-2xl text-foreground">{fmt(totalAum)}</p>
+                <p className="text-[10px] uppercase tracking-wider text-primary-foreground/60">Total Family AUM</p>
+                <p className="font-serif text-2xl text-primary-foreground">{fmt(totalAum)}</p>
               </div>
               <div className="hidden sm:block">
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Households</p>
-                <p className="font-serif text-2xl text-foreground">{householdCount}</p>
+                <p className="text-[10px] uppercase tracking-wider text-primary-foreground/60">Households</p>
+                <p className="font-serif text-2xl text-primary-foreground">{householdCount}</p>
               </div>
               <div className="hidden md:block">
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Members</p>
-                <p className="font-serif text-2xl text-foreground">{memberCount}</p>
+                <p className="text-[10px] uppercase tracking-wider text-primary-foreground/60">Members</p>
+                <p className="font-serif text-2xl text-primary-foreground">{memberCount}</p>
               </div>
             </div>
           </div>
-          <div className="mt-6 h-px bg-gradient-to-r from-transparent via-amber-500/40 to-transparent" />
+          <div className="mt-6 h-px bg-gradient-to-r from-transparent via-primary-foreground/30 to-transparent" />
         </div>
       </header>
 
