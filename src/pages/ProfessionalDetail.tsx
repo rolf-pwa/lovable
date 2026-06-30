@@ -122,8 +122,8 @@ export default function ProfessionalDetail() {
   }
 
   const scopeOptions =
-    form.scope_type === "family" ? scopes.families.map((f) => ({ id: f.id, label: f.family_name })) :
-    form.scope_type === "household" ? scopes.households.map((h) => ({ id: h.id, label: h.household_name })) :
+    form.scope_type === "family" ? scopes.families.map((f) => ({ id: f.id, label: f.name })) :
+    form.scope_type === "household" ? scopes.households.map((h) => ({ id: h.id, label: h.label || "Household" })) :
     scopes.contacts.map((c) => ({ id: c.id, label: c.full_name }));
 
   if (!pro) {
