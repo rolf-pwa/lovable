@@ -983,7 +983,8 @@ const Portal = () => {
     const ind = getIndividualData();
     const isSelf = !currentMember;
     const hasTerritory = (ind.vineyardAccounts?.length || 0) > 0 || (ind.memberStorehouses?.length || 0) > 0;
-    const effectiveTab = !hasTerritory && (activeTab === "vineyard" || activeTab === "storehouses") ? "tasks" : activeTab;
+    const hasFinancials = hasTerritory || (isSelf && holding_tank.length > 0);
+    const effectiveTab = !hasFinancials && activeTab === "financials" ? "tasks" : activeTab;
 
 
 
