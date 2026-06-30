@@ -28,14 +28,18 @@ const formatCurrency = (value: number) =>
     maximumFractionDigits: 0,
   }).format(value);
 
-export function PortalHoldingTank({ accounts }: PortalHoldingTankProps) {
+export function PortalHoldingTank({ accounts, defaultCollapsed = false }: PortalHoldingTankProps) {
+  const [open, setOpen] = useState(!defaultCollapsed);
   if (!accounts || accounts.length === 0) return null;
 
   const totalValue = accounts.reduce((sum, a) => sum + (a.current_value || 0), 0);
 
   return (
     <Card className="border-amber-500/20">
-      <CardHeader className="pb-2">
+      <CardHeader
+        className="pb-2 cursor-pointer select-none"
+        onClick={() => setOpen((o) => !o)}
+      >
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-500/10">
             <Anchor className="h-5 w-5 text-amber-600" />
@@ -44,14 +48,22 @@ export function PortalHoldingTank({ accounts }: PortalHoldingTankProps) {
             <CardTitle className="text-lg font-serif">The Holding Tank</CardTitle>
             <p className="text-xs text-muted-foreground">Accounts awaiting Charter ratification</p>
           </div>
-          <div className="ml-auto text-right">
-            <p className="text-xl font-bold text-amber-600">{formatCurrency(totalValue)}</p>
-            <Badge variant="secondary" className="text-[10px]">
-              {accounts.length} account{accounts.length !== 1 ? "s" : ""}
-            </Badge>
+          <div className="ml-auto flex items-center gap-3">
+            <div className="text-right">
+              <p className="text-xl font-bold text-amber-600">{formatCurrency(totalValue)}</p>
+              <Badge variant="secondary" className="text-[10px]">
+                {accounts.length} account{accounts.length !== 1 ? "s" : ""}
+              </Badge>
+            </div>
+            {open ? (
+              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+            ) : (
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            )}
           </div>
         </div>
       </CardHeader>
+      {open && (
       <CardContent className="space-y-2">
         {accounts.map((account) => (
           <div key={account.id} className="flex items-center justify-between rounded-md border border-border bg-muted/30 px-3 py-2">
