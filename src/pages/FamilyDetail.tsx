@@ -75,6 +75,9 @@ const FamilyDetail = () => {
   const [storehouses, setStorehouses] = useState<any[]>([]);
   const [holdingTank, setHoldingTank] = useState<any[]>([]);
   const [openHouseholds, setOpenHouseholds] = useState<Set<string>>(new Set());
+  const [openSidebarHoldingTank, setOpenSidebarHoldingTank] = useState(false);
+  const [openSidebarVineyard, setOpenSidebarVineyard] = useState(false);
+  const [openSidebarStorehouses, setOpenSidebarStorehouses] = useState(false);
 
   const fetchData = useCallback(async () => {
     if (!id) return;
