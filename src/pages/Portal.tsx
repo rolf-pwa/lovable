@@ -1061,7 +1061,7 @@ const Portal = () => {
                     href="https://calendar.app.google/EwH29qfci75yedju8"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 rounded-md bg-accent/10 px-3 py-1.5 text-xs font-medium text-accent hover:bg-accent/20 transition-colors border border-accent/20"
+                    className="inline-flex items-center gap-1.5 rounded-md bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/20 transition-colors border border-primary/20"
                   >
                     <MapPin className="h-3.5 w-3.5" />
                     In Person
@@ -1070,7 +1070,7 @@ const Portal = () => {
                     href="https://calendar.app.google/HgYuTusrWbomsfsC8"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 rounded-md bg-accent/10 px-3 py-1.5 text-xs font-medium text-accent hover:bg-accent/20 transition-colors border border-accent/20"
+                    className="inline-flex items-center gap-1.5 rounded-md bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/20 transition-colors border border-primary/20"
                   >
                     <Video className="h-3.5 w-3.5" />
                     Video
@@ -1110,9 +1110,9 @@ const Portal = () => {
                             href={href}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="flex items-start gap-2 rounded-md border border-border bg-card px-2.5 py-2 hover:border-accent/40 hover:bg-accent/5 transition-colors"
+                            className="flex items-start gap-2 rounded-md border border-border bg-card px-2.5 py-2 hover:border-primary/40 hover:bg-primary/5 transition-colors"
                           >
-                            <FileBarChart className="h-3.5 w-3.5 text-accent mt-0.5 shrink-0" />
+                            <FileBarChart className="h-3.5 w-3.5 text-primary mt-0.5 shrink-0" />
                             <div className="flex-1 min-w-0">
                               <p className="text-xs font-medium text-foreground truncate">{review.title}</p>
                               {(dateLabel || memberName) && (
@@ -1224,7 +1224,7 @@ const Portal = () => {
                           setDrilldown({ level: "household", householdId: contact.household_id });
                         }
                       }}
-                      className="w-full flex items-center justify-center gap-2 rounded-md border border-accent/20 bg-accent/5 px-3 py-2 text-xs font-medium text-accent hover:bg-accent/10 transition-colors"
+                      className="w-full flex items-center justify-center gap-2 rounded-md border border-primary/20 bg-primary/5 px-3 py-2 text-xs font-medium text-primary hover:bg-primary/10 transition-colors"
                     >
                       <Users className="h-3.5 w-3.5" />
                       {hierarchyLevel === "family" ? "View Family Overview" : "View Household"}
