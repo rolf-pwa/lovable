@@ -34,6 +34,22 @@ export async function getOrCreateToken(contactId: string, userId: string): Promi
   return (data as any).token;
 }
 
+async function resolvePortalPath(contactId: string): Promise<"portal" | "vfo"> {
+  const { data: contact } = await supabase
+    .from("contacts")
+    .select("family_id, households:household_id(family_id)")
+    .eq("id", contactId)
+    .maybeSingle();
+  const familyId = (contact as any)?.family_id || (contact as any)?.households?.family_id;
+  if (!familyId) return "portal";
+  const { data: family } = await supabase
+    .from("families")
+    .select("vfo_enabled")
+    .eq("id", familyId)
+    .maybeSingle();
+  return (family as any)?.vfo_enabled ? "vfo" : "portal";
+}
+
 export function PortalMagicLinkButton({ contactId }: Props) {
   const { user } = useAuth();
   const [copied, setCopied] = useState(false);
@@ -44,11 +60,14 @@ export function PortalMagicLinkButton({ contactId }: Props) {
     if (!user) return;
     setLoading(true);
     try {
-      const token = await getOrCreateToken(contactId, user.id);
-      const url = `${window.location.origin}/portal/${token}`;
+      const [token, base] = await Promise.all([
+        getOrCreateToken(contactId, user.id),
+        resolvePortalPath(contactId),
+      ]);
+      const url = `${window.location.origin}/${base}/${token}`;
       await navigator.clipboard.writeText(url);
       setCopied(true);
-      toast.success("Portal link copied to clipboard — valid for 7 days.");
+      toast.success(`${base === "vfo" ? "VFO" : "Portal"} link copied to clipboard — valid for 7 days.`);
       setTimeout(() => setCopied(false), 3000);
     } catch {
       toast.error("Failed to generate portal link.");
@@ -63,12 +82,15 @@ export function PortalMagicLinkButton({ contactId }: Props) {
     // Open window synchronously to avoid popup blocker
     const newWindow = window.open("about:blank", "_blank");
     try {
-      const token = await getOrCreateToken(contactId, user.id);
+      const [token, base] = await Promise.all([
+        getOrCreateToken(contactId, user.id),
+        resolvePortalPath(contactId),
+      ]);
       if (newWindow) {
-        newWindow.location.href = `/portal/${token}`;
+        newWindow.location.href = `/${base}/${token}`;
       } else {
         // Fallback: navigate in current tab
-        window.location.href = `/portal/${token}`;
+        window.location.href = `/${base}/${token}`;
       }
     } catch {
       if (newWindow) newWindow.close();
