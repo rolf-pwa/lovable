@@ -51,6 +51,7 @@ interface Props {
   onScopeChange?: () => void;
   corporations?: any[];
   section?: "vineyard" | "storehouses" | "all";
+  defaultCollapsed?: boolean;
 }
 
 function ScopeBadge({
