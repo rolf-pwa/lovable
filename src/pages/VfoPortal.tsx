@@ -587,6 +587,12 @@ const VfoPortal = () => {
                 portalToken={portalToken}
               />
             </TabsContent>
+
+            {professionals.length > 0 && (
+              <TabsContent value="team" className="mt-4">
+                <PortalProfessionals professionals={professionals} engagements={engagements} />
+              </TabsContent>
+            )}
           </Tabs>
         </div>
 
@@ -622,6 +628,12 @@ const VfoPortal = () => {
               </CardContent>
             </Card>
           )}
+
+          <PortalYourTeam
+            professionals={professionals}
+            engagements={engagements}
+            onSelect={professionals.length > 0 ? () => setTab("team") : undefined}
+          />
         </aside>
       </div>
     );
