@@ -86,6 +86,7 @@ const adminItems = [
   { to: "/knowledge-base", label: "Knowledge Base", icon: BookOpen },
   { to: "/workbench", label: "Workbench", icon: Cpu },
   { to: "/admin/vfo", label: "VFO Roster", icon: Crown },
+  { to: "/professionals", label: "Professionals", icon: Briefcase },
 ];
 
 const externalLinks = [
