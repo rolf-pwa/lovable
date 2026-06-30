@@ -182,11 +182,10 @@ serve(async (req) => {
 
       // Also drop a staff bell notification
       await supabase.from("staff_notifications").insert({
-        notification_type: "engagement_message",
         title: `Pro reply — ${engagement.title}`,
         body: "A professional posted a new message.",
-        link: `/professionals`,
-        metadata: { engagement_id, message_id: inserted.id },
+        link: `/professionals/${engagement.professional_id}`,
+        source_type: "engagement_message",
       }).then(() => {}, () => {/* best-effort */});
     }
 
