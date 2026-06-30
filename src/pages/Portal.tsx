@@ -589,7 +589,7 @@ const Portal = () => {
         {hierarchyLevel === "family" && (drilldown.level === "household" || drilldown.level === "individual") && (
           <button
             onClick={() => setDrilldown({ level: "family" })}
-            className="flex items-center gap-1 text-accent hover:underline"
+            className="flex items-center gap-1 text-primary hover:underline"
           >
             <ChevronLeft className="h-3.5 w-3.5" />
             {family?.name || "Family"}
@@ -600,7 +600,7 @@ const Portal = () => {
             <span className="text-muted-foreground">/</span>
             <button
               onClick={() => setDrilldown({ level: "household", householdId: drilldown.householdId })}
-              className="text-accent hover:underline"
+              className="text-primary hover:underline"
             >
               {currentHousehold?.label || "Household"}
             </button>
@@ -1253,7 +1253,7 @@ const Portal = () => {
                   <Megaphone className="h-4 w-4 text-accent" />
                   <h3 className="text-sm font-semibold text-foreground font-serif">Updates</h3>
                   {unreadUpdateCount > 0 && (
-                    <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-accent text-[10px] font-bold text-accent-foreground px-1">
+                    <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground px-1">
                       {unreadUpdateCount > 99 ? "99+" : unreadUpdateCount}
                     </span>
                   )}

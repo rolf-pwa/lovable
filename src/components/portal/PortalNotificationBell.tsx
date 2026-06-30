@@ -187,7 +187,7 @@ export function PortalNotificationBell({ requests, contactId, portalToken, onNav
             {unreadCount > 0 && (
               <button
                 onClick={handleMarkAllRead}
-                className="text-xs text-accent hover:text-accent/80 font-medium"
+                className="text-xs text-primary hover:text-primary/80 font-medium"
               >
                 Mark all read
               </button>
