@@ -726,8 +726,28 @@ const VfoPortal = () => {
         contactName={`${contact?.first_name || ""} ${contact?.last_name || ""}`.trim()}
         contactId={contact?.id}
         portalToken={portalToken}
+        onRequestSubmitted={refreshData}
       />
+
+      <Dialog open={requestsOpen} onOpenChange={setRequestsOpen}>
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="font-serif flex items-center gap-2">
+              <ClipboardList className="h-5 w-5 text-amber-500" />
+              Your Requests
+            </DialogTitle>
+          </DialogHeader>
+          <PortalRequests
+            requests={portal_requests}
+            contactId={contact.id}
+            contactName={`${contact.first_name || ""} ${contact.last_name || ""}`.trim()}
+            portalToken={portalToken}
+            onUpdate={refreshData}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
+
   );
 };
 
