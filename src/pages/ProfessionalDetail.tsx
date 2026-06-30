@@ -27,6 +27,7 @@ import { Plus, ArrowLeft, Briefcase } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { format } from "date-fns";
+import EngagementThreadButton from "@/components/EngagementThreadButton";
 
 const PILLARS = [
   { value: "tax", label: "Tax" },
@@ -254,14 +255,17 @@ export default function ProfessionalDetail() {
                       {format(new Date(e.created_at), "PP")}
                     </td>
                     <td className="px-4 py-3">
-                      <Select value={e.status} onValueChange={(v) => updateStatus(e.id, v)}>
-                        <SelectTrigger className="h-7 w-28 text-xs"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          {["draft", "invited", "active", "completed", "archived", "revoked"].map((s) => (
-                            <SelectItem key={s} value={s} className="text-xs">{s}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <div className="flex items-center gap-2">
+                        <Select value={e.status} onValueChange={(v) => updateStatus(e.id, v)}>
+                          <SelectTrigger className="h-7 w-28 text-xs"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {["draft", "invited", "active", "completed", "archived", "revoked"].map((s) => (
+                              <SelectItem key={s} value={s} className="text-xs">{s}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <EngagementThreadButton engagementId={e.id} engagementTitle={e.title} />
+                      </div>
                     </td>
                   </tr>
                 ))}
