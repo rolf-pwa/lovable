@@ -18,6 +18,9 @@ import { PortalTasks } from "@/components/portal/PortalTasks";
 import { PortalVault } from "@/components/portal/PortalVault";
 import { PortalUpdates } from "@/components/portal/PortalUpdates";
 import { PortalGeorgiaChat } from "@/components/portal/PortalGeorgiaChat";
+import { PortalYourTeam } from "@/components/portal/PortalYourTeam";
+import { PortalProfessionals } from "@/components/portal/PortalProfessionals";
+import { Briefcase } from "lucide-react";
 import prosperwiseLogo from "@/assets/prosperwise-logo.png";
 
 const ROLE_LABELS: Record<string, string> = {
@@ -103,6 +106,7 @@ const VfoPortal = () => {
     vineyard_accounts = [], storehouses = [],
     holding_tank = [], household_holding_tank = [], family_holding_tank = [],
     portal_requests = [], meetings = [], charter, corporations = [], hierarchy,
+    professionals = [], engagements = [],
   } = data;
 
   if (!family?.vfo_enabled) {
