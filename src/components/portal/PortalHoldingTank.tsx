@@ -95,6 +95,7 @@ export function PortalHoldingTank({ accounts, defaultCollapsed = false }: Portal
           </div>
         ))}
       </CardContent>
+      )}
     </Card>
   );
 }
