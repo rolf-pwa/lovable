@@ -27,6 +27,23 @@ import { format, differenceInDays, addDays } from "date-fns";
 import { PageBreadcrumbs } from "@/components/PageBreadcrumbs";
 import { ContactMerge } from "@/components/ContactMerge";
 import { getOrCreateToken } from "@/components/portal/PortalMagicLinkButton";
+import { supabase as supabaseClient } from "@/integrations/supabase/client";
+
+async function resolvePortalBase(contactId: string): Promise<"portal" | "vfo"> {
+  const { data: contact } = await supabaseClient
+    .from("contacts")
+    .select("family_id, households:household_id(family_id)")
+    .eq("id", contactId)
+    .maybeSingle();
+  const familyId = (contact as any)?.family_id || (contact as any)?.households?.family_id;
+  if (!familyId) return "portal";
+  const { data: family } = await supabaseClient
+    .from("families")
+    .select("vfo_enabled")
+    .eq("id", familyId)
+    .maybeSingle();
+  return (family as any)?.vfo_enabled ? "vfo" : "portal";
+}
 import { useAuth } from "@/hooks/useAuth";
 import { ContactTaskList } from "@/components/ContactTaskList";
 import { ContactRequests } from "@/components/ContactRequests";
@@ -267,9 +284,9 @@ const ContactDetail = () => {
     setViewPortalLoading(true);
     const newWindow = window.open("about:blank", "_blank");
     try {
-      const token = await getOrCreateToken(id, user.id);
-      if (newWindow) newWindow.location.href = `/portal/${token}`;
-      else window.location.href = `/portal/${token}`;
+      const [token, base] = await Promise.all([getOrCreateToken(id, user.id), resolvePortalBase(id)]);
+      if (newWindow) newWindow.location.href = `/${base}/${token}`;
+      else window.location.href = `/${base}/${token}`;
     } catch {
       if (newWindow) newWindow.close();
       toast.error("Failed to open portal.");
@@ -282,10 +299,10 @@ const ContactDetail = () => {
     if (!user || !id) return;
     setCopyLoading(true);
     try {
-      const token = await getOrCreateToken(id, user.id);
-      const url = `${window.location.origin}/portal/${token}`;
+      const [token, base] = await Promise.all([getOrCreateToken(id, user.id), resolvePortalBase(id)]);
+      const url = `${window.location.origin}/${base}/${token}`;
       await navigator.clipboard.writeText(url);
-      toast.success("Portal link copied to clipboard — valid for 7 days.");
+      toast.success(`${base === "vfo" ? "VFO" : "Portal"} link copied to clipboard — valid for 7 days.`);
     } catch {
       toast.error("Failed to generate portal link.");
     } finally {
