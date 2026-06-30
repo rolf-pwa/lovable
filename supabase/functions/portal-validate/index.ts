@@ -396,6 +396,36 @@ if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders }
     const reviewMemberIds = [contactId, ...householdMembers.map((m: any) => m.id)];
     const quarterly_reviews = await fetchQuarterlyReviews(supabase, reviewMemberIds);
 
+    // VFO Professionals & engagements scoped to this family / household / contacts
+    let professionals: any[] = [];
+    let engagements: any[] = [];
+    try {
+      const scopeIds: string[] = [];
+      if (familyId) scopeIds.push(familyId);
+      if (householdId) scopeIds.push(householdId);
+      reviewMemberIds.forEach((id) => id && scopeIds.push(id));
+      if (scopeIds.length > 0) {
+        const { data: engRows } = await supabase
+          .from("professional_engagements")
+          .select("id, professional_id, scope_type, scope_id, pillar, title, status, started_at, completed_at, updated_at")
+          .in("scope_id", scopeIds)
+          .neq("status", "draft")
+          .neq("status", "revoked")
+          .order("updated_at", { ascending: false });
+        engagements = engRows || [];
+        const proIds = [...new Set(engagements.map((e: any) => e.professional_id).filter(Boolean))];
+        if (proIds.length > 0) {
+          const { data: pros } = await supabase
+            .from("professionals")
+            .select("id, full_name, firm, professional_type, credentials, email, phone")
+            .in("id", proIds);
+          professionals = pros || [];
+        }
+      }
+    } catch (e) {
+      console.error("[portal-validate] professionals fetch error", e);
+    }
+
     return new Response(JSON.stringify({
       contact: contactRes.data,
       vineyard_accounts: accountsRes.data || [],
@@ -417,6 +447,9 @@ if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders }
       corporations,
       charter: charterRes.data,
       quarterly_reviews,
+      professionals,
+      engagements,
+
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

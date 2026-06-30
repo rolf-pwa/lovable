@@ -1,0 +1,92 @@
+import { Card, CardContent } from "@/components/ui/card";
+import { Users, Scale, Calculator, Shield, ScrollText, HeartHandshake, Briefcase } from "lucide-react";
+
+const TYPE_META: Record<string, { label: string; Icon: any }> = {
+  lawyer: { label: "Lawyer", Icon: Scale },
+  accountant: { label: "Accountant", Icon: Calculator },
+  insurance_broker: { label: "Insurance Broker", Icon: Shield },
+  executor: { label: "Executor", Icon: ScrollText },
+  poa: { label: "Power of Attorney", Icon: ScrollText },
+  financial_planner: { label: "Financial Planner", Icon: Briefcase },
+  philanthropy: { label: "Philanthropy Advisor", Icon: HeartHandshake },
+  other: { label: "Advisor", Icon: Briefcase },
+};
+
+interface Engagement {
+  id: string;
+  professional_id: string;
+  pillar: string | null;
+  title: string;
+  status: string;
+}
+
+interface Professional {
+  id: string;
+  full_name: string;
+  firm: string | null;
+  professional_type: string;
+  credentials: string | null;
+}
+
+export function PortalYourTeam({
+  professionals,
+  engagements,
+  onSelect,
+}: {
+  professionals: Professional[];
+  engagements: Engagement[];
+  onSelect?: () => void;
+}) {
+  if (!professionals?.length) return null;
+
+  const byPro = (id: string) => engagements.filter((e) => e.professional_id === id);
+
+  return (
+    <Card className="border-amber-500/15">
+      <CardContent className="p-5 space-y-3">
+        <div className="flex items-center gap-2">
+          <Users className="h-4 w-4 text-amber-500" />
+          <h3 className="font-serif text-sm text-foreground">Your Team</h3>
+        </div>
+        <ul className="space-y-2.5">
+          {professionals.map((p) => {
+            const meta = TYPE_META[p.professional_type] || TYPE_META.other;
+            const open = byPro(p.id).filter((e) => e.status === "active" || e.status === "invited").length;
+            return (
+              <li
+                key={p.id}
+                className="flex items-start gap-3 rounded-md border border-amber-500/10 bg-amber-500/[0.02] p-2.5"
+              >
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-500/10 shrink-0">
+                  <meta.Icon className="h-4 w-4 text-amber-500" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm text-foreground truncate">
+                    {p.full_name}
+                    {p.credentials ? <span className="text-muted-foreground text-xs">, {p.credentials}</span> : null}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground truncate">
+                    {meta.label}{p.firm ? ` · ${p.firm}` : ""}
+                  </p>
+                  {open > 0 && (
+                    <p className="text-[10px] text-amber-600 mt-0.5">
+                      {open} active engagement{open === 1 ? "" : "s"}
+                    </p>
+                  )}
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+        {onSelect && (
+          <button
+            onClick={onSelect}
+            className="w-full text-[11px] uppercase tracking-wider text-muted-foreground hover:text-amber-500 transition-colors pt-1"
+          >
+            View all professionals →
+          </button>
+        )}
+      </CardContent>
+    </Card>
+  );
+}

@@ -18,6 +18,9 @@ import { PortalTasks } from "@/components/portal/PortalTasks";
 import { PortalVault } from "@/components/portal/PortalVault";
 import { PortalUpdates } from "@/components/portal/PortalUpdates";
 import { PortalGeorgiaChat } from "@/components/portal/PortalGeorgiaChat";
+import { PortalYourTeam } from "@/components/portal/PortalYourTeam";
+import { PortalProfessionals } from "@/components/portal/PortalProfessionals";
+import { Briefcase } from "lucide-react";
 import prosperwiseLogo from "@/assets/prosperwise-logo.png";
 
 const ROLE_LABELS: Record<string, string> = {
@@ -103,6 +106,7 @@ const VfoPortal = () => {
     vineyard_accounts = [], storehouses = [],
     holding_tank = [], household_holding_tank = [], family_holding_tank = [],
     portal_requests = [], meetings = [], charter, corporations = [], hierarchy,
+    professionals = [], engagements = [],
   } = data;
 
   if (!family?.vfo_enabled) {
@@ -335,6 +339,7 @@ const VfoPortal = () => {
             portalToken={portalToken}
             onScopeChange={refreshData}
           />
+          <PortalYourTeam professionals={professionals} engagements={engagements} />
         </aside>
       </div>
     );
@@ -472,6 +477,7 @@ const VfoPortal = () => {
             onScopeChange={refreshData}
             corporations={corporations}
           />
+          <PortalYourTeam professionals={professionals} engagements={engagements} />
         </aside>
       </div>
     );
@@ -511,6 +517,11 @@ const VfoPortal = () => {
               <TabsTrigger value="requests" className="flex-1 gap-1.5 data-[state=active]:bg-amber-500/10 data-[state=active]:text-amber-500">
                 <ClipboardList className="h-4 w-4" />Requests
               </TabsTrigger>
+              {professionals.length > 0 && (
+                <TabsTrigger value="team" className="flex-1 gap-1.5 data-[state=active]:bg-amber-500/10 data-[state=active]:text-amber-500">
+                  <Briefcase className="h-4 w-4" />Professionals
+                </TabsTrigger>
+              )}
               <TabsTrigger value="updates" className="flex-1 gap-1.5 data-[state=active]:bg-amber-500/10 data-[state=active]:text-amber-500">
                 <Megaphone className="h-4 w-4" />Updates
               </TabsTrigger>
@@ -576,6 +587,12 @@ const VfoPortal = () => {
                 portalToken={portalToken}
               />
             </TabsContent>
+
+            {professionals.length > 0 && (
+              <TabsContent value="team" className="mt-4">
+                <PortalProfessionals professionals={professionals} engagements={engagements} />
+              </TabsContent>
+            )}
           </Tabs>
         </div>
 
@@ -611,6 +628,12 @@ const VfoPortal = () => {
               </CardContent>
             </Card>
           )}
+
+          <PortalYourTeam
+            professionals={professionals}
+            engagements={engagements}
+            onSelect={professionals.length > 0 ? () => setTab("team") : undefined}
+          />
         </aside>
       </div>
     );
