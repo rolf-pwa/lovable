@@ -245,7 +245,7 @@ Deno.serve(async (req) => {
 
     // ---------- Build markdown ----------
     const displayDate = toDisplayDate(targetDate);
-    const title = `[${displayDate} - PWA] Daily Dump`;
+    const title = `[${displayDate}-PWA] Daily Dump`;
     const md = buildMarkdown({ displayDate, byContact, contactNames, asanaTasks });
 
     // ---------- Create Doc ----------
@@ -383,7 +383,7 @@ function buildMarkdown(args: {
 }): string {
   const { displayDate, byContact, contactNames, asanaTasks } = args;
   const lines: string[] = [];
-  lines.push(`# Daily Activity — ${displayDate}`);
+  lines.push(`# [${displayDate}-PWA] Daily Dump`);
   lines.push("");
 
   // Sort contacts by name; unassigned last
