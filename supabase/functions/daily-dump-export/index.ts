@@ -5,12 +5,16 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const GOOGLE_CLIENT_ID = Deno.env.get("GOOGLE_CLIENT_ID")!;
 const GOOGLE_CLIENT_SECRET = Deno.env.get("GOOGLE_CLIENT_SECRET")!;
+const ASANA_ACCESS_TOKEN = Deno.env.get("ASANA_ACCESS_TOKEN");
+const ASANA_WORKSPACE_ID = Deno.env.get("ASANA_WORKSPACE_ID");
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-dump-secret",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-dump-secret",
 };
 
+// ---------- Google token helper ----------
 async function getValidToken(sb: any, userId: string): Promise<string> {
   const { data, error } = await sb.from("google_tokens").select("*").eq("user_id", userId).maybeSingle();
   if (error || !data) throw new Error(`No google_tokens row for user_id ${userId}`);
@@ -35,11 +39,18 @@ async function getValidToken(sb: any, userId: string): Promise<string> {
   return data.access_token;
 }
 
+// ---------- Types ----------
+interface ActivityRow {
+  label: string;      // Short kind: "Portal Request", "SMS", "Call", …
+  summary: string;    // One-line description
+  detail?: string;    // Optional nested detail line(s)
+}
+
+// ---------- Main ----------
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    // Shared-secret auth (cron and manual triggers both send x-dump-secret)
     const expectedSecret = Deno.env.get("DAILY_DUMP_SECRET");
     const provided = req.headers.get("x-dump-secret");
     if (!expectedSecret || provided !== expectedSecret) {
@@ -52,11 +63,9 @@ Deno.serve(async (req) => {
     const folderIdRaw = Deno.env.get("DAILY_DUMP_DRIVE_FOLDER_ID");
     const googleUserId = Deno.env.get("DAILY_DUMP_GOOGLE_USER_ID");
     if (!folderIdRaw) throw new Error("DAILY_DUMP_DRIVE_FOLDER_ID not configured");
-    // Accept either a raw folder ID or a full Drive URL and extract the ID.
     const folderId = (folderIdRaw.match(/folders\/([a-zA-Z0-9_-]+)/) || [null, folderIdRaw.trim()])[1];
     if (!googleUserId) throw new Error("DAILY_DUMP_GOOGLE_USER_ID not configured");
 
-    // Determine target date. If invoked after midnight for "yesterday", body may pass { date }.
     let targetDate: string;
     try {
       const body = await req.json();
@@ -67,30 +76,184 @@ Deno.serve(async (req) => {
 
     const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // 1. Get recap markdown by invoking recap-draft
-    const recapRes = await fetch(`${SUPABASE_URL}/functions/v1/recap-draft`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-        apikey: SUPABASE_SERVICE_ROLE_KEY,
-      },
-      body: JSON.stringify({ date: targetDate }),
-    });
-    if (!recapRes.ok) throw new Error(`recap-draft failed: ${await recapRes.text()}`);
-    const { draft } = await recapRes.json();
+    const dayStart = `${targetDate}T00:00:00Z`;
+    const dayEnd = `${targetDate}T23:59:59Z`;
 
-    // 2. Get Google token
+    // ---------- Pull activity rows ----------
+    const [
+      portalReqRes,
+      pipelineRes,
+      contactsRes,
+      holdingRes,
+      auditRes,
+      reviewRes,
+      quoMsgRes,
+      quoCallRes,
+      manualRes,
+      requestMsgRes,
+    ] = await Promise.all([
+      sb.from("portal_requests")
+        .select("id, contact_id, request_type, request_description, status")
+        .gte("created_at", dayStart).lte("created_at", dayEnd),
+      sb.from("business_pipeline")
+        .select("contact_id, category, status, amount, notes")
+        .gte("updated_at", dayStart).lte("updated_at", dayEnd),
+      sb.from("contacts")
+        .select("id, governance_status")
+        .gte("updated_at", dayStart).lte("updated_at", dayEnd),
+      sb.from("holding_tank")
+        .select("contact_id, account_name, status, current_value")
+        .gte("updated_at", dayStart).lte("updated_at", dayEnd),
+      sb.from("sovereignty_audit_trail")
+        .select("contact_id, action_type, action_description")
+        .gte("created_at", dayStart).lte("created_at", dayEnd),
+      sb.from("review_queue")
+        .select("contact_id, action_type, action_description, status")
+        .gte("created_at", dayStart).lte("created_at", dayEnd),
+      sb.from("quo_messages")
+        .select("contact_id, direction, body, pii_blocked, pii_block_reason")
+        .gte("occurred_at", dayStart).lte("occurred_at", dayEnd),
+      sb.from("quo_calls")
+        .select("contact_id, direction, duration_seconds, summary, is_voicemail")
+        .gte("occurred_at", dayStart).lte("occurred_at", dayEnd),
+      sb.from("manual_activity_log")
+        .select("contact_id, kind, direction, subject, body, duration_minutes")
+        .gte("occurred_at", dayStart).lte("occurred_at", dayEnd),
+      sb.from("portal_request_messages")
+        .select("request_id, sender_type, sender_name, content")
+        .gte("created_at", dayStart).lte("created_at", dayEnd),
+    ]);
+
+    // Portal-request-message contact lookup
+    const requestMessages = requestMsgRes.data || [];
+    const requestIds = [...new Set(requestMessages.map((m: any) => m.request_id).filter(Boolean))];
+    const requestIdToContact: Record<string, string> = {};
+    if (requestIds.length) {
+      const { data: reqs } = await sb.from("portal_requests").select("id, contact_id").in("id", requestIds);
+      for (const r of reqs || []) requestIdToContact[r.id] = r.contact_id;
+    }
+
+    // Collect all contact_ids we need names for
+    const contactIds = new Set<string>();
+    const push = (id: any) => id && contactIds.add(id);
+    (portalReqRes.data || []).forEach((r: any) => push(r.contact_id));
+    (pipelineRes.data || []).forEach((r: any) => push(r.contact_id));
+    (contactsRes.data || []).forEach((r: any) => push(r.id));
+    (holdingRes.data || []).forEach((r: any) => push(r.contact_id));
+    (auditRes.data || []).forEach((r: any) => push(r.contact_id));
+    (reviewRes.data || []).forEach((r: any) => push(r.contact_id));
+    (quoMsgRes.data || []).forEach((r: any) => push(r.contact_id));
+    (quoCallRes.data || []).forEach((r: any) => push(r.contact_id));
+    (manualRes.data || []).forEach((r: any) => push(r.contact_id));
+    requestMessages.forEach((m: any) => push(requestIdToContact[m.request_id]));
+
+    const contactNames: Record<string, string> = {};
+    if (contactIds.size) {
+      const { data: cs } = await sb.from("contacts").select("id, full_name").in("id", [...contactIds]);
+      for (const c of cs || []) contactNames[c.id] = c.full_name || "(Unnamed contact)";
+    }
+
+    // Group activity by contact
+    const byContact: Record<string, ActivityRow[]> = {};
+    const addRow = (contactId: string | null | undefined, row: ActivityRow) => {
+      const key = contactId || "__unassigned__";
+      (byContact[key] ||= []).push(row);
+    };
+
+    for (const r of portalReqRes.data || []) {
+      addRow(r.contact_id, {
+        label: "Portal Request",
+        summary: `${r.request_type || "Request"} — ${r.status || "open"}`,
+        detail: r.request_description || undefined,
+      });
+    }
+    for (const r of pipelineRes.data || []) {
+      const amt = r.amount != null ? ` — $${Number(r.amount).toLocaleString()}` : "";
+      addRow(r.contact_id, {
+        label: "Pipeline",
+        summary: `${r.category || "Item"} → ${r.status || "updated"}${amt}`,
+        detail: r.notes || undefined,
+      });
+    }
+    for (const r of contactsRes.data || []) {
+      addRow(r.id, {
+        label: "Contact Updated",
+        summary: r.governance_status ? `Governance: ${r.governance_status}` : "Profile updated",
+      });
+    }
+    for (const r of holdingRes.data || []) {
+      const val = r.current_value != null ? ` — $${Number(r.current_value).toLocaleString()}` : "";
+      addRow(r.contact_id, {
+        label: "Holding Tank",
+        summary: `${r.account_name || "Account"} (${r.status || "updated"})${val}`,
+      });
+    }
+    for (const r of auditRes.data || []) {
+      addRow(r.contact_id, {
+        label: "Audit Trail",
+        summary: `${r.action_type || "action"}`,
+        detail: r.action_description || undefined,
+      });
+    }
+    for (const r of reviewRes.data || []) {
+      addRow(r.contact_id, {
+        label: "Review Queue",
+        summary: `${r.action_type || "review"} — ${r.status || "pending"}`,
+        detail: r.action_description || undefined,
+      });
+    }
+    for (const r of quoMsgRes.data || []) {
+      if (r.pii_blocked) {
+        addRow(r.contact_id, {
+          label: "SMS Blocked",
+          summary: `${r.direction || ""} — PII Shield: ${r.pii_block_reason || "blocked"}`,
+        });
+      } else {
+        addRow(r.contact_id, {
+          label: "SMS",
+          summary: `${r.direction || ""}`,
+          detail: r.body ? truncate(r.body, 200) : undefined,
+        });
+      }
+    }
+    for (const r of quoCallRes.data || []) {
+      const dur = r.duration_seconds ? ` (${Math.round(r.duration_seconds / 60)}m)` : "";
+      addRow(r.contact_id, {
+        label: r.is_voicemail ? "Voicemail" : "Call",
+        summary: `${r.direction || ""}${dur}`,
+        detail: r.summary || undefined,
+      });
+    }
+    for (const r of manualRes.data || []) {
+      const dur = r.duration_minutes ? ` (${r.duration_minutes}m)` : "";
+      addRow(r.contact_id, {
+        label: `Manual ${r.kind || "note"}`,
+        summary: `${r.direction || ""} ${r.subject || ""}${dur}`.trim(),
+        detail: r.body ? truncate(r.body, 300) : undefined,
+      });
+    }
+    for (const m of requestMessages) {
+      addRow(requestIdToContact[m.request_id], {
+        label: "Request Reply",
+        summary: `${m.sender_type || "message"} — ${m.sender_name || ""}`.trim(),
+        detail: m.content ? truncate(m.content, 200) : undefined,
+      });
+    }
+
+    // ---------- Fetch Asana tasks modified/completed on target day ----------
+    const asanaTasks = await fetchAsanaTasks(targetDate);
+
+    // ---------- Build markdown ----------
+    const titleDate = targetDate;
+    const title = `${titleDate} - PWA Daily Dump`;
+    const md = buildMarkdown({ targetDate, byContact, contactNames, asanaTasks });
+
+    // ---------- Create Doc ----------
     const gToken = await getValidToken(sb, googleUserId);
 
-    // 3. Create Google Doc in target folder
-    const title = `ProsperWise Daily Dump — ${targetDate}`;
     const createRes = await fetch("https://www.googleapis.com/drive/v3/files", {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${gToken}`,
-        "Content-Type": "application/json",
-      },
+      headers: { Authorization: `Bearer ${gToken}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         name: title,
         mimeType: "application/vnd.google-apps.document",
@@ -101,14 +264,10 @@ Deno.serve(async (req) => {
     const docFile = await createRes.json();
     const docId = docFile.id;
 
-    // 4. Insert content into the Doc via batchUpdate
-    const requests = markdownToDocsRequests(draft, `${title}\n\n`);
+    const requests = markdownToDocsRequests(md, `${title}\n\n`);
     const updateRes = await fetch(`https://docs.googleapis.com/v1/documents/${docId}:batchUpdate`, {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${gToken}`,
-        "Content-Type": "application/json",
-      },
+      headers: { Authorization: `Bearer ${gToken}`, "Content-Type": "application/json" },
       body: JSON.stringify({ requests }),
     });
     if (!updateRes.ok) throw new Error(`Docs batchUpdate failed: ${await updateRes.text()}`);
@@ -129,21 +288,152 @@ Deno.serve(async (req) => {
   }
 });
 
+// ---------- Helpers ----------
+
+function truncate(s: string, n: number) {
+  if (!s) return s;
+  return s.length > n ? s.slice(0, n - 1) + "…" : s;
+}
+
 function defaultYesterday(): string {
-  // "Yesterday" in America/Toronto (ET). Cron runs just after ET midnight.
+  // "Yesterday" in America/Los_Angeles (Pacific). Cron fires at 22:30 PT so
+  // the target date is today at run time; but if invoked after midnight PT
+  // we still want the just-finished day.
   const now = new Date();
-  const et = new Date(now.toLocaleString("en-US", { timeZone: "America/Toronto" }));
-  et.setDate(et.getDate() - 1);
-  const y = et.getFullYear();
-  const m = String(et.getMonth() + 1).padStart(2, "0");
-  const d = String(et.getDate()).padStart(2, "0");
+  const pt = new Date(now.toLocaleString("en-US", { timeZone: "America/Los_Angeles" }));
+  const hour = pt.getHours();
+  if (hour < 6) pt.setDate(pt.getDate() - 1); // Ran overnight → previous day
+  const y = pt.getFullYear();
+  const m = String(pt.getMonth() + 1).padStart(2, "0");
+  const d = String(pt.getDate()).padStart(2, "0");
   return `${y}-${m}-${d}`;
+}
+
+interface AsanaTask {
+  gid: string;
+  name: string;
+  completed: boolean;
+  completed_at?: string | null;
+  modified_at?: string | null;
+  assignee_name?: string | null;
+  project_name?: string | null;
+  section_name?: string | null;
+  parent_name?: string | null;
+  due_on?: string | null;
+  notes?: string | null;
+}
+
+async function fetchAsanaTasks(targetDate: string): Promise<AsanaTask[]> {
+  if (!ASANA_ACCESS_TOKEN || !ASANA_WORKSPACE_ID) {
+    console.log("[daily-dump-export] Asana not configured; skipping tasks");
+    return [];
+  }
+  try {
+    // Search API: tasks modified in the day window
+    const dayStart = `${targetDate}T00:00:00Z`;
+    const dayEnd = `${targetDate}T23:59:59Z`;
+    const url =
+      `https://app.asana.com/api/1.0/workspaces/${ASANA_WORKSPACE_ID}/tasks/search` +
+      `?modified_at.after=${encodeURIComponent(dayStart)}` +
+      `&modified_at.before=${encodeURIComponent(dayEnd)}` +
+      `&opt_fields=name,completed,completed_at,modified_at,assignee.name,projects.name,memberships.section.name,parent.name,due_on,notes` +
+      `&limit=100`;
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${ASANA_ACCESS_TOKEN}` },
+    });
+    if (!res.ok) {
+      console.error(`[daily-dump-export] Asana search failed ${res.status}: ${await res.text()}`);
+      return [];
+    }
+    const json = await res.json();
+    return (json.data || []).map((t: any) => ({
+      gid: t.gid,
+      name: t.name,
+      completed: !!t.completed,
+      completed_at: t.completed_at,
+      modified_at: t.modified_at,
+      assignee_name: t.assignee?.name || null,
+      project_name: t.projects?.[0]?.name || null,
+      section_name: t.memberships?.[0]?.section?.name || null,
+      parent_name: t.parent?.name || null,
+      due_on: t.due_on,
+      notes: t.notes ? truncate(t.notes, 300) : null,
+    }));
+  } catch (e) {
+    console.error("[daily-dump-export] Asana fetch error:", e);
+    return [];
+  }
+}
+
+function buildMarkdown(args: {
+  targetDate: string;
+  byContact: Record<string, ActivityRow[]>;
+  contactNames: Record<string, string>;
+  asanaTasks: AsanaTask[];
+}): string {
+  const { targetDate, byContact, contactNames, asanaTasks } = args;
+  const lines: string[] = [];
+  lines.push(`# Daily Activity — ${targetDate}`);
+  lines.push("");
+
+  // Sort contacts by name; unassigned last
+  const keys = Object.keys(byContact).sort((a, b) => {
+    if (a === "__unassigned__") return 1;
+    if (b === "__unassigned__") return -1;
+    return (contactNames[a] || "").localeCompare(contactNames[b] || "");
+  });
+
+  if (keys.length === 0) {
+    lines.push("_No contact-linked activity for this date._");
+    lines.push("");
+  } else {
+    lines.push("# Activity by Contact");
+    lines.push("");
+    for (const key of keys) {
+      const name = key === "__unassigned__" ? "Unassigned / Internal" : (contactNames[key] || "(Unknown contact)");
+      lines.push(`## ${name}`);
+      for (const row of byContact[key]) {
+        lines.push(`- **${row.label}** — ${row.summary}`);
+        if (row.detail) lines.push(`  - ${row.detail}`);
+      }
+      lines.push("");
+    }
+  }
+
+  // Tasks section
+  lines.push("# Tasks (Asana)");
+  lines.push("");
+  if (asanaTasks.length === 0) {
+    lines.push("_No task activity for this date._");
+  } else {
+    // Group by project (family)
+    const byProject: Record<string, AsanaTask[]> = {};
+    for (const t of asanaTasks) {
+      const p = t.project_name || "(No project)";
+      (byProject[p] ||= []).push(t);
+    }
+    for (const proj of Object.keys(byProject).sort()) {
+      lines.push(`## ${proj}`);
+      for (const t of byProject[proj]) {
+        const status = t.completed ? "✅ Completed" : "🔄 Updated";
+        const parent = t.parent_name ? ` [subtask of: ${t.parent_name}]` : "";
+        const section = t.section_name ? ` — ${t.section_name}` : "";
+        const assignee = t.assignee_name ? ` — @${t.assignee_name}` : "";
+        const due = t.due_on ? ` (due ${t.due_on})` : "";
+        lines.push(`- **${status}** ${t.name}${section}${assignee}${due}${parent}`);
+        if (t.notes) lines.push(`  - ${t.notes}`);
+      }
+      lines.push("");
+    }
+  }
+
+  return lines.join("\n");
 }
 
 /**
  * Very small markdown -> Google Docs batchUpdate translator.
- * Supports: `## heading`, `- bullet`, `  - nested bullet`, and plain paragraphs.
- * Inserts content sequentially from index 1, then applies paragraph styles.
+ * Supports: `# H1`, `## H2`, `- bullet`, `  - nested bullet`, and plain paragraphs.
+ * Bold markers (**text**) are stripped in this simple renderer.
  */
 function markdownToDocsRequests(md: string, prefix: string) {
   const requests: any[] = [];
@@ -157,7 +447,6 @@ function markdownToDocsRequests(md: string, prefix: string) {
     return { start, end: index };
   };
 
-  // Title
   const titleRange = pushText(prefix);
   styleOps.push({
     updateParagraphStyle: {
@@ -169,15 +458,11 @@ function markdownToDocsRequests(md: string, prefix: string) {
 
   const lines = md.split("\n");
   for (const raw of lines) {
-    const line = raw.replace(/\r$/, "");
-    if (line.trim() === "") {
-      pushText("\n");
-      continue;
-    }
+    const line = raw.replace(/\r$/, "").replace(/\*\*/g, "");
+    if (line.trim() === "") { pushText("\n"); continue; }
 
     if (line.startsWith("## ")) {
-      const text = line.slice(3) + "\n";
-      const r = pushText(text);
+      const r = pushText(line.slice(3) + "\n");
       styleOps.push({
         updateParagraphStyle: {
           range: { startIndex: r.start, endIndex: r.end },
@@ -186,8 +471,7 @@ function markdownToDocsRequests(md: string, prefix: string) {
         },
       });
     } else if (line.startsWith("# ")) {
-      const text = line.slice(2) + "\n";
-      const r = pushText(text);
+      const r = pushText(line.slice(2) + "\n");
       styleOps.push({
         updateParagraphStyle: {
           range: { startIndex: r.start, endIndex: r.end },
