@@ -245,26 +245,79 @@ Deno.serve(async (req) => {
 
     // ---------- Build markdown ----------
     const displayDate = toDisplayDate(targetDate);
-    const title = `[${displayDate}-PWA] Daily Dump`;
     const md = buildMarkdown({ displayDate, byContact, contactNames, asanaTasks });
 
-    // ---------- Create Doc ----------
+    // ---------- Locate today's pre-created Doc & append ----------
     const gToken = await getValidToken(sb, googleUserId);
 
-    const createRes = await fetch("https://www.googleapis.com/drive/v3/files", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${gToken}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: title,
-        mimeType: "application/vnd.google-apps.document",
-        parents: [folderId],
-      }),
+    // The scheduled job at 10:15 PM PT creates a file named like:
+    //   "[July 1, 2026 at 10:15 PM PDT] Daily Dump"
+    // We search the folder for any file whose name starts with "[<displayDate>"
+    // and append our activity dump after any existing content.
+    const namePrefix = `[${displayDate}`;
+    const searchQ =
+      `'${folderId}' in parents and ` +
+      `mimeType='application/vnd.google-apps.document' and ` +
+      `name contains ${JSON.stringify(namePrefix)} and trashed=false`;
+    const searchUrl =
+      `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(searchQ)}` +
+      `&fields=${encodeURIComponent("files(id,name,createdTime)")}` +
+      `&orderBy=createdTime desc&pageSize=10`;
+    const searchRes = await fetch(searchUrl, {
+      headers: { Authorization: `Bearer ${gToken}` },
     });
-    if (!createRes.ok) throw new Error(`Drive create failed: ${await createRes.text()}`);
-    const docFile = await createRes.json();
-    const docId = docFile.id;
+    if (!searchRes.ok) throw new Error(`Drive search failed: ${await searchRes.text()}`);
+    const searchJson = await searchRes.json();
+    const matches = (searchJson.files || []).filter((f: any) =>
+      typeof f.name === "string" && f.name.startsWith(namePrefix),
+    );
 
-    const requests = markdownToDocsRequests(md, `${title}\n\n`);
+    let docId: string;
+    let docName: string;
+    let created = false;
+
+    if (matches.length > 0) {
+      docId = matches[0].id;
+      docName = matches[0].name;
+    } else {
+      // Fallback: no pre-created file for today — create one so we don't lose the dump.
+      const fallbackName = `[${displayDate}-PWA] Daily Dump`;
+      const createRes = await fetch("https://www.googleapis.com/drive/v3/files", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${gToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: fallbackName,
+          mimeType: "application/vnd.google-apps.document",
+          parents: [folderId],
+        }),
+      });
+      if (!createRes.ok) throw new Error(`Drive create failed: ${await createRes.text()}`);
+      const docFile = await createRes.json();
+      docId = docFile.id;
+      docName = fallbackName;
+      created = true;
+    }
+
+    // Find the current end-of-body index so we can append after existing content.
+    const docRes = await fetch(
+      `https://docs.googleapis.com/v1/documents/${docId}?fields=body(content(endIndex))`,
+      { headers: { Authorization: `Bearer ${gToken}` } },
+    );
+    if (!docRes.ok) throw new Error(`Docs get failed: ${await docRes.text()}`);
+    const docJson = await docRes.json();
+    const contentArr = docJson?.body?.content || [];
+    const lastEnd = contentArr.length
+      ? contentArr[contentArr.length - 1].endIndex
+      : 2;
+    // Google Docs bodies always end with a trailing newline segment; insert
+    // just before it so we don't clobber that required newline.
+    const insertIndex = Math.max(1, lastEnd - 1);
+    const hasExisting = insertIndex > 1;
+
+    const separator = hasExisting
+      ? `\n\n──────────────────────────────\n`
+      : "";
+    const requests = markdownToDocsRequests(md, separator, insertIndex);
     const updateRes = await fetch(`https://docs.googleapis.com/v1/documents/${docId}:batchUpdate`, {
       method: "POST",
       headers: { Authorization: `Bearer ${gToken}`, "Content-Type": "application/json" },
@@ -273,10 +326,10 @@ Deno.serve(async (req) => {
     if (!updateRes.ok) throw new Error(`Docs batchUpdate failed: ${await updateRes.text()}`);
 
     const webViewLink = `https://docs.google.com/document/d/${docId}/edit`;
-    console.log(`[daily-dump-export] Created ${title} → ${webViewLink}`);
+    console.log(`[daily-dump-export] Appended to ${docName} (created=${created}) → ${webViewLink}`);
 
     return new Response(
-      JSON.stringify({ ok: true, date: targetDate, docId, webViewLink }),
+      JSON.stringify({ ok: true, date: targetDate, docId, docName, appended: !created, webViewLink }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (e) {
@@ -445,26 +498,21 @@ function buildMarkdown(args: {
  * Supports: `# H1`, `## H2`, `- bullet`, `  - nested bullet`, and plain paragraphs.
  * Bold markers (**text**) are stripped in this simple renderer.
  */
-function markdownToDocsRequests(md: string, prefix: string) {
+function markdownToDocsRequests(md: string, prefix: string, startIndex: number = 1) {
   const requests: any[] = [];
-  let index = 1;
+  let index = startIndex;
   const styleOps: any[] = [];
 
   const pushText = (text: string) => {
+    if (!text) return { start: index, end: index };
     requests.push({ insertText: { location: { index }, text } });
     const start = index;
     index += text.length;
     return { start, end: index };
   };
 
-  const titleRange = pushText(prefix);
-  styleOps.push({
-    updateParagraphStyle: {
-      range: { startIndex: titleRange.start, endIndex: titleRange.end },
-      paragraphStyle: { namedStyleType: "TITLE" },
-      fields: "namedStyleType",
-    },
-  });
+  if (prefix) pushText(prefix);
+
 
   const lines = md.split("\n");
   for (const raw of lines) {
