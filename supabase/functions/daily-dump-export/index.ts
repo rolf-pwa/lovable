@@ -244,9 +244,9 @@ Deno.serve(async (req) => {
     const asanaTasks = await fetchAsanaTasks(targetDate);
 
     // ---------- Build markdown ----------
-    const titleDate = targetDate;
-    const title = `${titleDate} - PWA Daily Dump`;
-    const md = buildMarkdown({ targetDate, byContact, contactNames, asanaTasks });
+    const displayDate = toDisplayDate(targetDate);
+    const title = `[${displayDate} - PWA] Daily Dump`;
+    const md = buildMarkdown({ displayDate, byContact, contactNames, asanaTasks });
 
     // ---------- Create Doc ----------
     const gToken = await getValidToken(sb, googleUserId);
@@ -308,6 +308,17 @@ function defaultYesterday(): string {
   }).format(new Date());
 }
 
+function toDisplayDate(isoDate: string): string {
+  const [year, month, day] = isoDate.split("-").map(Number);
+  const d = new Date(Date.UTC(year, month - 1, day));
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: "UTC",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  }).format(d);
+}
+
 interface AsanaTask {
   gid: string;
   name: string;
@@ -365,14 +376,14 @@ async function fetchAsanaTasks(targetDate: string): Promise<AsanaTask[]> {
 }
 
 function buildMarkdown(args: {
-  targetDate: string;
+  displayDate: string;
   byContact: Record<string, ActivityRow[]>;
   contactNames: Record<string, string>;
   asanaTasks: AsanaTask[];
 }): string {
-  const { targetDate, byContact, contactNames, asanaTasks } = args;
+  const { displayDate, byContact, contactNames, asanaTasks } = args;
   const lines: string[] = [];
-  lines.push(`# Daily Activity — ${targetDate}`);
+  lines.push(`# Daily Activity — ${displayDate}`);
   lines.push("");
 
   // Sort contacts by name; unassigned last
