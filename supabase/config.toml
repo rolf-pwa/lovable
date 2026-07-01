@@ -78,6 +78,9 @@ verify_jwt = false
 [functions.engagement-message-send]
 verify_jwt = false
 
+[functions.daily-dump-export]
+verify_jwt = false
+
 
 
 
