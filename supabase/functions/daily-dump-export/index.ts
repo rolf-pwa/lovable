@@ -376,14 +376,14 @@ async function fetchAsanaTasks(targetDate: string): Promise<AsanaTask[]> {
 }
 
 function buildMarkdown(args: {
-  targetDate: string;
+  displayDate: string;
   byContact: Record<string, ActivityRow[]>;
   contactNames: Record<string, string>;
   asanaTasks: AsanaTask[];
 }): string {
-  const { targetDate, byContact, contactNames, asanaTasks } = args;
+  const { displayDate, byContact, contactNames, asanaTasks } = args;
   const lines: string[] = [];
-  lines.push(`# Daily Activity — ${targetDate}`);
+  lines.push(`# Daily Activity — ${displayDate}`);
   lines.push("");
 
   // Sort contacts by name; unassigned last
