@@ -1,4 +1,4 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+// Uses Deno.serve
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const ALLOWED_ORIGINS = [
@@ -20,7 +20,7 @@ function getCorsHeaders(req: Request) {
 // ---------- Vertex AI Auth ----------
 
 const REGION = "northamerica-northeast1"; // Montreal — PIPEDA compliance
-const MODEL = "gemini-2.5-flash-preview-05-20";
+const MODEL = "gemini-2.5-flash";
 
 interface ServiceAccountKey {
   type: string;
@@ -90,7 +90,7 @@ async function getAccessToken(sa: ServiceAccountKey): Promise<string> {
   return data.access_token;
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 

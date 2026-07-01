@@ -1,4 +1,4 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+// Uses Deno.serve (no std import needed)
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -35,7 +35,7 @@ async function getValidToken(sb: any, userId: string): Promise<string> {
   return data.access_token;
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
@@ -49,9 +49,11 @@ serve(async (req) => {
       });
     }
 
-    const folderId = Deno.env.get("DAILY_DUMP_DRIVE_FOLDER_ID");
+    const folderIdRaw = Deno.env.get("DAILY_DUMP_DRIVE_FOLDER_ID");
     const googleUserId = Deno.env.get("DAILY_DUMP_GOOGLE_USER_ID");
-    if (!folderId) throw new Error("DAILY_DUMP_DRIVE_FOLDER_ID not configured");
+    if (!folderIdRaw) throw new Error("DAILY_DUMP_DRIVE_FOLDER_ID not configured");
+    // Accept either a raw folder ID or a full Drive URL and extract the ID.
+    const folderId = (folderIdRaw.match(/folders\/([a-zA-Z0-9_-]+)/) || [null, folderIdRaw.trim()])[1];
     if (!googleUserId) throw new Error("DAILY_DUMP_GOOGLE_USER_ID not configured");
 
     // Determine target date. If invoked after midnight for "yesterday", body may pass { date }.
