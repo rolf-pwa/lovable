@@ -498,26 +498,21 @@ function buildMarkdown(args: {
  * Supports: `# H1`, `## H2`, `- bullet`, `  - nested bullet`, and plain paragraphs.
  * Bold markers (**text**) are stripped in this simple renderer.
  */
-function markdownToDocsRequests(md: string, prefix: string) {
+function markdownToDocsRequests(md: string, prefix: string, startIndex: number = 1) {
   const requests: any[] = [];
-  let index = 1;
+  let index = startIndex;
   const styleOps: any[] = [];
 
   const pushText = (text: string) => {
+    if (!text) return { start: index, end: index };
     requests.push({ insertText: { location: { index }, text } });
     const start = index;
     index += text.length;
     return { start, end: index };
   };
 
-  const titleRange = pushText(prefix);
-  styleOps.push({
-    updateParagraphStyle: {
-      range: { startIndex: titleRange.start, endIndex: titleRange.end },
-      paragraphStyle: { namedStyleType: "TITLE" },
-      fields: "namedStyleType",
-    },
-  });
+  if (prefix) pushText(prefix);
+
 
   const lines = md.split("\n");
   for (const raw of lines) {
