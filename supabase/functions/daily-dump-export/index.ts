@@ -35,7 +35,7 @@ async function getValidToken(sb: any, userId: string): Promise<string> {
   return data.access_token;
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
