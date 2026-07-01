@@ -308,6 +308,17 @@ function defaultYesterday(): string {
   }).format(new Date());
 }
 
+function toDisplayDate(isoDate: string): string {
+  const [year, month, day] = isoDate.split("-").map(Number);
+  const d = new Date(Date.UTC(year, month - 1, day));
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: "UTC",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  }).format(d);
+}
+
 interface AsanaTask {
   gid: string;
   name: string;
