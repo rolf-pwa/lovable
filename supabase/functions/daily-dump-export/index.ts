@@ -296,17 +296,16 @@ function truncate(s: string, n: number) {
 }
 
 function defaultYesterday(): string {
-  // "Yesterday" in America/Los_Angeles (Pacific). Cron fires at 22:30 PT so
-  // the target date is today at run time; but if invoked after midnight PT
-  // we still want the just-finished day.
-  const now = new Date();
-  const pt = new Date(now.toLocaleString("en-US", { timeZone: "America/Los_Angeles" }));
-  const hour = pt.getHours();
-  if (hour < 6) pt.setDate(pt.getDate() - 1); // Ran overnight → previous day
-  const y = pt.getFullYear();
-  const m = String(pt.getMonth() + 1).padStart(2, "0");
-  const d = String(pt.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
+  // Target the current calendar date in America/Los_Angeles at run time.
+  // Cron fires at 05:30 UTC (22:30 PDT / 21:30 PST the prior day), so the PT
+  // date at that moment is the day that just finished. Manual runs during the
+  // day simply capture "today so far" in PT.
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Los_Angeles",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
 }
 
 interface AsanaTask {
