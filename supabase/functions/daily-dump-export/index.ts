@@ -244,9 +244,9 @@ Deno.serve(async (req) => {
     const asanaTasks = await fetchAsanaTasks(targetDate);
 
     // ---------- Build markdown ----------
-    const titleDate = targetDate;
-    const title = `${titleDate} - PWA Daily Dump`;
-    const md = buildMarkdown({ targetDate, byContact, contactNames, asanaTasks });
+    const displayDate = toDisplayDate(targetDate);
+    const title = `[${displayDate} - PWA] Daily Dump`;
+    const md = buildMarkdown({ displayDate, byContact, contactNames, asanaTasks });
 
     // ---------- Create Doc ----------
     const gToken = await getValidToken(sb, googleUserId);
