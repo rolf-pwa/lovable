@@ -383,7 +383,7 @@ function buildMarkdown(args: {
 }): string {
   const { displayDate, byContact, contactNames, asanaTasks } = args;
   const lines: string[] = [];
-  lines.push(`# Daily Activity — ${displayDate}`);
+  lines.push(`# [${displayDate}-PWA] Daily Dump`);
   lines.push("");
 
   // Sort contacts by name; unassigned last
