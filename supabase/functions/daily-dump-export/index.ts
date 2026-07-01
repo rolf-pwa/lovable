@@ -49,9 +49,11 @@ Deno.serve(async (req) => {
       });
     }
 
-    const folderId = Deno.env.get("DAILY_DUMP_DRIVE_FOLDER_ID");
+    const folderIdRaw = Deno.env.get("DAILY_DUMP_DRIVE_FOLDER_ID");
     const googleUserId = Deno.env.get("DAILY_DUMP_GOOGLE_USER_ID");
-    if (!folderId) throw new Error("DAILY_DUMP_DRIVE_FOLDER_ID not configured");
+    if (!folderIdRaw) throw new Error("DAILY_DUMP_DRIVE_FOLDER_ID not configured");
+    // Accept either a raw folder ID or a full Drive URL and extract the ID.
+    const folderId = (folderIdRaw.match(/folders\/([a-zA-Z0-9_-]+)/) || [null, folderIdRaw.trim()])[1];
     if (!googleUserId) throw new Error("DAILY_DUMP_GOOGLE_USER_ID not configured");
 
     // Determine target date. If invoked after midnight for "yesterday", body may pass { date }.
