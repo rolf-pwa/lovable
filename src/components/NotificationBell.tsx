@@ -84,9 +84,13 @@ export function NotificationBell() {
       );
     }
     setOpen(false);
-    // Navigate
+    // Navigate — external URLs open in a new tab, in-app paths use the router
     if (notif.link) {
-      navigate(notif.link);
+      if (/^https?:\/\//i.test(notif.link)) {
+        window.open(notif.link, "_blank", "noopener,noreferrer");
+      } else {
+        navigate(notif.link);
+      }
     } else if (notif.contact_id) {
       navigate(`/contacts/${notif.contact_id}`);
     }
