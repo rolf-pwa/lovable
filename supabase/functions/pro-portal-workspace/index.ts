@@ -95,16 +95,16 @@ async function resolveScope(supabase: any, professional_id: string) {
 }
 
 async function buildTree(supabase: any, scope: Awaited<ReturnType<typeof resolveScope>>) {
-  const { familyIds, householdIds, contactIds } = scope;
-  if (!familyIds.length && !householdIds.length && !contactIds.length) {
+  const { treeFamilyIds, treeHouseholdIds, contactIds } = scope;
+  if (!treeFamilyIds.length && !treeHouseholdIds.length && !contactIds.length) {
     return { families: [] };
   }
   const [{ data: families }, { data: households }, { data: contacts }] = await Promise.all([
-    familyIds.length
-      ? supabase.from("families").select("id, name, fee_tier").in("id", familyIds)
+    treeFamilyIds.length
+      ? supabase.from("families").select("id, name, fee_tier").in("id", treeFamilyIds)
       : Promise.resolve({ data: [] as any[] }),
-    householdIds.length
-      ? supabase.from("households").select("id, label, family_id, governance_status").in("id", householdIds)
+    treeHouseholdIds.length
+      ? supabase.from("households").select("id, label, family_id, governance_status").in("id", treeHouseholdIds)
       : Promise.resolve({ data: [] as any[] }),
     contactIds.length
       ? supabase
