@@ -6,10 +6,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import {
-  Briefcase, LogOut, FileText, MessageSquare, ChevronLeft, Download,
+  LogOut, FileText, MessageSquare, ChevronLeft, Download,
   Crown, Users, ChevronRight, ArrowRight, Landmark,
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
+import prosperwiseLogo from "@/assets/prosperwise-logo.png";
 
 const FN_ENG = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/pro-portal-engagements`;
 const FN_OTP = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/pro-portal-otp`;
