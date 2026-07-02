@@ -29,6 +29,7 @@ import { HouseholdTaskRollup } from "@/components/HouseholdTaskRollup";
 import { HoldingTank } from "@/components/HoldingTank";
 import { VaultView } from "@/pages/Vault";
 import { CharterRatificationTile } from "@/components/CharterRatificationTile";
+import EngagementsPanel from "@/components/EngagementsPanel";
 import {
   Home,
   User,
@@ -609,6 +610,7 @@ const HouseholdDetail = () => {
                     </Card>
                   );
                 })()}
+                <EngagementsPanel scopeType="household" scopeId={id!} title="Pro Engagements & Threads" />
               </div>
             </div>
           </TabsContent>

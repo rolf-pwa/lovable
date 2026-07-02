@@ -57,6 +57,7 @@ import { StatementUpload } from "@/components/StatementUpload";
 import { HoldingTank } from "@/components/HoldingTank";
 import { AssetContainer, type MoveTarget } from "@/components/AssetContainer";
 import { ProfessionalLinker } from "@/components/ProfessionalLinker";
+import EngagementsPanel from "@/components/EngagementsPanel";
 import { StabilizationMapButton } from "@/components/StabilizationMapButton";
 import { QuarterlySystemReviewButton } from "@/components/QuarterlySystemReviewButton";
 import { SovereigntyCharterButton } from "@/components/SovereigntyCharterButton";
@@ -820,6 +821,7 @@ const ContactDetail = () => {
                 <ContactCalendar contactEmail={contact.email} contactName={contact.full_name} />
                 <ContactRequests contactId={id!} />
                 <AuditTrail contactId={id!} />
+                <EngagementsPanel scopeType="contact" scopeId={id!} />
               </TabsContent>
 
               {/* The Vineyard Tab */}
