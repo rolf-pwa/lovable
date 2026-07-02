@@ -206,37 +206,52 @@ export default function ProPortal() {
 
   // ── Header ──
   const firmTitle = profile?.firm || profile?.full_name || "Professional Portal";
+  const subtitle = profile
+    ? `${profile.full_name}${profile.professional_type ? ` · ${PRO_TYPE_LABELS[profile.professional_type] || profile.professional_type}` : ""}`
+    : "Concierge Workspace";
+  const familyCount = families.length;
+  const activeCount = engagements.filter((e) => e.status !== "completed").length;
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b border-amber-500/10 bg-gradient-to-b from-slate-950 to-background">
-        <div className="max-w-7xl mx-auto px-6 py-5 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="h-10 w-10 rounded-lg bg-amber-500/10 flex items-center justify-center shrink-0">
-              <Briefcase className="h-5 w-5 text-amber-500" />
+    <div className="min-h-screen bg-background text-foreground">
+      {/* Premium Header — matches Family Office */}
+      <header className="border-b border-primary-foreground/10 bg-primary">
+        <div className="max-w-7xl mx-auto px-6 py-8">
+          <div className="flex items-start justify-between gap-6 flex-wrap">
+            <div className="flex items-center gap-4 min-w-0">
+              <img src={prosperwiseLogo} alt="" className="h-10 w-10 opacity-90" />
+              <div className="min-w-0">
+                <h1 className="font-serif text-3xl md:text-4xl text-primary-foreground leading-tight truncate">
+                  {firmTitle}
+                </h1>
+                <p className="text-sm text-primary-foreground/70 mt-1">{subtitle}</p>
+              </div>
             </div>
-            <div className="min-w-0">
-              <h1 className="font-serif text-xl text-foreground truncate">
-                {firmTitle} <span className="text-amber-500/80">· Concierge Workspace</span>
-              </h1>
-              {profile && (
-                <p className="text-xs text-muted-foreground truncate">
-                  {profile.full_name}
-                  {profile.professional_type ? ` · ${PRO_TYPE_LABELS[profile.professional_type] || profile.professional_type}` : ""}
-                </p>
-              )}
+            <div className="flex items-center gap-6 border-l border-primary-foreground/15 pl-6">
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-primary-foreground/60">Families</p>
+                <p className="font-serif text-2xl text-primary-foreground">{familyCount}</p>
+              </div>
+              <div className="hidden sm:block">
+                <p className="text-[10px] uppercase tracking-wider text-primary-foreground/60">Active Threads</p>
+                <p className="font-serif text-2xl text-primary-foreground">{activeCount}</p>
+              </div>
+              <div className="hidden md:block">
+                <p className="text-[10px] uppercase tracking-wider text-primary-foreground/60">Unread</p>
+                <p className="font-serif text-2xl text-primary-foreground">{totalUnread}</p>
+              </div>
+              <button
+                onClick={logout}
+                className="ml-2 inline-flex items-center gap-1.5 text-xs text-primary-foreground/70 hover:text-primary-foreground transition-colors"
+              >
+                <LogOut className="h-3.5 w-3.5" /> Sign out
+              </button>
             </div>
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={logout}
-            className="text-muted-foreground hover:text-foreground hover:bg-white/5 shrink-0"
-          >
-            <LogOut className="h-4 w-4 mr-1.5" /> Sign out
-          </Button>
+          <div className="mt-6 h-px bg-gradient-to-r from-transparent via-primary-foreground/30 to-transparent" />
         </div>
       </header>
+
 
       <main className="max-w-7xl mx-auto px-6 py-8">
         {selected ? (
