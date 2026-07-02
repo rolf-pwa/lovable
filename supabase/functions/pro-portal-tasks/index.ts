@@ -234,10 +234,10 @@ serve(async (req) => {
       // Notify staff via bell
       try {
         await supabase.from("staff_notifications").insert({
-          category: "pro_request",
+          source_type: "pro_request",
           title: `New pro request: ${title}`,
           body: `${session.professional.full_name} opened a task via the Pro Portal.`,
-          link_url: `https://app.asana.com/0/${projectGid}/${result.data?.gid || ""}`,
+          link: `https://app.asana.com/0/${projectGid}/${result.data?.gid || ""}`,
         });
       } catch {/* noop */}
       return new Response(JSON.stringify({ ok: true, task: result.data }), {
