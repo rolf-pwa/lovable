@@ -53,6 +53,7 @@ import QuarterlyReview from "./pages/QuarterlyReview";
 import GovernanceReview from "./pages/GovernanceReview";
 import SovereigntyCharter from "./pages/SovereigntyCharter";
 import Inbox from "./pages/Inbox";
+import Mail from "./pages/Mail";
 import Professionals from "./pages/Professionals";
 import ProfessionalDetail from "./pages/ProfessionalDetail";
 
@@ -86,6 +87,7 @@ const App = () => (
             <Route path="/google-callback" element={<ProtectedRoute><GoogleCallback /></ProtectedRoute>} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/inbox" element={<ProtectedRoute><Inbox /></ProtectedRoute>} />
+            <Route path="/mail" element={<ProtectedRoute><Mail /></ProtectedRoute>} />
             <Route path="/holding-tank" element={<ProtectedRoute><HoldingTankPage /></ProtectedRoute>} />
             <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
             <Route path="/onboarding/bulk" element={<ProtectedRoute><BulkOnboarding /></ProtectedRoute>} />
