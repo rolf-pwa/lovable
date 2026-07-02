@@ -30,6 +30,7 @@ import { HoldingTank } from "@/components/HoldingTank";
 import { VaultView } from "@/pages/Vault";
 import { CharterRatificationTile } from "@/components/CharterRatificationTile";
 import EngagementsPanel from "@/components/EngagementsPanel";
+import { ProsPanel } from "@/components/ProsPanel";
 import {
   Home,
   User,
@@ -53,6 +54,7 @@ import {
   ListChecks,
   Users,
   Anchor,
+  Briefcase,
 } from "lucide-react";
 import { ContactAnalytics } from "@/components/ContactAnalytics";
 
@@ -857,6 +859,16 @@ const HouseholdDetail = () => {
           {/* Analytics */}
           <TabsContent value="analytics" className="space-y-6 mt-4">
             <ContactAnalytics contactIds={members.map((m) => m.id)} />
+          </TabsContent>
+
+          {/* Pros */}
+          <TabsContent value="pros" className="space-y-6 mt-4">
+            <ProsPanel
+              scope="household"
+              scopeId={id!}
+              memberContactIds={members.map((m: any) => m.id)}
+              title="Household Pros"
+            />
           </TabsContent>
         </Tabs>
       </div>
