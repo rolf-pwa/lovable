@@ -24,6 +24,10 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 // Resolve every family/household/contact the pro is engaged with.
+// Visibility rules (strict — do NOT expand downward beyond the granted scope):
+//   • family    → that family + all its households + every contact within
+//   • household → that household + only its members (family shown as container)
+//   • contact   → that contact only (household + family shown as containers)
 async function resolveScope(supabase: any, professional_id: string) {
   const { data: engagements } = await supabase
     .from("professional_engagements")
@@ -31,48 +35,62 @@ async function resolveScope(supabase: any, professional_id: string) {
     .eq("professional_id", professional_id)
     .in("status", ["invited", "active", "completed"]);
 
-  const familyIds = new Set<string>();
-  const householdIds = new Set<string>();
-  const contactIds = new Set<string>();
+  // Full-access sets — everything the pro can actually open / act on.
+  const familyIds = new Set<string>();      // full family access
+  const householdIds = new Set<string>();   // full household access (all members)
+  const contactIds = new Set<string>();     // individually granted contacts
+
+  // Container-only sets — shown as parent nodes in the tree for hierarchy,
+  // but the pro cannot open the family/household detail page itself.
+  const containerFamilyIds = new Set<string>();
+  const containerHouseholdIds = new Set<string>();
+
   for (const e of engagements || []) {
     if (e.scope_type === "family") familyIds.add(e.scope_id);
     else if (e.scope_type === "household") householdIds.add(e.scope_id);
     else if (e.scope_type === "contact") contactIds.add(e.scope_id);
   }
 
-  // Expand household → its family
-  if (householdIds.size) {
-    const { data: hhs } = await supabase
-      .from("households").select("id, family_id").in("id", Array.from(householdIds));
-    (hhs || []).forEach((h: any) => h.family_id && familyIds.add(h.family_id));
-  }
-  // Expand contact → its household + family
-  if (contactIds.size) {
-    const { data: cs } = await supabase
-      .from("contacts").select("id, family_id, household_id").in("id", Array.from(contactIds));
-    (cs || []).forEach((c: any) => {
-      if (c.family_id) familyIds.add(c.family_id);
-      if (c.household_id) householdIds.add(c.household_id);
-    });
-  }
-  // Expand family → all households in family, contacts assigned via family
+  // family scope → expand to all households + all contacts under it
   if (familyIds.size) {
     const { data: allHh } = await supabase
       .from("households").select("id, family_id").in("family_id", Array.from(familyIds));
     (allHh || []).forEach((h: any) => householdIds.add(h.id));
+    const { data: famContacts } = await supabase
+      .from("contacts").select("id").in("family_id", Array.from(familyIds));
+    (famContacts || []).forEach((c: any) => contactIds.add(c.id));
   }
-  // Every household in scope → every member becomes visible
+
+  // household scope → its members become visible; parent family is a container only
   if (householdIds.size) {
+    const { data: hhs } = await supabase
+      .from("households").select("id, family_id").in("id", Array.from(householdIds));
+    (hhs || []).forEach((h: any) => { if (h.family_id) containerFamilyIds.add(h.family_id); });
     const { data: members } = await supabase
       .from("contacts").select("id").in("household_id", Array.from(householdIds));
     (members || []).forEach((m: any) => contactIds.add(m.id));
   }
+
+  // contact scope → containers for tree only, no sibling exposure
+  if (contactIds.size) {
+    const { data: cs } = await supabase
+      .from("contacts").select("id, family_id, household_id").in("id", Array.from(contactIds));
+    (cs || []).forEach((c: any) => {
+      if (c.household_id) containerHouseholdIds.add(c.household_id);
+      if (c.family_id) containerFamilyIds.add(c.family_id);
+    });
+  }
+
+  const treeFamilyIds = new Set<string>([...familyIds, ...containerFamilyIds]);
+  const treeHouseholdIds = new Set<string>([...householdIds, ...containerHouseholdIds]);
 
   return {
     engagements: engagements || [],
     familyIds: Array.from(familyIds),
     householdIds: Array.from(householdIds),
     contactIds: Array.from(contactIds),
+    treeFamilyIds: Array.from(treeFamilyIds),
+    treeHouseholdIds: Array.from(treeHouseholdIds),
   };
 }
 
