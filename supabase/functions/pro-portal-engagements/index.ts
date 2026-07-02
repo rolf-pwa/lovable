@@ -93,21 +93,134 @@ serve(async (req) => {
         .in("status", ["invited", "active", "completed"])
         .order("created_at", { ascending: false });
 
-      // Hydrate scope labels + unread counts
+      // Resolve family_id for each engagement scope
+      const resolveFamilyId = async (scope_type: string, scope_id: string): Promise<string | null> => {
+        try {
+          if (scope_type === "family") return scope_id;
+          if (scope_type === "household") {
+            const { data } = await supabase.from("households").select("family_id").eq("id", scope_id).maybeSingle();
+            return data?.family_id || null;
+          }
+          if (scope_type === "contact") {
+            const { data } = await supabase.from("contacts").select("family_id, household_id").eq("id", scope_id).maybeSingle();
+            if (data?.family_id) return data.family_id;
+            if (data?.household_id) {
+              const { data: hh } = await supabase.from("households").select("family_id").eq("id", data.household_id).maybeSingle();
+              return hh?.family_id || null;
+            }
+          }
+        } catch {/* noop */}
+        return null;
+      };
+
+      // Hydrate scope labels + unread + family_id
       const list = await Promise.all(
         (engagements || []).map(async (e: any) => {
           const scope_label = await resolveScopeLabel(supabase, e.scope_type, e.scope_id);
+          const family_id = await resolveFamilyId(e.scope_type, e.scope_id);
           const { count: unread } = await supabase
             .from("engagement_messages")
             .select("id", { count: "exact", head: true })
             .eq("engagement_id", e.id)
             .neq("sender_type", "pro")
             .is("read_by_pro_at", null);
-          return { ...e, scope_label, unread_count: unread || 0 };
+          const { data: latestMsg } = await supabase
+            .from("engagement_messages")
+            .select("created_at, sender_type, body")
+            .eq("engagement_id", e.id)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          return {
+            ...e,
+            scope_label,
+            family_id,
+            unread_count: unread || 0,
+            last_message_at: latestMsg?.created_at || null,
+            last_message_preview: latestMsg?.body ? String(latestMsg.body).slice(0, 90) : null,
+            last_message_sender: latestMsg?.sender_type || null,
+          };
         }),
       );
 
-      return new Response(JSON.stringify({ engagements: list }), {
+      // Collect all unique family IDs
+      const familyIds = Array.from(new Set(list.map((e: any) => e.family_id).filter(Boolean)));
+
+      // Fetch family names
+      const { data: familyRows } = familyIds.length
+        ? await supabase.from("families").select("id, name").in("id", familyIds)
+        : { data: [] as any[] };
+      const familyMap = new Map((familyRows || []).map((f: any) => [f.id, f.name]));
+
+      // Fetch collaborators (other pros on same families) via engagements on those families
+      const collaboratorsByFamily: Record<string, any[]> = {};
+      if (familyIds.length) {
+        // Get every engagement scoped to these families (family/household/contact)
+        // Gather household + contact IDs per family for scope matching
+        const [{ data: households }, { data: contactsInFams }] = await Promise.all([
+          supabase.from("households").select("id, family_id").in("family_id", familyIds),
+          supabase.from("contacts").select("id, family_id, household_id").in("family_id", familyIds),
+        ]);
+        const hhToFam = new Map((households || []).map((h: any) => [h.id, h.family_id]));
+        const contactToFam = new Map<string, string>();
+        (contactsInFams || []).forEach((c: any) => {
+          if (c.family_id) contactToFam.set(c.id, c.family_id);
+          else if (c.household_id && hhToFam.get(c.household_id)) contactToFam.set(c.id, hhToFam.get(c.household_id)!);
+        });
+        // Also pull contacts by household for households whose contacts don't have family_id set
+        const hhIds = (households || []).map((h: any) => h.id);
+        if (hhIds.length) {
+          const { data: moreContacts } = await supabase.from("contacts").select("id, household_id").in("household_id", hhIds);
+          (moreContacts || []).forEach((c: any) => {
+            if (!contactToFam.has(c.id) && c.household_id && hhToFam.get(c.household_id)) {
+              contactToFam.set(c.id, hhToFam.get(c.household_id)!);
+            }
+          });
+        }
+
+        const { data: allEng } = await supabase
+          .from("professional_engagements")
+          .select("professional_id, scope_type, scope_id, pillar, status")
+          .neq("professional_id", session.professional_id)
+          .in("status", ["invited", "active", "completed"]);
+
+        const proIds = new Set<string>();
+        const proToFams: Record<string, Set<string>> = {};
+        (allEng || []).forEach((eng: any) => {
+          let famId: string | null = null;
+          if (eng.scope_type === "family" && familyIds.includes(eng.scope_id)) famId = eng.scope_id;
+          else if (eng.scope_type === "household") famId = hhToFam.get(eng.scope_id) || null;
+          else if (eng.scope_type === "contact") famId = contactToFam.get(eng.scope_id) || null;
+          if (famId && familyIds.includes(famId)) {
+            proIds.add(eng.professional_id);
+            if (!proToFams[eng.professional_id]) proToFams[eng.professional_id] = new Set();
+            proToFams[eng.professional_id].add(famId);
+          }
+        });
+
+        if (proIds.size) {
+          const { data: pros } = await supabase
+            .from("professionals")
+            .select("id, full_name, firm, professional_type")
+            .in("id", Array.from(proIds));
+          (pros || []).forEach((p: any) => {
+            (proToFams[p.id] || new Set()).forEach((famId) => {
+              if (!collaboratorsByFamily[famId]) collaboratorsByFamily[famId] = [];
+              collaboratorsByFamily[famId].push(p);
+            });
+          });
+        }
+      }
+
+      const families = familyIds.map((fid) => ({
+        id: fid,
+        name: familyMap.get(fid) || "Family",
+        engagements: list.filter((e: any) => e.family_id === fid),
+        collaborators: collaboratorsByFamily[fid] || [],
+      }));
+      const unaffiliated = list.filter((e: any) => !e.family_id);
+
+      return new Response(JSON.stringify({ engagements: list, families, unaffiliated }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
