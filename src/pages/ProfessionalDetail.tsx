@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/select";
 import {
   Plus, ArrowLeft, Briefcase, Mail, Phone, Building2,
-  TreesIcon, Home, User, ChevronDown, ChevronRight, Loader2,
+  TreesIcon, Home, User, ChevronDown, ChevronRight, Loader2, Eye,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
@@ -75,6 +75,7 @@ export default function ProfessionalDetail() {
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [openGroups, setOpenGroups] = useState<Set<string>>(new Set());
+  const [viewPortalLoading, setViewPortalLoading] = useState(false);
   const [form, setForm] = useState({
     title: "",
     description: "",
@@ -82,6 +83,21 @@ export default function ProfessionalDetail() {
     scope_type: "household",
     scope_id: "",
   });
+
+  const handleViewProPortal = () => {
+    if (!pro?.pro_portal_enabled) {
+      toast.error("Pro Portal access is not enabled for this professional.");
+      return;
+    }
+    setViewPortalLoading(true);
+    const newWindow = window.open("about:blank", "_blank");
+    if (newWindow) {
+      newWindow.location.href = `${window.location.origin}/pro-portal/login`;
+    } else {
+      window.location.href = `${window.location.origin}/pro-portal/login`;
+    }
+    setViewPortalLoading(false);
+  };
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -243,6 +259,15 @@ export default function ProfessionalDetail() {
                   </div>
                 </div>
               </div>
+              <Button
+                className="bg-sanctuary-green text-sanctuary-bronze hover:bg-sanctuary-green/90 gap-1.5 shrink-0"
+                onClick={handleViewProPortal}
+                disabled={viewPortalLoading || !pro?.pro_portal_enabled}
+                title={pro?.pro_portal_enabled ? "Open Pro Portal login" : "Pro Portal not enabled"}
+              >
+                {viewPortalLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Eye className="h-4 w-4" />}
+                View Pro Portal
+              </Button>
             </div>
 
             <div className="mt-6 grid grid-cols-3 gap-4">
