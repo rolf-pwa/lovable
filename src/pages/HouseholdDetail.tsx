@@ -610,6 +610,7 @@ const HouseholdDetail = () => {
                     </Card>
                   );
                 })()}
+                <EngagementsPanel scopeType="household" scopeId={id!} title="Pro Engagements & Threads" />
               </div>
             </div>
           </TabsContent>
