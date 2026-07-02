@@ -416,6 +416,10 @@ const HouseholdDetail = () => {
               <Grape className="mr-1.5 h-3.5 w-3.5" />
               The Vineyard
             </TabsTrigger>
+            <TabsTrigger value="pros" className="flex-1">
+              <Briefcase className="mr-1.5 h-3.5 w-3.5" />
+              Pros
+            </TabsTrigger>
             <TabsTrigger value="analytics" className="flex-1">
               <BarChart3 className="mr-1.5 h-3.5 w-3.5" />
               Analytics
