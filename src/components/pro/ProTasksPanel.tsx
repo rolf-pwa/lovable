@@ -22,8 +22,9 @@ interface Task {
 interface Story { gid: string; text: string; created_at: string; author: string }
 
 interface Props {
-  scopeType: "family" | "household" | "contact";
-  scopeId: string;
+  scopeType: "family" | "household" | "contact" | "portfolio";
+  scopeId?: string;
+  title?: string;
 }
 
 export default function ProTasksPanel({ scopeType, scopeId }: Props) {
