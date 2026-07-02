@@ -71,7 +71,7 @@ export default function ProPortalFamily() {
             <Card className="border-amber-500/20">
               <CardHeader>
                 <CardTitle className="font-serif text-foreground flex items-center gap-2">
-                  <Crown className="h-4 w-4 text-amber-500" /> Directory You Serve
+                  <Crown className="h-4 w-4 text-amber-500" /> The {family.name} Directory
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2 p-0">
