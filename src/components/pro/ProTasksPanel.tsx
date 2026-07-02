@@ -125,7 +125,7 @@ export default function ProTasksPanel({ scopeType, scopeId, title }: Props) {
       <CardHeader>
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <CardTitle className="font-serif text-foreground flex items-center gap-2">
-            <CheckCircle2 className="h-4 w-4 text-amber-500" /> Workflow Tasks
+            <CheckCircle2 className="h-4 w-4 text-amber-500" /> {title || "Workflow Tasks"}
           </CardTitle>
           <div className="flex items-center gap-2">
             <div className="inline-flex rounded-md border border-border/60 p-0.5 text-xs">
@@ -138,9 +138,11 @@ export default function ProTasksPanel({ scopeType, scopeId, title }: Props) {
                 className={`px-3 py-1 rounded ${tab === "done" ? "bg-amber-500 text-slate-950" : "text-muted-foreground hover:text-foreground"}`}
               >Done</button>
             </div>
-            <Button size="sm" variant="outline" onClick={() => setNewOpen((v) => !v)}>
-              <Plus className="h-3.5 w-3.5 mr-1" /> New task
-            </Button>
+            {!isPortfolio && (
+              <Button size="sm" variant="outline" onClick={() => setNewOpen((v) => !v)}>
+                <Plus className="h-3.5 w-3.5 mr-1" /> New task
+              </Button>
+            )}
           </div>
         </div>
       </CardHeader>
