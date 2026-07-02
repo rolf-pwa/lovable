@@ -6,10 +6,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import {
-  Briefcase, LogOut, FileText, MessageSquare, ChevronLeft, Download,
+  LogOut, FileText, MessageSquare, ChevronLeft, Download,
   Crown, Users, ChevronRight, ArrowRight, Landmark,
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
+import prosperwiseLogo from "@/assets/prosperwise-logo.png";
 
 const FN_ENG = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/pro-portal-engagements`;
 const FN_OTP = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/pro-portal-otp`;
@@ -205,37 +206,52 @@ export default function ProPortal() {
 
   // ── Header ──
   const firmTitle = profile?.firm || profile?.full_name || "Professional Portal";
+  const subtitle = profile
+    ? `${profile.full_name}${profile.professional_type ? ` · ${PRO_TYPE_LABELS[profile.professional_type] || profile.professional_type}` : ""}`
+    : "Concierge Workspace";
+  const familyCount = families.length;
+  const activeCount = engagements.filter((e) => e.status !== "completed").length;
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b border-amber-500/10 bg-gradient-to-b from-slate-950 to-background">
-        <div className="max-w-7xl mx-auto px-6 py-5 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="h-10 w-10 rounded-lg bg-amber-500/10 flex items-center justify-center shrink-0">
-              <Briefcase className="h-5 w-5 text-amber-500" />
+    <div className="min-h-screen bg-background text-foreground">
+      {/* Premium Header — matches Family Office */}
+      <header className="border-b border-primary-foreground/10 bg-primary">
+        <div className="max-w-7xl mx-auto px-6 py-8">
+          <div className="flex items-start justify-between gap-6 flex-wrap">
+            <div className="flex items-center gap-4 min-w-0">
+              <img src={prosperwiseLogo} alt="" className="h-10 w-10 opacity-90" />
+              <div className="min-w-0">
+                <h1 className="font-serif text-3xl md:text-4xl text-primary-foreground leading-tight truncate">
+                  {firmTitle}
+                </h1>
+                <p className="text-sm text-primary-foreground/70 mt-1">{subtitle}</p>
+              </div>
             </div>
-            <div className="min-w-0">
-              <h1 className="font-serif text-xl text-foreground truncate">
-                {firmTitle} <span className="text-amber-500/80">· Concierge Workspace</span>
-              </h1>
-              {profile && (
-                <p className="text-xs text-muted-foreground truncate">
-                  {profile.full_name}
-                  {profile.professional_type ? ` · ${PRO_TYPE_LABELS[profile.professional_type] || profile.professional_type}` : ""}
-                </p>
-              )}
+            <div className="flex items-center gap-6 border-l border-primary-foreground/15 pl-6">
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-primary-foreground/60">Families</p>
+                <p className="font-serif text-2xl text-primary-foreground">{familyCount}</p>
+              </div>
+              <div className="hidden sm:block">
+                <p className="text-[10px] uppercase tracking-wider text-primary-foreground/60">Active Threads</p>
+                <p className="font-serif text-2xl text-primary-foreground">{activeCount}</p>
+              </div>
+              <div className="hidden md:block">
+                <p className="text-[10px] uppercase tracking-wider text-primary-foreground/60">Unread</p>
+                <p className="font-serif text-2xl text-primary-foreground">{totalUnread}</p>
+              </div>
+              <button
+                onClick={logout}
+                className="ml-2 inline-flex items-center gap-1.5 text-xs text-primary-foreground/70 hover:text-primary-foreground transition-colors"
+              >
+                <LogOut className="h-3.5 w-3.5" /> Sign out
+              </button>
             </div>
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={logout}
-            className="text-muted-foreground hover:text-foreground hover:bg-white/5 shrink-0"
-          >
-            <LogOut className="h-4 w-4 mr-1.5" /> Sign out
-          </Button>
+          <div className="mt-6 h-px bg-gradient-to-r from-transparent via-primary-foreground/30 to-transparent" />
         </div>
       </header>
+
 
       <main className="max-w-7xl mx-auto px-6 py-8">
         {selected ? (
@@ -283,7 +299,7 @@ export default function ProPortal() {
                           <div className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${
                             m.sender_type === "pro"
                               ? "bg-amber-500/15 border border-amber-500/25 text-foreground"
-                              : "bg-white/[0.03] border border-white/5 text-foreground"
+                              : "bg-muted/50 border border-border/60 text-foreground"
                           }`}>
                             <div className="whitespace-pre-wrap break-words">{m.body}</div>
                             <div className="text-[10px] mt-1 text-muted-foreground">
@@ -293,13 +309,13 @@ export default function ProPortal() {
                         </div>
                       ))}
                     </div>
-                    <div className="space-y-2 border-t border-white/5 pt-3">
+                    <div className="space-y-2 border-t border-border/60 pt-3">
                       <Textarea
                         rows={3}
                         placeholder="Write a reply… (avoid SIN, account numbers, balances)"
                         value={composer}
                         onChange={(e) => setComposer(e.target.value)}
-                        className="bg-white/[0.02] border-white/10"
+                        className="bg-muted/40 border-border"
                       />
                       <div className="flex justify-end">
                         <Button
@@ -330,7 +346,7 @@ export default function ProPortal() {
                     ) : (
                       <ul className="space-y-2">
                         {detail.files.map((f: any) => (
-                          <li key={f.id} className="flex items-center justify-between text-sm border border-white/5 rounded px-3 py-2">
+                          <li key={f.id} className="flex items-center justify-between text-sm border border-border/60 rounded px-3 py-2">
                             <span className="truncate">{f.name}</span>
                             <Button size="sm" variant="ghost" disabled>
                               <Download className="h-3 w-3" />
@@ -377,7 +393,7 @@ export default function ProPortal() {
                   <Card key={fam.id} className="border-amber-500/15 overflow-hidden">
                     <button
                       onClick={() => toggleFamily(fam.id)}
-                      className="w-full text-left px-5 py-4 flex items-center gap-3 hover:bg-amber-500/[0.03] transition-colors border-b border-white/5"
+                      className="w-full text-left px-5 py-4 flex items-center gap-3 hover:bg-amber-500/[0.03] transition-colors border-b border-border/60"
                     >
                       <div className="h-9 w-9 rounded-lg bg-amber-500/10 flex items-center justify-center shrink-0">
                         <Crown className="h-4 w-4 text-amber-500" />
@@ -401,7 +417,7 @@ export default function ProPortal() {
                       />
                     </button>
                     {expanded && (
-                      <ul className="divide-y divide-white/5">
+                      <ul className="divide-y divide-border/60">
                         {fam.engagements.map((e) => (
                           <li key={e.id}>
                             <button
@@ -441,19 +457,19 @@ export default function ProPortal() {
               })}
 
               {unaffiliated.length > 0 && (
-                <Card className="border-white/10">
+                <Card className="border-border">
                   <CardHeader>
                     <CardTitle className="text-base font-serif text-foreground flex items-center gap-2">
                       <Landmark className="h-4 w-4 text-muted-foreground" /> Other Engagements
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="p-0">
-                    <ul className="divide-y divide-white/5">
+                    <ul className="divide-y divide-border/60">
                       {unaffiliated.map((e) => (
                         <li key={e.id}>
                           <button
                             onClick={() => openEngagement(e)}
-                            className="w-full text-left px-5 py-3.5 hover:bg-white/[0.02] transition flex items-center justify-between gap-4"
+                            className="w-full text-left px-5 py-3.5 hover:bg-muted/40 transition flex items-center justify-between gap-4"
                           >
                             <div className="min-w-0 flex-1">
                               <div className="font-medium text-foreground truncate">{e.title}</div>
@@ -493,7 +509,7 @@ export default function ProPortal() {
                   {activeThreads.length === 0 ? (
                     <div className="px-5 pb-5 text-sm text-muted-foreground">No active conversations.</div>
                   ) : (
-                    <ul className="divide-y divide-white/5">
+                    <ul className="divide-y divide-border/60">
                       {activeThreads.map((e) => (
                         <li key={e.id}>
                           <button
@@ -549,7 +565,7 @@ export default function ProPortal() {
                           </div>
                           <ul className="space-y-2">
                             {f.collaborators.map((c) => (
-                              <li key={`${f.id}-${c.id}`} className="flex items-start gap-2.5 border border-white/5 rounded-md px-3 py-2 bg-white/[0.015]">
+                              <li key={`${f.id}-${c.id}`} className="flex items-start gap-2.5 border border-border/60 rounded-md px-3 py-2 bg-muted/30">
                                 <div className="h-7 w-7 rounded-full bg-amber-500/10 flex items-center justify-center text-[11px] text-amber-500 font-medium shrink-0">
                                   {c.full_name?.split(" ").map((n) => n[0]).slice(0, 2).join("") || "?"}
                                 </div>
@@ -565,7 +581,7 @@ export default function ProPortal() {
                         </div>
                       ))
                   )}
-                  <p className="text-[11px] text-muted-foreground pt-2 border-t border-white/5">
+                  <p className="text-[11px] text-muted-foreground pt-2 border-t border-border/60">
                     Direct pro-to-pro messaging routes through ProsperWise. Contact your ProsperWise concierge to open a joint thread.
                   </p>
                 </CardContent>
@@ -573,6 +589,10 @@ export default function ProPortal() {
             </aside>
           </div>
         )}
+
+        <div className="text-center text-[10px] uppercase tracking-[0.25em] text-muted-foreground/60 pt-12 pb-2">
+          ProsperWise · Private Family Office
+        </div>
       </main>
     </div>
   );
