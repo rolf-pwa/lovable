@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/select";
 import {
   Plus, ArrowLeft, Briefcase, Mail, Phone, Building2,
-  TreesIcon, Home, User, ChevronDown, ChevronRight, Loader2,
+  TreesIcon, Home, User, ChevronDown, ChevronRight, Loader2, Eye,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
