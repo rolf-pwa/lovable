@@ -62,22 +62,6 @@ export default function ProPortalShell({ firmTitle, subtitle, crumbs, stats, chi
             <div className="flex items-center gap-4 min-w-0">
               <img src={prosperwiseLogo} alt="" className="h-10 w-10 opacity-90" />
               <div className="min-w-0">
-                {crumbs && crumbs.length > 0 && (
-                  <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-primary-foreground/60 mb-1">
-                    {crumbs.map((c, i) => (
-                      <span key={i} className="flex items-center gap-1.5">
-                        {c.to ? (
-                          <button onClick={() => navigate(c.to!)} className="hover:text-primary-foreground transition-colors">
-                            {c.label}
-                          </button>
-                        ) : (
-                          <span className="text-primary-foreground/80">{c.label}</span>
-                        )}
-                        {i < crumbs.length - 1 && <span>/</span>}
-                      </span>
-                    ))}
-                  </div>
-                )}
                 <h1 className="font-serif text-2xl md:text-3xl text-primary-foreground leading-tight truncate">
                   {firmTitle}
                 </h1>
@@ -104,6 +88,22 @@ export default function ProPortalShell({ firmTitle, subtitle, crumbs, stats, chi
       </header>
 
       <main className="max-w-7xl mx-auto px-6 py-8">
+        {crumbs && crumbs.length > 0 && (
+          <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-muted-foreground mb-6">
+            {crumbs.map((c, i) => (
+              <span key={i} className="flex items-center gap-1.5">
+                {c.to ? (
+                  <button onClick={() => navigate(c.to!)} className="hover:text-foreground transition-colors">
+                    {c.label}
+                  </button>
+                ) : (
+                  <span className="text-foreground/80">{c.label}</span>
+                )}
+                {i < crumbs.length - 1 && <span>/</span>}
+              </span>
+            ))}
+          </div>
+        )}
         {children}
         <div className="text-center text-[10px] uppercase tracking-[0.25em] text-muted-foreground/60 pt-12 pb-2">
           ProsperWise · Private Family Office
