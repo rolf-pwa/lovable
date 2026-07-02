@@ -33,11 +33,7 @@ export function ContactEmails({ contactEmail }: ContactEmailsProps) {
             )}
           </CollapsibleTrigger>
           {open && contactEmail && (
-            <a
-              href={`https://mail.google.com/mail/u/0/?view=cm&to=${encodeURIComponent(contactEmail)}`}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
+            <a href={`/mail?compose=1&to=${encodeURIComponent(contactEmail)}`}>
               <Button variant="ghost" size="sm" className="h-7 px-2 text-xs">
                 <Send className="mr-1 h-3 w-3" />
                 Compose
