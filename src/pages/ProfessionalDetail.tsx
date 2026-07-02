@@ -259,6 +259,15 @@ export default function ProfessionalDetail() {
                   </div>
                 </div>
               </div>
+              <Button
+                className="bg-sanctuary-green text-sanctuary-bronze hover:bg-sanctuary-green/90 gap-1.5 shrink-0"
+                onClick={handleViewProPortal}
+                disabled={viewPortalLoading || !pro?.pro_portal_enabled}
+                title={pro?.pro_portal_enabled ? "Open Pro Portal login" : "Pro Portal not enabled"}
+              >
+                {viewPortalLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Eye className="h-4 w-4" />}
+                View Pro Portal
+              </Button>
             </div>
 
             <div className="mt-6 grid grid-cols-3 gap-4">
