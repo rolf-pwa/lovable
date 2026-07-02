@@ -227,9 +227,11 @@ serve(async (req) => {
       }
       const attributedTitle = `${marker} ${title}`;
       const attributedNotes = `Requested by ${session.professional.full_name} (${session.professional.firm || session.professional.professional_type}) via Pro Portal.\n\n${notes}`;
+      // Assign to "me" (the Asana PAT / Ghost User) so it surfaces on the staff
+      // Dashboard, which queries tasks assigned to the PAT owner.
       const result = await asana(`/tasks`, {
         method: "POST",
-        body: JSON.stringify({ data: { projects: [projectGid], name: attributedTitle, notes: attributedNotes } }),
+        body: JSON.stringify({ data: { projects: [projectGid], name: attributedTitle, notes: attributedNotes, assignee: "me" } }),
       });
       // Notify staff via bell
       try {
