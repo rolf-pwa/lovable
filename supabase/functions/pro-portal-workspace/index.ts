@@ -202,9 +202,11 @@ serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const action = body.action as string;
     const scope = await resolveScope(supabase, session.professional_id);
+    console.log("[pro-portal-workspace]", action, "pro=", session.professional_id, "engagements=", scope.engagements.length, "fam=", scope.familyIds.length, "hh=", scope.householdIds.length, "c=", scope.contactIds.length);
 
     if (action === "tree") {
       const tree = await buildTree(supabase, scope);
+      console.log("[pro-portal-workspace] tree families=", tree.families.length);
       return new Response(JSON.stringify(tree), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
