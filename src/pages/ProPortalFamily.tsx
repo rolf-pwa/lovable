@@ -132,10 +132,11 @@ export default function ProPortalFamily() {
               </CardContent>
             </Card>
 
-            <ProTasksPanel scopeType="family" scopeId={family.id} />
           </div>
 
           <aside className="space-y-5">
+            <ProTasksPanel scopeType="family" scopeId={family.id} />
+
             <Card className="border-amber-500/15">
               <CardHeader>
                 <CardTitle className="text-base font-serif flex items-center gap-2">
@@ -163,6 +164,7 @@ export default function ProPortalFamily() {
               </CardContent>
             </Card>
           </aside>
+
         </div>
       )}
     </ProPortalShell>
