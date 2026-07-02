@@ -31,33 +31,35 @@ export default function EngagementsPanel({ scopeType, scopeId, title = "Professi
   const [rows, setRows] = useState<EngagementRow[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    (async () => {
-      setLoading(true);
-      const { data } = await (supabase as any)
-        .from("professional_engagements")
-        .select("id, title, pillar, status, professional_id, professional:professionals(id, full_name, firm, professional_type)")
-        .eq("scope_type", scopeType)
-        .eq("scope_id", scopeId)
-        .order("created_at", { ascending: false });
-      setRows(data || []);
-      setLoading(false);
-    })();
+  const load = useCallback(async () => {
+    setLoading(true);
+    const { data } = await (supabase as any)
+      .from("professional_engagements")
+      .select("id, title, pillar, status, professional_id, professional:professionals(id, full_name, firm, professional_type)")
+      .eq("scope_type", scopeType)
+      .eq("scope_id", scopeId)
+      .order("created_at", { ascending: false });
+    setRows(data || []);
+    setLoading(false);
   }, [scopeType, scopeId]);
+
+  useEffect(() => { load(); }, [load]);
 
   return (
     <Card>
-      <CardHeader className="pb-3">
+      <CardHeader className="pb-3 flex-row items-center justify-between space-y-0">
         <CardTitle className="text-base font-serif flex items-center gap-2">
           <Briefcase className="h-4 w-4" /> {title}
         </CardTitle>
+        <LinkProDialog scopeType={scopeType} scopeId={scopeId} onLinked={load} />
       </CardHeader>
       <CardContent>
         {loading ? (
           <div className="text-sm text-muted-foreground py-4 text-center">Loading…</div>
         ) : rows.length === 0 ? (
           <div className="text-sm text-muted-foreground py-4 text-center">
-            No professionals linked to this {scopeType} yet. Link one from the Professionals directory.
+            No professionals linked to this {scopeType} yet. Use "Link a Pro" to grant portal
+            visibility scoped strictly to this {scopeType}.
           </div>
         ) : (
           <ul className="divide-y">
