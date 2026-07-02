@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Crown, ArrowRight, Users } from "lucide-react";
 import { toast } from "sonner";
 import ProPortalShell, { FN, proFetch } from "@/components/pro/ProPortalShell";
+import ProTasksPanel from "@/components/pro/ProTasksPanel";
 
 const PRO_TYPE_LABELS: Record<string, string> = {
   lawyer: "Legal Counsel", accountant: "Tax & Accounting", insurance: "Insurance",
