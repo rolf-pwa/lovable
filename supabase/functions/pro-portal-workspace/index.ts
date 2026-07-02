@@ -232,7 +232,9 @@ serve(async (req) => {
 
     if (action === "family") {
       const familyId = body.family_id as string;
-      if (!familyId || !scope.familyIds.includes(familyId)) {
+      // Accessible as a family page if any engagement touches this family
+      // (family/household/contact scope). Detail page respects strict visibility.
+      if (!familyId || !scope.treeFamilyIds.includes(familyId)) {
         return new Response(JSON.stringify({ error: "Not accessible" }), {
           status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
@@ -240,9 +242,11 @@ serve(async (req) => {
       // Filter scope down to this family
       const filtered = {
         engagements: scope.engagements,
-        familyIds: [familyId],
+        familyIds: scope.familyIds.includes(familyId) ? [familyId] : [],
         householdIds: scope.householdIds,
         contactIds: scope.contactIds,
+        treeFamilyIds: [familyId],
+        treeHouseholdIds: scope.treeHouseholdIds,
       };
       const tree = await buildTree(supabase, filtered);
       const family = tree.families[0] || null;
