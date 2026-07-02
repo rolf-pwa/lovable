@@ -821,6 +821,7 @@ const ContactDetail = () => {
                 <ContactCalendar contactEmail={contact.email} contactName={contact.full_name} />
                 <ContactRequests contactId={id!} />
                 <AuditTrail contactId={id!} />
+                <EngagementsPanel scopeType="contact" scopeId={id!} />
               </TabsContent>
 
               {/* The Vineyard Tab */}
