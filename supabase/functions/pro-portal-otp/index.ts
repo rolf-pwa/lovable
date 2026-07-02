@@ -261,6 +261,67 @@ serve(async (req) => {
       );
     }
 
+    if (action === "staff_impersonate") {
+      // Staff-only: mint a short pro portal session for a specific professional
+      // so an internal user can preview that pro's portal view.
+      const authHeader = req.headers.get("Authorization") || "";
+      const jwt = authHeader.replace(/^Bearer\s+/i, "").trim();
+      if (!jwt) {
+        return new Response(JSON.stringify({ error: "Missing auth token" }), {
+          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const userClient = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY")!, {
+        global: { headers: { Authorization: `Bearer ${jwt}` } },
+      });
+      const { data: userRes, error: userErr } = await userClient.auth.getUser();
+      if (userErr || !userRes?.user) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const proId = String(body.professional_id || "").trim();
+      if (!proId) {
+        return new Response(JSON.stringify({ error: "professional_id required" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const { data: pro } = await supabase
+        .from("professionals")
+        .select("id, full_name, email, firm, professional_type, pro_portal_enabled")
+        .eq("id", proId)
+        .maybeSingle();
+      if (!pro || !pro.pro_portal_enabled) {
+        return new Response(JSON.stringify({ error: "Pro Portal not enabled for this professional" }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const rawToken = generateSessionToken();
+      const newHash = await sha256Hex(rawToken);
+      // Short 30-minute preview session
+      const sessionExp = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+      await supabase.from("pro_portal_tokens").insert({
+        professional_id: pro.id,
+        token_hash: newHash,
+        session_expires_at: sessionExp,
+        last_used_at: new Date().toISOString(),
+      });
+
+      console.log(`[pro-portal-otp] staff_impersonate by ${userRes.user.email} -> pro ${pro.id}`);
+      const { pro_portal_enabled: _pe, ...proSafe } = pro;
+      return new Response(
+        JSON.stringify({
+          session_token: rawToken,
+          session_expires_at: sessionExp,
+          professional: proSafe,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
     if (action === "logout") {
       if (body.session_token) {
         const h = await sha256Hex(String(body.session_token));

@@ -84,19 +84,31 @@ export default function ProfessionalDetail() {
     scope_id: "",
   });
 
-  const handleViewProPortal = () => {
+  const handleViewProPortal = async () => {
     if (!pro?.pro_portal_enabled) {
       toast.error("Pro Portal access is not enabled for this professional.");
       return;
     }
     setViewPortalLoading(true);
-    const newWindow = window.open("about:blank", "_blank");
-    if (newWindow) {
-      newWindow.location.href = `${window.location.origin}/pro-portal/login`;
-    } else {
-      window.location.href = `${window.location.origin}/pro-portal/login`;
+    try {
+      const { data, error } = await (supabase as any).functions.invoke("pro-portal-otp", {
+        body: { action: "staff_impersonate", professional_id: pro.id },
+      });
+      if (error || !data?.session_token) {
+        throw new Error(error?.message || data?.error || "Failed to start preview session");
+      }
+      // Seed pro portal session in localStorage, then open portal.
+      localStorage.setItem("pro_portal_session", data.session_token);
+      localStorage.setItem("pro_portal_expires", data.session_expires_at);
+      localStorage.setItem("pro_portal_profile", JSON.stringify(data.professional));
+      const url = `${window.location.origin}/pro-portal`;
+      const newWindow = window.open(url, "_blank");
+      if (!newWindow) window.location.href = url;
+    } catch (e: any) {
+      toast.error(e?.message || "Unable to open Pro Portal preview");
+    } finally {
+      setViewPortalLoading(false);
     }
-    setViewPortalLoading(false);
   };
 
   const load = useCallback(async () => {
