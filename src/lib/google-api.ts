@@ -121,16 +121,96 @@ export async function readGmailMessage(messageId: string) {
   return data;
 }
 
-export async function sendGmailMessage(to: string, subject: string, body: string) {
+export async function sendGmailMessage(
+  to: string,
+  subject: string,
+  body: string,
+  opts?: { cc?: string; bcc?: string; threadId?: string; inReplyTo?: string; references?: string },
+) {
   const headers = await getAuthHeaders();
   const res = await fetch(`${FUNCTIONS_URL}/google-gmail?action=send`, {
     method: "POST",
     headers,
-    body: JSON.stringify({ to, subject, body }),
+    body: JSON.stringify({ to, subject, body, ...opts }),
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || "Failed to send message");
   return data;
+}
+
+// --- Gmail threads / mailbox ---
+
+export async function listGmailThreads(params: {
+  q?: string; labelIds?: string; maxResults?: number; pageToken?: string;
+} = {}) {
+  const headers = await getAuthHeaders();
+  const sp = new URLSearchParams({ action: "threads-list" });
+  if (params.q) sp.set("q", params.q);
+  if (params.labelIds) sp.set("labelIds", params.labelIds);
+  if (params.maxResults) sp.set("maxResults", String(params.maxResults));
+  if (params.pageToken) sp.set("pageToken", params.pageToken);
+  const res = await fetch(`${FUNCTIONS_URL}/google-gmail?${sp}`, { headers });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Failed to list threads");
+  return data as { threads: any[]; nextPageToken: string | null };
+}
+
+export async function getGmailThread(threadId: string) {
+  const headers = await getAuthHeaders();
+  const sp = new URLSearchParams({ action: "thread-get", threadId });
+  const res = await fetch(`${FUNCTIONS_URL}/google-gmail?${sp}`, { headers });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Failed to get thread");
+  return data as { id: string; messages: any[] };
+}
+
+export async function modifyGmail(payload: {
+  messageId?: string; threadId?: string;
+  addLabelIds?: string[]; removeLabelIds?: string[];
+}) {
+  const headers = await getAuthHeaders();
+  const res = await fetch(`${FUNCTIONS_URL}/google-gmail?action=modify`, {
+    method: "POST", headers, body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Failed to modify");
+  return data;
+}
+
+export async function trashGmail(payload: { messageId?: string; threadId?: string }) {
+  const headers = await getAuthHeaders();
+  const res = await fetch(`${FUNCTIONS_URL}/google-gmail?action=trash`, {
+    method: "POST", headers, body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Failed to trash");
+  return data;
+}
+
+export async function untrashGmail(payload: { messageId?: string; threadId?: string }) {
+  const headers = await getAuthHeaders();
+  const res = await fetch(`${FUNCTIONS_URL}/google-gmail?action=untrash`, {
+    method: "POST", headers, body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Failed to untrash");
+  return data;
+}
+
+export async function listGmailLabels() {
+  const headers = await getAuthHeaders();
+  const res = await fetch(`${FUNCTIONS_URL}/google-gmail?action=labels-list`, { headers });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Failed to list labels");
+  return data as { labels: any[] };
+}
+
+export async function getGmailProfile() {
+  const headers = await getAuthHeaders();
+  const res = await fetch(`${FUNCTIONS_URL}/google-gmail?action=profile`, { headers });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Failed to get profile");
+  return data as { emailAddress: string; messagesTotal: number; threadsTotal: number };
 }
 
 export async function createGmailDraft(to: string, subject: string, body: string) {
