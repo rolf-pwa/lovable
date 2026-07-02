@@ -24,6 +24,9 @@ import DiscoveryEmbed from "./pages/DiscoveryEmbed";
 import VfoOnboardingEmbed from "./pages/VfoOnboardingEmbed";
 import ProPortalLogin from "./pages/ProPortalLogin";
 import ProPortal from "./pages/ProPortal";
+import ProPortalFamily from "./pages/ProPortalFamily";
+import ProPortalHousehold from "./pages/ProPortalHousehold";
+import ProPortalContact from "./pages/ProPortalContact";
 import Leads from "./pages/Leads";
 import ReviewQueue from "./pages/ReviewQueue";
 import Requests from "./pages/Requests";
@@ -76,6 +79,9 @@ const App = () => (
             <Route path="/vfo/:token" element={<VfoPortal />} />
             <Route path="/pro-portal/login" element={<ProPortalLogin />} />
             <Route path="/pro-portal" element={<ProPortal />} />
+            <Route path="/pro-portal/family/:id" element={<ProPortalFamily />} />
+            <Route path="/pro-portal/household/:id" element={<ProPortalHousehold />} />
+            <Route path="/pro-portal/contact/:id" element={<ProPortalContact />} />
             <Route path="/admin/vfo" element={<ProtectedRoute><AdminVfo /></ProtectedRoute>} />
             <Route path="/google-callback" element={<ProtectedRoute><GoogleCallback /></ProtectedRoute>} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
