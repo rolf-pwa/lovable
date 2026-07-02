@@ -199,6 +199,68 @@ serve(async (req) => {
       });
     }
 
+    if (action === "oauth_exchange") {
+      // Exchange a Supabase auth bearer token (from Google OAuth) for a
+      // pro portal session. The professional must exist by email and be
+      // portal-enabled.
+      const authHeader = req.headers.get("Authorization") || "";
+      const jwt = authHeader.replace(/^Bearer\s+/i, "").trim();
+      if (!jwt) {
+        return new Response(JSON.stringify({ error: "Missing auth token" }), {
+          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const userClient = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY")!, {
+        global: { headers: { Authorization: `Bearer ${jwt}` } },
+      });
+      const { data: userRes, error: userErr } = await userClient.auth.getUser();
+      if (userErr || !userRes?.user?.email) {
+        return new Response(JSON.stringify({ error: "Invalid Google session" }), {
+          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const email = userRes.user.email.toLowerCase();
+
+      const { data: pro } = await supabase
+        .from("professionals")
+        .select("id, full_name, email, firm, professional_type, pro_portal_enabled")
+        .ilike("email", email)
+        .maybeSingle();
+
+      if (!pro || !pro.pro_portal_enabled) {
+        return new Response(
+          JSON.stringify({ error: "No Pro Portal account is linked to this Google email." }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+
+      const rawToken = generateSessionToken();
+      const newHash = await sha256Hex(rawToken);
+      const sessionExp = new Date(Date.now() + SESSION_TTL_MS).toISOString();
+
+      await supabase.from("pro_portal_tokens").insert({
+        professional_id: pro.id,
+        token_hash: newHash,
+        session_expires_at: sessionExp,
+        last_used_at: new Date().toISOString(),
+      });
+
+      await supabase
+        .from("professionals")
+        .update({ last_login_at: new Date().toISOString() })
+        .eq("id", pro.id);
+
+      const { pro_portal_enabled: _pe, ...proSafe } = pro;
+      return new Response(
+        JSON.stringify({
+          session_token: rawToken,
+          session_expires_at: sessionExp,
+          professional: proSafe,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
     if (action === "logout") {
       if (body.session_token) {
         const h = await sha256Hex(String(body.session_token));
