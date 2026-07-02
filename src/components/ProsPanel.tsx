@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Briefcase, ExternalLink, Home, User, TreesIcon } from "lucide-react";
 import EngagementThreadButton from "@/components/EngagementThreadButton";
+import LinkProDialog from "@/components/LinkProDialog";
 import { format } from "date-fns";
 
 interface Props {
