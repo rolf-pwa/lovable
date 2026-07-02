@@ -12,7 +12,8 @@ function getCorsHeaders(req: Request) {
   const allowed = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
   return {
     "Access-Control-Allow-Origin": allowed,
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+    "Access-Control-Allow-Headers":
+      "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
   };
 }
 
@@ -27,7 +28,6 @@ async function getValidToken(supabaseAdmin: any, userId: string): Promise<string
     .select("*")
     .eq("user_id", userId)
     .maybeSingle();
-
   if (error || !data) throw new Error("Google not connected");
 
   if (new Date(data.token_expiry) <= new Date()) {
@@ -43,31 +43,77 @@ async function getValidToken(supabaseAdmin: any, userId: string): Promise<string
     });
     const tokens = await res.json();
     if (tokens.error) throw new Error(`Token refresh failed: ${tokens.error}`);
-
     const newExpiry = new Date(Date.now() + tokens.expires_in * 1000).toISOString();
     await supabaseAdmin
       .from("google_tokens")
       .update({ access_token: tokens.access_token, token_expiry: newExpiry })
       .eq("user_id", userId);
-
     return tokens.access_token;
   }
-
   return data.access_token;
+}
+
+function b64urlEncode(str: string) {
+  return btoa(unescape(encodeURIComponent(str)))
+    .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+function b64urlDecode(str: string): string {
+  const s = str.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((str.length + 3) % 4);
+  try {
+    return decodeURIComponent(escape(atob(s)));
+  } catch {
+    try { return atob(s); } catch { return ""; }
+  }
+}
+
+function extractBody(payload: any): { html: string; text: string } {
+  let html = "", text = "";
+  const walk = (p: any) => {
+    if (!p) return;
+    const mime = p.mimeType || "";
+    if (p.body?.data) {
+      const decoded = b64urlDecode(p.body.data);
+      if (mime === "text/html" && !html) html = decoded;
+      else if (mime === "text/plain" && !text) text = decoded;
+    }
+    if (Array.isArray(p.parts)) p.parts.forEach(walk);
+  };
+  walk(payload);
+  return { html, text };
+}
+
+function getHeader(headers: any[], name: string): string {
+  return headers?.find((h: any) => h.name?.toLowerCase() === name.toLowerCase())?.value || "";
+}
+
+function buildRawEmail(opts: {
+  to: string; subject: string; body: string; cc?: string; bcc?: string;
+  inReplyTo?: string; references?: string; from?: string;
+}) {
+  const lines = [
+    `To: ${opts.to}`,
+    opts.cc ? `Cc: ${opts.cc}` : "",
+    opts.bcc ? `Bcc: ${opts.bcc}` : "",
+    `Subject: ${opts.subject}`,
+    opts.inReplyTo ? `In-Reply-To: ${opts.inReplyTo}` : "",
+    opts.references ? `References: ${opts.references}` : "",
+    "MIME-Version: 1.0",
+    'Content-Type: text/html; charset="UTF-8"',
+    "",
+    opts.body,
+  ].filter(Boolean).join("\r\n");
+  return b64urlEncode(lines);
 }
 
 serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
-if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
@@ -77,180 +123,276 @@ if (req.method === "OPTIONS") {
     const { data: { user }, error: userError } = await supabaseUser.auth.getUser();
     if (userError || !user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const userId = user.id;
 
     const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-    const accessToken = await getValidToken(supabaseAdmin, userId);
+    const accessToken = await getValidToken(supabaseAdmin, user.id);
+    const authH = { Authorization: `Bearer ${accessToken}` };
 
     const url = new URL(req.url);
     const action = url.searchParams.get("action");
+    const json = (obj: any, status = 200) =>
+      new Response(JSON.stringify(obj), {
+        status, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
 
+    // ------- List individual messages (kept for backwards compat) -------
     if (action === "list") {
       const query = url.searchParams.get("q") || "";
       const maxResults = url.searchParams.get("maxResults") || "15";
-
+      const labelIds = url.searchParams.get("labelIds") || "";
       const params: Record<string, string> = { maxResults };
       if (query) params.q = query;
+      if (labelIds) params.labelIds = labelIds;
 
-      const gmailRes = await fetch(
+      const listRes = await fetch(
         `https://gmail.googleapis.com/gmail/v1/users/me/messages?${new URLSearchParams(params)}`,
-        { headers: { Authorization: `Bearer ${accessToken}` } }
+        { headers: authH },
       );
+      if (!listRes.ok) throw new Error(`Gmail list ${listRes.status}: ${await listRes.text()}`);
+      const listData = await listRes.json();
+      if (!listData.messages?.length) return json({ messages: [] });
 
-      if (!gmailRes.ok) {
-        const err = await gmailRes.text();
-        console.error("Gmail list error:", err);
-        throw new Error(`Gmail API error: ${gmailRes.status}`);
-      }
+      const details = await Promise.all(listData.messages.slice(0, parseInt(maxResults)).map(async (m: any) => {
+        const r = await fetch(
+          `https://gmail.googleapis.com/gmail/v1/users/me/messages/${m.id}?format=metadata&metadataHeaders=Subject&metadataHeaders=From&metadataHeaders=To&metadataHeaders=Date`,
+          { headers: authH },
+        );
+        return r.ok ? r.json() : null;
+      }));
+      const messages = details.filter(Boolean).map((msg: any) => ({
+        id: msg.id, threadId: msg.threadId, snippet: msg.snippet,
+        subject: getHeader(msg.payload?.headers || [], "Subject"),
+        from: getHeader(msg.payload?.headers || [], "From"),
+        to: getHeader(msg.payload?.headers || [], "To"),
+        date: getHeader(msg.payload?.headers || [], "Date"),
+        labelIds: msg.labelIds,
+      }));
+      return json({ messages });
+    }
 
-      const listData = await gmailRes.json();
-      if (!listData.messages || listData.messages.length === 0) {
-        return new Response(JSON.stringify({ messages: [] }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+    // ------- List threads (Gmail-style inbox) -------
+    if (action === "threads-list") {
+      const query = url.searchParams.get("q") || "";
+      const maxResults = url.searchParams.get("maxResults") || "30";
+      const labelIds = url.searchParams.get("labelIds") || "";
+      const pageToken = url.searchParams.get("pageToken") || "";
+      const params: Record<string, string> = { maxResults };
+      if (query) params.q = query;
+      if (labelIds) params.labelIds = labelIds;
+      if (pageToken) params.pageToken = pageToken;
+
+      const listRes = await fetch(
+        `https://gmail.googleapis.com/gmail/v1/users/me/threads?${new URLSearchParams(params)}`,
+        { headers: authH },
+      );
+      if (!listRes.ok) throw new Error(`Gmail threads ${listRes.status}: ${await listRes.text()}`);
+      const listData = await listRes.json();
+      if (!listData.threads?.length) return json({ threads: [], nextPageToken: null });
+
+      const summaries = await Promise.all(listData.threads.map(async (t: any) => {
+        const r = await fetch(
+          `https://gmail.googleapis.com/gmail/v1/users/me/threads/${t.id}?format=metadata&metadataHeaders=Subject&metadataHeaders=From&metadataHeaders=To&metadataHeaders=Date`,
+          { headers: authH },
+        );
+        if (!r.ok) return null;
+        const thread = await r.json();
+        const msgs = thread.messages || [];
+        const last = msgs[msgs.length - 1];
+        const first = msgs[0];
+        const labelIds: string[] = Array.from(new Set(msgs.flatMap((m: any) => m.labelIds || [])));
+        const unread = msgs.some((m: any) => (m.labelIds || []).includes("UNREAD"));
+        const starred = msgs.some((m: any) => (m.labelIds || []).includes("STARRED"));
+        const fromSet = new Set<string>();
+        msgs.forEach((m: any) => {
+          const f = getHeader(m.payload?.headers || [], "From");
+          if (f) fromSet.add(f);
         });
-      }
-
-      // Fetch message details (metadata only for speed)
-      const messageDetails = await Promise.all(
-        listData.messages.slice(0, parseInt(maxResults)).map(async (msg: any) => {
-          const detailRes = await fetch(
-            `https://gmail.googleapis.com/gmail/v1/users/me/messages/${msg.id}?format=metadata&metadataHeaders=Subject&metadataHeaders=From&metadataHeaders=To&metadataHeaders=Date`,
-            { headers: { Authorization: `Bearer ${accessToken}` } }
-          );
-          if (!detailRes.ok) return null;
-          return detailRes.json();
-        })
-      );
-
-      const messages = messageDetails.filter(Boolean).map((msg: any) => {
-        const headers = msg.payload?.headers || [];
-        const getHeader = (name: string) => headers.find((h: any) => h.name === name)?.value || "";
         return {
-          id: msg.id,
-          threadId: msg.threadId,
-          snippet: msg.snippet,
-          subject: getHeader("Subject"),
-          from: getHeader("From"),
-          to: getHeader("To"),
-          date: getHeader("Date"),
-          labelIds: msg.labelIds,
+          id: thread.id,
+          historyId: thread.historyId,
+          snippet: last?.snippet || thread.snippet,
+          subject: getHeader(first?.payload?.headers || [], "Subject"),
+          from: getHeader(last?.payload?.headers || [], "From"),
+          fromParticipants: Array.from(fromSet),
+          date: getHeader(last?.payload?.headers || [], "Date"),
+          messageCount: msgs.length,
+          labelIds, unread, starred,
         };
-      });
+      }));
 
-      return new Response(JSON.stringify({ messages }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      return json({
+        threads: summaries.filter(Boolean),
+        nextPageToken: listData.nextPageToken || null,
+        resultSizeEstimate: listData.resultSizeEstimate,
       });
     }
 
+    // ------- Get thread with full messages -------
+    if (action === "thread-get") {
+      const threadId = url.searchParams.get("threadId");
+      if (!threadId) throw new Error("threadId required");
+      const r = await fetch(
+        `https://gmail.googleapis.com/gmail/v1/users/me/threads/${threadId}?format=full`,
+        { headers: authH },
+      );
+      if (!r.ok) throw new Error(`Gmail thread ${r.status}: ${await r.text()}`);
+      const thread = await r.json();
+      const messages = (thread.messages || []).map((m: any) => {
+        const headers = m.payload?.headers || [];
+        const body = extractBody(m.payload);
+        return {
+          id: m.id,
+          threadId: m.threadId,
+          internalDate: m.internalDate,
+          snippet: m.snippet,
+          labelIds: m.labelIds || [],
+          headers: {
+            subject: getHeader(headers, "Subject"),
+            from: getHeader(headers, "From"),
+            to: getHeader(headers, "To"),
+            cc: getHeader(headers, "Cc"),
+            date: getHeader(headers, "Date"),
+            messageId: getHeader(headers, "Message-ID"),
+            references: getHeader(headers, "References"),
+          },
+          bodyHtml: body.html,
+          bodyText: body.text,
+        };
+      });
+      return json({ id: thread.id, historyId: thread.historyId, messages });
+    }
+
+    // ------- Read single message (legacy) -------
     if (action === "read") {
       const messageId = url.searchParams.get("messageId");
       if (!messageId) throw new Error("messageId required");
-
-      const gmailRes = await fetch(
+      const r = await fetch(
         `https://gmail.googleapis.com/gmail/v1/users/me/messages/${messageId}?format=full`,
-        { headers: { Authorization: `Bearer ${accessToken}` } }
+        { headers: authH },
       );
-
-      if (!gmailRes.ok) throw new Error(`Gmail API error: ${gmailRes.status}`);
-      const data = await gmailRes.json();
-
-      return new Response(JSON.stringify(data), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      if (!r.ok) throw new Error(`Gmail read ${r.status}`);
+      return json(await r.json());
     }
 
+    // ------- Modify labels (mark read/unread, star, archive, etc.) -------
+    if (action === "modify") {
+      const { messageId, threadId, addLabelIds = [], removeLabelIds = [] } = await req.json();
+      const target = threadId
+        ? `threads/${threadId}/modify`
+        : `messages/${messageId}/modify`;
+      const r = await fetch(
+        `https://gmail.googleapis.com/gmail/v1/users/me/${target}`,
+        {
+          method: "POST",
+          headers: { ...authH, "Content-Type": "application/json" },
+          body: JSON.stringify({ addLabelIds, removeLabelIds }),
+        },
+      );
+      if (!r.ok) throw new Error(`Gmail modify ${r.status}: ${await r.text()}`);
+      return json(await r.json());
+    }
+
+    // ------- Trash (move to Trash) -------
+    if (action === "trash") {
+      const { messageId, threadId } = await req.json();
+      const target = threadId
+        ? `threads/${threadId}/trash`
+        : `messages/${messageId}/trash`;
+      const r = await fetch(
+        `https://gmail.googleapis.com/gmail/v1/users/me/${target}`,
+        { method: "POST", headers: authH },
+      );
+      if (!r.ok) throw new Error(`Gmail trash ${r.status}: ${await r.text()}`);
+      return json(await r.json());
+    }
+
+    // ------- Untrash -------
+    if (action === "untrash") {
+      const { messageId, threadId } = await req.json();
+      const target = threadId
+        ? `threads/${threadId}/untrash`
+        : `messages/${messageId}/untrash`;
+      const r = await fetch(
+        `https://gmail.googleapis.com/gmail/v1/users/me/${target}`,
+        { method: "POST", headers: authH },
+      );
+      if (!r.ok) throw new Error(`Gmail untrash ${r.status}: ${await r.text()}`);
+      return json(await r.json());
+    }
+
+    // ------- List labels -------
+    if (action === "labels-list") {
+      const r = await fetch(
+        `https://gmail.googleapis.com/gmail/v1/users/me/labels`,
+        { headers: authH },
+      );
+      if (!r.ok) throw new Error(`Gmail labels ${r.status}`);
+      return json(await r.json());
+    }
+
+    // ------- Send (with optional reply threading) -------
     if (action === "send") {
-      const { to, subject, body } = await req.json();
-      const rawMessage = [
-        `To: ${to}`,
-        `Subject: ${subject}`,
-        "Content-Type: text/html; charset=utf-8",
-        "",
-        body,
-      ].join("\r\n");
-
-      // Base64url encode
-      const encoded = btoa(unescape(encodeURIComponent(rawMessage)))
-        .replace(/\+/g, "-")
-        .replace(/\//g, "_")
-        .replace(/=+$/, "");
-
-      const gmailRes = await fetch(
+      const body = await req.json();
+      const raw = buildRawEmail({
+        to: body.to, subject: body.subject, body: body.body,
+        cc: body.cc, bcc: body.bcc,
+        inReplyTo: body.inReplyTo, references: body.references,
+      });
+      const payload: any = { raw };
+      if (body.threadId) payload.threadId = body.threadId;
+      const r = await fetch(
         "https://gmail.googleapis.com/gmail/v1/users/me/messages/send",
         {
           method: "POST",
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ raw: encoded }),
-        }
+          headers: { ...authH, "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        },
       );
-
-      if (!gmailRes.ok) {
-        const err = await gmailRes.text();
-        console.error("Gmail send error:", err);
-        throw new Error(`Gmail send error: ${gmailRes.status}`);
-      }
-
-      const data = await gmailRes.json();
-      return new Response(JSON.stringify(data), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      if (!r.ok) throw new Error(`Gmail send ${r.status}: ${await r.text()}`);
+      return json(await r.json());
     }
 
+    // ------- Draft -------
     if (action === "draft") {
-      const { to, subject, body } = await req.json();
-      const rawMessage = [
-        `To: ${to}`,
-        `Subject: ${subject}`,
-        "Content-Type: text/html; charset=utf-8",
-        "",
-        body,
-      ].join("\r\n");
-
-      const encoded = btoa(unescape(encodeURIComponent(rawMessage)))
-        .replace(/\+/g, "-")
-        .replace(/\//g, "_")
-        .replace(/=+$/, "");
-
-      const gmailRes = await fetch(
+      const body = await req.json();
+      const raw = buildRawEmail({
+        to: body.to, subject: body.subject, body: body.body,
+        cc: body.cc, bcc: body.bcc,
+        inReplyTo: body.inReplyTo, references: body.references,
+      });
+      const message: any = { raw };
+      if (body.threadId) message.threadId = body.threadId;
+      const r = await fetch(
         "https://gmail.googleapis.com/gmail/v1/users/me/drafts",
         {
           method: "POST",
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ message: { raw: encoded } }),
-        }
+          headers: { ...authH, "Content-Type": "application/json" },
+          body: JSON.stringify({ message }),
+        },
       );
-
-      if (!gmailRes.ok) {
-        const err = await gmailRes.text();
-        console.error("Gmail draft error:", err);
-        throw new Error(`Gmail draft error: ${gmailRes.status}`);
-      }
-
-      const data = await gmailRes.json();
-      return new Response(JSON.stringify(data), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      if (!r.ok) throw new Error(`Gmail draft ${r.status}: ${await r.text()}`);
+      return json(await r.json());
     }
 
-    return new Response(JSON.stringify({ error: "Invalid action" }), {
-      status: 400,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    // ------- Profile (get "me" email) -------
+    if (action === "profile") {
+      const r = await fetch(
+        `https://gmail.googleapis.com/gmail/v1/users/me/profile`,
+        { headers: authH },
+      );
+      if (!r.ok) throw new Error(`Gmail profile ${r.status}`);
+      return json(await r.json());
+    }
+
+    return json({ error: "Invalid action" }, 400);
   } catch (e) {
     console.error("google-gmail error:", e);
     return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }
 });
