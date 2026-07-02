@@ -75,6 +75,7 @@ export default function ProfessionalDetail() {
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [openGroups, setOpenGroups] = useState<Set<string>>(new Set());
+  const [viewPortalLoading, setViewPortalLoading] = useState(false);
   const [form, setForm] = useState({
     title: "",
     description: "",
@@ -82,6 +83,21 @@ export default function ProfessionalDetail() {
     scope_type: "household",
     scope_id: "",
   });
+
+  const handleViewProPortal = () => {
+    if (!pro?.pro_portal_enabled) {
+      toast.error("Pro Portal access is not enabled for this professional.");
+      return;
+    }
+    setViewPortalLoading(true);
+    const newWindow = window.open("about:blank", "_blank");
+    if (newWindow) {
+      newWindow.location.href = `${window.location.origin}/pro-portal/login`;
+    } else {
+      window.location.href = `${window.location.origin}/pro-portal/login`;
+    }
+    setViewPortalLoading(false);
+  };
 
   const load = useCallback(async () => {
     if (!id) return;
