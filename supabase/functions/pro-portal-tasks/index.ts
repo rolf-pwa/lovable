@@ -131,8 +131,49 @@ serve(async (req) => {
     const marker = proMarker(session.professional.full_name);
 
     if (action === "list") {
-      const scopeType = body.scope_type as "family" | "household" | "contact";
+      const scopeType = body.scope_type as "family" | "household" | "contact" | "portfolio";
       const scopeId = body.scope_id as string;
+
+      // Portfolio: aggregate across every project the pro has an engagement in.
+      if (scopeType === "portfolio") {
+        const { data: engagements } = await supabase
+          .from("professional_engagements")
+          .select("scope_type, scope_id, status")
+          .eq("professional_id", session.professional_id)
+          .eq("status", "active");
+        const projectGids = new Set<string>();
+        for (const e of engagements || []) {
+          const { projectGid } = await resolveProject(supabase, e.scope_type, e.scope_id);
+          if (projectGid) projectGids.add(projectGid);
+        }
+        const allTasks: any[] = [];
+        for (const pg of projectGids) {
+          try {
+            const r = await asana(
+              `/tasks?project=${pg}&opt_fields=name,notes,completed,due_on,memberships.section.name,num_subtasks,created_at,modified_at&limit=100`,
+            );
+            for (const t of r.data || []) {
+              if (matchesPro(t.name, marker) || matchesPro(t.notes, marker)) {
+                allTasks.push({
+                  gid: t.gid,
+                  name: (t.name || "").replace(marker, "").trim() || t.name,
+                  notes: t.notes || "",
+                  completed: !!t.completed,
+                  due_on: t.due_on || null,
+                  section: t.memberships?.[0]?.section?.name || null,
+                  num_subtasks: t.num_subtasks || 0,
+                  modified_at: t.modified_at,
+                });
+              }
+            }
+          } catch (_) { /* skip broken projects */ }
+        }
+        allTasks.sort((a, b) => (b.modified_at || "").localeCompare(a.modified_at || ""));
+        return new Response(JSON.stringify({ tasks: allTasks, projectGid: null }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       if (!scopeType || !scopeId) {
         return new Response(JSON.stringify({ error: "scope required" }), {
           status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
