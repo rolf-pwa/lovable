@@ -62,9 +62,7 @@ export function ContactEmails({ contactEmail }: ContactEmailsProps) {
                 return (
                   <li key={msg.id}>
                     <a
-                      href={`https://mail.google.com/mail/u/0/#all/${msg.id}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                      href={`/mail?thread=${msg.threadId}`}
                       className="block rounded-md border-b border-border/50 pb-3 last:border-0 last:pb-0 transition-colors hover:bg-muted/50 -mx-1 px-1"
                     >
                       <div className="flex items-start justify-between gap-2">
