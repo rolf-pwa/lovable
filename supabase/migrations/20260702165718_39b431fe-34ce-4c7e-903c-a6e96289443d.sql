@@ -1,0 +1,1 @@
+UPDATE public.professionals SET pro_portal_enabled = true WHERE id = '5e4ddcd5-8b51-4e2b-9371-3a67f87058f6';
