@@ -27,7 +27,8 @@ interface Props {
   title?: string;
 }
 
-export default function ProTasksPanel({ scopeType, scopeId }: Props) {
+export default function ProTasksPanel({ scopeType, scopeId, title }: Props) {
+  const isPortfolio = scopeType === "portfolio";
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<"open" | "done">("open");
