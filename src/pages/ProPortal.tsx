@@ -589,6 +589,10 @@ export default function ProPortal() {
             </aside>
           </div>
         )}
+
+        <div className="text-center text-[10px] uppercase tracking-[0.25em] text-muted-foreground/60 pt-12 pb-2">
+          ProsperWise · Private Family Office
+        </div>
       </main>
     </div>
   );
