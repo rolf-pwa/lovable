@@ -24,6 +24,7 @@ import {
 import { Briefcase, Plus, Search } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
+import { CrmTabs } from "@/components/CrmTabs";
 
 type Pro = {
   id: string;
@@ -114,6 +115,7 @@ export default function Professionals() {
   return (
     <AppLayout>
       <div className="max-w-7xl mx-auto p-8 space-y-6">
+        <CrmTabs />
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-serif tracking-tight flex items-center gap-3">

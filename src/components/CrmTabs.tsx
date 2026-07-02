@@ -5,6 +5,7 @@ const TABS = [
   { label: "Individuals", to: "/contacts" },
   { label: "Households", to: "/households" },
   { label: "Families", to: "/families" },
+  { label: "Pros", to: "/professionals" },
   { label: "Leads", to: "/leads" },
   { label: "General / Vendors", to: "/contacts?view=general" },
 ];
