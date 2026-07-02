@@ -83,7 +83,7 @@ async function buildTree(supabase: any, scope: Awaited<ReturnType<typeof resolve
   }
   const [{ data: families }, { data: households }, { data: contacts }] = await Promise.all([
     familyIds.length
-      ? supabase.from("families").select("id, name, governance_status, fee_tier").in("id", familyIds)
+      ? supabase.from("families").select("id, name, fee_tier").in("id", familyIds)
       : Promise.resolve({ data: [] as any[] }),
     householdIds.length
       ? supabase.from("households").select("id, label, family_id, governance_status").in("id", householdIds)
