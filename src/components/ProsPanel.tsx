@@ -32,42 +32,41 @@ export function ProsPanel({ scope, scopeId, memberContactIds = [], householdIds 
   const [engagements, setEngagements] = useState<any[]>([]);
   const [pros, setPros] = useState<Record<string, any>>({});
 
-  useEffect(() => {
-    (async () => {
-      setLoading(true);
-      // Build OR filter across relevant scopes
-      const orParts: string[] = [`and(scope_type.eq.${scope},scope_id.eq.${scopeId})`];
-      if (memberContactIds.length) {
-        orParts.push(`and(scope_type.eq.contact,scope_id.in.(${memberContactIds.join(",")}))`);
-      }
-      if (scope === "family" && householdIds.length) {
-        orParts.push(`and(scope_type.eq.household,scope_id.in.(${householdIds.join(",")}))`);
-      }
+  const load = useCallback(async () => {
+    setLoading(true);
+    const orParts: string[] = [`and(scope_type.eq.${scope},scope_id.eq.${scopeId})`];
+    if (memberContactIds.length) {
+      orParts.push(`and(scope_type.eq.contact,scope_id.in.(${memberContactIds.join(",")}))`);
+    }
+    if (scope === "family" && householdIds.length) {
+      orParts.push(`and(scope_type.eq.household,scope_id.in.(${householdIds.join(",")}))`);
+    }
 
-      const { data: engs } = await (supabase as any)
-        .from("professional_engagements")
-        .select("*")
-        .or(orParts.join(","))
-        .order("created_at", { ascending: false });
+    const { data: engs } = await (supabase as any)
+      .from("professional_engagements")
+      .select("*")
+      .or(orParts.join(","))
+      .order("created_at", { ascending: false });
 
-      const list = engs || [];
-      setEngagements(list);
+    const list = engs || [];
+    setEngagements(list);
 
-      const proIds = Array.from(new Set(list.map((e: any) => e.professional_id)));
-      if (proIds.length) {
-        const { data: ps } = await (supabase as any)
-          .from("professionals")
-          .select("id, full_name, professional_type, firm, credentials, email, phone")
-          .in("id", proIds);
-        const map: Record<string, any> = {};
-        (ps || []).forEach((p: any) => { map[p.id] = p; });
-        setPros(map);
-      } else {
-        setPros({});
-      }
-      setLoading(false);
-    })();
+    const proIds = Array.from(new Set(list.map((e: any) => e.professional_id)));
+    if (proIds.length) {
+      const { data: ps } = await (supabase as any)
+        .from("professionals")
+        .select("id, full_name, professional_type, firm, credentials, email, phone")
+        .in("id", proIds);
+      const map: Record<string, any> = {};
+      (ps || []).forEach((p: any) => { map[p.id] = p; });
+      setPros(map);
+    } else {
+      setPros({});
+    }
+    setLoading(false);
   }, [scope, scopeId, memberContactIds.join(","), householdIds.join(",")]);
+
+  useEffect(() => { load(); }, [load]);
 
   // Group by professional
   const grouped: Record<string, any[]> = {};
@@ -78,20 +77,21 @@ export function ProsPanel({ scope, scopeId, memberContactIds = [], householdIds 
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex-row items-center justify-between space-y-0">
         <CardTitle className="text-lg font-serif flex items-center gap-2">
           <Briefcase className="h-5 w-5 text-sanctuary-bronze" />
           {title}
           <Badge variant="outline" className="ml-2 text-[10px]">{Object.keys(grouped).length}</Badge>
         </CardTitle>
+        <LinkProDialog scopeType={scope} scopeId={scopeId} onLinked={load} />
       </CardHeader>
       <CardContent className="space-y-3">
         {loading ? (
           <p className="text-sm text-muted-foreground py-6 text-center">Loading…</p>
         ) : engagements.length === 0 ? (
           <p className="text-sm text-muted-foreground py-6 text-center">
-            No professionals linked yet. Add engagements from a{" "}
-            <Link to="/professionals" className="underline">pro's profile</Link>.
+            No professionals linked yet. Use "Link a Pro" above to grant portal access
+            scoped to this {scope}.
           </p>
         ) : (
           Object.entries(grouped).map(([proId, engs]) => {
