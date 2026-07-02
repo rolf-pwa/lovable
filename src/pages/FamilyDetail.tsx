@@ -29,6 +29,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { FamilyRollup } from "@/components/FamilyRollup";
+import { ProsPanel } from "@/components/ProsPanel";
 
 const ROLE_ICONS: Record<string, typeof Crown> = {
   head_of_family: Crown,
@@ -539,6 +540,15 @@ const FamilyDetail = () => {
             </Card>
           </div>
         </div>
+
+        {/* Family Pros */}
+        <ProsPanel
+          scope="family"
+          scopeId={family.id}
+          memberContactIds={contacts.map((c: any) => c.id)}
+          householdIds={households.map((h: any) => h.id)}
+          title="Family Pros"
+        />
       </div>
     </AppLayout>
   );
