@@ -813,6 +813,8 @@ const ContactDetail = () => {
                       disabled={!contact.household_id}
                     >
                       <ShieldCheck className="mr-2 h-4 w-4" />
+                      Governance Review
+                    </Button>
                   </CardContent>
                 </Card>
 
