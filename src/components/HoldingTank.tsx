@@ -427,6 +427,20 @@ export function HoldingTank({ contactId, householdId, onAccountMoved }: HoldingT
   );
 }
 
+interface SnapshotSummary {
+  snapshot_date: string;
+  boy_value: number | null;
+  current_value: number | null;
+  current_harvest: number | null;
+  ytd_value: number | null;
+  ror_ytd: number | null;
+  ror_6m: number | null;
+  ror_1y: number | null;
+  ror_3y: number | null;
+  ror_5y: number | null;
+  ror_since_inception: number | null;
+}
+
 function HoldingTankRow({
   account,
   onMove,
@@ -444,6 +458,21 @@ function HoldingTankRow({
   const [editingValue, setEditingValue] = useState(false);
   const [valueDraft, setValueDraft] = useState<string>("");
   const [savingValue, setSavingValue] = useState(false);
+  const [snapshot, setSnapshot] = useState<SnapshotSummary | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (supabase.from("account_harvest_snapshots") as any)
+      .select("snapshot_date, boy_value, current_value, current_harvest, ytd_value, ror_ytd, ror_6m, ror_1y, ror_3y, ror_5y, ror_since_inception")
+      .eq("holding_tank_id", account.id)
+      .order("snapshot_date", { ascending: false })
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }: any) => {
+        if (!cancelled && data) setSnapshot(data as SnapshotSummary);
+      });
+    return () => { cancelled = true; };
+  }, [account.id]);
 
   const saveValue = async () => {
     const parsed = valueDraft.trim() === "" ? null : Number(valueDraft.replace(/[^0-9.\-]/g, ""));
