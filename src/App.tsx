@@ -44,6 +44,7 @@ import KnowledgeBase from "./pages/KnowledgeBase";
 import HoldingTankPage from "./pages/HoldingTankPage";
 import Onboarding from "./pages/Onboarding";
 import BulkOnboarding from "./pages/BulkOnboarding";
+import BulkImporters from "./pages/BulkImporters";
 import Analytics from "./pages/Analytics";
 import StabilizationMap from "./pages/StabilizationMap";
 import StabilizationMapResolver from "./pages/StabilizationMapResolver";
