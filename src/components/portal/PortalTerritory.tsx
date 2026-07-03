@@ -231,6 +231,7 @@ export function PortalTerritory({ vineyardAccounts, storehouses, contact, family
                         ${(Number(acc.current_value) || 0).toLocaleString()}
                       </span>
                     </div>
+                    <PortalAccountSnapshot snapshot={acc.latest_snapshot} />
                     <div className="flex items-center justify-end mt-1.5">
                       <ScopeBadge
                         scope={acc.visibility_scope}
