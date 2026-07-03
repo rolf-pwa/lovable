@@ -1,0 +1,325 @@
+import { useState } from "react";
+import * as XLSX from "xlsx";
+import { AppLayout } from "@/components/AppLayout";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { Upload, FileSpreadsheet, FileText, CheckCircle2, AlertTriangle, Loader2 } from "lucide-react";
+
+/* --------------------------- REGISTRY IMPORTER --------------------------- */
+
+function RegistryImporter() {
+  const [docId, setDocId] = useState("1V1MRc9vpiho7kei3QeXroMjxUWk2S1N3u35RsHso1W8");
+  const [loading, setLoading] = useState(false);
+  const [plan, setPlan] = useState<any>(null);
+  const [committing, setCommitting] = useState(false);
+  const [result, setResult] = useState<any>(null);
+
+  const extractId = (s: string) => {
+    const m = s.match(/\/d\/([a-zA-Z0-9_-]+)/);
+    return m ? m[1] : s.trim();
+  };
+
+  const run = async (mode: "preview" | "commit") => {
+    const id = extractId(docId);
+    if (!id) return toast.error("Provide a Google Doc URL or ID");
+    if (mode === "commit") setCommitting(true); else setLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("bulk-import-registry", {
+        body: { mode, doc_id: id },
+      });
+      if (error) throw error;
+      if (data.error) throw new Error(data.error);
+      if (mode === "preview") { setPlan(data.plan); setResult(null); }
+      else { setResult(data.results); setPlan(null); toast.success("Registry imported."); }
+    } catch (e: any) {
+      toast.error(e.message || "Import failed");
+    } finally { setLoading(false); setCommitting(false); }
+  };
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader><CardTitle>Household Registry (Google Doc)</CardTitle></CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <Label className="text-xs">Google Doc URL or ID</Label>
+            <Input value={docId} onChange={(e) => setDocId(e.target.value)} placeholder="https://docs.google.com/document/d/..." />
+          </div>
+          <div className="flex gap-2">
+            <Button onClick={() => run("preview")} disabled={loading || committing} variant="outline">
+              {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <FileText className="h-4 w-4 mr-2" />}
+              Preview
+            </Button>
+            <Button onClick={() => run("commit")} disabled={!plan || committing} className="bg-accent">
+              {committing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
+              Commit Import
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {plan && (
+        <Card>
+          <CardHeader><CardTitle>Preview</CardTitle></CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
+              <Stat label="Households (new)" value={plan.newHouseholds} />
+              <Stat label="Households (matched)" value={plan.matchedHouseholds} />
+              <Stat label="Contacts (new)" value={plan.newContacts} />
+              <Stat label="Contacts (matched)" value={plan.matchedContacts} />
+              <Stat label="Accounts (new)" value={plan.newAccounts} />
+            </div>
+            {plan.duplicateContracts?.length > 0 && (
+              <div className="mb-3 text-xs text-amber-600 flex items-start gap-2">
+                <AlertTriangle className="h-3.5 w-3.5 mt-0.5" />
+                <span>{plan.duplicateContracts.length} contract number(s) already exist in Holding Tank — will be skipped: {plan.duplicateContracts.slice(0, 6).join(", ")}{plan.duplicateContracts.length > 6 ? "…" : ""}</span>
+              </div>
+            )}
+            <div className="max-h-96 overflow-y-auto space-y-2 border rounded p-2">
+              {plan.households.map((h: any, i: number) => (
+                <div key={i} className="text-xs border-b pb-1 last:border-0">
+                  <div className="font-medium">
+                    {h.existing_id ? <Badge variant="outline" className="mr-1 text-[9px]">exists</Badge> : <Badge className="mr-1 text-[9px] bg-green-600">new</Badge>}
+                    {h.label} <span className="text-muted-foreground">— {h.address || "no address"}</span>
+                  </div>
+                  {h.members.map((m: any, j: number) => (
+                    <div key={j} className="ml-3 mt-0.5">
+                      {m.existing_contact_id ? "· " : "+ "}{m.first_name} {m.last_name}
+                      <span className="text-muted-foreground"> ({m.container}{m.storehouse_label ? `: ${m.storehouse_label}` : ""})</span>
+                      <span className="text-muted-foreground"> — {m.accounts.length} account{m.accounts.length !== 1 ? "s" : ""}</span>
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {result && (
+        <Card>
+          <CardHeader><CardTitle>Commit Result</CardTitle></CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+              <Stat label="Families created" value={result.families} />
+              <Stat label="Households created" value={result.households} />
+              <Stat label="Contacts created" value={result.contacts} />
+              <Stat label="Accounts created" value={result.accounts} />
+              <Stat label="Skipped (dup)" value={result.skipped} />
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+/* ------------------------- PERFORMANCE IMPORTER ------------------------- */
+
+const HEADER_MAP: Record<string, keyof any> = {
+  "last name": "last_name",
+  "first name": "first_name",
+  "contract number": "contract",
+  "product": "product",
+  "type of registration": "registration",
+  "issue date": "issue_date",
+  "begining of the year": "boy_value",
+  "beginning of the year": "boy_value",
+  "%": "variation_pct",
+  "$": "variation_dollar",
+  "year-to-date": "ror_ytd",
+  "6 months": "ror_6m",
+  "1 year": "ror_1y",
+  "3 years": "ror_3y",
+  "5 years": "ror_5y",
+};
+
+function PerformanceImporter() {
+  const [file, setFile] = useState<File | null>(null);
+  const [snapshotDate, setSnapshotDate] = useState<string>("");
+  const [rows, setRows] = useState<any[]>([]);
+  const [report, setReport] = useState<any>(null);
+  const [commitResult, setCommitResult] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+
+  const parseFile = async (f: File) => {
+    setFile(f);
+    setReport(null); setCommitResult(null); setRows([]);
+    // Auto-detect date from filename: Tracking_Performance_YYYYMMDD_...
+    const dm = f.name.match(/(\d{4})(\d{2})(\d{2})/);
+    if (dm) setSnapshotDate(`${dm[1]}-${dm[2]}-${dm[3]}`);
+
+    const buf = await f.arrayBuffer();
+    const wb = XLSX.read(buf, { type: "array", cellDates: true });
+    const sh = wb.Sheets[wb.SheetNames[0]];
+    const grid = XLSX.utils.sheet_to_json<any[]>(sh, { header: 1, raw: true, defval: null });
+
+    // Find header row: row containing "Contract Number"
+    let headerIdx = -1;
+    for (let i = 0; i < Math.min(grid.length, 20); i++) {
+      const r = grid[i] || [];
+      if (r.some((c: any) => String(c || "").toLowerCase().includes("contract number"))) { headerIdx = i; break; }
+    }
+    if (headerIdx < 0) { toast.error("Couldn't find header row"); return; }
+    const headers = (grid[headerIdx] || []).map((c: any) => String(c || "").toLowerCase().trim());
+    // Detect "As of YYYY-MM-DD" column → current_value + snapshot date confirmation
+    const asOfIdx = headers.findIndex((h: string) => h.startsWith("as of"));
+    const asOfMatch = asOfIdx >= 0 ? headers[asOfIdx].match(/(\d{4})-(\d{2})-(\d{2})/) : null;
+    if (asOfMatch && !snapshotDate) setSnapshotDate(`${asOfMatch[1]}-${asOfMatch[2]}-${asOfMatch[3]}`);
+    // "Since Initial Purchase" var may have long name
+    const sinceIdx = headers.findIndex((h: string) => h.startsWith("since"));
+
+    const out: any[] = [];
+    for (let i = headerIdx + 1; i < grid.length; i++) {
+      const row = grid[i] || [];
+      if (!row.some((c: any) => c !== null && c !== "")) continue;
+      const obj: any = {};
+      headers.forEach((h: string, j: number) => {
+        const key = HEADER_MAP[h];
+        if (key) obj[key] = row[j];
+      });
+      if (asOfIdx >= 0) obj.current_value = row[asOfIdx];
+      if (sinceIdx >= 0) obj.ror_since_inception = row[sinceIdx];
+      const contract = String(obj.contract || "").trim();
+      if (!contract || !/^\d+$/.test(contract)) continue;
+      // Skip rows where BoY is text ("Information for this account not available")
+      if (typeof obj.boy_value === "string") obj.boy_value = null;
+      if (typeof obj.current_value === "string") obj.current_value = null;
+      // Convert issue_date if Date
+      if (obj.issue_date instanceof Date) obj.issue_date = obj.issue_date.toISOString().slice(0, 10);
+      out.push(obj);
+    }
+    setRows(out);
+    toast.success(`Parsed ${out.length} rows`);
+  };
+
+  const run = async (mode: "preview" | "commit") => {
+    if (!rows.length) return toast.error("Load a file first");
+    if (!snapshotDate) return toast.error("Snapshot date required");
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("bulk-import-performance", {
+        body: { mode, snapshot_date: snapshotDate, rows, source_file: file?.name },
+      });
+      if (error) throw error;
+      if (data.error) throw new Error(data.error);
+      setReport(data.report);
+      if (mode === "commit") { setCommitResult(data.commit); toast.success("Snapshots imported."); }
+    } catch (e: any) {
+      toast.error(e.message || "Import failed");
+    } finally { setLoading(false); }
+  };
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader><CardTitle>Monthly Performance File (iA XLSX)</CardTitle></CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid md:grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs">Upload XLSX</Label>
+              <Input type="file" accept=".xlsx,.xls" onChange={(e) => e.target.files?.[0] && parseFile(e.target.files[0])} />
+              {file && <p className="text-xs text-muted-foreground mt-1">{file.name} — {rows.length} rows</p>}
+            </div>
+            <div>
+              <Label className="text-xs">Snapshot Date</Label>
+              <Input type="date" value={snapshotDate} onChange={(e) => setSnapshotDate(e.target.value)} />
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Button onClick={() => run("preview")} disabled={!rows.length || loading} variant="outline">
+              {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <FileSpreadsheet className="h-4 w-4 mr-2" />}
+              Preview Match
+            </Button>
+            <Button onClick={() => run("commit")} disabled={!report || loading} className="bg-accent">
+              <Upload className="h-4 w-4 mr-2" /> Commit Snapshots
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {report && (
+        <Card>
+          <CardHeader><CardTitle>Match Report — {report.snapshot_date}</CardTitle></CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-6 gap-3 mb-4">
+              <Stat label="Total rows" value={report.total_rows} />
+              <Stat label="Matched (Vineyard)" value={report.matched_vineyard} />
+              <Stat label="Matched (Holding)" value={report.matched_holding} />
+              <Stat label="Auto-created HT" value={report.auto_created_holding} tone="amber" />
+              <Stat label="Skipped (dup)" value={report.skipped_duplicate} />
+              <Stat label="Skipped (no data)" value={report.skipped_no_data} />
+            </div>
+            {report.unmatched_no_contact?.length > 0 && (
+              <div className="text-xs">
+                <div className="font-medium text-destructive mb-1 flex items-center gap-1">
+                  <AlertTriangle className="h-3 w-3" /> {report.unmatched_no_contact.length} rows had no matching contract AND no matching contact — skipped:
+                </div>
+                <ul className="max-h-40 overflow-y-auto border rounded p-2 space-y-0.5">
+                  {report.unmatched_no_contact.map((u: any, i: number) => (
+                    <li key={i}>#{u.contract} — {u.first} {u.last} ({u.registration})</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {commitResult && (
+        <Card>
+          <CardHeader><CardTitle>Commit Result</CardTitle></CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-3 gap-3">
+              <Stat label="Snapshots written" value={commitResult.snapshots_inserted} />
+              <Stat label="HT auto-created" value={commitResult.ht_created} tone="amber" />
+              <Stat label="Errors" value={commitResult.errors?.length || 0} tone={commitResult.errors?.length ? "red" : undefined} />
+            </div>
+            {commitResult.errors?.length > 0 && (
+              <ul className="mt-3 text-xs text-destructive space-y-0.5">
+                {commitResult.errors.map((e: any, i: number) => <li key={i}>#{e.contract}: {e.error}</li>)}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+function Stat({ label, value, tone }: { label: string; value: number; tone?: "amber" | "red" }) {
+  const color = tone === "amber" ? "text-amber-600" : tone === "red" ? "text-destructive" : "text-foreground";
+  return (
+    <div className="rounded border p-2 bg-muted/30">
+      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</div>
+      <div className={`text-xl font-semibold tabular-nums ${color}`}>{value ?? 0}</div>
+    </div>
+  );
+}
+
+export default function BulkImporters() {
+  return (
+    <AppLayout>
+      <div className="container mx-auto px-4 py-6 max-w-6xl">
+        <div className="mb-6">
+          <h1 className="text-2xl font-serif">Bulk Importers</h1>
+          <p className="text-sm text-muted-foreground">Seed household structure from the registry, then apply monthly iA performance files.</p>
+        </div>
+        <Tabs defaultValue="registry">
+          <TabsList>
+            <TabsTrigger value="registry"><FileText className="h-3.5 w-3.5 mr-1.5" /> Registry</TabsTrigger>
+            <TabsTrigger value="performance"><FileSpreadsheet className="h-3.5 w-3.5 mr-1.5" /> Monthly Performance</TabsTrigger>
+          </TabsList>
+          <TabsContent value="registry" className="mt-4"><RegistryImporter /></TabsContent>
+          <TabsContent value="performance" className="mt-4"><PerformanceImporter /></TabsContent>
+        </Tabs>
+      </div>
+    </AppLayout>
+  );
+}

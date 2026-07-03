@@ -44,6 +44,7 @@ import KnowledgeBase from "./pages/KnowledgeBase";
 import HoldingTankPage from "./pages/HoldingTankPage";
 import Onboarding from "./pages/Onboarding";
 import BulkOnboarding from "./pages/BulkOnboarding";
+import BulkImporters from "./pages/BulkImporters";
 import Analytics from "./pages/Analytics";
 import StabilizationMap from "./pages/StabilizationMap";
 import StabilizationMapResolver from "./pages/StabilizationMapResolver";
@@ -91,6 +92,7 @@ const App = () => (
             <Route path="/holding-tank" element={<ProtectedRoute><HoldingTankPage /></ProtectedRoute>} />
             <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
             <Route path="/onboarding/bulk" element={<ProtectedRoute><BulkOnboarding /></ProtectedRoute>} />
+            <Route path="/importers" element={<ProtectedRoute><BulkImporters /></ProtectedRoute>} />
             
             <Route path="/families" element={<ProtectedRoute><Families /></ProtectedRoute>} />
             <Route path="/families/:id" element={<ProtectedRoute><FamilyDetail /></ProtectedRoute>} />
