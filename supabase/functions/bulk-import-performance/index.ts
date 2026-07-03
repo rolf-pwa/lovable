@@ -211,6 +211,18 @@ Deno.serve(async (req) => {
         });
         if (se) throw se;
         commit.snapshots_inserted++;
+
+        // Also update the account row itself so dashboards render current values
+        const updatePayload: any = {
+          current_value: cur,
+          book_value: boy,
+          updated_at: new Date().toISOString(),
+        };
+        if (holding_tank_id) {
+          await supabase.from("holding_tank").update(updatePayload).eq("id", holding_tank_id);
+        } else if (vineyard_account_id) {
+          await supabase.from("vineyard_accounts").update(updatePayload).eq("id", vineyard_account_id);
+        }
       } catch (e) {
         commit.errors.push({ contract: op.row.contract, error: (e as Error).message });
       }
