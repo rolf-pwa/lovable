@@ -149,7 +149,7 @@ const HouseholdDetail = () => {
         supabase.from("vineyard_accounts").select("*").in("contact_id", memberIds),
         supabase.from("storehouses").select("*").in("contact_id", memberIds),
         supabase.from("shareholders").select("contact_id, corporation_id, ownership_percentage, share_class, role_title").in("contact_id", memberIds).eq("is_active", true),
-        supabase.from("holding_tank").select("contact_id, current_value").in("contact_id", memberIds),
+        supabase.from("holding_tank").select("contact_id, current_value").in("contact_id", memberIds).neq("status", "moved"),
       ]);
       setVineyardAccounts(vine || []);
       setStorehouses(store || []);

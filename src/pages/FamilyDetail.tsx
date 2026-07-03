@@ -114,7 +114,7 @@ const FamilyDetail = () => {
       const [{ data: v }, { data: s }, { data: t }] = await Promise.all([
         supabase.from("vineyard_accounts").select("id, contact_id, account_name, account_type, current_value, book_value").in("contact_id", memberIds),
         supabase.from("storehouses").select("id, contact_id, storehouse_number, label, current_value, book_value, asset_type").in("contact_id", memberIds),
-        supabase.from("holding_tank").select("id, contact_id, account_name, account_type, current_value, book_value, custodian, expected_deposit_date").in("contact_id", memberIds),
+        supabase.from("holding_tank").select("id, contact_id, account_name, account_type, current_value, book_value, custodian, expected_deposit_date").in("contact_id", memberIds).neq("status", "moved"),
       ]);
       setVineyard(v || []);
       setStorehouses(s || []);

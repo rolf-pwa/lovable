@@ -198,7 +198,7 @@ const ContactDetail = () => {
     const [contactRes, storehouseRes, holdingRes, , accountsRes, harvestRes] = await Promise.all([
       supabase.from("contacts").select("*").eq("id", id).maybeSingle(),
       supabase.from("storehouses").select("*").eq("contact_id", id).order("storehouse_number"),
-      supabase.from("holding_tank").select("*").eq("contact_id", id).order("created_at"),
+      supabase.from("holding_tank").select("*").eq("contact_id", id).neq("status", "moved").order("created_at"),
       supabase.from("family_relationships").select("id, member_contact_id, relationship_label, contact:contacts!family_relationships_member_contact_id_fkey(id, first_name, last_name)").eq("contact_id", id),
       supabase.from("vineyard_accounts" as any).select("*").eq("contact_id", id).order("created_at"),
       supabase.from("account_harvest_snapshots").select("*").eq("contact_id", id).order("snapshot_date", { ascending: false }),
