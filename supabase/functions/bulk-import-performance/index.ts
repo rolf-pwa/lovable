@@ -159,7 +159,7 @@ Deno.serve(async (req) => {
     }
 
     // COMMIT
-    const commit = { snapshots_inserted: 0, ht_created: 0, errors: [] as any[] };
+    const commit = { snapshots_inserted: 0, snapshots_updated: 0, ht_created: 0, errors: [] as any[] };
     for (const op of ops) {
       try {
         let holding_tank_id: string | null = null;
@@ -192,7 +192,7 @@ Deno.serve(async (req) => {
         const harvest = toNum(row.variation_dollar) ?? (cur - boy);
         const ytdVal = toNum(row.variation_pct) ?? 0;
 
-        const { error: se } = await supabase.from("account_harvest_snapshots").insert({
+        const snapshotPayload: any = {
           contact_id,
           holding_tank_id,
           vineyard_account_id,
@@ -210,9 +210,31 @@ Deno.serve(async (req) => {
           ror_since_inception: toNum(row.ror_since_inception),
           notes: source_file ? `Import: ${source_file}` : null,
           created_by: user.id,
-        });
-        if (se) throw se;
-        commit.snapshots_inserted++;
+        };
+
+        // Update existing snapshot if present for this account+date; otherwise insert
+        let existingSnapId: string | null = null;
+        if (holding_tank_id) {
+          const { data: es } = await supabase.from("account_harvest_snapshots")
+            .select("id").eq("snapshot_date", snapDate).eq("holding_tank_id", holding_tank_id).maybeSingle();
+          existingSnapId = es?.id ?? null;
+        } else if (vineyard_account_id) {
+          const { data: es } = await supabase.from("account_harvest_snapshots")
+            .select("id").eq("snapshot_date", snapDate).eq("vineyard_account_id", vineyard_account_id).maybeSingle();
+          existingSnapId = es?.id ?? null;
+        }
+
+        if (existingSnapId) {
+          const { error: ue } = await supabase.from("account_harvest_snapshots")
+            .update(snapshotPayload).eq("id", existingSnapId);
+          if (ue) throw ue;
+          commit.snapshots_updated++;
+        } else {
+          const { error: se } = await supabase.from("account_harvest_snapshots").insert(snapshotPayload);
+          if (se) throw se;
+          commit.snapshots_inserted++;
+        }
+
 
         // Also update the account row itself so dashboards render current values
         const updatePayload: any = {
