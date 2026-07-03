@@ -118,8 +118,10 @@ export function HoldingTank({ contactId, householdId, onAccountMoved }: HoldingT
 
     try {
       const scope = account.visibility_scope || "household_shared";
+      let newRowId: string | null = null;
+      let newRowTable: "vineyard_accounts" | "storehouses" | null = null;
       if (moveTarget.destination === "vineyard") {
-        const { error } = await supabase.from("vineyard_accounts").insert({
+        const { data: inserted, error } = await supabase.from("vineyard_accounts").insert({
           contact_id: account.contact_id,
           account_name: account.account_name,
           account_number: account.account_number,
@@ -128,10 +130,12 @@ export function HoldingTank({ contactId, householdId, onAccountMoved }: HoldingT
           book_value: account.book_value,
           notes: account.notes,
           visibility_scope: scope,
-        } as any);
+        } as any).select("id").single();
         if (error) throw error;
+        newRowId = (inserted as any).id;
+        newRowTable = "vineyard_accounts";
       } else if (moveTarget.destination === "storehouse" && moveTarget.storehouseNum) {
-        const { error } = await supabase.from("storehouses").insert({
+        const { data: inserted, error } = await supabase.from("storehouses").insert({
           contact_id: account.contact_id,
           storehouse_number: moveTarget.storehouseNum,
           label: account.account_name,
@@ -140,8 +144,18 @@ export function HoldingTank({ contactId, householdId, onAccountMoved }: HoldingT
           notes: account.notes,
           asset_type: account.account_type,
           visibility_scope: scope,
-        } as any);
+        } as any).select("id").single();
         if (error) throw error;
+        newRowId = (inserted as any).id;
+        newRowTable = "storehouses";
+      }
+
+      // Re-point historical snapshots from the holding_tank row to the new account row
+      if (newRowId && newRowTable) {
+        const updateCol = newRowTable === "vineyard_accounts" ? "vineyard_account_id" : "storehouse_id";
+        await (supabase.from("account_harvest_snapshots") as any)
+          .update({ holding_tank_id: null, [updateCol]: newRowId })
+          .eq("holding_tank_id", moveTarget.id);
       }
 
       // Mark holding tank account as moved
