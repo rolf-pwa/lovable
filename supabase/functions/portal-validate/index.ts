@@ -426,6 +426,71 @@ if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders }
       console.error("[portal-validate] professionals fetch error", e);
     }
 
+    // Attach latest performance snapshot to every account (vineyard / storehouse / holding tank)
+    try {
+      const vyIds: string[] = [];
+      const shIds: string[] = [];
+      const htIds: string[] = [];
+      const pushVy = (rows: any[]) => (rows || []).forEach((r: any) => r?.id && vyIds.push(r.id));
+      const pushSh = (rows: any[]) => (rows || []).forEach((r: any) => r?.id && shIds.push(r.id));
+      const pushHt = (rows: any[]) => (rows || []).forEach((r: any) => r?.id && htIds.push(r.id));
+
+      pushVy(accountsRes.data || []);
+      pushSh(storehousesRes.data || []);
+      pushHt(holdingTankRes.data || []);
+      pushHt(householdHoldingTank);
+      pushHt(familyHoldingTank);
+      if (Array.isArray(hierarchy?.households)) {
+        hierarchy.households.forEach((hh: any) => (hh.members || []).forEach((m: any) => {
+          pushVy(m.vineyard_accounts); pushSh(m.storehouses);
+        }));
+      }
+      if (Array.isArray(hierarchy?.members)) {
+        hierarchy.members.forEach((m: any) => { pushVy(m.vineyard_accounts); pushSh(m.storehouses); });
+      }
+
+      const uniq = (arr: string[]) => [...new Set(arr)];
+      const [vySnapRes, shSnapRes, htSnapRes] = await Promise.all([
+        vyIds.length ? supabase.from("account_harvest_snapshots")
+          .select("vineyard_account_id, snapshot_date, boy_value, current_value, current_harvest, ytd_value, ror_ytd, ror_6m, ror_1y, ror_3y, ror_5y, ror_since_inception")
+          .in("vineyard_account_id", uniq(vyIds)).order("snapshot_date", { ascending: false }) : Promise.resolve({ data: [] }),
+        shIds.length ? supabase.from("account_harvest_snapshots")
+          .select("storehouse_id, snapshot_date, boy_value, current_value, current_harvest, ytd_value, ror_ytd, ror_6m, ror_1y, ror_3y, ror_5y, ror_since_inception")
+          .in("storehouse_id", uniq(shIds)).order("snapshot_date", { ascending: false }) : Promise.resolve({ data: [] }),
+        htIds.length ? supabase.from("account_harvest_snapshots")
+          .select("holding_tank_id, snapshot_date, boy_value, current_value, current_harvest, ytd_value, ror_ytd, ror_6m, ror_1y, ror_3y, ror_5y, ror_since_inception")
+          .in("holding_tank_id", uniq(htIds)).order("snapshot_date", { ascending: false }) : Promise.resolve({ data: [] }),
+      ]);
+
+      const latestBy = (rows: any[], key: string) => {
+        const m = new Map<string, any>();
+        (rows || []).forEach((r: any) => { if (r[key] && !m.has(r[key])) m.set(r[key], r); });
+        return m;
+      };
+      const vyMap = latestBy(vySnapRes.data as any[], "vineyard_account_id");
+      const shMap = latestBy(shSnapRes.data as any[], "storehouse_id");
+      const htMap = latestBy(htSnapRes.data as any[], "holding_tank_id");
+      const attachVy = (rows: any[]) => (rows || []).forEach((r: any) => { if (r?.id) r.latest_snapshot = vyMap.get(r.id) || null; });
+      const attachSh = (rows: any[]) => (rows || []).forEach((r: any) => { if (r?.id) r.latest_snapshot = shMap.get(r.id) || null; });
+      const attachHt = (rows: any[]) => (rows || []).forEach((r: any) => { if (r?.id) r.latest_snapshot = htMap.get(r.id) || null; });
+
+      attachVy(accountsRes.data || []);
+      attachSh(storehousesRes.data || []);
+      attachHt(holdingTankRes.data || []);
+      attachHt(householdHoldingTank);
+      attachHt(familyHoldingTank);
+      if (Array.isArray(hierarchy?.households)) {
+        hierarchy.households.forEach((hh: any) => (hh.members || []).forEach((m: any) => {
+          attachVy(m.vineyard_accounts); attachSh(m.storehouses);
+        }));
+      }
+      if (Array.isArray(hierarchy?.members)) {
+        hierarchy.members.forEach((m: any) => { attachVy(m.vineyard_accounts); attachSh(m.storehouses); });
+      }
+    } catch (e) {
+      console.error("[portal-validate] snapshot attach error", e);
+    }
+
     return new Response(JSON.stringify({
       contact: contactRes.data,
       vineyard_accounts: accountsRes.data || [],
