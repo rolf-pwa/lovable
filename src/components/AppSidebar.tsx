@@ -83,6 +83,7 @@ const growthItems = [
 
 const adminItems = [
   { to: "/onboarding", label: "Onboarding", icon: PackagePlus },
+  { to: "/importers", label: "Bulk Importers", icon: Upload },
   { to: "/review-queue", label: "Review Queue", icon: ClipboardCheck, reviewBadge: true },
   { to: "/knowledge-base", label: "Knowledge Base", icon: BookOpen },
   { to: "/workbench", label: "Workbench", icon: Cpu },
