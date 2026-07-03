@@ -253,8 +253,9 @@ function PerformanceImporter() {
               <Stat label="Matched (Vineyard)" value={report.matched_vineyard} />
               <Stat label="Matched (Holding)" value={report.matched_holding} />
               <Stat label="Auto-created HT" value={report.auto_created_holding} tone="amber" />
-              <Stat label="Skipped (dup)" value={report.skipped_duplicate} />
+              <Stat label="Updated existing" value={report.updated_existing} tone="amber" />
               <Stat label="Skipped (no data)" value={report.skipped_no_data} />
+
             </div>
             {report.unmatched_no_contact?.length > 0 && (
               <div className="text-xs">
