@@ -4,6 +4,7 @@ import { Progress } from "@/components/ui/progress";
 import { Grape, Landmark, Castle, Sword, Wheat, Lock, Users, Home, Eye, EyeOff, Globe, Building2, ChevronDown, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { PortalAccountSnapshot } from "./PortalAccountSnapshot";
 
 const STOREHOUSE_CONFIG = [
   { num: 1, name: "Liquidity Reserve", icon: Castle },
@@ -231,6 +232,7 @@ export function PortalTerritory({ vineyardAccounts, storehouses, contact, family
                         ${(Number(acc.current_value) || 0).toLocaleString()}
                       </span>
                     </div>
+                    <PortalAccountSnapshot snapshot={acc.latest_snapshot} />
                     <div className="flex items-center justify-end mt-1.5">
                       <ScopeBadge
                         scope={acc.visibility_scope}
@@ -375,6 +377,7 @@ export function PortalTerritory({ vineyardAccounts, storehouses, contact, family
                               ${accCurrent.toLocaleString()}
                             </span>
                           </div>
+                          <PortalAccountSnapshot snapshot={acc.latest_snapshot} />
                           <div className="flex items-center justify-end mt-1.5">
                             <ScopeBadge
                               scope={acc.visibility_scope}
