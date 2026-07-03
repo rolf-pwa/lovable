@@ -253,8 +253,9 @@ function PerformanceImporter() {
               <Stat label="Matched (Vineyard)" value={report.matched_vineyard} />
               <Stat label="Matched (Holding)" value={report.matched_holding} />
               <Stat label="Auto-created HT" value={report.auto_created_holding} tone="amber" />
-              <Stat label="Skipped (dup)" value={report.skipped_duplicate} />
+              <Stat label="Updated existing" value={report.updated_existing} tone="amber" />
               <Stat label="Skipped (no data)" value={report.skipped_no_data} />
+
             </div>
             {report.unmatched_no_contact?.length > 0 && (
               <div className="text-xs">
@@ -276,8 +277,9 @@ function PerformanceImporter() {
         <Card>
           <CardHeader><CardTitle>Commit Result</CardTitle></CardHeader>
           <CardContent>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-4 gap-3">
               <Stat label="Snapshots written" value={commitResult.snapshots_inserted} />
+              <Stat label="Snapshots updated" value={commitResult.snapshots_updated} tone="amber" />
               <Stat label="HT auto-created" value={commitResult.ht_created} tone="amber" />
               <Stat label="Errors" value={commitResult.errors?.length || 0} tone={commitResult.errors?.length ? "red" : undefined} />
             </div>

@@ -91,17 +91,18 @@ Deno.serve(async (req) => {
       matched_holding: 0,
       matched_vineyard: 0,
       auto_created_holding: 0,
-      skipped_duplicate: 0,
+      updated_existing: 0,
       skipped_no_data: 0,
       unmatched_no_contact: [] as any[],
       preview_ops: [] as any[],
     };
 
     interface Op {
-      kind: "insert_snapshot" | "create_ht_then_snapshot";
+      kind: "upsert_snapshot" | "create_ht_then_snapshot";
       row: PerfRow;
       target?: { table: "holding_tank" | "vineyard_accounts"; id: string; contact_id: string };
       needsHt?: { contact_id: string; household_id?: string | null; account_name: string; account_number: string; account_type: string };
+      isUpdate?: boolean;
     }
     const ops: Op[] = [];
 
@@ -116,18 +117,19 @@ Deno.serve(async (req) => {
 
       const vy = vyByContract.get(contract);
       if (vy) {
-        if (existingVySnaps.has(vy.id)) { report.skipped_duplicate++; continue; }
-        report.matched_vineyard++;
-        ops.push({ kind: "insert_snapshot", row: r, target: { table: "vineyard_accounts", id: vy.id, contact_id: vy.contact_id } });
+        const isUpdate = existingVySnaps.has(vy.id);
+        if (isUpdate) report.updated_existing++; else report.matched_vineyard++;
+        ops.push({ kind: "upsert_snapshot", row: r, target: { table: "vineyard_accounts", id: vy.id, contact_id: vy.contact_id }, isUpdate });
         continue;
       }
       const ht = htByContract.get(contract);
       if (ht) {
-        if (existingHtSnaps.has(ht.id)) { report.skipped_duplicate++; continue; }
-        report.matched_holding++;
-        ops.push({ kind: "insert_snapshot", row: r, target: { table: "holding_tank", id: ht.id, contact_id: ht.contact_id } });
+        const isUpdate = existingHtSnaps.has(ht.id);
+        if (isUpdate) report.updated_existing++; else report.matched_holding++;
+        ops.push({ kind: "upsert_snapshot", row: r, target: { table: "holding_tank", id: ht.id, contact_id: ht.contact_id }, isUpdate });
         continue;
       }
+
 
       // Unmatched — try contact by name to create HT stub
       const nkey = normName(r.first_name + r.last_name);
@@ -157,7 +159,7 @@ Deno.serve(async (req) => {
     }
 
     // COMMIT
-    const commit = { snapshots_inserted: 0, ht_created: 0, errors: [] as any[] };
+    const commit = { snapshots_inserted: 0, snapshots_updated: 0, ht_created: 0, errors: [] as any[] };
     for (const op of ops) {
       try {
         let holding_tank_id: string | null = null;
@@ -190,7 +192,7 @@ Deno.serve(async (req) => {
         const harvest = toNum(row.variation_dollar) ?? (cur - boy);
         const ytdVal = toNum(row.variation_pct) ?? 0;
 
-        const { error: se } = await supabase.from("account_harvest_snapshots").insert({
+        const snapshotPayload: any = {
           contact_id,
           holding_tank_id,
           vineyard_account_id,
@@ -208,9 +210,31 @@ Deno.serve(async (req) => {
           ror_since_inception: toNum(row.ror_since_inception),
           notes: source_file ? `Import: ${source_file}` : null,
           created_by: user.id,
-        });
-        if (se) throw se;
-        commit.snapshots_inserted++;
+        };
+
+        // Update existing snapshot if present for this account+date; otherwise insert
+        let existingSnapId: string | null = null;
+        if (holding_tank_id) {
+          const { data: es } = await supabase.from("account_harvest_snapshots")
+            .select("id").eq("snapshot_date", snapDate).eq("holding_tank_id", holding_tank_id).maybeSingle();
+          existingSnapId = es?.id ?? null;
+        } else if (vineyard_account_id) {
+          const { data: es } = await supabase.from("account_harvest_snapshots")
+            .select("id").eq("snapshot_date", snapDate).eq("vineyard_account_id", vineyard_account_id).maybeSingle();
+          existingSnapId = es?.id ?? null;
+        }
+
+        if (existingSnapId) {
+          const { error: ue } = await supabase.from("account_harvest_snapshots")
+            .update(snapshotPayload).eq("id", existingSnapId);
+          if (ue) throw ue;
+          commit.snapshots_updated++;
+        } else {
+          const { error: se } = await supabase.from("account_harvest_snapshots").insert(snapshotPayload);
+          if (se) throw se;
+          commit.snapshots_inserted++;
+        }
+
 
         // Also update the account row itself so dashboards render current values
         const updatePayload: any = {
