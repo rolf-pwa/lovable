@@ -91,17 +91,18 @@ Deno.serve(async (req) => {
       matched_holding: 0,
       matched_vineyard: 0,
       auto_created_holding: 0,
-      skipped_duplicate: 0,
+      updated_existing: 0,
       skipped_no_data: 0,
       unmatched_no_contact: [] as any[],
       preview_ops: [] as any[],
     };
 
     interface Op {
-      kind: "insert_snapshot" | "create_ht_then_snapshot";
+      kind: "upsert_snapshot" | "create_ht_then_snapshot";
       row: PerfRow;
       target?: { table: "holding_tank" | "vineyard_accounts"; id: string; contact_id: string };
       needsHt?: { contact_id: string; household_id?: string | null; account_name: string; account_number: string; account_type: string };
+      isUpdate?: boolean;
     }
     const ops: Op[] = [];
 
@@ -116,18 +117,19 @@ Deno.serve(async (req) => {
 
       const vy = vyByContract.get(contract);
       if (vy) {
-        if (existingVySnaps.has(vy.id)) { report.skipped_duplicate++; continue; }
-        report.matched_vineyard++;
-        ops.push({ kind: "insert_snapshot", row: r, target: { table: "vineyard_accounts", id: vy.id, contact_id: vy.contact_id } });
+        const isUpdate = existingVySnaps.has(vy.id);
+        if (isUpdate) report.updated_existing++; else report.matched_vineyard++;
+        ops.push({ kind: "upsert_snapshot", row: r, target: { table: "vineyard_accounts", id: vy.id, contact_id: vy.contact_id }, isUpdate });
         continue;
       }
       const ht = htByContract.get(contract);
       if (ht) {
-        if (existingHtSnaps.has(ht.id)) { report.skipped_duplicate++; continue; }
-        report.matched_holding++;
-        ops.push({ kind: "insert_snapshot", row: r, target: { table: "holding_tank", id: ht.id, contact_id: ht.contact_id } });
+        const isUpdate = existingHtSnaps.has(ht.id);
+        if (isUpdate) report.updated_existing++; else report.matched_holding++;
+        ops.push({ kind: "upsert_snapshot", row: r, target: { table: "holding_tank", id: ht.id, contact_id: ht.contact_id }, isUpdate });
         continue;
       }
+
 
       // Unmatched — try contact by name to create HT stub
       const nkey = normName(r.first_name + r.last_name);
