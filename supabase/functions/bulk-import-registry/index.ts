@@ -259,9 +259,7 @@ Deno.serve(async (req) => {
       plan.households.push(hEntry);
     }
 
-    if (!existingH_hasFamily(plan)) {
-      plan.newFamilies = plan.households.filter((h) => !h.family_id).length;
-    }
+    plan.newFamilies = plan.households.filter((h: any) => !h.family_id).length;
 
     if (mode === "preview") {
       return new Response(JSON.stringify({ ok: true, plan, parsedCount: parsed.length }), {
