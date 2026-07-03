@@ -190,7 +190,14 @@ Deno.serve(async (req) => {
         const boy = toNum(row.boy_value) ?? 0;
         const cur = toNum(row.current_value) ?? 0;
         const harvest = toNum(row.variation_dollar) ?? (cur - boy);
-        const ytdVal = toNum(row.variation_pct) ?? 0;
+
+        // Source file stores percentages as decimal fractions (0.1327 = 13.27%).
+        // UI expects percentage numbers (13.27). Convert on import.
+        const pct = (v: any): number | null => {
+          const n = toNum(v);
+          return n == null ? null : n * 100;
+        };
+        const ytdVal = pct(row.variation_pct) ?? 0;
 
         const snapshotPayload: any = {
           contact_id,
@@ -202,12 +209,13 @@ Deno.serve(async (req) => {
           current_value: cur,
           current_harvest: harvest,
           ytd_value: ytdVal,
-          ror_ytd: toNum(row.ror_ytd),
-          ror_6m: toNum(row.ror_6m),
-          ror_1y: toNum(row.ror_1y),
-          ror_3y: toNum(row.ror_3y),
-          ror_5y: toNum(row.ror_5y),
-          ror_since_inception: toNum(row.ror_since_inception),
+          ror_ytd: pct(row.ror_ytd),
+          ror_6m: pct(row.ror_6m),
+          ror_1y: pct(row.ror_1y),
+          ror_3y: pct(row.ror_3y),
+          ror_5y: pct(row.ror_5y),
+          ror_since_inception: pct(row.ror_since_inception),
+
           notes: source_file ? `Import: ${source_file}` : null,
           created_by: user.id,
         };
