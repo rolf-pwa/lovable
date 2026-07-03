@@ -817,6 +817,33 @@ const ContactDetail = () => {
                     </Button>
                   </CardContent>
                 </Card>
+
+                {/* Statement Upload — moved from Vineyard tab */}
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base">Statement Ingestion</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <StatementUpload
+                      files={statementFiles}
+                      onFilesChange={setStatementFiles}
+                      isIngesting={isIngesting}
+                    />
+                    {statementFiles.length > 0 && !isIngesting && (
+                      <Button onClick={handleIngestStatements} className="w-full">
+                        <FileUp className="h-4 w-4 mr-2" />
+                        Ingest {statementFiles.length} Statement{statementFiles.length !== 1 ? "s" : ""}
+                      </Button>
+                    )}
+                    {isIngesting && (
+                      <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground py-2">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        AI is parsing statements…
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
                 <ContactTaskList asanaUrl={contact.asana_url} contactId={contact.id} householdMembers={householdMembers} />
                 <ContactCalendar contactEmail={contact.email} contactName={contact.full_name} />
                 <ContactRequests contactId={id!} />
@@ -826,27 +853,9 @@ const ContactDetail = () => {
 
               {/* The Vineyard Tab */}
               <TabsContent value="vineyard" className="space-y-4 mt-4">
-                {/* Statement Upload */}
-                <StatementUpload
-                  files={statementFiles}
-                  onFilesChange={setStatementFiles}
-                  isIngesting={isIngesting}
-                />
-                {statementFiles.length > 0 && !isIngesting && (
-                  <Button onClick={handleIngestStatements} className="w-full">
-                    <FileUp className="h-4 w-4 mr-2" />
-                    Ingest {statementFiles.length} Statement{statementFiles.length !== 1 ? "s" : ""}
-                  </Button>
-                )}
-                {isIngesting && (
-                  <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground py-2">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    AI is parsing statements…
-                  </div>
-                )}
-
                 {/* Holding Tank */}
                 <HoldingTank contactId={id!} onAccountMoved={() => fetchData()} />
+
 
 
                 {/* The Vineyard Accounts */}
