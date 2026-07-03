@@ -92,6 +92,7 @@ const App = () => (
             <Route path="/holding-tank" element={<ProtectedRoute><HoldingTankPage /></ProtectedRoute>} />
             <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
             <Route path="/onboarding/bulk" element={<ProtectedRoute><BulkOnboarding /></ProtectedRoute>} />
+            <Route path="/importers" element={<ProtectedRoute><BulkImporters /></ProtectedRoute>} />
             
             <Route path="/families" element={<ProtectedRoute><Families /></ProtectedRoute>} />
             <Route path="/families/:id" element={<ProtectedRoute><FamilyDetail /></ProtectedRoute>} />
