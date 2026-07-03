@@ -277,8 +277,9 @@ function PerformanceImporter() {
         <Card>
           <CardHeader><CardTitle>Commit Result</CardTitle></CardHeader>
           <CardContent>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-4 gap-3">
               <Stat label="Snapshots written" value={commitResult.snapshots_inserted} />
+              <Stat label="Snapshots updated" value={commitResult.snapshots_updated} tone="amber" />
               <Stat label="HT auto-created" value={commitResult.ht_created} tone="amber" />
               <Stat label="Errors" value={commitResult.errors?.length || 0} tone={commitResult.errors?.length ? "red" : undefined} />
             </div>
