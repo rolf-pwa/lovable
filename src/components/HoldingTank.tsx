@@ -565,6 +565,77 @@ function HoldingTankRow({
         </div>
       </div>
 
+      {snapshot && (
+        <div className="rounded-md border border-border/60 bg-muted/30 px-3 py-2 space-y-2">
+          <div className="grid grid-cols-3 gap-2 text-[11px]">
+            <div>
+              <div className="text-[9px] uppercase tracking-wider text-muted-foreground">Beginning of Year</div>
+              <div className="font-semibold tabular-nums">
+                {snapshot.boy_value != null ? formatCurrency(Number(snapshot.boy_value)) : "—"}
+              </div>
+            </div>
+            <div>
+              <div className="text-[9px] uppercase tracking-wider text-muted-foreground">Current Market</div>
+              <div className="font-semibold tabular-nums">
+                {snapshot.current_value != null ? formatCurrency(Number(snapshot.current_value)) : "—"}
+              </div>
+            </div>
+            <div>
+              <div className="text-[9px] uppercase tracking-wider text-muted-foreground">YTD Change</div>
+              {(() => {
+                const h = snapshot.current_harvest != null ? Number(snapshot.current_harvest) : null;
+                const pct = snapshot.ytd_value != null ? Number(snapshot.ytd_value) : null;
+                const pos = (h ?? 0) >= 0;
+                return (
+                  <div className={`font-semibold tabular-nums ${pos ? "text-green-600" : "text-destructive"}`}>
+                    {h != null ? `${pos ? "+" : ""}${formatCurrency(h)}` : "—"}
+                    {pct != null && (
+                      <span className="ml-1 text-[10px] font-normal">({pos ? "+" : ""}{pct.toFixed(2)}%)</span>
+                    )}
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+
+          {[snapshot.ror_ytd, snapshot.ror_6m, snapshot.ror_1y, snapshot.ror_3y, snapshot.ror_5y, snapshot.ror_since_inception].some(v => v != null) && (
+            <div>
+              <div className="text-[9px] uppercase tracking-wider text-muted-foreground mb-1">Historical Rate of Return</div>
+              <table className="w-full text-[10px] tabular-nums">
+                <thead>
+                  <tr className="text-muted-foreground border-b border-border/50">
+                    <th className="text-right py-0.5 px-1 font-medium">YTD</th>
+                    <th className="text-right py-0.5 px-1 font-medium">6 Mo</th>
+                    <th className="text-right py-0.5 px-1 font-medium">1 Yr</th>
+                    <th className="text-right py-0.5 px-1 font-medium">3 Yr</th>
+                    <th className="text-right py-0.5 px-1 font-medium">5 Yr</th>
+                    <th className="text-right py-0.5 px-1 font-medium">Since Inception</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    {[snapshot.ror_ytd, snapshot.ror_6m, snapshot.ror_1y, snapshot.ror_3y, snapshot.ror_5y, snapshot.ror_since_inception].map((v, i) => {
+                      const num = v == null ? null : Number(v);
+                      return (
+                        <td key={i} className={`text-right py-0.5 px-1 ${num == null ? "text-muted-foreground" : num >= 0 ? "text-green-600" : "text-destructive"}`}>
+                          {num == null ? "—" : `${num >= 0 ? "+" : ""}${num.toFixed(2)}%`}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          <div className="text-[9px] text-muted-foreground">
+            Snapshot as of {format(new Date(snapshot.snapshot_date + "T00:00:00"), "MMM d, yyyy")}
+          </div>
+        </div>
+      )}
+
+
+
 
 
       <div className="flex items-center gap-2">
