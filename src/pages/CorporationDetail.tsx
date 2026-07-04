@@ -98,6 +98,7 @@ const CorporationDetail = () => {
   const [subsidiaries, setSubsidiaries] = useState<CorpLink[]>([]);
   const [parentCorps, setParentCorps] = useState<CorpLink[]>([]);
   const [loading, setLoading] = useState(true);
+  const [linkedStorehouses, setLinkedStorehouses] = useState<any[]>([]);
 
   // Add shareholder dialog
   const [showAddShareholder, setShowAddShareholder] = useState(false);
