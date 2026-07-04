@@ -108,6 +108,7 @@ const HouseholdDetail = () => {
   const [storehouses, setStorehouses] = useState<any[]>([]);
   const [corporations, setCorporations] = useState<any[]>([]);
   const [holdingTank, setHoldingTank] = useState<any[]>([]);
+  const [insurancePolicies, setInsurancePolicies] = useState<any[]>([]);
 
   const fetchData = useCallback(async () => {
     if (!id) return;
