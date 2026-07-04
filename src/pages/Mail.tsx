@@ -195,7 +195,7 @@ export default function Mail({ embedded = false }: { embedded?: boolean } = {}) 
 
   if (!gStatus?.connected) {
     return (
-      <AppLayout>
+      <Wrapper>
         <div className="max-w-lg mx-auto mt-20 text-center space-y-4">
           <MailIcon className="h-12 w-12 mx-auto text-amber-500" />
           <h1 className="text-2xl font-serif">Connect Google to use Mail</h1>
@@ -204,7 +204,7 @@ export default function Mail({ embedded = false }: { embedded?: boolean } = {}) 
             Modify + Labels scopes are required for the in-app mailbox.
           </p>
         </div>
-      </AppLayout>
+      </Wrapper>
     );
   }
 
