@@ -865,6 +865,42 @@ const HouseholdDetail = () => {
                               </div>
                             </div>
                           ))}
+                          {insurancePolicies
+                            .filter((p) => accounts.some((a) => a.id === p.coverage_storehouse_id))
+                            .map((p) => (
+                              <div
+                                key={`cov-${p.id}`}
+                                className="rounded-lg bg-accent/5 px-4 py-2.5 border border-accent/30"
+                              >
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm text-foreground/80">
+                                    🛡️ {p.carrier} — Coverage
+                                    {p.policy_number ? ` #${p.policy_number}` : ""}
+                                  </span>
+                                  <span className="text-sm font-medium text-foreground">
+                                    {formatCurrency(Number(p.coverage_amount) || 0)}
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                          {insurancePolicies
+                            .filter((p) => accounts.some((a) => a.id === p.cash_value_storehouse_id))
+                            .map((p) => (
+                              <div
+                                key={`cv-${p.id}`}
+                                className="rounded-lg bg-accent/5 px-4 py-2.5 border border-accent/30"
+                              >
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm text-foreground/80">
+                                    🛡️ {p.carrier} — Cash Value
+                                    {p.policy_number ? ` #${p.policy_number}` : ""}
+                                  </span>
+                                  <span className="text-sm font-medium text-foreground">
+                                    {formatCurrency(Number(p.cash_value) || 0)}
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
                         </>
                       ) : (
                         <p className="text-xs text-muted-foreground pl-6">No accounts configured</p>
