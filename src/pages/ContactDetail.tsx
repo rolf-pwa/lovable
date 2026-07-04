@@ -27,22 +27,19 @@ import { format, differenceInDays, addDays } from "date-fns";
 import { PageBreadcrumbs } from "@/components/PageBreadcrumbs";
 import { ContactMerge } from "@/components/ContactMerge";
 import { getOrCreateToken } from "@/components/portal/PortalMagicLinkButton";
-import { supabase as supabaseClient } from "@/integrations/supabase/client";
 
 async function resolvePortalBase(contactId: string): Promise<"portal" | "vfo"> {
-  const { data: contact } = await supabaseClient
+  // Single round-trip: fetch contact + family via nested join on both direct and household paths.
+  const { data: contact } = await supabase
     .from("contacts")
-    .select("family_id, households:household_id(family_id)")
+    .select("family:family_id(vfo_enabled), households:household_id(family:family_id(vfo_enabled))")
     .eq("id", contactId)
     .maybeSingle();
-  const familyId = (contact as any)?.family_id || (contact as any)?.households?.family_id;
-  if (!familyId) return "portal";
-  const { data: family } = await supabaseClient
-    .from("families")
-    .select("vfo_enabled")
-    .eq("id", familyId)
-    .maybeSingle();
-  return (family as any)?.vfo_enabled ? "vfo" : "portal";
+  const vfoEnabled =
+    (contact as any)?.family?.vfo_enabled ??
+    (contact as any)?.households?.family?.vfo_enabled ??
+    false;
+  return vfoEnabled ? "vfo" : "portal";
 }
 import { useAuth } from "@/hooks/useAuth";
 import { ContactTaskList } from "@/components/ContactTaskList";
