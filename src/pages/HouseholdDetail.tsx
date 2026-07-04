@@ -825,7 +825,8 @@ const HouseholdDetail = () => {
               <CardContent className="space-y-4">
                 {STOREHOUSE_CONFIG.map(({ num, name, icon: Icon }) => {
                   const accounts = storehouses.filter((s) => s.storehouse_number === num);
-                  const total = accounts.reduce((sum, s) => sum + (Number(s.current_value) || 0), 0);
+                  const insuranceHere = accounts.reduce((sum, s) => sum + insuranceForStorehouse(s.id), 0);
+                  const total = accounts.reduce((sum, s) => sum + (Number(s.current_value) || 0), 0) + insuranceHere;
                   const targetTotal = accounts.reduce((sum, s) => sum + (Number(s.target_value) || 0), 0);
                   const pct = targetTotal > 0 ? Math.min((total / targetTotal) * 100, 100) : 0;
 
