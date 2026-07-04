@@ -213,6 +213,7 @@ const ContactDetail = () => {
       supabase.from("vineyard_accounts" as any).select("*").eq("contact_id", id).order("created_at"),
       supabase.from("account_harvest_snapshots").select("*").eq("contact_id", id).order("snapshot_date", { ascending: false }),
     ]);
+    if (!mountedRef.current) return;
     setContact(contactRes.data);
     setStorehouses(storehouseRes.data || []);
     setHoldingTankAccounts((holdingRes.data as any) || []);
@@ -220,6 +221,7 @@ const ContactDetail = () => {
     setHarvestSnapshots((harvestRes.data as any) || []);
 
     const { data: insData } = await supabase.from("insurance_policies" as any).select("*").eq("contact_id", id);
+    if (!mountedRef.current) return;
     setInsurancePolicies((insData as any) || []);
 
     if (contactRes.data?.household_id) {
