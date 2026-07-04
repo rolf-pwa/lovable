@@ -868,7 +868,6 @@ const Portal = () => {
                 <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Corporate Entities</h3>
               </div>
               {corporations.map((corp: any) => {
-                const TYPE_LABELS: Record<string, string> = { opco: "Operating Co", holdco: "Holding Co", trust: "Trust", partnership: "Partnership", other: "Entity" };
                 const isExpanded = expandedCorps.has(corp.id);
                 const toggleCorp = () => {
                   setExpandedCorps(prev => {
