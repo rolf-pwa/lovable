@@ -215,10 +215,20 @@ const HouseholdDetail = () => {
     (sum, a) => sum + (Number(a.current_value) || 0),
     0
   );
-  const totalStorehouses = storehouses.reduce(
-    (sum, s) => sum + (Number(s.current_value) || 0),
+  const insuranceForStorehouse = (storehouseId: string) =>
+    insurancePolicies.reduce((sum, p) => {
+      let add = 0;
+      if (p.coverage_storehouse_id === storehouseId) add += Number(p.coverage_amount) || 0;
+      if (p.cash_value_storehouse_id === storehouseId) add += Number(p.cash_value) || 0;
+      return sum + add;
+    }, 0);
+  const totalInsuranceInStorehouses = storehouses.reduce(
+    (sum, s) => sum + insuranceForStorehouse(s.id),
     0
   );
+  const totalStorehouses =
+    storehouses.reduce((sum, s) => sum + (Number(s.current_value) || 0), 0) +
+    totalInsuranceInStorehouses;
   const totalCorpAssets = corporations.reduce(
     (sum, c) => sum + (c.total_assets || 0),
     0
