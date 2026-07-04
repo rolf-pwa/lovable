@@ -59,6 +59,9 @@ interface PortalData {
   insurance_policies?: any[];
 }
 
+const INACTIVITY_TIMEOUT = 15 * 60 * 1000;
+const CORP_TYPE_LABELS: Record<string, string> = { opco: "Operating Co", holdco: "Holding Co", trust: "Trust", partnership: "Partnership", other: "Entity" };
+
 const ROLE_LABELS: Record<string, string> = {
   head_of_family: "Head of Family",
   head_of_household: "Head of Household",
@@ -262,8 +265,7 @@ const Portal = () => {
     try { localStorage.removeItem(TRUSTED_DEVICE_KEY); } catch {}
   };
 
-  // Inactivity timeout (15 minutes)
-  const INACTIVITY_TIMEOUT = 15 * 60 * 1000;
+  // Inactivity timeout (15 minutes) — INACTIVITY_TIMEOUT hoisted to module scope
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleLogout = useCallback(() => {
@@ -866,7 +868,6 @@ const Portal = () => {
                 <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Corporate Entities</h3>
               </div>
               {corporations.map((corp: any) => {
-                const TYPE_LABELS: Record<string, string> = { opco: "Operating Co", holdco: "Holding Co", trust: "Trust", partnership: "Partnership", other: "Entity" };
                 const isExpanded = expandedCorps.has(corp.id);
                 const toggleCorp = () => {
                   setExpandedCorps(prev => {
@@ -890,7 +891,7 @@ const Portal = () => {
                         <div>
                           <p className="text-sm font-medium text-foreground">{corp.name}</p>
                           <p className="text-xs text-muted-foreground">
-                            {TYPE_LABELS[corp.corporation_type] || corp.corporation_type}
+                            {CORP_TYPE_LABELS[corp.corporation_type] || corp.corporation_type}
                             {corp.jurisdiction ? ` · ${corp.jurisdiction}` : ""}
                           </p>
                         </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/AppLayout";
@@ -27,22 +27,19 @@ import { format, differenceInDays, addDays } from "date-fns";
 import { PageBreadcrumbs } from "@/components/PageBreadcrumbs";
 import { ContactMerge } from "@/components/ContactMerge";
 import { getOrCreateToken } from "@/components/portal/PortalMagicLinkButton";
-import { supabase as supabaseClient } from "@/integrations/supabase/client";
 
 async function resolvePortalBase(contactId: string): Promise<"portal" | "vfo"> {
-  const { data: contact } = await supabaseClient
+  // Single round-trip: fetch contact + family via nested join on both direct and household paths.
+  const { data: contact } = await supabase
     .from("contacts")
-    .select("family_id, households:household_id(family_id)")
+    .select("family:family_id(vfo_enabled), households:household_id(family:family_id(vfo_enabled))")
     .eq("id", contactId)
     .maybeSingle();
-  const familyId = (contact as any)?.family_id || (contact as any)?.households?.family_id;
-  if (!familyId) return "portal";
-  const { data: family } = await supabaseClient
-    .from("families")
-    .select("vfo_enabled")
-    .eq("id", familyId)
-    .maybeSingle();
-  return (family as any)?.vfo_enabled ? "vfo" : "portal";
+  const vfoEnabled =
+    (contact as any)?.family?.vfo_enabled ??
+    (contact as any)?.households?.family?.vfo_enabled ??
+    false;
+  return vfoEnabled ? "vfo" : "portal";
 }
 import { useAuth } from "@/hooks/useAuth";
 import { ContactTaskList } from "@/components/ContactTaskList";
@@ -512,6 +509,12 @@ const ContactDetail = () => {
     { num: 5, label: "Sovereign" },
   ];
 
+  // Memoize props passed to InsurancePanel so it doesn't re-render on every parent render.
+  const insuranceScope = useMemo(() => ({ kind: "contact" as const, contactId: id! }), [id]);
+  const insuranceStorehouses = useMemo(
+    () => storehouses.map((s) => ({ id: s.id, storehouse_number: s.storehouse_number, label: s.label })),
+    [storehouses],
+  );
 
   return (
     <AppLayout>
@@ -884,8 +887,8 @@ const ContactDetail = () => {
 
                 {/* Insurance */}
                 <InsurancePanel
-                  scope={{ kind: "contact", contactId: id! }}
-                  storehouses={storehouses.map((s) => ({ id: s.id, storehouse_number: s.storehouse_number, label: s.label }))}
+                  scope={insuranceScope}
+                  storehouses={insuranceStorehouses}
                 />
 
 

@@ -28,6 +28,8 @@ import { PortalDynamicLinks } from "@/components/portal/PortalDynamicLinks";
 import { Briefcase } from "lucide-react";
 import prosperwiseLogo from "@/assets/prosperwise-logo.png";
 
+const CORP_TYPE_LABELS: Record<string, string> = { opco: "Operating Co", holdco: "Holding Co", trust: "Trust", partnership: "Partnership", other: "Entity" };
+
 const ROLE_LABELS: Record<string, string> = {
   head_of_family: "Head of Family",
   head_of_household: "Head of Household",
@@ -434,7 +436,6 @@ const VfoPortal = () => {
                 <h3 className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Corporate Entities</h3>
               </div>
               {corporations.map((corp: any) => {
-                const TYPE_LABELS: Record<string, string> = { opco: "Operating Co", holdco: "Holding Co", trust: "Trust", partnership: "Partnership", other: "Entity" };
                 const isExpanded = expandedCorps.has(corp.id);
                 return (
                   <button
@@ -450,7 +451,7 @@ const VfoPortal = () => {
                         <div>
                           <p className="text-sm font-medium text-foreground">{corp.name}</p>
                           <p className="text-xs text-muted-foreground">
-                            {TYPE_LABELS[corp.corporation_type] || corp.corporation_type}
+                            {CORP_TYPE_LABELS[corp.corporation_type] || corp.corporation_type}
                             {corp.jurisdiction ? ` · ${corp.jurisdiction}` : ""}
                           </p>
                         </div>
