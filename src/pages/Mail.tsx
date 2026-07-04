@@ -209,8 +209,8 @@ export default function Mail({ embedded = false }: { embedded?: boolean } = {}) 
   }
 
   return (
-    <AppLayout>
-      <div className="flex h-[calc(100vh-8rem)] gap-4">
+    <Wrapper>
+      <div className={`flex ${embedded ? "h-[calc(100vh-14rem)]" : "h-[calc(100vh-8rem)]"} gap-4`}>
         {/* LEFT — labels + compose */}
         <div className="w-52 shrink-0 flex flex-col gap-2">
           <Button
