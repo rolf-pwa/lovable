@@ -56,6 +56,7 @@ import { AuditTrail } from "@/components/AuditTrail";
 import { StatementUpload } from "@/components/StatementUpload";
 import { HoldingTank } from "@/components/HoldingTank";
 import { AssetContainer, type MoveTarget } from "@/components/AssetContainer";
+import { InsurancePanel } from "@/components/InsurancePanel";
 import { ProfessionalLinker } from "@/components/ProfessionalLinker";
 import EngagementsPanel from "@/components/EngagementsPanel";
 import { StabilizationMapButton } from "@/components/StabilizationMapButton";
@@ -855,6 +856,13 @@ const ContactDetail = () => {
               <TabsContent value="vineyard" className="space-y-4 mt-4">
                 {/* Holding Tank */}
                 <HoldingTank contactId={id!} onAccountMoved={() => fetchData()} />
+
+                {/* Insurance */}
+                <InsurancePanel
+                  scope={{ kind: "contact", contactId: id! }}
+                  storehouses={storehouses.map((s) => ({ id: s.id, storehouse_number: s.storehouse_number, label: s.label }))}
+                />
+
 
 
 
