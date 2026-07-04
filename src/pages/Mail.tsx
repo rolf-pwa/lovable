@@ -457,6 +457,6 @@ export default function Mail({ embedded = false }: { embedded?: boolean } = {}) 
           </Card>
         </div>
       )}
-    </AppLayout>
+    </Wrapper>
   );
 }
