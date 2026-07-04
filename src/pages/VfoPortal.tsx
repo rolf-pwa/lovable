@@ -113,7 +113,7 @@ const VfoPortal = () => {
     vineyard_accounts = [], storehouses = [],
     holding_tank = [], household_holding_tank = [], family_holding_tank = [],
     portal_requests = [], meetings = [], charter, corporations = [], hierarchy,
-    professionals = [], engagements = [],
+    professionals = [], engagements = [], insurance_policies = [],
   } = data;
 
   if (!family?.vfo_enabled) {
