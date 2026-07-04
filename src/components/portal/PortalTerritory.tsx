@@ -51,6 +51,7 @@ interface Props {
   portalToken?: string;
   onScopeChange?: () => void;
   corporations?: any[];
+  insurancePolicies?: any[];
   section?: "vineyard" | "storehouses" | "all";
   defaultCollapsed?: boolean;
 }
