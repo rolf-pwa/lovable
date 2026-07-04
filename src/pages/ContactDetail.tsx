@@ -509,6 +509,12 @@ const ContactDetail = () => {
     { num: 5, label: "Sovereign" },
   ];
 
+  // Memoize props passed to InsurancePanel so it doesn't re-render on every parent render.
+  const insuranceScope = useMemo(() => ({ kind: "contact" as const, contactId: id! }), [id]);
+  const insuranceStorehouses = useMemo(
+    () => storehouses.map((s) => ({ id: s.id, storehouse_number: s.storehouse_number, label: s.label })),
+    [storehouses],
+  );
 
   return (
     <AppLayout>
