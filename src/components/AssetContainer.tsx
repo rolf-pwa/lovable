@@ -60,6 +60,10 @@ interface AssetContainerProps {
   showAddForm?: boolean;
   addFormContent?: React.ReactNode;
   onConfigurePlaceholder?: () => void;
+  /** Extra amount (e.g. insurance cash value) to include in the header total */
+  extraTotal?: number;
+  /** Additional rows to render inside the container (e.g. insurance policy cards) */
+  footerContent?: React.ReactNode;
 }
 
 export function AssetContainer({
@@ -76,8 +80,11 @@ export function AssetContainer({
   addFormContent,
   onAddAccount,
   onConfigurePlaceholder,
+  extraTotal = 0,
+  footerContent,
 }: AssetContainerProps) {
-  const total = accounts.reduce((sum, a) => sum + (Number(a.currentValue) || 0), 0);
+  const accountsTotal = accounts.reduce((sum, a) => sum + (Number(a.currentValue) || 0), 0);
+  const total = accountsTotal + (Number(extraTotal) || 0);
   const totalTarget = accounts.reduce((sum, a) => sum + (Number(a.targetValue) || 0), 0);
   const totalPct = totalTarget > 0 ? Math.min((total / totalTarget) * 100, 100) : 0;
 
