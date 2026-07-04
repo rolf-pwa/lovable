@@ -159,6 +159,51 @@ export function InsurancePanel({ scope, storehouses }: { scope: OwnerScope; stor
     return sh ? `${STOREHOUSE_NAMES[sh.storehouse_number] || "Storehouse"} · ${sh.label}` : "—";
   };
 
+  // Ensure all 4 canonical storehouse types appear in the dropdown, even if a row
+  // doesn't yet exist for this owner. Missing ones use a sentinel value; on select
+  // we create the row, then set the policy's storehouse id to the new row's id.
+  const canonicalNums = [1, 2, 3, 4];
+  const missingCanonical = canonicalNums.filter(
+    (n) => !storehouses.some((s) => s.storehouse_number === n),
+  );
+
+  const ensureCanonicalStorehouse = async (num: number): Promise<string | null> => {
+    const payload: any = {
+      storehouse_number: num,
+      label: STOREHOUSE_NAMES[num] || "",
+      contact_id: scope.kind === "contact" ? scope.contactId : null,
+      corporation_id: scope.kind === "corporation" ? scope.corporationId : null,
+    };
+    const { data, error } = await supabase
+      .from("storehouses")
+      .insert(payload)
+      .select("id")
+      .single();
+    if (error) {
+      toast.error(`Failed to create ${STOREHOUSE_NAMES[num]}: ${error.message}`);
+      return null;
+    }
+    return (data as any)?.id ?? null;
+  };
+
+  const handleStorehouseSelect = async (
+    v: string,
+    field: "coverage_storehouse_id" | "cash_value_storehouse_id",
+  ) => {
+    if (!editing) return;
+    if (v === "none") {
+      setEditing({ ...editing, [field]: null });
+      return;
+    }
+    if (v.startsWith("create:")) {
+      const num = Number(v.split(":")[1]);
+      const newId = await ensureCanonicalStorehouse(num);
+      if (newId) setEditing({ ...editing, [field]: newId });
+      return;
+    }
+    setEditing({ ...editing, [field]: v });
+  };
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0">
@@ -276,7 +321,7 @@ export function InsurancePanel({ scope, storehouses }: { scope: OwnerScope; stor
                   <Label>Coverage → Storehouse</Label>
                   <Select
                     value={editing.coverage_storehouse_id || "none"}
-                    onValueChange={(v) => setEditing({ ...editing, coverage_storehouse_id: v === "none" ? null : v })}
+                    onValueChange={(v) => handleStorehouseSelect(v, "coverage_storehouse_id")}
                   >
                     <SelectTrigger><SelectValue placeholder="Unassigned" /></SelectTrigger>
                     <SelectContent>
@@ -286,6 +331,11 @@ export function InsurancePanel({ scope, storehouses }: { scope: OwnerScope; stor
                           {STOREHOUSE_NAMES[s.storehouse_number] || "Storehouse"} · {s.label}
                         </SelectItem>
                       ))}
+                      {missingCanonical.map((n) => (
+                        <SelectItem key={`create-${n}`} value={`create:${n}`}>
+                          + Create {STOREHOUSE_NAMES[n]}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -293,7 +343,7 @@ export function InsurancePanel({ scope, storehouses }: { scope: OwnerScope; stor
                   <Label>Cash Value → Storehouse</Label>
                   <Select
                     value={editing.cash_value_storehouse_id || "none"}
-                    onValueChange={(v) => setEditing({ ...editing, cash_value_storehouse_id: v === "none" ? null : v })}
+                    onValueChange={(v) => handleStorehouseSelect(v, "cash_value_storehouse_id")}
                   >
                     <SelectTrigger><SelectValue placeholder="Unassigned" /></SelectTrigger>
                     <SelectContent>
@@ -301,6 +351,11 @@ export function InsurancePanel({ scope, storehouses }: { scope: OwnerScope; stor
                       {storehouses.map((s) => (
                         <SelectItem key={s.id} value={s.id}>
                           {STOREHOUSE_NAMES[s.storehouse_number] || "Storehouse"} · {s.label}
+                        </SelectItem>
+                      ))}
+                      {missingCanonical.map((n) => (
+                        <SelectItem key={`create-${n}`} value={`create:${n}`}>
+                          + Create {STOREHOUSE_NAMES[n]}
                         </SelectItem>
                       ))}
                     </SelectContent>
