@@ -887,8 +887,8 @@ const ContactDetail = () => {
 
                 {/* Insurance */}
                 <InsurancePanel
-                  scope={{ kind: "contact", contactId: id! }}
-                  storehouses={storehouses.map((s) => ({ id: s.id, storehouse_number: s.storehouse_number, label: s.label }))}
+                  scope={insuranceScope}
+                  storehouses={insuranceStorehouses}
                 />
 
 
