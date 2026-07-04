@@ -491,6 +491,35 @@ if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders }
       console.error("[portal-validate] snapshot attach error", e);
     }
 
+    // Fetch insurance policies for all in-scope contacts and corporations
+    let insurance_policies: any[] = [];
+    try {
+      const insContactIds = new Set<string>([contactId, ...householdMembers.map((m: any) => m.id)]);
+      if (Array.isArray(hierarchy?.households)) {
+        hierarchy.households.forEach((hh: any) => (hh.members || []).forEach((m: any) => insContactIds.add(m.id)));
+      }
+      if (Array.isArray(hierarchy?.members)) {
+        hierarchy.members.forEach((m: any) => insContactIds.add(m.id));
+      }
+      const insCorpIds = corporations.map((c: any) => c.id);
+      const [insByContact, insByCorp] = await Promise.all([
+        insContactIds.size > 0
+          ? supabase.from("insurance_policies").select("*").in("contact_id", [...insContactIds])
+          : Promise.resolve({ data: [] }),
+        insCorpIds.length > 0
+          ? supabase.from("insurance_policies").select("*").in("corporation_id", insCorpIds)
+          : Promise.resolve({ data: [] }),
+      ]);
+      const seen = new Set<string>();
+      insurance_policies = [...(insByContact.data || []), ...(insByCorp.data || [])].filter((p: any) => {
+        if (seen.has(p.id)) return false;
+        seen.add(p.id);
+        return true;
+      });
+    } catch (e) {
+      console.error("[portal-validate] insurance fetch error", e);
+    }
+
     return new Response(JSON.stringify({
       contact: contactRes.data,
       vineyard_accounts: accountsRes.data || [],
@@ -514,6 +543,7 @@ if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders }
       quarterly_reviews,
       professionals,
       engagements,
+      insurance_policies,
 
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
