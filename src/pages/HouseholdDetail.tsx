@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/AppLayout";
@@ -110,6 +110,13 @@ const HouseholdDetail = () => {
   const [holdingTank, setHoldingTank] = useState<any[]>([]);
   const [insurancePolicies, setInsurancePolicies] = useState<any[]>([]);
 
+  // Guard against setState after unmount when fetchData reruns via mutation callbacks.
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
+
   const fetchData = useCallback(async () => {
     if (!id) return;
 
@@ -119,6 +126,7 @@ const HouseholdDetail = () => {
       .eq("id", id)
       .single();
 
+    if (!mountedRef.current) return;
     if (!hh) {
       setLoading(false);
       return;
@@ -133,6 +141,7 @@ const HouseholdDetail = () => {
       supabase.from("families").select("name").eq("id", hh.family_id).single(),
       supabase.from("contacts").select("id, first_name, last_name, family_role, email, phone, address, governance_status, is_minor, asana_url, lawyer_name, lawyer_firm, accountant_name, accountant_firm, executor_name, executor_firm, poa_name, poa_firm").eq("household_id", id),
     ]);
+    if (!mountedRef.current) return;
 
     setFamilyName(family?.name || "Unknown");
     const roleRank = (r: string | null | undefined) => {
@@ -152,6 +161,7 @@ const HouseholdDetail = () => {
         supabase.from("shareholders").select("contact_id, corporation_id, ownership_percentage, share_class, role_title").in("contact_id", memberIds).eq("is_active", true),
         supabase.from("holding_tank").select("contact_id, current_value").in("contact_id", memberIds).neq("status", "moved"),
       ]);
+      if (!mountedRef.current) return;
       setVineyardAccounts(vine || []);
       setStorehouses(store || []);
       setHoldingTank(tank || []);
@@ -163,6 +173,7 @@ const HouseholdDetail = () => {
           supabase.from("corporations").select("id, name, corporation_type, jurisdiction").in("id", corpIds),
           supabase.from("corporate_vineyard_accounts").select("*").in("corporation_id", corpIds),
         ]);
+        if (!mountedRef.current) return;
 
         const enrichedCorps = (corps || []).map((corp: any) => ({
           ...corp,
@@ -179,11 +190,12 @@ const HouseholdDetail = () => {
       const { data: ins } = await (supabase.from("insurance_policies" as any) as any)
         .select("*")
         .or(`contact_id.in.(${memberIds.join(",")})${corpIds.length ? `,corporation_id.in.(${corpIds.join(",")})` : ""}`);
+      if (!mountedRef.current) return;
       setInsurancePolicies((ins as any[]) || []);
     }
 
 
-    setLoading(false);
+    if (mountedRef.current) setLoading(false);
   }, [id]);
 
   useEffect(() => {

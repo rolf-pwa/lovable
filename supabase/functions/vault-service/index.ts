@@ -558,7 +558,13 @@ async function driveListChildren(folderId: string, accessToken: string) {
 }
 
 function genUnlockCode() {
-  return Math.floor(100000 + Math.random() * 900000).toString();
+  // Cryptographically secure 6-digit code with rejection sampling to avoid modulo bias.
+  const buf = new Uint32Array(1);
+  while (true) {
+    crypto.getRandomValues(buf);
+    const n = buf[0];
+    if (n < 4_294_000_000) return String(100000 + (n % 900000));
+  }
 }
 
 // ─────────────────────────────────────────────────────────
@@ -597,7 +603,7 @@ serve(async (req) => {
     if (!collab?.email) {
       return new Response(JSON.stringify({ ok: true }), { headers: { ...cors, "Content-Type": "application/json" } });
     }
-    const newCode = String(Math.floor(100000 + Math.random() * 900000));
+    const newCode = genUnlockCode();
     await supabaseAdmin
       .from("vault_guest_tokens")
       .update({

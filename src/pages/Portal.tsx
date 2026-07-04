@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import { signInWithGoogle } from "@/lib/auth";
 import { PortalTerritory } from "@/components/portal/PortalTerritory";
 import { PortalHoldingTank } from "@/components/portal/PortalHoldingTank";
@@ -303,16 +304,20 @@ const Portal = () => {
   const handleToggleNotifications = async () => {
     const activeToken = token || data?.portal_token;
     if (!activeToken) return;
+    const prevVal = notificationsEnabled;
+    const newVal = !notificationsEnabled;
     setTogglingNotif(true);
+    // Optimistic update
+    setNotificationsEnabled(newVal);
     try {
-      const newVal = !notificationsEnabled;
       const res = await supabase.functions.invoke("portal-update-scope", {
         body: { portal_token: activeToken, action: "toggle_notifications", enabled: newVal },
       });
-      if (res.error || res.data?.error) throw new Error(res.data?.error || "Failed");
-      setNotificationsEnabled(newVal);
-    } catch {
-      // revert on error
+      if (res.error || res.data?.error) throw new Error(res.data?.error || "Failed to update notifications");
+    } catch (err: any) {
+      // Revert and surface the error to the user
+      setNotificationsEnabled(prevVal);
+      toast.error(err?.message || "Could not update notification preferences. Please try again.");
     } finally {
       setTogglingNotif(false);
     }

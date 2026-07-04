@@ -31,7 +31,7 @@ async function notifyViaGmail(opts: { to: string; subject: string; text: string 
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${SERVICE_KEY}`,
-        "x-internal-call": "1",
+        "x-internal-secret": Deno.env.get("INTERNAL_FUNCTION_SECRET") ?? "",
       },
       body: JSON.stringify(opts),
     });

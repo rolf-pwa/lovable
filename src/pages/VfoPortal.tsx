@@ -56,9 +56,11 @@ const VfoPortal = () => {
 
   useEffect(() => {
     if (!token) { setError("Missing access token."); setLoading(false); return; }
+    let cancelled = false;
     (async () => {
       try {
         const { data: res, error: err } = await supabase.functions.invoke("portal-validate", { body: { token } });
+        if (cancelled) return;
         if (err) throw err;
         if (!res || (res as any).error) throw new Error((res as any)?.error || "Invalid link");
         setData(res);
@@ -68,9 +70,13 @@ const VfoPortal = () => {
         else if (lvl === "household") setDrilldown({ level: "household", householdId: (res as any).household?.id });
         else setDrilldown({ level: "individual" });
       } catch (e: any) {
+        if (cancelled) return;
         setError(e?.message || "Unable to load your Family Office.");
-      } finally { setLoading(false); }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     })();
+    return () => { cancelled = true; };
   }, [token]);
 
   const refreshData = async () => {
