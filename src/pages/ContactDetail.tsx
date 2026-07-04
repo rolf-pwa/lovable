@@ -1036,8 +1036,8 @@ const ContactDetail = () => {
                       .map((n) => ({ label: STOREHOUSE_NAMES[n - 1], key: `storehouse-${n}` })),
                   ];
                   return (
+                    <div key={num} className="space-y-2">
                     <AssetContainer
-                      key={num}
                       title={storehouseName}
                       icon={
                         <span className={`flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-bold ${isPlaceholder ? "bg-muted text-muted-foreground" : "bg-sanctuary-bronze/20 text-sanctuary-bronze"}`}>
