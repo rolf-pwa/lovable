@@ -1026,6 +1026,9 @@ const ContactDetail = () => {
                   const accounts = storehouses.filter((s) => s.storehouse_number === num);
                   const isPlaceholder = accounts.length === 0;
                   const storehouseName = STOREHOUSE_NAMES[num - 1];
+                  const shIds = accounts.map((a) => a.id);
+                  const coveragePolicies = insurancePolicies.filter((p) => shIds.includes(p.coverage_storehouse_id));
+                  const cashValuePolicies = insurancePolicies.filter((p) => shIds.includes(p.cash_value_storehouse_id));
                   const otherTargets = [
                     { label: "The Vineyard", key: "vineyard" },
                     ...[1, 2, 3, 4]
