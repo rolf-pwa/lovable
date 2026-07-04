@@ -576,7 +576,16 @@ const CorporationDetail = () => {
               )}
             </CardContent>
           </Card>
+
+          {/* Corporate Insurance */}
+          <InsurancePanel
+            scope={{ kind: "corporation", corporationId: id! }}
+            storehouses={linkedStorehouses.map((s) => ({
+              id: s.id, storehouse_number: s.storehouse_number, label: s.label,
+            }))}
+          />
         </div>
+
 
         {/* Details card */}
         <Card>
