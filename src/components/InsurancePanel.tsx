@@ -70,7 +70,7 @@ const FREQUENCIES = [
 ];
 
 const STOREHOUSE_NAMES: Record<number, string> = {
-  1: "Keep", 2: "Armoury", 3: "Granary", 4: "Vault",
+  1: "Liquidity Reserve", 2: "Strategic Reserve", 3: "Philanthropic Trust", 4: "Legacy Trust",
 };
 
 const currency = (n: number | null | undefined) =>
