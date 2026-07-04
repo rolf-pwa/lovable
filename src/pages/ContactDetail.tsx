@@ -195,6 +195,14 @@ const ContactDetail = () => {
   const [copyLoading, setCopyLoading] = useState(false);
   const [mergeOpen, setMergeOpen] = useState(false);
 
+  // Guard against setState after unmount when fetchData is triggered by
+  // mutation callbacks or route changes racing with async Supabase queries.
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
+
   const fetchData = useCallback(async () => {
     if (!id) return;
     const [contactRes, storehouseRes, holdingRes, , accountsRes, harvestRes] = await Promise.all([
