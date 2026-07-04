@@ -338,6 +338,7 @@ const VfoPortal = () => {
           <PortalTerritory
             vineyardAccounts={fa.vineyard}
             storehouses={fa.storehouses}
+            insurancePolicies={insurance_policies}
             contact={contact}
             family={family}
             household={null}
@@ -475,6 +476,7 @@ const VfoPortal = () => {
           <PortalTerritory
             vineyardAccounts={hhAssets.vineyard}
             storehouses={hhAssets.storehouses}
+            insurancePolicies={insurance_policies}
             contact={contact}
             family={family}
             household={currentHousehold || household}
@@ -552,6 +554,7 @@ const VfoPortal = () => {
                   <PortalTerritory
                     vineyardAccounts={ind.vineyardAccounts}
                     storehouses={ind.memberStorehouses}
+                    insurancePolicies={insurance_policies}
                     contact={isSelf ? contact : currentMember}
                     family={family}
                     household={household}
