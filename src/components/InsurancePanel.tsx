@@ -321,7 +321,7 @@ export function InsurancePanel({ scope, storehouses }: { scope: OwnerScope; stor
                   <Label>Coverage → Storehouse</Label>
                   <Select
                     value={editing.coverage_storehouse_id || "none"}
-                    onValueChange={(v) => setEditing({ ...editing, coverage_storehouse_id: v === "none" ? null : v })}
+                    onValueChange={(v) => handleStorehouseSelect(v, "coverage_storehouse_id")}
                   >
                     <SelectTrigger><SelectValue placeholder="Unassigned" /></SelectTrigger>
                     <SelectContent>
@@ -331,6 +331,11 @@ export function InsurancePanel({ scope, storehouses }: { scope: OwnerScope; stor
                           {STOREHOUSE_NAMES[s.storehouse_number] || "Storehouse"} · {s.label}
                         </SelectItem>
                       ))}
+                      {missingCanonical.map((n) => (
+                        <SelectItem key={`create-${n}`} value={`create:${n}`}>
+                          + Create {STOREHOUSE_NAMES[n]}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -338,7 +343,7 @@ export function InsurancePanel({ scope, storehouses }: { scope: OwnerScope; stor
                   <Label>Cash Value → Storehouse</Label>
                   <Select
                     value={editing.cash_value_storehouse_id || "none"}
-                    onValueChange={(v) => setEditing({ ...editing, cash_value_storehouse_id: v === "none" ? null : v })}
+                    onValueChange={(v) => handleStorehouseSelect(v, "cash_value_storehouse_id")}
                   >
                     <SelectTrigger><SelectValue placeholder="Unassigned" /></SelectTrigger>
                     <SelectContent>
@@ -346,6 +351,11 @@ export function InsurancePanel({ scope, storehouses }: { scope: OwnerScope; stor
                       {storehouses.map((s) => (
                         <SelectItem key={s.id} value={s.id}>
                           {STOREHOUSE_NAMES[s.storehouse_number] || "Storehouse"} · {s.label}
+                        </SelectItem>
+                      ))}
+                      {missingCanonical.map((n) => (
+                        <SelectItem key={`create-${n}`} value={`create:${n}`}>
+                          + Create {STOREHOUSE_NAMES[n]}
                         </SelectItem>
                       ))}
                     </SelectContent>
