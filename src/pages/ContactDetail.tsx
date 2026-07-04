@@ -1113,6 +1113,7 @@ const ContactDetail = () => {
                     />
                   );
                 })}
+                {/* NOTE: insurance cards inline below */}
               </TabsContent>
 
               {/* Analytics Tab */}
