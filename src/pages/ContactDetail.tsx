@@ -857,6 +857,13 @@ const ContactDetail = () => {
                 {/* Holding Tank */}
                 <HoldingTank contactId={id!} onAccountMoved={() => fetchData()} />
 
+                {/* Insurance */}
+                <InsurancePanel
+                  scope={{ kind: "contact", contactId: id! }}
+                  storehouses={storehouses.map((s) => ({ id: s.id, storehouse_number: s.storehouse_number, label: s.label }))}
+                />
+
+
 
 
                 {/* The Vineyard Accounts */}
