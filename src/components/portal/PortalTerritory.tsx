@@ -51,6 +51,7 @@ interface Props {
   portalToken?: string;
   onScopeChange?: () => void;
   corporations?: any[];
+  insurancePolicies?: any[];
   section?: "vineyard" | "storehouses" | "all";
   defaultCollapsed?: boolean;
 }
@@ -146,7 +147,7 @@ function ScopeBadge({
   );
 }
 
-export function PortalTerritory({ vineyardAccounts, storehouses, contact, family, household, householdMembers = [], scopeLabel, portalToken, onScopeChange, corporations = [], section = "all", defaultCollapsed = false }: Props) {
+export function PortalTerritory({ vineyardAccounts, storehouses, contact, family, household, householdMembers = [], scopeLabel, portalToken, onScopeChange, corporations = [], insurancePolicies = [], section = "all", defaultCollapsed = false }: Props) {
   const showVineyard = section === "all" || section === "vineyard";
   const showStorehouses = section === "all" || section === "storehouses";
   const [vineyardOpen, setVineyardOpen] = useState(!defaultCollapsed);
@@ -391,6 +392,26 @@ export function PortalTerritory({ vineyardAccounts, storehouses, contact, family
                         </div>
                       );
                     })}
+                    {insurancePolicies
+                      .filter((p: any) => accounts.some((a: any) => a.id === p.coverage_storehouse_id))
+                      .map((p: any) => (
+                        <div key={`cov-${p.id}`} className="rounded-lg bg-accent/5 px-4 py-2.5 border border-accent/30">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-foreground/80">🛡️ {p.carrier} — Coverage{p.policy_number ? ` #${p.policy_number}` : ""}</span>
+                            <span className="text-sm font-medium text-foreground">${(Number(p.coverage_amount) || 0).toLocaleString()}</span>
+                          </div>
+                        </div>
+                      ))}
+                    {insurancePolicies
+                      .filter((p: any) => accounts.some((a: any) => a.id === p.cash_value_storehouse_id))
+                      .map((p: any) => (
+                        <div key={`cv-${p.id}`} className="rounded-lg bg-accent/5 px-4 py-2.5 border border-accent/30">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-foreground/80">🛡️ {p.carrier} — Cash Value{p.policy_number ? ` #${p.policy_number}` : ""}</span>
+                            <span className="text-sm font-medium text-foreground">${(Number(p.cash_value) || 0).toLocaleString()}</span>
+                          </div>
+                        </div>
+                      ))}
                   </>
                 ) : privateAccounts.length > 0 ? (
                   <div className="flex items-center gap-2 rounded-lg bg-muted/30 px-4 py-2.5 border border-border text-xs text-muted-foreground">

@@ -55,6 +55,7 @@ interface PortalData {
     drive_url: string | null;
     review_date: string | null;
   }>;
+  insurance_policies?: any[];
 }
 
 const ROLE_LABELS: Record<string, string> = {
@@ -568,7 +569,7 @@ const Portal = () => {
     );
   }
 
-  const { contact, charter, vineyard_accounts, storehouses, holding_tank = [], household_holding_tank = [], family_holding_tank = [], audit_trail, portal_requests, meetings, family, household, household_members, hierarchy, corporations = [], quarterly_reviews = [] } = data;
+  const { contact, charter, vineyard_accounts, storehouses, holding_tank = [], household_holding_tank = [], family_holding_tank = [], audit_trail, portal_requests, meetings, family, household, household_members, hierarchy, corporations = [], quarterly_reviews = [], insurance_policies = [] } = data;
   const portalToken = token || data.portal_token || "";
   const hierarchyLevel = hierarchy?.level || "individual";
 
@@ -751,6 +752,7 @@ const Portal = () => {
           <PortalTerritory
             vineyardAccounts={familyAssets.vineyard}
             storehouses={familyAssets.storehouses}
+            insurancePolicies={insurance_policies}
             contact={contact}
             family={family}
             household={null}
@@ -943,6 +945,7 @@ const Portal = () => {
           <PortalTerritory
             vineyardAccounts={hhAssets.vineyard}
             storehouses={hhAssets.storehouses}
+            insurancePolicies={insurance_policies}
             contact={contact}
             family={family}
             household={currentHousehold || household}
@@ -1140,6 +1143,7 @@ const Portal = () => {
                   <PortalTerritory
                     vineyardAccounts={ind.vineyardAccounts}
                     storehouses={ind.memberStorehouses}
+                    insurancePolicies={insurance_policies}
                     contact={isSelf ? contact : currentMember}
                     family={family}
                     household={household}
