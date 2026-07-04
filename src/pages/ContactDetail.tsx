@@ -1111,9 +1111,33 @@ const ContactDetail = () => {
                         }
                       }}
                     />
+                    {(coveragePolicies.length > 0 || cashValuePolicies.length > 0) && (
+                      <div className="rounded-lg border border-accent/30 bg-accent/5 p-2 space-y-1">
+                        {coveragePolicies.map((p) => (
+                          <div key={`cov-${p.id}`} className="flex items-center justify-between px-2 py-1.5">
+                            <span className="text-xs text-foreground/80">
+                              🛡️ {p.carrier} — Coverage{p.policy_number ? ` #${p.policy_number}` : ""}
+                            </span>
+                            <span className="text-xs font-medium tabular-nums">
+                              ${(Number(p.coverage_amount) || 0).toLocaleString()}
+                            </span>
+                          </div>
+                        ))}
+                        {cashValuePolicies.map((p) => (
+                          <div key={`cv-${p.id}`} className="flex items-center justify-between px-2 py-1.5">
+                            <span className="text-xs text-foreground/80">
+                              🛡️ {p.carrier} — Cash Value{p.policy_number ? ` #${p.policy_number}` : ""}
+                            </span>
+                            <span className="text-xs font-medium tabular-nums">
+                              ${(Number(p.cash_value) || 0).toLocaleString()}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    </div>
                   );
                 })}
-                {/* NOTE: insurance cards inline below */}
               </TabsContent>
 
               {/* Analytics Tab */}
