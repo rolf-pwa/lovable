@@ -1296,6 +1296,113 @@ export type Database = {
           },
         ]
       }
+      insurance_policies: {
+        Row: {
+          carrier: string
+          cash_value: number | null
+          cash_value_storehouse_id: string | null
+          contact_id: string | null
+          contingent_beneficiary: string | null
+          corporation_id: string | null
+          coverage_amount: number | null
+          coverage_storehouse_id: string | null
+          created_at: string
+          id: string
+          insured_name: string | null
+          issue_date: string | null
+          notes: string | null
+          paid_up_date: string | null
+          policy_number: string | null
+          policy_type: string
+          premium_amount: number | null
+          premium_frequency: string | null
+          primary_beneficiary: string | null
+          renewal_date: string | null
+          updated_at: string
+          vault_folder_id: string | null
+          visibility_scope: string | null
+        }
+        Insert: {
+          carrier: string
+          cash_value?: number | null
+          cash_value_storehouse_id?: string | null
+          contact_id?: string | null
+          contingent_beneficiary?: string | null
+          corporation_id?: string | null
+          coverage_amount?: number | null
+          coverage_storehouse_id?: string | null
+          created_at?: string
+          id?: string
+          insured_name?: string | null
+          issue_date?: string | null
+          notes?: string | null
+          paid_up_date?: string | null
+          policy_number?: string | null
+          policy_type?: string
+          premium_amount?: number | null
+          premium_frequency?: string | null
+          primary_beneficiary?: string | null
+          renewal_date?: string | null
+          updated_at?: string
+          vault_folder_id?: string | null
+          visibility_scope?: string | null
+        }
+        Update: {
+          carrier?: string
+          cash_value?: number | null
+          cash_value_storehouse_id?: string | null
+          contact_id?: string | null
+          contingent_beneficiary?: string | null
+          corporation_id?: string | null
+          coverage_amount?: number | null
+          coverage_storehouse_id?: string | null
+          created_at?: string
+          id?: string
+          insured_name?: string | null
+          issue_date?: string | null
+          notes?: string | null
+          paid_up_date?: string | null
+          policy_number?: string | null
+          policy_type?: string
+          premium_amount?: number | null
+          premium_frequency?: string | null
+          primary_beneficiary?: string | null
+          renewal_date?: string | null
+          updated_at?: string
+          vault_folder_id?: string | null
+          visibility_scope?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "insurance_policies_cash_value_storehouse_id_fkey"
+            columns: ["cash_value_storehouse_id"]
+            isOneToOne: false
+            referencedRelation: "storehouses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "insurance_policies_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "insurance_policies_corporation_id_fkey"
+            columns: ["corporation_id"]
+            isOneToOne: false
+            referencedRelation: "corporations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "insurance_policies_coverage_storehouse_id_fkey"
+            columns: ["coverage_storehouse_id"]
+            isOneToOne: false
+            referencedRelation: "storehouses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       knowledge_base: {
         Row: {
           category: string
