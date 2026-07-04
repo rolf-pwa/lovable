@@ -59,7 +59,7 @@ async function sendViaGmail(args: {
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${serviceKey}`,
-        "x-internal-call": "1",
+        "x-internal-secret": Deno.env.get("INTERNAL_FUNCTION_SECRET") ?? "",
       },
       body: JSON.stringify(args),
     });

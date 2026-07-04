@@ -100,7 +100,7 @@ serve(async (req) => {
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${SERVICE_KEY}`,
-            "x-internal-call": "1",
+            "x-internal-secret": Deno.env.get("INTERNAL_FUNCTION_SECRET") ?? "",
           },
           body: JSON.stringify({ to: pro.email, subject, text }),
         });
