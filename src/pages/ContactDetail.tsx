@@ -56,6 +56,7 @@ import { AuditTrail } from "@/components/AuditTrail";
 import { StatementUpload } from "@/components/StatementUpload";
 import { HoldingTank } from "@/components/HoldingTank";
 import { AssetContainer, type MoveTarget } from "@/components/AssetContainer";
+import { InsurancePanel } from "@/components/InsurancePanel";
 import { ProfessionalLinker } from "@/components/ProfessionalLinker";
 import EngagementsPanel from "@/components/EngagementsPanel";
 import { StabilizationMapButton } from "@/components/StabilizationMapButton";
