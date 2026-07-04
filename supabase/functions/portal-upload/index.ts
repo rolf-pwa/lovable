@@ -106,9 +106,11 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Generate a safe path scoped to the authenticated contact
+    // Generate a safe path scoped to the authenticated contact (CSPRNG to avoid predictable filenames)
     const safeExt = ext || "bin";
-    const path = `${contactId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${safeExt}`;
+    const rand = Array.from(crypto.getRandomValues(new Uint8Array(9)))
+      .map((b) => b.toString(16).padStart(2, "0")).join("");
+    const path = `${contactId}/${Date.now()}-${rand}.${safeExt}`;
 
     const arrayBuffer = await file.arrayBuffer();
     const { error: uploadError } = await supabase.storage
