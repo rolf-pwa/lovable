@@ -603,7 +603,7 @@ serve(async (req) => {
     if (!collab?.email) {
       return new Response(JSON.stringify({ ok: true }), { headers: { ...cors, "Content-Type": "application/json" } });
     }
-    const newCode = String(Math.floor(100000 + Math.random() * 900000));
+    const newCode = genUnlockCode();
     await supabaseAdmin
       .from("vault_guest_tokens")
       .update({
