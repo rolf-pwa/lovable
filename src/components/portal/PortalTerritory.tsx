@@ -341,7 +341,10 @@ export function PortalTerritory({ vineyardAccounts, storehouses, contact, family
           {STOREHOUSE_CONFIG.map(({ num, name, icon: Icon }) => {
             const accounts = visibleStorehouses.filter((s: any) => s.storehouse_number === num);
             const privateAccounts = storehouses.filter((s: any) => s.storehouse_number === num && s.visibility_scope === "private");
-            const total = accounts.reduce((sum: number, s: any) => sum + (Number(s.current_value) || 0), 0);
+            const cashValueForGroup = insurancePolicies
+              .filter((p: any) => accounts.some((a: any) => a.id === p.cash_value_storehouse_id))
+              .reduce((sum: number, p: any) => sum + (Number(p.cash_value) || 0), 0);
+            const total = accounts.reduce((sum: number, s: any) => sum + (Number(s.current_value) || 0), 0) + cashValueForGroup;
             const targetTotal = accounts.reduce((sum: number, s: any) => sum + (Number(s.target_value) || 0), 0);
             const pct = targetTotal > 0 ? Math.min((total / targetTotal) * 100, 100) : 0;
 
