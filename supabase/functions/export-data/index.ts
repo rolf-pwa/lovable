@@ -34,26 +34,38 @@ if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders }
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
+    // Hard safety cap: this endpoint is intended for backup snapshots, not
+    // arbitrary data extraction. Any single-table page is limited to 1000 rows;
+    // callers must paginate with ?offset= to walk larger tables. This prevents
+    // a single API key holder from siphoning the entire dataset in one call.
+    const url = new URL(req.url);
+    const PAGE = Math.min(1000, Math.max(1, Number(url.searchParams.get("limit") ?? "1000")));
+    const OFFSET = Math.max(0, Number(url.searchParams.get("offset") ?? "0"));
+    const range = (q: any) => q.range(OFFSET, OFFSET + PAGE - 1);
+
     const [households, contacts, corporations, shareholders] = await Promise.all([
-      supabase.from("households").select("*"),
-      supabase.from("contacts").select("*"),
-      supabase.from("corporations").select("*"),
-      supabase.from("shareholders").select("*"),
+      range(supabase.from("households").select("*")),
+      range(supabase.from("contacts").select("*")),
+      range(supabase.from("corporations").select("*")),
+      range(supabase.from("shareholders").select("*")),
     ]);
 
-    // Also fetch related data
-    const [families, vineyardAccounts, storehouses, corpVineyard, corpShareholders, portalTokens, portalRequests, auditTrail] = await Promise.all([
-      supabase.from("families").select("*"),
-      supabase.from("vineyard_accounts").select("*"),
-      supabase.from("storehouses").select("*"),
-      supabase.from("corporate_vineyard_accounts").select("*"),
-      supabase.from("corporate_shareholders").select("*"),
-      supabase.from("portal_tokens").select("id, contact_id, created_by, expires_at, revoked, created_at"),
-      supabase.from("portal_requests").select("*, messages:portal_request_messages(*)"),
-      supabase.from("sovereignty_audit_trail").select("*"),
+    const [families, vineyardAccounts, storehouses, corpVineyard, corpShareholders, portalRequests, auditTrail] = await Promise.all([
+      range(supabase.from("families").select("*")),
+      range(supabase.from("vineyard_accounts").select("*")),
+      range(supabase.from("storehouses").select("*")),
+      range(supabase.from("corporate_vineyard_accounts").select("*")),
+      range(supabase.from("corporate_shareholders").select("*")),
+      range(supabase.from("portal_requests").select("*, messages:portal_request_messages(*)")),
+      range(supabase.from("sovereignty_audit_trail").select("*")),
     ]);
+
+    // NOTE: portal_tokens was previously included here. It contained credential
+    // metadata (token hashes, expiry) that should never leave the backend in a
+    // routine export. Excluded intentionally.
 
     return new Response(JSON.stringify({
+      _meta: { limit: PAGE, offset: OFFSET, note: "Paginate with ?offset=<n>&limit=<=1000>" },
       households: households.data || [],
       contacts: contacts.data || [],
       corporations: corporations.data || [],
@@ -63,7 +75,6 @@ if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders }
       storehouses: storehouses.data || [],
       corporate_vineyard_accounts: corpVineyard.data || [],
       corporate_shareholders: corpShareholders.data || [],
-      portal_tokens: portalTokens.data || [],
       portal_requests: portalRequests.data || [],
       audit_trail: auditTrail.data || [],
     }), {
