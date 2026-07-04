@@ -265,8 +265,7 @@ const Portal = () => {
     try { localStorage.removeItem(TRUSTED_DEVICE_KEY); } catch {}
   };
 
-  // Inactivity timeout (15 minutes)
-  const INACTIVITY_TIMEOUT = 15 * 60 * 1000;
+  // Inactivity timeout (15 minutes) — INACTIVITY_TIMEOUT hoisted to module scope
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleLogout = useCallback(() => {
