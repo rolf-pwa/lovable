@@ -115,7 +115,13 @@ function getCorsHeaders(req: Request) {
 }
 
 function generateOtp(): string {
-  return String(Math.floor(100000 + Math.random() * 900000));
+  // Cryptographically secure 6-digit OTP with rejection sampling to avoid modulo bias.
+  const buf = new Uint32Array(1);
+  while (true) {
+    crypto.getRandomValues(buf);
+    const n = buf[0];
+    if (n < 4_294_000_000) return String(100000 + (n % 900000));
+  }
 }
 
 // Fetch vineyard + storehouse data for a list of contact IDs
