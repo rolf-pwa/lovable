@@ -147,7 +147,7 @@ function ScopeBadge({
   );
 }
 
-export function PortalTerritory({ vineyardAccounts, storehouses, contact, family, household, householdMembers = [], scopeLabel, portalToken, onScopeChange, corporations = [], section = "all", defaultCollapsed = false }: Props) {
+export function PortalTerritory({ vineyardAccounts, storehouses, contact, family, household, householdMembers = [], scopeLabel, portalToken, onScopeChange, corporations = [], insurancePolicies = [], section = "all", defaultCollapsed = false }: Props) {
   const showVineyard = section === "all" || section === "vineyard";
   const showStorehouses = section === "all" || section === "storehouses";
   const [vineyardOpen, setVineyardOpen] = useState(!defaultCollapsed);
