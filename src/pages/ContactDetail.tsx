@@ -255,8 +255,8 @@ const ContactDetail = () => {
 
 
     try {
-      const { data: shareholdings } = await supabase.from("shareholders").select("corporation_id, ownership_percentage, share_class, role_title").eq("contact_id", id).eq("is_active", true);
-      if (!mountedRef.current) return;
+      const shareholdings = (shareholdingsRes.data as any[]) || [];
+
       if (shareholdings && shareholdings.length > 0) {
         const corpIds = shareholdings.map((s) => s.corporation_id);
         const [corpsRes, assetsRes, subsRes] = await Promise.all([
