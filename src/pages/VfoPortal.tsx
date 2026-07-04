@@ -28,6 +28,8 @@ import { PortalDynamicLinks } from "@/components/portal/PortalDynamicLinks";
 import { Briefcase } from "lucide-react";
 import prosperwiseLogo from "@/assets/prosperwise-logo.png";
 
+const CORP_TYPE_LABELS: Record<string, string> = { opco: "Operating Co", holdco: "Holding Co", trust: "Trust", partnership: "Partnership", other: "Entity" };
+
 const ROLE_LABELS: Record<string, string> = {
   head_of_family: "Head of Family",
   head_of_household: "Head of Household",
