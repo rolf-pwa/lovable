@@ -143,20 +143,28 @@ serve(async (req) => {
     });
   }
 
-  // Auth: either a Supabase JWT (logged-in staff/server) or an internal call
-  // marker from another edge function using the service role key.
+  // Auth: either a Supabase JWT (logged-in staff/user) or an internal call
+  // from another edge function presenting the dedicated INTERNAL_FUNCTION_SECRET.
+  // We deliberately no longer accept the raw SUPABASE_SERVICE_ROLE_KEY as a
+  // bearer token — that credential should never traverse the network as a
+  // reusable authorization value for a general-purpose function.
   const authHeader = req.headers.get("Authorization") || "";
-  const isInternal = req.headers.get("x-internal-call") === "1";
-  if (!authHeader.startsWith("Bearer ")) {
-    return new Response(JSON.stringify({ error: "Unauthorized" }), {
-      status: 401,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
-  const token = authHeader.replace("Bearer ", "");
+  const internalSecretHeader = req.headers.get("x-internal-secret") || "";
+  const INTERNAL_FUNCTION_SECRET = Deno.env.get("INTERNAL_FUNCTION_SECRET") || "";
+
+  const isInternal =
+    internalSecretHeader.length > 0 &&
+    INTERNAL_FUNCTION_SECRET.length > 0 &&
+    timingSafeEqual(internalSecretHeader, INTERNAL_FUNCTION_SECRET);
 
   if (!isInternal) {
-    // Validate as a real user JWT
+    if (!authHeader.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const token = authHeader.replace("Bearer ", "");
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_ANON_KEY")!,
@@ -165,14 +173,6 @@ serve(async (req) => {
     const { data, error } = await supabase.auth.getClaims(token);
     if (error || !data?.claims) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-  } else {
-    // Internal call: must match service role key
-    if (token !== Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")) {
-      return new Response(JSON.stringify({ error: "Unauthorized internal call" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
