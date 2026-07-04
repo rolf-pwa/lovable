@@ -231,6 +231,7 @@ const ContactDetail = () => {
         .eq("household_id", contactRes.data.household_id)
         .neq("id", id)
         .order("first_name");
+      if (!mountedRef.current) return;
       setHouseholdMembers((hhMembers as any) || []);
     } else {
       setHouseholdMembers([]);
@@ -238,10 +239,12 @@ const ContactDetail = () => {
 
     if (contactRes.data?.family_id) {
       const { data: fam } = await supabase.from("families").select("name").eq("id", contactRes.data.family_id).maybeSingle();
+      if (!mountedRef.current) return;
       setFamilyName(fam?.name || null);
     }
     if (contactRes.data?.household_id) {
       const { data: hh } = await supabase.from("households").select("label, vault_root_folder_id").eq("id", contactRes.data.household_id).maybeSingle();
+      if (!mountedRef.current) return;
       setHouseholdLabel(hh?.label || null);
       setHouseholdVaultRootId((hh as any)?.vault_root_folder_id || null);
     }
@@ -249,6 +252,7 @@ const ContactDetail = () => {
     const names = [contactRes.data?.lawyer_name, contactRes.data?.accountant_name, contactRes.data?.executor_name, contactRes.data?.poa_name].filter(Boolean) as string[];
     if (names.length > 0) {
       const { data: matchedContacts } = await supabase.from("contacts").select("id, first_name, last_name, full_name").in("full_name", names);
+      if (!mountedRef.current) return;
       const map: Record<string, { id: string; full_name: string } | null> = {};
       names.forEach((name) => {
         const match = matchedContacts?.find((c) => c.full_name === name) || null;
@@ -257,42 +261,49 @@ const ContactDetail = () => {
       setProfessionalContacts(map);
     }
 
-    const { data: shareholdings } = await supabase.from("shareholders").select("corporation_id, ownership_percentage, share_class, role_title").eq("contact_id", id).eq("is_active", true);
-    if (shareholdings && shareholdings.length > 0) {
-      const corpIds = shareholdings.map((s) => s.corporation_id);
-      const [corpsRes, assetsRes, subsRes] = await Promise.all([
-        supabase.from("corporations").select("id, name, corporation_type").in("id", corpIds),
-        supabase.from("corporate_vineyard_accounts").select("corporation_id, current_value").in("corporation_id", corpIds),
-        supabase.from("corporate_shareholders").select("parent_corporation_id, child_corporation_id, ownership_percentage").in("parent_corporation_id", corpIds),
-      ]);
-      const childIds = (subsRes.data || []).map((s) => s.child_corporation_id);
-      let childCorps: any[] = [];
-      let childAssets: any[] = [];
-      if (childIds.length > 0) {
-        const [cc, ca] = await Promise.all([
-          supabase.from("corporations").select("id, name, corporation_type").in("id", childIds),
-          supabase.from("corporate_vineyard_accounts").select("corporation_id, current_value").in("corporation_id", childIds),
+    try {
+      const { data: shareholdings } = await supabase.from("shareholders").select("corporation_id, ownership_percentage, share_class, role_title").eq("contact_id", id).eq("is_active", true);
+      if (!mountedRef.current) return;
+      if (shareholdings && shareholdings.length > 0) {
+        const corpIds = shareholdings.map((s) => s.corporation_id);
+        const [corpsRes, assetsRes, subsRes] = await Promise.all([
+          supabase.from("corporations").select("id, name, corporation_type").in("id", corpIds),
+          supabase.from("corporate_vineyard_accounts").select("corporation_id, current_value").in("corporation_id", corpIds),
+          supabase.from("corporate_shareholders").select("parent_corporation_id, child_corporation_id, ownership_percentage").in("parent_corporation_id", corpIds),
         ]);
-        childCorps = cc.data || [];
-        childAssets = ca.data || [];
-      }
-      const stakes = shareholdings.map((sh) => {
-        const corp = (corpsRes.data || []).find((c) => c.id === sh.corporation_id);
-        const totalAssets = (assetsRes.data || []).filter((a) => a.corporation_id === sh.corporation_id).reduce((sum, a) => sum + (Number(a.current_value) || 0), 0);
-        const proRata = totalAssets * (sh.ownership_percentage / 100);
-        const subs = (subsRes.data || []).filter((s) => s.parent_corporation_id === sh.corporation_id).map((s) => {
-          const child = childCorps.find((c: any) => c.id === s.child_corporation_id);
-          const childTotal = childAssets.filter((a: any) => a.corporation_id === s.child_corporation_id).reduce((sum: number, a: any) => sum + (Number(a.current_value) || 0), 0);
-          const indirectPct = (sh.ownership_percentage / 100) * (s.ownership_percentage / 100);
-          return { child_id: s.child_corporation_id, child_name: child?.name || "Unknown", child_type: child?.corporation_type || "other", parent_ownership_pct: s.ownership_percentage, child_total_assets: childTotal, indirect_pro_rata: childTotal * indirectPct };
+        if (!mountedRef.current) return;
+        const childIds = (subsRes.data || []).map((s) => s.child_corporation_id);
+        let childCorps: any[] = [];
+        let childAssets: any[] = [];
+        if (childIds.length > 0) {
+          const [cc, ca] = await Promise.all([
+            supabase.from("corporations").select("id, name, corporation_type").in("id", childIds),
+            supabase.from("corporate_vineyard_accounts").select("corporation_id, current_value").in("corporation_id", childIds),
+          ]);
+          if (!mountedRef.current) return;
+          childCorps = cc.data || [];
+          childAssets = ca.data || [];
+        }
+        const stakes = shareholdings.map((sh) => {
+          const corp = (corpsRes.data || []).find((c) => c.id === sh.corporation_id);
+          const totalAssets = (assetsRes.data || []).filter((a) => a.corporation_id === sh.corporation_id).reduce((sum, a) => sum + (Number(a.current_value) || 0), 0);
+          const proRata = totalAssets * (sh.ownership_percentage / 100);
+          const subs = (subsRes.data || []).filter((s) => s.parent_corporation_id === sh.corporation_id).map((s) => {
+            const child = childCorps.find((c: any) => c.id === s.child_corporation_id);
+            const childTotal = childAssets.filter((a: any) => a.corporation_id === s.child_corporation_id).reduce((sum: number, a: any) => sum + (Number(a.current_value) || 0), 0);
+            const indirectPct = (sh.ownership_percentage / 100) * (s.ownership_percentage / 100);
+            return { child_id: s.child_corporation_id, child_name: child?.name || "Unknown", child_type: child?.corporation_type || "other", parent_ownership_pct: s.ownership_percentage, child_total_assets: childTotal, indirect_pro_rata: childTotal * indirectPct };
+          });
+          return { corporation_id: sh.corporation_id, corporation_name: corp?.name || "Unknown", corporation_type: corp?.corporation_type || "other", ownership_percentage: sh.ownership_percentage, share_class: sh.share_class, role_title: sh.role_title, total_assets: totalAssets, pro_rata: proRata, subsidiaries: subs };
         });
-        return { corporation_id: sh.corporation_id, corporation_name: corp?.name || "Unknown", corporation_type: corp?.corporation_type || "other", ownership_percentage: sh.ownership_percentage, share_class: sh.share_class, role_title: sh.role_title, total_assets: totalAssets, pro_rata: proRata, subsidiaries: subs };
-      });
-      setCorporateStakes(stakes);
-    } else {
-      setCorporateStakes([]);
+        setCorporateStakes(stakes);
+      } else {
+        setCorporateStakes([]);
+      }
+    } finally {
+      // Also fixes M16: guarantee spinner clears even if a downstream branch throws.
+      if (mountedRef.current) setLoading(false);
     }
-    setLoading(false);
   }, [id]);
 
   const handleViewPortal = async () => {
