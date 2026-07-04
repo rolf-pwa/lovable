@@ -55,6 +55,7 @@ interface PortalData {
     drive_url: string | null;
     review_date: string | null;
   }>;
+  insurance_policies?: any[];
 }
 
 const ROLE_LABELS: Record<string, string> = {
