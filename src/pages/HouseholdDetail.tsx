@@ -110,6 +110,13 @@ const HouseholdDetail = () => {
   const [holdingTank, setHoldingTank] = useState<any[]>([]);
   const [insurancePolicies, setInsurancePolicies] = useState<any[]>([]);
 
+  // Guard against setState after unmount when fetchData reruns via mutation callbacks.
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
+
   const fetchData = useCallback(async () => {
     if (!id) return;
 
