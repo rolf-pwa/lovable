@@ -69,7 +69,6 @@ const topItems = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/contacts", label: "CRM", icon: Users },
   { to: "/inbox", label: "Inbox", icon: InboxIcon, inboxBadge: true },
-  { to: "/mail", label: "Mail", icon: Mail },
 ];
 
 const marketingItems = [

@@ -36,7 +36,8 @@ function stripName(addr: string) {
   return m ? { name: m[1].trim() || m[2], email: m[2] } : { name: addr, email: addr };
 }
 
-export default function Mail() {
+export default function Mail({ embedded = false }: { embedded?: boolean } = {}) {
+  const Wrapper: any = embedded ? (({ children }: any) => <>{children}</>) : AppLayout;
   const { data: gStatus } = useGoogleStatus();
   const [searchParams, setSearchParams] = useSearchParams();
   const qc = useQueryClient();
@@ -194,7 +195,7 @@ export default function Mail() {
 
   if (!gStatus?.connected) {
     return (
-      <AppLayout>
+      <Wrapper>
         <div className="max-w-lg mx-auto mt-20 text-center space-y-4">
           <MailIcon className="h-12 w-12 mx-auto text-amber-500" />
           <h1 className="text-2xl font-serif">Connect Google to use Mail</h1>
@@ -203,13 +204,13 @@ export default function Mail() {
             Modify + Labels scopes are required for the in-app mailbox.
           </p>
         </div>
-      </AppLayout>
+      </Wrapper>
     );
   }
 
   return (
-    <AppLayout>
-      <div className="flex h-[calc(100vh-8rem)] gap-4">
+    <Wrapper>
+      <div className={`flex ${embedded ? "h-[calc(100vh-14rem)]" : "h-[calc(100vh-8rem)]"} gap-4`}>
         {/* LEFT — labels + compose */}
         <div className="w-52 shrink-0 flex flex-col gap-2">
           <Button
@@ -456,6 +457,6 @@ export default function Mail() {
           </Card>
         </div>
       )}
-    </AppLayout>
+    </Wrapper>
   );
 }

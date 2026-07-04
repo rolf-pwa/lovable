@@ -14,13 +14,14 @@ import {
 import {
   Loader2, MessageSquare, Phone, RefreshCw, Eye, EyeOff,
   Inbox as InboxIcon, UserPlus, Link2, Send, AlertCircle, ChevronRight, ChevronDown,
-  Archive, ArchiveRestore, Trash2,
+  Archive, ArchiveRestore, Trash2, Mail as MailIcon,
 } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
+import Mail from "@/pages/Mail";
 
 interface QuoMessage {
   id: string;
@@ -349,6 +350,7 @@ export default function Inbox() {
               Unmatched ({unmatchedTimeline.filter((e) => !isArchived({ key: e.item.contact_id || `phone:${last10(e.item.direction === "outbound" ? e.item.to_number : e.item.from_number)}`, lastAt: e.at })).length})
             </TabsTrigger>
             <TabsTrigger value="archived">Archived ({archivedThreads.length})</TabsTrigger>
+            <TabsTrigger value="mail"><MailIcon className="h-3.5 w-3.5 mr-1.5" />Mail</TabsTrigger>
           </TabsList>
 
           <TabsContent value="all" className="mt-4">
@@ -371,6 +373,9 @@ export default function Inbox() {
           </TabsContent>
           <TabsContent value="archived" className="mt-4">
             <ThreadList threads={filterThreads("archived")} loading={loading} {...cardProps} archivedView />
+          </TabsContent>
+          <TabsContent value="mail" className="mt-4">
+            <Mail embedded />
           </TabsContent>
         </Tabs>
       </div>
