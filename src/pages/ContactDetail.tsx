@@ -188,6 +188,7 @@ const ContactDetail = () => {
     }>;
   }>>([]);
   const [holdingTankAccounts, setHoldingTankAccounts] = useState<any[]>([]);
+  const [insurancePolicies, setInsurancePolicies] = useState<any[]>([]);
 
   const { user } = useAuth();
   const [viewPortalLoading, setViewPortalLoading] = useState(false);
@@ -209,6 +210,9 @@ const ContactDetail = () => {
     setHoldingTankAccounts((holdingRes.data as any) || []);
     setVineyardAccounts((accountsRes.data as any) || []);
     setHarvestSnapshots((harvestRes.data as any) || []);
+
+    const { data: insData } = await supabase.from("insurance_policies" as any).select("*").eq("contact_id", id);
+    setInsurancePolicies((insData as any) || []);
 
     if (contactRes.data?.household_id) {
       const { data: hhMembers } = await supabase
@@ -1022,6 +1026,9 @@ const ContactDetail = () => {
                   const accounts = storehouses.filter((s) => s.storehouse_number === num);
                   const isPlaceholder = accounts.length === 0;
                   const storehouseName = STOREHOUSE_NAMES[num - 1];
+                  const shIds = accounts.map((a) => a.id);
+                  const coveragePolicies = insurancePolicies.filter((p) => shIds.includes(p.coverage_storehouse_id));
+                  const cashValuePolicies = insurancePolicies.filter((p) => shIds.includes(p.cash_value_storehouse_id));
                   const otherTargets = [
                     { label: "The Vineyard", key: "vineyard" },
                     ...[1, 2, 3, 4]
@@ -1029,8 +1036,8 @@ const ContactDetail = () => {
                       .map((n) => ({ label: STOREHOUSE_NAMES[n - 1], key: `storehouse-${n}` })),
                   ];
                   return (
+                    <div key={num} className="space-y-2">
                     <AssetContainer
-                      key={num}
                       title={storehouseName}
                       icon={
                         <span className={`flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-bold ${isPlaceholder ? "bg-muted text-muted-foreground" : "bg-sanctuary-bronze/20 text-sanctuary-bronze"}`}>
@@ -1104,6 +1111,31 @@ const ContactDetail = () => {
                         }
                       }}
                     />
+                    {(coveragePolicies.length > 0 || cashValuePolicies.length > 0) && (
+                      <div className="rounded-lg border border-accent/30 bg-accent/5 p-2 space-y-1">
+                        {coveragePolicies.map((p) => (
+                          <div key={`cov-${p.id}`} className="flex items-center justify-between px-2 py-1.5">
+                            <span className="text-xs text-foreground/80">
+                              🛡️ {p.carrier} — Coverage{p.policy_number ? ` #${p.policy_number}` : ""}
+                            </span>
+                            <span className="text-xs font-medium tabular-nums">
+                              ${(Number(p.coverage_amount) || 0).toLocaleString()}
+                            </span>
+                          </div>
+                        ))}
+                        {cashValuePolicies.map((p) => (
+                          <div key={`cv-${p.id}`} className="flex items-center justify-between px-2 py-1.5">
+                            <span className="text-xs text-foreground/80">
+                              🛡️ {p.carrier} — Cash Value{p.policy_number ? ` #${p.policy_number}` : ""}
+                            </span>
+                            <span className="text-xs font-medium tabular-nums">
+                              ${(Number(p.cash_value) || 0).toLocaleString()}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    </div>
                   );
                 })}
               </TabsContent>
