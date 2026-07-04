@@ -8,11 +8,21 @@ const GOOGLE_CLIENT_SECRET = Deno.env.get("GOOGLE_CLIENT_SECRET")!;
 const ASANA_ACCESS_TOKEN = Deno.env.get("ASANA_ACCESS_TOKEN");
 const ASANA_WORKSPACE_ID = Deno.env.get("ASANA_WORKSPACE_ID");
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-dump-secret",
-};
+const ALLOWED_ORIGINS = [
+  "https://prosperwise.lovable.app",
+  "https://app.prosperwise.ca",
+  "https://id-preview--339dfc8f-3e82-4b05-8a36-a9f66fc58449.lovable.app",
+];
+
+function getCorsHeaders(req: Request) {
+  const origin = req.headers.get("Origin") || "";
+  const allowed = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  return {
+    "Access-Control-Allow-Origin": allowed,
+    "Access-Control-Allow-Headers":
+      "authorization, x-client-info, apikey, content-type, x-dump-secret",
+  };
+}
 
 // ---------- Google token helper ----------
 async function getValidToken(sb: any, userId: string): Promise<string> {
