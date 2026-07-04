@@ -156,8 +156,9 @@ const HouseholdDetail = () => {
       setStorehouses(store || []);
       setHoldingTank(tank || []);
 
+      let corpIds: string[] = [];
       if (shareholders && shareholders.length > 0) {
-        const corpIds = [...new Set(shareholders.map((s: any) => s.corporation_id))];
+        corpIds = [...new Set(shareholders.map((s: any) => s.corporation_id))];
         const [{ data: corps }, { data: corpVineyard }] = await Promise.all([
           supabase.from("corporations").select("id, name, corporation_type, jurisdiction").in("id", corpIds),
           supabase.from("corporate_vineyard_accounts").select("*").in("corporation_id", corpIds),
@@ -173,7 +174,14 @@ const HouseholdDetail = () => {
         }));
         setCorporations(enrichedCorps);
       }
+
+      // Insurance policies for members + related corporations
+      const { data: ins } = await (supabase.from("insurance_policies" as any) as any)
+        .select("*")
+        .or(`contact_id.in.(${memberIds.join(",")})${corpIds.length ? `,corporation_id.in.(${corpIds.join(",")})` : ""}`);
+      setInsurancePolicies((ins as any[]) || []);
     }
+
 
     setLoading(false);
   }, [id]);
