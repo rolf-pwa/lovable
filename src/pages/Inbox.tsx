@@ -14,13 +14,14 @@ import {
 import {
   Loader2, MessageSquare, Phone, RefreshCw, Eye, EyeOff,
   Inbox as InboxIcon, UserPlus, Link2, Send, AlertCircle, ChevronRight, ChevronDown,
-  Archive, ArchiveRestore, Trash2,
+  Archive, ArchiveRestore, Trash2, Mail as MailIcon,
 } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
+import Mail from "@/pages/Mail";
 
 interface QuoMessage {
   id: string;
