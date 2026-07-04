@@ -450,7 +450,7 @@ const VfoPortal = () => {
                         <div>
                           <p className="text-sm font-medium text-foreground">{corp.name}</p>
                           <p className="text-xs text-muted-foreground">
-                            {TYPE_LABELS[corp.corporation_type] || corp.corporation_type}
+                            {CORP_TYPE_LABELS[corp.corporation_type] || corp.corporation_type}
                             {corp.jurisdiction ? ` · ${corp.jurisdiction}` : ""}
                           </p>
                         </div>
