@@ -476,6 +476,14 @@ const ContactDetail = () => {
     }
   };
 
+  // Memoize props passed to InsurancePanel. MUST be declared before any early returns
+  // so hook order stays stable across renders.
+  const insuranceScope = useMemo(() => ({ kind: "contact" as const, contactId: id! }), [id]);
+  const insuranceStorehouses = useMemo(
+    () => storehouses.map((s) => ({ id: s.id, storehouse_number: s.storehouse_number, label: s.label })),
+    [storehouses],
+  );
+
   if (loading) {
     return (<AppLayout><p className="text-muted-foreground">Loading...</p></AppLayout>);
   }
@@ -505,12 +513,6 @@ const ContactDetail = () => {
     { num: 5, label: "Sovereign" },
   ];
 
-  // Memoize props passed to InsurancePanel so it doesn't re-render on every parent render.
-  const insuranceScope = useMemo(() => ({ kind: "contact" as const, contactId: id! }), [id]);
-  const insuranceStorehouses = useMemo(
-    () => storehouses.map((s) => ({ id: s.id, storehouse_number: s.storehouse_number, label: s.label })),
-    [storehouses],
-  );
 
   return (
     <AppLayout>
