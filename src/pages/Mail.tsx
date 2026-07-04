@@ -36,7 +36,8 @@ function stripName(addr: string) {
   return m ? { name: m[1].trim() || m[2], email: m[2] } : { name: addr, email: addr };
 }
 
-export default function Mail() {
+export default function Mail({ embedded = false }: { embedded?: boolean } = {}) {
+  const Wrapper: any = embedded ? (({ children }: any) => <>{children}</>) : AppLayout;
   const { data: gStatus } = useGoogleStatus();
   const [searchParams, setSearchParams] = useSearchParams();
   const qc = useQueryClient();
