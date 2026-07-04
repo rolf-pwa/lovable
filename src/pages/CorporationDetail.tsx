@@ -178,8 +178,16 @@ const CorporationDetail = () => {
             : null,
         }))
       );
+
+      // Load storehouses owned by shareholder contacts (available for policy routing)
+      const { data: shStores } = await supabase
+        .from("storehouses")
+        .select("id, storehouse_number, label, contact_id")
+        .in("contact_id", contactIds);
+      setLinkedStorehouses(shStores || []);
     } else {
       setShareholders([]);
+      setLinkedStorehouses([]);
     }
 
     // Fetch corp-to-corp links (this corp as parent = subsidiaries, as child = parent corps)
