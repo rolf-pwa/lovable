@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import {
   Loader2, Crown, ShieldCheck, Calendar, CheckSquare, Landmark, FolderLock,
   ClipboardList, MessageCircle, ScrollText, Megaphone, Home, Users, ChevronLeft,
-  ChevronDown, ChevronRight, ArrowRight, Building2,
+  ChevronDown, ChevronRight, ArrowRight, Building2, Briefcase,
 } from "lucide-react";
 import { PortalTerritory } from "@/components/portal/PortalTerritory";
 import { PortalHoldingTank } from "@/components/portal/PortalHoldingTank";
@@ -24,8 +24,6 @@ import { PortalGeorgiaChat } from "@/components/portal/PortalGeorgiaChat";
 import { PortalYourTeam } from "@/components/portal/PortalYourTeam";
 import { PortalProfessionals } from "@/components/portal/PortalProfessionals";
 import { PortalDynamicLinks } from "@/components/portal/PortalDynamicLinks";
-
-import { Briefcase } from "lucide-react";
 import prosperwiseLogo from "@/assets/prosperwise-logo.png";
 
 const CORP_TYPE_LABELS: Record<string, string> = { opco: "Operating Co", holdco: "Holding Co", trust: "Trust", partnership: "Partnership", other: "Entity" };
