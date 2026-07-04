@@ -38,9 +38,17 @@ function getCorsHeaders(req: Request) {
   return {
     "Access-Control-Allow-Origin": allowed,
     "Access-Control-Allow-Headers":
-      "authorization, x-client-info, apikey, content-type, x-internal-call",
+      "authorization, x-client-info, apikey, content-type, x-internal-secret",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
   };
+}
+
+// Timing-safe comparison for shared secrets (fixed-time regardless of match position).
+function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
 }
 
 function base64UrlEncode(input: string): string {
