@@ -374,6 +374,9 @@ export default function Inbox() {
           <TabsContent value="archived" className="mt-4">
             <ThreadList threads={filterThreads("archived")} loading={loading} {...cardProps} archivedView />
           </TabsContent>
+          <TabsContent value="mail" className="mt-4">
+            <Mail embedded />
+          </TabsContent>
         </Tabs>
       </div>
 
