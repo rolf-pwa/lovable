@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { PageBreadcrumbs } from "@/components/PageBreadcrumbs";
 import { InlineEdit } from "@/components/InlineEdit";
+import { InsurancePanel } from "@/components/InsurancePanel";
 import {
   Dialog,
   DialogContent,
@@ -97,6 +98,7 @@ const CorporationDetail = () => {
   const [subsidiaries, setSubsidiaries] = useState<CorpLink[]>([]);
   const [parentCorps, setParentCorps] = useState<CorpLink[]>([]);
   const [loading, setLoading] = useState(true);
+  const [linkedStorehouses, setLinkedStorehouses] = useState<any[]>([]);
 
   // Add shareholder dialog
   const [showAddShareholder, setShowAddShareholder] = useState(false);
@@ -176,8 +178,16 @@ const CorporationDetail = () => {
             : null,
         }))
       );
+
+      // Load storehouses owned by shareholder contacts (available for policy routing)
+      const { data: shStores } = await supabase
+        .from("storehouses")
+        .select("id, storehouse_number, label, contact_id")
+        .in("contact_id", contactIds);
+      setLinkedStorehouses(shStores || []);
     } else {
       setShareholders([]);
+      setLinkedStorehouses([]);
     }
 
     // Fetch corp-to-corp links (this corp as parent = subsidiaries, as child = parent corps)
@@ -566,7 +576,16 @@ const CorporationDetail = () => {
               )}
             </CardContent>
           </Card>
+
+          {/* Corporate Insurance */}
+          <InsurancePanel
+            scope={{ kind: "corporation", corporationId: id! }}
+            storehouses={linkedStorehouses.map((s) => ({
+              id: s.id, storehouse_number: s.storehouse_number, label: s.label,
+            }))}
+          />
         </div>
+
 
         {/* Details card */}
         <Card>

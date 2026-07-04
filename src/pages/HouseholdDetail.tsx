@@ -108,6 +108,7 @@ const HouseholdDetail = () => {
   const [storehouses, setStorehouses] = useState<any[]>([]);
   const [corporations, setCorporations] = useState<any[]>([]);
   const [holdingTank, setHoldingTank] = useState<any[]>([]);
+  const [insurancePolicies, setInsurancePolicies] = useState<any[]>([]);
 
   const fetchData = useCallback(async () => {
     if (!id) return;
@@ -155,8 +156,9 @@ const HouseholdDetail = () => {
       setStorehouses(store || []);
       setHoldingTank(tank || []);
 
+      let corpIds: string[] = [];
       if (shareholders && shareholders.length > 0) {
-        const corpIds = [...new Set(shareholders.map((s: any) => s.corporation_id))];
+        corpIds = [...new Set(shareholders.map((s: any) => s.corporation_id))];
         const [{ data: corps }, { data: corpVineyard }] = await Promise.all([
           supabase.from("corporations").select("id, name, corporation_type, jurisdiction").in("id", corpIds),
           supabase.from("corporate_vineyard_accounts").select("*").in("corporation_id", corpIds),
@@ -172,7 +174,14 @@ const HouseholdDetail = () => {
         }));
         setCorporations(enrichedCorps);
       }
+
+      // Insurance policies for members + related corporations
+      const { data: ins } = await (supabase.from("insurance_policies" as any) as any)
+        .select("*")
+        .or(`contact_id.in.(${memberIds.join(",")})${corpIds.length ? `,corporation_id.in.(${corpIds.join(",")})` : ""}`);
+      setInsurancePolicies((ins as any[]) || []);
     }
+
 
     setLoading(false);
   }, [id]);
@@ -206,10 +215,20 @@ const HouseholdDetail = () => {
     (sum, a) => sum + (Number(a.current_value) || 0),
     0
   );
-  const totalStorehouses = storehouses.reduce(
-    (sum, s) => sum + (Number(s.current_value) || 0),
+  const insuranceForStorehouse = (storehouseId: string) =>
+    insurancePolicies.reduce((sum, p) => {
+      let add = 0;
+      if (p.coverage_storehouse_id === storehouseId) add += Number(p.coverage_amount) || 0;
+      if (p.cash_value_storehouse_id === storehouseId) add += Number(p.cash_value) || 0;
+      return sum + add;
+    }, 0);
+  const totalInsuranceInStorehouses = storehouses.reduce(
+    (sum, s) => sum + insuranceForStorehouse(s.id),
     0
   );
+  const totalStorehouses =
+    storehouses.reduce((sum, s) => sum + (Number(s.current_value) || 0), 0) +
+    totalInsuranceInStorehouses;
   const totalCorpAssets = corporations.reduce(
     (sum, c) => sum + (c.total_assets || 0),
     0
@@ -806,7 +825,8 @@ const HouseholdDetail = () => {
               <CardContent className="space-y-4">
                 {STOREHOUSE_CONFIG.map(({ num, name, icon: Icon }) => {
                   const accounts = storehouses.filter((s) => s.storehouse_number === num);
-                  const total = accounts.reduce((sum, s) => sum + (Number(s.current_value) || 0), 0);
+                  const insuranceHere = accounts.reduce((sum, s) => sum + insuranceForStorehouse(s.id), 0);
+                  const total = accounts.reduce((sum, s) => sum + (Number(s.current_value) || 0), 0) + insuranceHere;
                   const targetTotal = accounts.reduce((sum, s) => sum + (Number(s.target_value) || 0), 0);
                   const pct = targetTotal > 0 ? Math.min((total / targetTotal) * 100, 100) : 0;
 
