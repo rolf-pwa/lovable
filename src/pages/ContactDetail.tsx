@@ -188,6 +188,7 @@ const ContactDetail = () => {
     }>;
   }>>([]);
   const [holdingTankAccounts, setHoldingTankAccounts] = useState<any[]>([]);
+  const [insurancePolicies, setInsurancePolicies] = useState<any[]>([]);
 
   const { user } = useAuth();
   const [viewPortalLoading, setViewPortalLoading] = useState(false);
