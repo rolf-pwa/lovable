@@ -211,6 +211,9 @@ const ContactDetail = () => {
     setVineyardAccounts((accountsRes.data as any) || []);
     setHarvestSnapshots((harvestRes.data as any) || []);
 
+    const { data: insData } = await supabase.from("insurance_policies" as any).select("*").eq("contact_id", id);
+    setInsurancePolicies((insData as any) || []);
+
     if (contactRes.data?.household_id) {
       const { data: hhMembers } = await supabase
         .from("contacts")
