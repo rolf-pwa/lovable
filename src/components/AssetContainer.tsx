@@ -171,6 +171,10 @@ export function AssetContainer({
           </>
         )}
 
+        {footerContent}
+
+
+
 
         {/* Add form / button */}
         {showAddForm && addFormContent}
