@@ -320,7 +320,11 @@ export function PortalTerritory({ vineyardAccounts, storehouses, contact, family
             <div className="ml-auto flex items-center gap-3">
               <div className="text-right">
                 <p className="text-2xl font-bold text-accent">
-                  ${visibleStorehouses.reduce((sum: number, s: any) => sum + (Number(s.current_value) || 0), 0).toLocaleString()}
+                  ${(visibleStorehouses.reduce((sum: number, s: any) => sum + (Number(s.current_value) || 0), 0)
+                    + insurancePolicies
+                        .filter((p: any) => visibleStorehouses.some((s: any) => s.id === p.cash_value_storehouse_id))
+                        .reduce((sum: number, p: any) => sum + (Number(p.cash_value) || 0), 0)
+                  ).toLocaleString()}
                 </p>
                 <p className="text-xs text-muted-foreground">Total Value</p>
               </div>
