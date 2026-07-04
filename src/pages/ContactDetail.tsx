@@ -202,13 +202,16 @@ const ContactDetail = () => {
 
   const fetchData = useCallback(async () => {
     if (!id) return;
-    const [contactRes, storehouseRes, holdingRes, , accountsRes, harvestRes] = await Promise.all([
+    // Batch 1 — all queries that only depend on `id` fire in parallel.
+    const [contactRes, storehouseRes, holdingRes, , accountsRes, harvestRes, insRes, shareholdingsRes] = await Promise.all([
       supabase.from("contacts").select("*").eq("id", id).maybeSingle(),
       supabase.from("storehouses").select("*").eq("contact_id", id).order("storehouse_number"),
       supabase.from("holding_tank").select("*").eq("contact_id", id).neq("status", "moved").order("created_at"),
       supabase.from("family_relationships").select("id, member_contact_id, relationship_label, contact:contacts!family_relationships_member_contact_id_fkey(id, first_name, last_name)").eq("contact_id", id),
       supabase.from("vineyard_accounts" as any).select("*").eq("contact_id", id).order("created_at"),
       supabase.from("account_harvest_snapshots").select("*").eq("contact_id", id).order("snapshot_date", { ascending: false }),
+      supabase.from("insurance_policies" as any).select("*").eq("contact_id", id),
+      supabase.from("shareholders").select("corporation_id, ownership_percentage, share_class, role_title").eq("contact_id", id).eq("is_active", true),
     ]);
     if (!mountedRef.current) return;
     setContact(contactRes.data);
@@ -216,52 +219,45 @@ const ContactDetail = () => {
     setHoldingTankAccounts((holdingRes.data as any) || []);
     setVineyardAccounts((accountsRes.data as any) || []);
     setHarvestSnapshots((harvestRes.data as any) || []);
+    setInsurancePolicies((insRes.data as any) || []);
 
-    const { data: insData } = await supabase.from("insurance_policies" as any).select("*").eq("contact_id", id);
+    // Batch 2 — all queries that depend on contactRes fields fire in parallel.
+    const contactData = contactRes.data;
+    const names = [contactData?.lawyer_name, contactData?.accountant_name, contactData?.executor_name, contactData?.poa_name].filter(Boolean) as string[];
+    const [hhMembersRes, famRes, hhRes, profRes] = await Promise.all([
+      contactData?.household_id
+        ? supabase.from("contacts").select("id, first_name, last_name, family_role").eq("household_id", contactData.household_id).neq("id", id).order("first_name")
+        : Promise.resolve({ data: [] as any[] }),
+      contactData?.family_id
+        ? supabase.from("families").select("name").eq("id", contactData.family_id).maybeSingle()
+        : Promise.resolve({ data: null as any }),
+      contactData?.household_id
+        ? supabase.from("households").select("label, vault_root_folder_id").eq("id", contactData.household_id).maybeSingle()
+        : Promise.resolve({ data: null as any }),
+      names.length > 0
+        ? supabase.from("contacts").select("id, first_name, last_name, full_name").in("full_name", names)
+        : Promise.resolve({ data: [] as any[] }),
+    ]);
     if (!mountedRef.current) return;
-    setInsurancePolicies((insData as any) || []);
-
-    if (contactRes.data?.household_id) {
-      const { data: hhMembers } = await supabase
-        .from("contacts")
-        .select("id, first_name, last_name, family_role")
-        .eq("household_id", contactRes.data.household_id)
-        .neq("id", id)
-        .order("first_name");
-      if (!mountedRef.current) return;
-      setHouseholdMembers((hhMembers as any) || []);
-    } else {
-      setHouseholdMembers([]);
-    }
-
-    if (contactRes.data?.family_id) {
-      const { data: fam } = await supabase.from("families").select("name").eq("id", contactRes.data.family_id).maybeSingle();
-      if (!mountedRef.current) return;
-      setFamilyName(fam?.name || null);
-    }
-    if (contactRes.data?.household_id) {
-      const { data: hh } = await supabase.from("households").select("label, vault_root_folder_id").eq("id", contactRes.data.household_id).maybeSingle();
-      if (!mountedRef.current) return;
-      setHouseholdLabel(hh?.label || null);
-      setHouseholdVaultRootId((hh as any)?.vault_root_folder_id || null);
-    }
-
-    const names = [contactRes.data?.lawyer_name, contactRes.data?.accountant_name, contactRes.data?.executor_name, contactRes.data?.poa_name].filter(Boolean) as string[];
+    setHouseholdMembers((hhMembersRes.data as any) || []);
+    setFamilyName((famRes.data as any)?.name || null);
+    setHouseholdLabel((hhRes.data as any)?.label || null);
+    setHouseholdVaultRootId((hhRes.data as any)?.vault_root_folder_id || null);
     if (names.length > 0) {
-      const { data: matchedContacts } = await supabase.from("contacts").select("id, first_name, last_name, full_name").in("full_name", names);
-      if (!mountedRef.current) return;
+      const matchedContacts = (profRes.data as any[]) || [];
       const map: Record<string, { id: string; full_name: string } | null> = {};
       names.forEach((name) => {
-        const match = matchedContacts?.find((c) => c.full_name === name) || null;
+        const match = matchedContacts.find((c) => c.full_name === name) || null;
         map[name] = match ? { id: match.id, full_name: match.full_name } : null;
       });
       setProfessionalContacts(map);
     }
 
+
     try {
-      const { data: shareholdings } = await supabase.from("shareholders").select("corporation_id, ownership_percentage, share_class, role_title").eq("contact_id", id).eq("is_active", true);
-      if (!mountedRef.current) return;
-      if (shareholdings && shareholdings.length > 0) {
+      const shareholdings = (shareholdingsRes.data as any[]) || [];
+
+      if (shareholdings.length > 0) {
         const corpIds = shareholdings.map((s) => s.corporation_id);
         const [corpsRes, assetsRes, subsRes] = await Promise.all([
           supabase.from("corporations").select("id, name, corporation_type").in("id", corpIds),
