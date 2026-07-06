@@ -235,13 +235,24 @@ serve(async (req) => {
           await sendAutoReply(admin, fromNum);
         }
       } else {
-        // delivered → update status
+        // delivered → upsert outbound (captures messages sent from Quo mobile/desktop app too)
         if (data?.id) {
-          await admin.from("quo_messages")
-            .update({ status: "delivered" })
-            .eq("quo_message_id", data.id);
+          await admin.from("quo_messages").upsert({
+            quo_message_id: data.id,
+            contact_id: contactId,
+            direction: "outbound",
+            from_number: fromNum,
+            to_number: toNum,
+            body: data?.body || data?.text || "",
+            status: "delivered",
+            media_urls: data?.media || [],
+            quo_user_id: data?.userId || null,
+            portal_visible: true,
+            occurred_at: data?.createdAt || new Date().toISOString(),
+          }, { onConflict: "quo_message_id" });
         }
       }
+
     }
 
     // ---- Calls ----
