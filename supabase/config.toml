@@ -81,6 +81,9 @@ verify_jwt = false
 [functions.daily-dump-export]
 verify_jwt = false
 
+[functions.portal-sms]
+verify_jwt = false
+
 
 
 
