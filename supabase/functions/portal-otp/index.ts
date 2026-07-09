@@ -325,7 +325,7 @@ serve(async (req) => {
       const sendTasks: Promise<unknown>[] = [];
       let resendOk = false;
 
-      if (useResend && RESEND_API_KEY && LOVABLE_API_KEY) {
+      if (useResend && RESEND_API_KEY) {
         sendTasks.push((async () => {
           try {
             const subject = `Your ProsperWise sign-in code: ${otp}`;
@@ -337,12 +337,11 @@ serve(async (req) => {
               <p style="margin-top:24px">Thank you,<br/>ProsperWise Team</p>
             </div>`;
             const text = `Hi ${contact.first_name || "there"},\n\nYour one-time sign-in code is:\n\n${otp}\n\nThis code expires in 10 minutes. If you didn't request it, you can ignore this email.\n\nThank you,\nProsperWise Team`;
-            const resendRes = await fetch("https://connector-gateway.lovable.dev/resend/emails", {
+            const resendRes = await fetch("https://api.resend.com/emails", {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
-                Authorization: `Bearer ${LOVABLE_API_KEY}`,
-                "X-Connection-Api-Key": RESEND_API_KEY,
+                Authorization: `Bearer ${RESEND_API_KEY}`,
               },
               body: JSON.stringify({
                 from: OTP_FROM_ADDRESS,
@@ -360,11 +359,11 @@ serve(async (req) => {
               console.log(`[OTP] Resend delivered to ${cleanEmail}`);
             }
           } catch (rErr) {
-            console.error("[OTP] Error calling Resend gateway:", rErr);
+            console.error("[OTP] Error calling Resend:", rErr);
           }
         })());
       } else if (useResend) {
-        console.warn(`[OTP] Resend secrets missing! RESEND_API_KEY=${!!RESEND_API_KEY}, LOVABLE_API_KEY=${!!LOVABLE_API_KEY}`);
+        console.warn(`[OTP] RESEND_API_KEY missing`);
       }
 
       if (useWix && WIX_SITE_URL && WIX_OTP_SECRET) {
