@@ -23,7 +23,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { Grape, ScrollText, Clock, Calendar, FolderOpen, CheckSquare, ShieldCheck, ExternalLink, FileBarChart, Mail, MailX, Loader2, Home, Users, ChevronLeft, ChevronDown, ChevronRight, ArrowRight, Landmark, MessageCircle, Video, MapPin, ClipboardList, LogOut, Megaphone, Building2, FolderLock } from "lucide-react";
 import prosperwiseLogo from "@/assets/prosperwise-logo.png";
-import { computeAum, insuranceCashForStorehouses, sumValues, isAumStorehouse } from "@/lib/portalAum";
+import { insuranceCashForStorehouses, sumValues, isAumStorehouse } from "@/lib/portalAum";
 
 interface PortalData {
   portal_token?: string;
