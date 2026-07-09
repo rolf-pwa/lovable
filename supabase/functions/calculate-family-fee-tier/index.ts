@@ -103,16 +103,23 @@ Deno.serve(async (req) => {
 
     const contactIds = contacts.map((c: any) => c.id);
 
-    // Sum all vineyard account values
-    const { data: accounts } = await supabase
-      .from("vineyard_accounts")
-      .select("current_value")
-      .in("contact_id", contactIds);
+    const [{ data: accounts }, { data: storehouses }, { data: insurancePolicies }] = await Promise.all([
+      supabase.from("vineyard_accounts").select("current_value").in("contact_id", contactIds),
+      supabase.from("storehouses").select("current_value, asset_type").in("contact_id", contactIds),
+      supabase.from("insurance_policies").select("cash_value").in("contact_id", contactIds),
+    ]);
 
-    const totalAssets = (accounts || []).reduce(
+    const vineyardTotal = (accounts || []).reduce(
       (sum: number, acc: any) => sum + (Number(acc.current_value) || 0),
       0
     );
+    const storehouseTotal = (storehouses || [])
+      .filter((s: any) => s.asset_type !== 'Primary Residence & Protected Legacy Accounts')
+      .reduce((sum: number, s: any) => sum + (Number(s.current_value) || 0), 0);
+    const insuranceCashTotal = (insurancePolicies || [])
+      .reduce((sum: number, p: any) => sum + (Number(p.cash_value) || 0), 0);
+
+    const totalAssets = vineyardTotal + storehouseTotal + insuranceCashTotal;
 
     const { tier, discount_pct, annual_savings } = calculateTier(totalAssets);
 
