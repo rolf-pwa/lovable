@@ -635,7 +635,7 @@ const Portal = () => {
       households.forEach((hh: any) => {
         (hh.members || []).forEach((m: any) => {
           (m.vineyard_accounts || []).filter((a: any) => a.visibility_scope === "family_shared").forEach((a: any) => allVineyard.push(a));
-          (m.storehouses || []).filter((a: any) => a.visibility_scope === "family_shared").forEach((a: any) => allStorehouses.push(a));
+          (m.storehouses || []).filter((a: any) => a.visibility_scope === "family_shared" && a.asset_type !== 'Primary Residence & Protected Legacy Accounts').forEach((a: any) => allStorehouses.push(a));
         });
       });
     } else if (level === "household") {
@@ -647,13 +647,13 @@ const Portal = () => {
       const selfInMembers = members.some((m: any) => m.id === contact.id);
       if (!selfInMembers) {
         const selfVineyard = vineyard_accounts.filter((a: any) => a.visibility_scope === "household_shared" || a.visibility_scope === "family_shared");
-        const selfStorehouses = storehouses.filter((a: any) => a.visibility_scope === "household_shared" || a.visibility_scope === "family_shared");
+        const selfStorehouses = storehouses.filter((a: any) => (a.visibility_scope === "household_shared" || a.visibility_scope === "family_shared") && a.asset_type !== 'Primary Residence & Protected Legacy Accounts');
         allVineyard.push(...selfVineyard);
         allStorehouses.push(...selfStorehouses);
       }
       members.forEach((m: any) => {
         (m.vineyard_accounts || []).filter((a: any) => a.visibility_scope === "household_shared" || a.visibility_scope === "family_shared").forEach((a: any) => allVineyard.push(a));
-        (m.storehouses || []).filter((a: any) => a.visibility_scope === "household_shared" || a.visibility_scope === "family_shared").forEach((a: any) => allStorehouses.push(a));
+        (m.storehouses || []).filter((a: any) => (a.visibility_scope === "household_shared" || a.visibility_scope === "family_shared") && a.asset_type !== 'Primary Residence & Protected Legacy Accounts').forEach((a: any) => allStorehouses.push(a));
       });
     }
 
