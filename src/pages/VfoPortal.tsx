@@ -195,17 +195,23 @@ const VfoPortal = () => {
         ? (hierarchy?.households?.find((h: any) => h.id === householdId)?.members || [])
         : (hierarchy?.members || []);
       const selfInMembers = members.some((m: any) => m.id === contact.id);
-      if (!selfInMembers) {
-        vineyard_accounts.filter((a: any) => a.visibility_scope === "household_shared" || a.visibility_scope === "family_shared").forEach((a: any) => v.push(a));
-        storehouses.filter((a: any) => (a.visibility_scope === "household_shared" || a.visibility_scope === "family_shared") && a.asset_type !== 'Primary Residence & Protected Legacy Accounts').forEach((a: any) => s.push(a));
+      // HoF viewing a sibling household: restrict to family_shared only.
+      const isHoFSibling = contact.family_role === "head_of_family" && !selfInMembers;
+      const allowed = isHoFSibling
+        ? new Set(["family_shared"])
+        : new Set(["household_shared", "family_shared"]);
+      if (!selfInMembers && !isHoFSibling) {
+        vineyard_accounts.filter((a: any) => allowed.has(a.visibility_scope)).forEach((a: any) => v.push(a));
+        storehouses.filter((a: any) => allowed.has(a.visibility_scope) && a.asset_type !== 'Primary Residence & Protected Legacy Accounts').forEach((a: any) => s.push(a));
       }
       members.forEach((m: any) => {
-        (m.vineyard_accounts || []).filter((a: any) => a.visibility_scope === "household_shared" || a.visibility_scope === "family_shared").forEach((a: any) => v.push(a));
-        (m.storehouses || []).filter((a: any) => (a.visibility_scope === "household_shared" || a.visibility_scope === "family_shared") && a.asset_type !== 'Primary Residence & Protected Legacy Accounts').forEach((a: any) => s.push(a));
+        (m.vineyard_accounts || []).filter((a: any) => allowed.has(a.visibility_scope)).forEach((a: any) => v.push(a));
+        (m.storehouses || []).filter((a: any) => allowed.has(a.visibility_scope) && a.asset_type !== 'Primary Residence & Protected Legacy Accounts').forEach((a: any) => s.push(a));
       });
     }
     return { vineyard: v, storehouses: s };
   };
+
 
   // ── Header subtitle ──
   const subtitle = (() => {
@@ -301,11 +307,25 @@ const VfoPortal = () => {
           <div className="grid gap-4 sm:grid-cols-2">
             {households.map((hh: any) => {
               const members = hh.members || [];
-              const hhV = members.flatMap((m: any) => m.vineyard_accounts || []);
-              const hhS = members.flatMap((m: any) => (m.storehouses || []).filter(isAumStorehouse));
-              const hhT = (family_holding_tank || []).filter((t: any) => members.some((m: any) => m.id === t.contact_id));
+              const isOwnHousehold = members.some((m: any) => m.id === contact.id);
+              const isHoF = contact.family_role === "head_of_family";
+              const restrictToFamilyShared = isHoF && !isOwnHousehold;
+              const scopeOk = (a: any) =>
+                restrictToFamilyShared ? a?.visibility_scope === "family_shared" : true;
+
+              const hhV = members.flatMap((m: any) => (m.vineyard_accounts || []).filter(scopeOk));
+              const hhS = members.flatMap((m: any) =>
+                (m.storehouses || []).filter((a: any) => isAumStorehouse(a) && scopeOk(a))
+              );
+              const hhT = restrictToFamilyShared
+                ? []
+                : (family_holding_tank || []).filter((t: any) => members.some((m: any) => m.id === t.contact_id));
+              const memberIds = new Set(members.map((m: any) => m.id));
+              const hhInsurance = restrictToFamilyShared
+                ? []
+                : (insurance_policies || []).filter((p: any) => memberIds.has(p.contact_id));
               const hhTotal = sumValues(hhV) + sumValues(hhS) + sumValues(hhT)
-                + insuranceCashForStorehouses(insurance_policies, hhS);
+                + insuranceCashForStorehouses(hhInsurance, hhS);
               return (
                 <button
                   key={hh.id}
@@ -325,7 +345,12 @@ const VfoPortal = () => {
                       <Users className="h-3.5 w-3.5" />
                       {(hh.members || []).length} member{(hh.members || []).length !== 1 ? "s" : ""}
                     </span>
-                    <span className="font-serif text-foreground">{fmt(hhTotal)}</span>
+                    <span className="font-serif text-foreground">
+                      {fmt(hhTotal)}
+                      {restrictToFamilyShared && (
+                        <span className="ml-1 text-[10px] font-normal text-muted-foreground">shared</span>
+                      )}
+                    </span>
                   </div>
                   <div className="mt-3 flex flex-wrap gap-1">
                     {(hh.members || []).slice(0, 5).map((m: any) => (
@@ -346,6 +371,30 @@ const VfoPortal = () => {
         </div>
 
         <aside className="space-y-4">
+          {(() => {
+            // Family AUM rolls up ALL scopes across every household — matches /portal & /contacts.
+            const allMembers = households.flatMap((hh: any) => hh.members || []);
+            const allV = allMembers.flatMap((m: any) => m.vineyard_accounts || []);
+            const allS = allMembers.flatMap((m: any) => (m.storehouses || []).filter(isAumStorehouse));
+            const familyAUM = sumValues(allV) + sumValues(allS)
+              + sumValues(family_holding_tank)
+              + insuranceCashForStorehouses(insurance_policies || [], allS);
+            return (
+              <Card className="border-amber-500/20 bg-gradient-to-b from-amber-500/5 to-transparent">
+                <CardContent className="p-5 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Crown className="h-4 w-4 text-amber-500" />
+                    <h3 className="text-[10px] uppercase tracking-wider text-muted-foreground">Family AUM</h3>
+                  </div>
+                  <p className="font-serif text-2xl text-amber-500">{fmt(familyAUM)}</p>
+                  <p className="text-[11px] text-muted-foreground leading-relaxed pt-2 border-t border-amber-500/10">
+                    Aggregate across {households.length} household{households.length !== 1 ? "s" : ""}. Individual account details remain private to each household.
+                  </p>
+                </CardContent>
+              </Card>
+            );
+          })()}
+
           {family_holding_tank.length > 0 && <PortalHoldingTank accounts={family_holding_tank} />}
           <PortalTerritory
             vineyardAccounts={fa.vineyard}
@@ -370,11 +419,19 @@ const VfoPortal = () => {
     const members = currentHousehold?.members || hierarchy?.members || [];
     const hhLabel = currentHousehold?.label || household?.label || "Household";
     const hhAssets = aggregateAssetsAtLevel("household", drilldown.householdId);
+    const viewingOwnHousehold = members.some((m: any) => m.id === contact.id);
+    const isHoFSibling = contact.family_role === "head_of_family" && !viewingOwnHousehold;
+    const allowedScopes = isHoFSibling
+      ? new Set(["family_shared"])
+      : new Set(["household_shared", "family_shared"]);
 
-    const orderedMembers = [
-      { ...contact, _isSelf: true },
-      ...members.filter((m: any) => m.id !== contact.id).map((m: any) => ({ ...m, _isSelf: false })),
-    ].sort((a: any, b: any) => {
+    const orderedMembers = (isHoFSibling
+      ? members.map((m: any) => ({ ...m, _isSelf: false }))
+      : [
+          { ...contact, _isSelf: true },
+          ...members.filter((m: any) => m.id !== contact.id).map((m: any) => ({ ...m, _isSelf: false })),
+        ]
+    ).sort((a: any, b: any) => {
       const order: Record<string, number> = { head_of_family: 0, head_of_household: 1, spouse: 2, beneficiary: 3, minor: 4 };
       return (order[a.family_role] ?? 4) - (order[b.family_role] ?? 4);
     });
@@ -389,7 +446,10 @@ const VfoPortal = () => {
               </div>
               <div>
                 <h2 className="font-serif text-lg text-foreground">{hhLabel} Household</h2>
-                <p className="text-xs text-muted-foreground">{orderedMembers.length} member{orderedMembers.length !== 1 ? "s" : ""}</p>
+                <p className="text-xs text-muted-foreground">
+                  {orderedMembers.length} member{orderedMembers.length !== 1 ? "s" : ""}
+                  {isHoFSibling && " · Family-shared view"}
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -397,14 +457,26 @@ const VfoPortal = () => {
           <div className="grid gap-3">
             {orderedMembers.map((m: any) => {
               const isSelf = m._isSelf;
-              const mVineyard = isSelf ? vineyard_accounts : (m.vineyard_accounts || []);
-              const mStorehouses = isSelf ? storehouses : (m.storehouses || []);
-              const mStoreAum = mStorehouses.filter(isAumStorehouse);
-              const mTank = ((isSelf ? (holding_tank || []) : []) as any[])
-                .concat((household_holding_tank || []).filter((t: any) => t.contact_id === m.id));
+              const mVineyardRaw = isSelf ? vineyard_accounts : (m.vineyard_accounts || []);
+              const mStorehousesRaw = isSelf ? storehouses : (m.storehouses || []);
+              const mVineyard = isHoFSibling
+                ? mVineyardRaw.filter((a: any) => allowedScopes.has(a.visibility_scope))
+                : mVineyardRaw;
+              const mStoreAum = (isHoFSibling
+                ? mStorehousesRaw.filter((a: any) => allowedScopes.has(a.visibility_scope))
+                : mStorehousesRaw
+              ).filter(isAumStorehouse);
+              const mTank = isHoFSibling
+                ? []
+                : ((isSelf ? (holding_tank || []) : []) as any[])
+                    .concat((household_holding_tank || []).filter((t: any) => t.contact_id === m.id));
               const mTankDedup = Array.from(new Map(mTank.map((t: any) => [t.id, t])).values());
+              const mInsurance = isHoFSibling
+                ? []
+                : insurance_policies.filter((p: any) => p.contact_id === m.id);
               const mTotal = sumValues(mVineyard) + sumValues(mStoreAum) + sumValues(mTankDedup)
-                + insuranceCashForStorehouses(insurance_policies.filter((p: any) => p.contact_id === m.id), mStoreAum);
+                + insuranceCashForStorehouses(mInsurance, mStoreAum);
+
               return (
                 <button
                   key={m.id}
@@ -510,12 +582,30 @@ const VfoPortal = () => {
   // ── Individual View ──
   const renderIndividualView = () => {
     const isSelf = !currentMember;
-    const ind = isSelf
-      ? { vineyardAccounts: vineyard_accounts, memberStorehouses: storehouses, name: `${contact.first_name || ""} ${contact.last_name || ""}`.trim() }
-      : { vineyardAccounts: currentMember.vineyard_accounts || [], memberStorehouses: currentMember.storehouses || [], name: `${currentMember.first_name || ""} ${currentMember.last_name || ""}`.trim() };
+    // HoF viewing a sibling household's member: restrict to family_shared only.
+    let indVineyard: any[] = [];
+    let indStorehouses: any[] = [];
+    let indName = "";
+    if (isSelf) {
+      indVineyard = vineyard_accounts;
+      indStorehouses = storehouses;
+      indName = `${contact.first_name || ""} ${contact.last_name || ""}`.trim();
+    } else {
+      const memberHousehold = hierarchy?.households?.find((h: any) =>
+        (h.members || []).some((mm: any) => mm.id === currentMember.id)
+      );
+      const inOwnHousehold = (memberHousehold?.members || []).some((mm: any) => mm.id === contact.id);
+      const restrict = contact.family_role === "head_of_family" && !inOwnHousehold;
+      const scopeOk = (a: any) => (restrict ? a?.visibility_scope === "family_shared" : true);
+      indVineyard = (currentMember.vineyard_accounts || []).filter(scopeOk);
+      indStorehouses = (currentMember.storehouses || []).filter(scopeOk);
+      indName = `${currentMember.first_name || ""} ${currentMember.last_name || ""}`.trim();
+    }
+    const ind = { vineyardAccounts: indVineyard, memberStorehouses: indStorehouses, name: indName };
     const hasHolding = isSelf && holding_tank.length > 0;
     const hasTerritory = (ind.vineyardAccounts.length + ind.memberStorehouses.length) > 0;
     const hasFinancials = hasHolding || hasTerritory;
+
 
     return (
       <div className="grid gap-6 lg:grid-cols-3">
