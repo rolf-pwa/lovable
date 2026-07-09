@@ -772,7 +772,7 @@ const Portal = () => {
             const allStore = allMembers.flatMap((m: any) =>
               (m.storehouses || []).filter((a: any) => isAumStorehouse(a))
             );
-            const allInsurance = allMembers.flatMap((m: any) => m.insurance_policies || []);
+            const allInsurance = insurance_policies || [];
             const familyAUM = sumValues(allVineyard) + sumValues(allStore)
               + sumValues(family_holding_tank)
               + insuranceCashForStorehouses(allInsurance, allStore);
