@@ -390,19 +390,7 @@ const VfoPortal = () => {
             );
           })()}
 
-          {family_holding_tank.length > 0 && <PortalHoldingTank accounts={family_holding_tank} />}
-          <PortalTerritory
-            vineyardAccounts={fa.vineyard}
-            storehouses={fa.storehouses}
-            insurancePolicies={insurance_policies}
-            contact={contact}
-            family={family}
-            household={null}
-            householdMembers={[]}
-            scopeLabel="Family Shared"
-            portalToken={portalToken}
-            onScopeChange={refreshData}
-          />
+          {/* Account details hidden in Family view — only AUM total shown above. */}
           <PortalYourTeam professionals={professionals} engagements={engagements} />
         </aside>
       </div>
