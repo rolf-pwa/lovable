@@ -310,15 +310,62 @@ serve(async (req) => {
         expires_at: expiresAt,
       });
 
-      // Outbound channels: Wix relay (default) and/or Gmail (admin@) via send-admin-email
-      const channel = (Deno.env.get("NOTIFICATION_CHANNEL") || "wix").toLowerCase();
-      const useWix = channel === "wix" || channel === "both";
-      const useGmail = channel === "gmail" || channel === "both";
+      // Outbound channels: Resend (default), Wix relay, and/or Gmail (admin@)
+      const channel = (Deno.env.get("NOTIFICATION_CHANNEL") || "resend").toLowerCase();
+      const useResend = channel === "resend" || channel === "all";
+      const useWix = channel === "wix" || channel === "both" || channel === "all";
+      const useGmail = channel === "gmail" || channel === "both" || channel === "all";
 
       const WIX_SITE_URL = Deno.env.get("WIX_SITE_URL");
       const WIX_OTP_SECRET = Deno.env.get("WIX_OTP_SECRET");
+      const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
+      const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+      const OTP_FROM_ADDRESS = Deno.env.get("OTP_FROM_ADDRESS") || "ProsperWise <noreply@prosperwise.ca>";
 
       const sendTasks: Promise<unknown>[] = [];
+      let resendOk = false;
+
+      if (useResend && RESEND_API_KEY && LOVABLE_API_KEY) {
+        sendTasks.push((async () => {
+          try {
+            const subject = `Your ProsperWise sign-in code: ${otp}`;
+            const html = `<div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#111">
+              <p>Hi ${contact.first_name || "there"},</p>
+              <p>Your one-time sign-in code is:</p>
+              <p style="font-size:28px;font-weight:700;letter-spacing:6px;background:#f5f1e8;padding:16px 24px;border-radius:8px;text-align:center;color:#2A4034">${otp}</p>
+              <p>This code expires in 10 minutes. If you didn't request it, you can ignore this email.</p>
+              <p style="margin-top:24px">Thank you,<br/>ProsperWise Team</p>
+            </div>`;
+            const text = `Hi ${contact.first_name || "there"},\n\nYour one-time sign-in code is:\n\n${otp}\n\nThis code expires in 10 minutes. If you didn't request it, you can ignore this email.\n\nThank you,\nProsperWise Team`;
+            const resendRes = await fetch("https://connector-gateway.lovable.dev/resend/emails", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${LOVABLE_API_KEY}`,
+                "X-Connection-Api-Key": RESEND_API_KEY,
+              },
+              body: JSON.stringify({
+                from: OTP_FROM_ADDRESS,
+                to: [cleanEmail],
+                subject,
+                html,
+                text,
+              }),
+            });
+            if (!resendRes.ok) {
+              const body = await resendRes.text();
+              console.error(`[OTP] Resend failed: ${resendRes.status} ${body}`);
+            } else {
+              resendOk = true;
+              console.log(`[OTP] Resend delivered to ${cleanEmail}`);
+            }
+          } catch (rErr) {
+            console.error("[OTP] Error calling Resend gateway:", rErr);
+          }
+        })());
+      } else if (useResend) {
+        console.warn(`[OTP] Resend secrets missing! RESEND_API_KEY=${!!RESEND_API_KEY}, LOVABLE_API_KEY=${!!LOVABLE_API_KEY}`);
+      }
 
       if (useWix && WIX_SITE_URL && WIX_OTP_SECRET) {
         sendTasks.push((async () => {
