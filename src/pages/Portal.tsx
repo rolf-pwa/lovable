@@ -711,7 +711,8 @@ const Portal = () => {
               const hhTank = (family_holding_tank || []).filter((t: any) =>
                 members.some((m: any) => m.id === t.contact_id)
               );
-              const hhInsurance = members.flatMap((m: any) => m.insurance_policies || []);
+              const memberIds = new Set(members.map((m: any) => m.id));
+              const hhInsurance = (insurance_policies || []).filter((p: any) => memberIds.has(p.contact_id));
               const hhTotal = sumValues(hhVineyard) + sumValues(hhStore)
                 + sumValues(hhTank)
                 + insuranceCashForStorehouses(hhInsurance, hhStore);
