@@ -307,11 +307,25 @@ const VfoPortal = () => {
           <div className="grid gap-4 sm:grid-cols-2">
             {households.map((hh: any) => {
               const members = hh.members || [];
-              const hhV = members.flatMap((m: any) => m.vineyard_accounts || []);
-              const hhS = members.flatMap((m: any) => (m.storehouses || []).filter(isAumStorehouse));
-              const hhT = (family_holding_tank || []).filter((t: any) => members.some((m: any) => m.id === t.contact_id));
+              const isOwnHousehold = members.some((m: any) => m.id === contact.id);
+              const isHoF = contact.family_role === "head_of_family";
+              const restrictToFamilyShared = isHoF && !isOwnHousehold;
+              const scopeOk = (a: any) =>
+                restrictToFamilyShared ? a?.visibility_scope === "family_shared" : true;
+
+              const hhV = members.flatMap((m: any) => (m.vineyard_accounts || []).filter(scopeOk));
+              const hhS = members.flatMap((m: any) =>
+                (m.storehouses || []).filter((a: any) => isAumStorehouse(a) && scopeOk(a))
+              );
+              const hhT = restrictToFamilyShared
+                ? []
+                : (family_holding_tank || []).filter((t: any) => members.some((m: any) => m.id === t.contact_id));
+              const memberIds = new Set(members.map((m: any) => m.id));
+              const hhInsurance = restrictToFamilyShared
+                ? []
+                : (insurance_policies || []).filter((p: any) => memberIds.has(p.contact_id));
               const hhTotal = sumValues(hhV) + sumValues(hhS) + sumValues(hhT)
-                + insuranceCashForStorehouses(insurance_policies, hhS);
+                + insuranceCashForStorehouses(hhInsurance, hhS);
               return (
                 <button
                   key={hh.id}
@@ -331,7 +345,12 @@ const VfoPortal = () => {
                       <Users className="h-3.5 w-3.5" />
                       {(hh.members || []).length} member{(hh.members || []).length !== 1 ? "s" : ""}
                     </span>
-                    <span className="font-serif text-foreground">{fmt(hhTotal)}</span>
+                    <span className="font-serif text-foreground">
+                      {fmt(hhTotal)}
+                      {restrictToFamilyShared && (
+                        <span className="ml-1 text-[10px] font-normal text-muted-foreground">shared</span>
+                      )}
+                    </span>
                   </div>
                   <div className="mt-3 flex flex-wrap gap-1">
                     {(hh.members || []).slice(0, 5).map((m: any) => (
@@ -352,6 +371,30 @@ const VfoPortal = () => {
         </div>
 
         <aside className="space-y-4">
+          {(() => {
+            // Family AUM rolls up ALL scopes across every household — matches /portal & /contacts.
+            const allMembers = households.flatMap((hh: any) => hh.members || []);
+            const allV = allMembers.flatMap((m: any) => m.vineyard_accounts || []);
+            const allS = allMembers.flatMap((m: any) => (m.storehouses || []).filter(isAumStorehouse));
+            const familyAUM = sumValues(allV) + sumValues(allS)
+              + sumValues(family_holding_tank)
+              + insuranceCashForStorehouses(insurance_policies || [], allS);
+            return (
+              <Card className="border-amber-500/20 bg-gradient-to-b from-amber-500/5 to-transparent">
+                <CardContent className="p-5 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Crown className="h-4 w-4 text-amber-500" />
+                    <h3 className="text-[10px] uppercase tracking-wider text-muted-foreground">Family AUM</h3>
+                  </div>
+                  <p className="font-serif text-2xl text-amber-500">{fmt(familyAUM)}</p>
+                  <p className="text-[11px] text-muted-foreground leading-relaxed pt-2 border-t border-amber-500/10">
+                    Aggregate across {households.length} household{households.length !== 1 ? "s" : ""}. Individual account details remain private to each household.
+                  </p>
+                </CardContent>
+              </Card>
+            );
+          })()}
+
           {family_holding_tank.length > 0 && <PortalHoldingTank accounts={family_holding_tank} />}
           <PortalTerritory
             vineyardAccounts={fa.vineyard}
