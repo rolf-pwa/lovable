@@ -399,10 +399,12 @@ const VfoPortal = () => {
               const isSelf = m._isSelf;
               const mVineyard = isSelf ? vineyard_accounts : (m.vineyard_accounts || []);
               const mStorehouses = isSelf ? storehouses : (m.storehouses || []);
-              const mTotal = mVineyard.reduce((s: number, a: any) => s + (Number(a.current_value) || 0), 0)
-                + mStorehouses
-                    .filter((a: any) => a.asset_type !== 'Primary Residence & Protected Legacy Accounts')
-                    .reduce((s: number, a: any) => s + (Number(a.current_value) || 0), 0);
+              const mStoreAum = mStorehouses.filter(isAumStorehouse);
+              const mTank = ((isSelf ? (holding_tank || []) : []) as any[])
+                .concat((household_holding_tank || []).filter((t: any) => t.contact_id === m.id));
+              const mTankDedup = Array.from(new Map(mTank.map((t: any) => [t.id, t])).values());
+              const mTotal = sumValues(mVineyard) + sumValues(mStoreAum) + sumValues(mTankDedup)
+                + insuranceCashForStorehouses(insurance_policies.filter((p: any) => p.contact_id === m.id), mStoreAum);
               return (
                 <button
                   key={m.id}
