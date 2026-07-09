@@ -195,8 +195,8 @@ const VfoPortal = () => {
         ? (hierarchy?.households?.find((h: any) => h.id === householdId)?.members || [])
         : (hierarchy?.members || []);
       const selfInMembers = members.some((m: any) => m.id === contact.id);
-      // HoF viewing a sibling household: restrict to family_shared only.
-      const isHoFSibling = contact.family_role === "head_of_family" && !selfInMembers;
+      // Viewing a sibling household: restrict to family_shared only (privacy firewall).
+      const isHoFSibling = !selfInMembers;
       const allowed = isHoFSibling
         ? new Set(["family_shared"])
         : new Set(["household_shared", "family_shared"]);
