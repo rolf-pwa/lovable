@@ -702,48 +702,47 @@ const Portal = () => {
               const members = hh.members || [];
               const isOwnHousehold = members.some((m: any) => m.id === contact.id);
               const isHoF = contact.family_role === "head_of_family";
-              // HoF cannot drill into or see details of sibling households,
-              // but their AUM still rolls up into the Family AUM total.
-              const canViewDetails = !isHoF || isOwnHousehold;
+              // HoF may drill into sibling households, but only sees
+              // accounts explicitly designated as `family_shared`. All other
+              // scopes stay private to that household.
+              const restrictToFamilyShared = isHoF && !isOwnHousehold;
 
-              const hhVineyard = members.flatMap((m: any) => m.vineyard_accounts || []);
+              const scopeOk = (a: any) =>
+                restrictToFamilyShared ? a?.visibility_scope === "family_shared" : true;
+
+              const hhVineyard = members.flatMap((m: any) =>
+                (m.vineyard_accounts || []).filter(scopeOk)
+              );
               const hhStore = members.flatMap((m: any) =>
-                (m.storehouses || []).filter((a: any) => isAumStorehouse(a))
+                (m.storehouses || []).filter((a: any) => isAumStorehouse(a) && scopeOk(a))
               );
-              const hhTank = (family_holding_tank || []).filter((t: any) =>
-                members.some((m: any) => m.id === t.contact_id)
-              );
+              const hhTank = restrictToFamilyShared
+                ? []
+                : (family_holding_tank || []).filter((t: any) =>
+                    members.some((m: any) => m.id === t.contact_id)
+                  );
               const memberIds = new Set(members.map((m: any) => m.id));
-              const hhInsurance = (insurance_policies || []).filter((p: any) => memberIds.has(p.contact_id));
+              const hhInsurance = restrictToFamilyShared
+                ? []
+                : (insurance_policies || []).filter((p: any) => memberIds.has(p.contact_id));
               const hhTotal = sumValues(hhVineyard) + sumValues(hhStore)
                 + sumValues(hhTank)
                 + insuranceCashForStorehouses(hhInsurance, hhStore);
 
-              const Wrapper: any = canViewDetails ? "button" : "div";
               return (
-                <Wrapper
+                <button
                   key={hh.id}
-                  {...(canViewDetails
-                    ? {
-                        onClick: () => setDrilldown({ level: "household", householdId: hh.id }),
-                        className:
-                          "text-left rounded-lg border border-border bg-card p-5 hover:border-accent/30 hover:bg-muted/30 transition-colors group",
-                      }
-                    : {
-                        className:
-                          "text-left rounded-lg border border-border bg-card/60 p-5 opacity-90",
-                      })}
+                  onClick={() => setDrilldown({ level: "household", householdId: hh.id })}
+                  className="text-left rounded-lg border border-border bg-card p-5 hover:border-accent/30 hover:bg-muted/30 transition-colors group"
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-2">
                       <Home className="h-4 w-4 text-accent" />
                       <h3 className="font-semibold text-foreground font-serif">{hh.label} Household</h3>
                     </div>
-                    {canViewDetails && (
-                      <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                    )}
+                    <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                   </div>
-                  {canViewDetails && hh.address && (
+                  {hh.address && (
                     <p className="text-xs text-muted-foreground mb-3">{hh.address}</p>
                   )}
                   <div className="flex items-center justify-between">
@@ -753,29 +752,29 @@ const Portal = () => {
                         {members.length} member{members.length !== 1 ? "s" : ""}
                       </span>
                     </div>
-                    {canViewDetails ? (
-                      <span className="text-sm font-semibold text-foreground">${hhTotal.toLocaleString()}</span>
-                    ) : (
-                      <span className="text-[11px] text-muted-foreground italic">Private</span>
+                    <span className="text-sm font-semibold text-foreground">
+                      ${hhTotal.toLocaleString()}
+                      {restrictToFamilyShared && (
+                        <span className="ml-1 text-[10px] font-normal text-muted-foreground">shared</span>
+                      )}
+                    </span>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-1">
+                    {members.slice(0, 4).map((m: any) => (
+                      <span key={m.id} className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
+                        {m.first_name}
+                      </span>
+                    ))}
+                    {members.length > 4 && (
+                      <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
+                        +{members.length - 4}
+                      </span>
                     )}
                   </div>
-                  {canViewDetails && (
-                    <div className="mt-3 flex flex-wrap gap-1">
-                      {members.slice(0, 4).map((m: any) => (
-                        <span key={m.id} className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
-                          {m.first_name}
-                        </span>
-                      ))}
-                      {members.length > 4 && (
-                        <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
-                          +{members.length - 4}
-                        </span>
-                      )}
-                    </div>
-                  )}
-                </Wrapper>
+                </button>
               );
             })}
+
           </div>
 
         </div>
