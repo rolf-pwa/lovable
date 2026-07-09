@@ -302,7 +302,9 @@ const VfoPortal = () => {
               const hhTotal = (hh.members || []).reduce((sum: number, m: any) => {
                 return sum
                   + (m.vineyard_accounts || []).reduce((s: number, a: any) => s + (Number(a.current_value) || 0), 0)
-                  + (m.storehouses || []).reduce((s: number, a: any) => s + (Number(a.current_value) || 0), 0);
+                  + (m.storehouses || [])
+                      .filter((a: any) => a.asset_type !== 'Primary Residence & Protected Legacy Accounts')
+                      .reduce((s: number, a: any) => s + (Number(a.current_value) || 0), 0);
               }, 0);
               return (
                 <button
