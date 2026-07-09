@@ -700,11 +700,15 @@ const Portal = () => {
           <div className="grid gap-4 sm:grid-cols-2">
             {households.map((hh: any) => {
               const members = hh.members || [];
-              // HoF has full visibility into every household under the family,
-              // so household tile totals sum all member assets (not just the
-              // family_shared subset used for the family-level rollup).
-              const hhVineyard = members.flatMap((m: any) => m.vineyard_accounts || []);
-              const hhStore = members.flatMap((m: any) => (m.storehouses || []).filter(isAumStorehouse));
+              // Household privacy: at the family level we only surface assets
+              // explicitly marked family_shared. Household- and individual-
+              // scoped holdings are hidden from siblings in the family view.
+              const hhVineyard = members.flatMap((m: any) =>
+                (m.vineyard_accounts || []).filter((a: any) => a.visibility_scope === "family_shared")
+              );
+              const hhStore = members.flatMap((m: any) =>
+                (m.storehouses || []).filter((a: any) => a.visibility_scope === "family_shared" && isAumStorehouse(a))
+              );
               const hhTank = (family_holding_tank || []).filter((t: any) =>
                 members.some((m: any) => m.id === t.contact_id)
               );
@@ -758,12 +762,16 @@ const Portal = () => {
         {/* Right Sidebar: Aggregate Family AUM (no per-account detail — household privacy preserved) */}
         <div className="space-y-4">
           {(() => {
-            // Aggregate every household's assets into a single family AUM number.
-            // Individual account/household breakdowns are intentionally omitted here
-            // to respect household-level privacy within the family.
+            // Aggregate family AUM: only family_shared assets are visible at
+            // the family scope. Household- and individual-scoped holdings stay
+            // private to their household.
             const allMembers = households.flatMap((hh: any) => hh.members || []);
-            const allVineyard = allMembers.flatMap((m: any) => m.vineyard_accounts || []);
-            const allStore = allMembers.flatMap((m: any) => (m.storehouses || []).filter(isAumStorehouse));
+            const allVineyard = allMembers.flatMap((m: any) =>
+              (m.vineyard_accounts || []).filter((a: any) => a.visibility_scope === "family_shared")
+            );
+            const allStore = allMembers.flatMap((m: any) =>
+              (m.storehouses || []).filter((a: any) => a.visibility_scope === "family_shared" && isAumStorehouse(a))
+            );
             const familyAUM = sumValues(allVineyard) + sumValues(allStore)
               + sumValues(family_holding_tank)
               + insuranceCashForStorehouses(insurance_policies, allStore);
