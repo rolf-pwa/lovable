@@ -836,6 +836,11 @@ const Portal = () => {
     const members = currentHousehold?.members || hierarchy?.members || [];
     const hhLabel = currentHousehold?.label || household?.label || "Household";
     const hhAssets = aggregateAssetsAtLevel("household", drilldown.householdId);
+    const viewingOwnHousehold = members.some((m: any) => m.id === contact.id);
+    const isHoFSibling = contact.family_role === "head_of_family" && !viewingOwnHousehold;
+    const allowedScopes = isHoFSibling
+      ? new Set(["family_shared"])
+      : new Set(["household_shared", "family_shared"]);
 
     return (
       <div className="grid gap-6 lg:grid-cols-3">
@@ -850,7 +855,8 @@ const Portal = () => {
                 <div>
                   <h2 className="text-lg font-semibold text-foreground font-serif">{hhLabel} Household</h2>
                   <p className="text-xs text-muted-foreground">
-                    {members.length + 1} member{members.length !== 0 ? "s" : ""}
+                    {members.length + (viewingOwnHousehold ? 0 : 1)} member{members.length !== 0 ? "s" : ""}
+                    {isHoFSibling && " · Family-shared view"}
                   </p>
                 </div>
               </div>
@@ -859,10 +865,12 @@ const Portal = () => {
 
           {/* Member cards — ordered: Head, Spouse, Beneficiary, Minor */}
           <div className="grid gap-3">
-            {[
-              { ...contact, _isSelf: true },
-              ...members.filter((m: any) => m.id !== contact.id).map((m: any) => ({ ...m, _isSelf: false })),
-            ]
+            {(isHoFSibling
+              ? members.map((m: any) => ({ ...m, _isSelf: false }))
+              : [
+                  { ...contact, _isSelf: true },
+                  ...members.filter((m: any) => m.id !== contact.id).map((m: any) => ({ ...m, _isSelf: false })),
+                ])
               .sort((a: any, b: any) => {
                 const order: Record<string, number> = { head_of_family: 0, head_of_household: 1, spouse: 2, beneficiary: 3, minor: 4 };
                 return (order[a.family_role] ?? 4) - (order[b.family_role] ?? 4);
@@ -871,14 +879,20 @@ const Portal = () => {
                 const isSelf = m._isSelf;
                 const mVineyard = isSelf ? vineyard_accounts : (m.vineyard_accounts || []);
                 const mStorehouses = isSelf ? storehouses : (m.storehouses || []);
-                const mVineyardShared = mVineyard.filter((a: any) => a.visibility_scope === "household_shared" || a.visibility_scope === "family_shared");
-                const mStoreShared = mStorehouses.filter((a: any) => (a.visibility_scope === "household_shared" || a.visibility_scope === "family_shared") && isAumStorehouse(a));
-                const mTank = ((isSelf ? (holding_tank || []) : []) as any[])
-                  .concat((household_holding_tank || []).filter((t: any) => t.contact_id === m.id));
+                const mVineyardShared = mVineyard.filter((a: any) => allowedScopes.has(a.visibility_scope));
+                const mStoreShared = mStorehouses.filter((a: any) => allowedScopes.has(a.visibility_scope) && isAumStorehouse(a));
+                const mTank = isHoFSibling
+                  ? []
+                  : ((isSelf ? (holding_tank || []) : []) as any[])
+                      .concat((household_holding_tank || []).filter((t: any) => t.contact_id === m.id));
                 const mTankDedup = Array.from(new Map(mTank.map((t: any) => [t.id, t])).values());
+                const mInsurance = isHoFSibling
+                  ? []
+                  : insurance_policies.filter((p: any) => p.contact_id === m.id);
                 const mTotal = sumValues(mVineyardShared) + sumValues(mStoreShared)
                   + sumValues(mTankDedup)
-                  + insuranceCashForStorehouses(insurance_policies.filter((p: any) => p.contact_id === m.id), mStoreShared);
+                  + insuranceCashForStorehouses(mInsurance, mStoreShared);
+
 
                 return (
                   <button
