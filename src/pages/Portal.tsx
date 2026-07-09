@@ -640,23 +640,32 @@ const Portal = () => {
         });
       });
     } else if (level === "household") {
-      // Household level: household_shared + family_shared assets from household members
+      // Household level: household_shared + family_shared assets from household members.
+      // If the viewer is a HoF drilling into a sibling household, restrict to family_shared only.
       const members = householdId
         ? (hierarchy?.households?.find((h: any) => h.id === householdId)?.members || [])
         : (hierarchy?.members || []);
-      // Deduplicate: if the logged-in contact is already in members, skip adding self separately
       const selfInMembers = members.some((m: any) => m.id === contact.id);
+      const isHoFSibling = contact.family_role === "head_of_family" && !selfInMembers;
+      const scopesAllowed = isHoFSibling
+        ? new Set(["family_shared"])
+        : new Set(["household_shared", "family_shared"]);
       if (!selfInMembers) {
-        const selfVineyard = vineyard_accounts.filter((a: any) => a.visibility_scope === "household_shared" || a.visibility_scope === "family_shared");
-        const selfStorehouses = storehouses.filter((a: any) => (a.visibility_scope === "household_shared" || a.visibility_scope === "family_shared") && a.asset_type !== 'Primary Residence & Protected Legacy Accounts');
-        allVineyard.push(...selfVineyard);
-        allStorehouses.push(...selfStorehouses);
+        const selfVineyard = vineyard_accounts.filter((a: any) => scopesAllowed.has(a.visibility_scope));
+        const selfStorehouses = storehouses.filter((a: any) => scopesAllowed.has(a.visibility_scope) && a.asset_type !== 'Primary Residence & Protected Legacy Accounts');
+        // Only include self assets if the logged-in contact belongs to this household context.
+        // For HoF viewing a sibling household, do not inject own assets.
+        if (!isHoFSibling) {
+          allVineyard.push(...selfVineyard);
+          allStorehouses.push(...selfStorehouses);
+        }
       }
       members.forEach((m: any) => {
-        (m.vineyard_accounts || []).filter((a: any) => a.visibility_scope === "household_shared" || a.visibility_scope === "family_shared").forEach((a: any) => allVineyard.push(a));
-        (m.storehouses || []).filter((a: any) => (a.visibility_scope === "household_shared" || a.visibility_scope === "family_shared") && a.asset_type !== 'Primary Residence & Protected Legacy Accounts').forEach((a: any) => allStorehouses.push(a));
+        (m.vineyard_accounts || []).filter((a: any) => scopesAllowed.has(a.visibility_scope)).forEach((a: any) => allVineyard.push(a));
+        (m.storehouses || []).filter((a: any) => scopesAllowed.has(a.visibility_scope) && a.asset_type !== 'Primary Residence & Protected Legacy Accounts').forEach((a: any) => allStorehouses.push(a));
       });
     }
+
 
     return { vineyard: allVineyard, storehouses: allStorehouses };
   };
