@@ -170,6 +170,11 @@ const FamilyDetail = () => {
   const vineyardByContact = sumByContact(vineyard);
   const storehouseByContact = sumByContact(storehouses.filter((s: any) => s.asset_type !== 'Primary Residence & Protected Legacy Accounts'));
   const holdingByContact = sumByContact(holdingTank);
+  const insuranceCashByContact: Record<string, number> = {};
+  insurancePolicies.forEach((p: any) => {
+    if (!p.cash_value_storehouse_id) return;
+    insuranceCashByContact[p.contact_id] = (insuranceCashByContact[p.contact_id] || 0) + (Number(p.cash_value) || 0);
+  });
 
   const totalVineyard = vineyard.reduce((s, a) => s + (Number(a.current_value) || 0), 0);
   const totalStorehouses = storehouses
@@ -218,13 +223,13 @@ const FamilyDetail = () => {
     const mems = contactsByHousehold(hid).map((c) => c.id);
     let total = 0;
     mems.forEach((m) => {
-      total += (vineyardByContact[m] || 0) + (storehouseByContact[m] || 0) + (holdingByContact[m] || 0);
+      total += (vineyardByContact[m] || 0) + (storehouseByContact[m] || 0) + (holdingByContact[m] || 0) + (insuranceCashByContact[m] || 0);
     });
     return total;
   };
 
   const contactTotal = (cid: string) =>
-    (vineyardByContact[cid] || 0) + (storehouseByContact[cid] || 0) + (holdingByContact[cid] || 0);
+    (vineyardByContact[cid] || 0) + (storehouseByContact[cid] || 0) + (holdingByContact[cid] || 0) + (insuranceCashByContact[cid] || 0);
 
   const storehouseName = (num: number) => {
     const names: Record<number, string> = {
