@@ -30,7 +30,7 @@ export function DashboardSidebar() {
 
         const { data: storehouseAccounts } = await supabase
           .from("storehouses")
-          .select("current_value, storehouse_number");
+          .select("current_value, storehouse_number, asset_type");
 
         const vineyardTotal = (vineyardAccounts || []).reduce(
           (sum, a) => sum + (Number(a.current_value) || 0),
@@ -39,7 +39,7 @@ export function DashboardSidebar() {
 
         const sumStorehouse = (num: number) =>
           (storehouseAccounts || [])
-            .filter((s: any) => s.storehouse_number === num)
+            .filter((s: any) => s.storehouse_number === num && s.asset_type !== 'Primary Residence & Protected Legacy Accounts')
             .reduce((sum: number, s: any) => sum + (Number(s.current_value) || 0), 0);
 
         const liquidityTotal = sumStorehouse(1);

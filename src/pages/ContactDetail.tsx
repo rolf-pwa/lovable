@@ -1083,8 +1083,7 @@ const ContactDetail = () => {
                         sourceTable: "storehouses" as const,
                       }))}
                       extraTotal={
-                        cashValuePolicies.reduce((s, p) => s + (Number(p.cash_value) || 0), 0) +
-                        coveragePolicies.reduce((s, p) => s + (Number(p.coverage_amount) || 0), 0)
+                        cashValuePolicies.reduce((s, p) => s + (Number(p.cash_value) || 0), 0)
                       }
                       footerContent={
                         (coveragePolicies.length > 0 || cashValuePolicies.length > 0) ? (
@@ -1181,7 +1180,9 @@ const ContactDetail = () => {
           <div className="space-y-4">
             {(() => {
               const totalVineyard = vineyardAccounts.reduce((s, a) => s + (Number(a.current_value) || 0), 0);
-              const totalStorehouses = storehouses.reduce((s, a) => s + (Number(a.current_value) || 0), 0);
+              const totalStorehouses = storehouses
+                .filter((s: any) => s.asset_type !== 'Primary Residence & Protected Legacy Accounts')
+                .reduce((s, a) => s + (Number(a.current_value) || 0), 0);
               const totalHoldingTank = holdingTankAccounts.reduce((s, a) => s + (Number(a.current_value) || 0), 0);
               const totalCorpAssets = corporateStakes.reduce((s, st) =>
                 s + (Number(st.pro_rata) || 0) + st.subsidiaries.reduce((ss, sub) => ss + (Number(sub.indirect_pro_rata) || 0), 0)

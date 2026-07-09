@@ -230,7 +230,6 @@ const HouseholdDetail = () => {
   const insuranceForStorehouse = (storehouseId: string) =>
     insurancePolicies.reduce((sum, p) => {
       let add = 0;
-      if (p.coverage_storehouse_id === storehouseId) add += Number(p.coverage_amount) || 0;
       if (p.cash_value_storehouse_id === storehouseId) add += Number(p.cash_value) || 0;
       return sum + add;
     }, 0);
@@ -239,7 +238,9 @@ const HouseholdDetail = () => {
     0
   );
   const totalStorehouses =
-    storehouses.reduce((sum, s) => sum + (Number(s.current_value) || 0), 0) +
+    storehouses
+      .filter((s: any) => s.asset_type !== 'Primary Residence & Protected Legacy Accounts')
+      .reduce((sum, s) => sum + (Number(s.current_value) || 0), 0) +
     totalInsuranceInStorehouses;
   const totalCorpAssets = corporations.reduce(
     (sum, c) => sum + (c.total_assets || 0),
@@ -494,7 +495,7 @@ const HouseholdDetail = () => {
                                 .filter((v) => v.contact_id === m.id)
                                 .reduce((s, v) => s + (Number(v.current_value) || 0), 0);
                               const storeTotal = storehouses
-                                .filter((s) => s.contact_id === m.id)
+                                .filter((s) => s.contact_id === m.id && s.asset_type !== 'Primary Residence & Protected Legacy Accounts')
                                 .reduce((sum, s) => sum + (Number(s.current_value) || 0), 0);
                               return (
                                 <tr

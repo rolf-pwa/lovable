@@ -164,11 +164,13 @@ const FamilyDetail = () => {
   };
 
   const vineyardByContact = sumByContact(vineyard);
-  const storehouseByContact = sumByContact(storehouses);
+  const storehouseByContact = sumByContact(storehouses.filter((s: any) => s.asset_type !== 'Primary Residence & Protected Legacy Accounts'));
   const holdingByContact = sumByContact(holdingTank);
 
   const totalVineyard = vineyard.reduce((s, a) => s + (Number(a.current_value) || 0), 0);
-  const totalStorehouses = storehouses.reduce((s, a) => s + (Number(a.current_value) || 0), 0);
+  const totalStorehouses = storehouses
+    .filter((s: any) => s.asset_type !== 'Primary Residence & Protected Legacy Accounts')
+    .reduce((s, a) => s + (Number(a.current_value) || 0), 0);
   const totalHolding = holdingTank.reduce((s, a) => s + (Number(a.current_value) || 0), 0);
   const totalAUM = totalVineyard + totalStorehouses + totalHolding;
 
