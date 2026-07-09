@@ -278,8 +278,6 @@ const VfoPortal = () => {
   const renderFamilyView = () => {
     const households = hierarchy?.households || [];
     const fa = aggregateAssetsAtLevel("family");
-    const totalShared = sumValues(fa.vineyard) + sumValues(fa.storehouses)
-      + insuranceCashForStorehouses(insurance_policies, fa.storehouses);
 
     return (
       <div className="grid gap-6 lg:grid-cols-3">
@@ -296,13 +294,10 @@ const VfoPortal = () => {
                     {households.length} household{households.length !== 1 ? "s" : ""} · {memberCount} members
                   </p>
                 </div>
-                <div className="text-right">
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Family-Shared</p>
-                  <p className="font-serif text-xl text-amber-500">{fmt(totalShared)}</p>
-                </div>
               </div>
             </CardContent>
           </Card>
+
 
           <div className="grid gap-4 sm:grid-cols-2">
             {households.map((hh: any) => {
