@@ -175,8 +175,31 @@ const FamilyDetail = () => {
   const totalStorehouses = storehouses
     .filter((s: any) => s.asset_type !== 'Primary Residence & Protected Legacy Accounts')
     .reduce((s, a) => s + (Number(a.current_value) || 0), 0);
+  const insuranceCashInStorehouses = insurancePolicies
+    .filter((p: any) => !!p.cash_value_storehouse_id)
+    .reduce((s: number, p: any) => s + (Number(p.cash_value) || 0), 0);
   const totalHolding = holdingTank.reduce((s, a) => s + (Number(a.current_value) || 0), 0);
-  const totalAUM = totalVineyard + totalStorehouses + totalHolding;
+  const totalAUM = totalVineyard + totalStorehouses + insuranceCashInStorehouses + totalHolding;
+
+  const storehouseBreakdown = [1, 2, 3, 4].map((num) => {
+    const shForNum = storehouses.filter((s: any) => s.storehouse_number === num);
+    const shIds = new Set(shForNum.map((s: any) => s.id));
+    const isLegacy = num === 4;
+    const shTotal = shForNum
+      .filter((s: any) => isLegacy || s.asset_type !== 'Primary Residence & Protected Legacy Accounts')
+      .reduce((sum: number, s: any) => sum + (Number(s.current_value) || 0), 0);
+    const cashTotal = insurancePolicies
+      .filter((p: any) => p.cash_value_storehouse_id && shIds.has(p.cash_value_storehouse_id))
+      .reduce((sum: number, p: any) => sum + (Number(p.cash_value) || 0), 0);
+    const coverageTotal = isLegacy
+      ? insurancePolicies
+          .filter((p: any) => p.coverage_storehouse_id && shIds.has(p.coverage_storehouse_id))
+          .reduce((sum: number, p: any) => sum + (Number(p.coverage_amount) || 0), 0)
+      : 0;
+    return { num, count: shForNum.length, total: shTotal + cashTotal + coverageTotal };
+  });
+  const storehousesCount = storehouseBreakdown.reduce((s, r) => s + r.count, 0);
+  const storehousesDisplayTotal = storehouseBreakdown.reduce((s, r) => s + r.total, 0);
 
   const toggleHousehold = (hid: string) => {
     setOpenHouseholds((prev) => {
