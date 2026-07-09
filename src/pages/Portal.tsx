@@ -703,14 +703,14 @@ const Portal = () => {
               // HoF has full visibility into every household under the family,
               // so household tile totals sum all member assets (not just the
               // family_shared subset used for the family-level rollup).
-              const hhTotal = members.reduce((sum: number, m: any) => {
-                const vTotal = (m.vineyard_accounts || [])
-                  .reduce((s: number, a: any) => s + (Number(a.current_value) || 0), 0);
-                const sTotal = (m.storehouses || [])
-                  .filter((a: any) => a.asset_type !== 'Primary Residence & Protected Legacy Accounts')
-                  .reduce((s: number, a: any) => s + (Number(a.current_value) || 0), 0);
-                return sum + vTotal + sTotal;
-              }, 0);
+              const hhVineyard = members.flatMap((m: any) => m.vineyard_accounts || []);
+              const hhStore = members.flatMap((m: any) => (m.storehouses || []).filter(isAumStorehouse));
+              const hhTank = (family_holding_tank || []).filter((t: any) =>
+                members.some((m: any) => m.id === t.contact_id)
+              );
+              const hhTotal = sumValues(hhVineyard) + sumValues(hhStore)
+                + sumValues(hhTank)
+                + insuranceCashForStorehouses(insurance_policies, hhStore);
 
               return (
                 <button
