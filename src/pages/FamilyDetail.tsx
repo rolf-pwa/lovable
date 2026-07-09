@@ -426,11 +426,11 @@ const FamilyDetail = () => {
                   <div className="flex-1 min-w-0">
                     <CardTitle className="text-base font-serif">Storehouses</CardTitle>
                     <p className="text-xs text-muted-foreground">
-                      {storehouses.length} account{storehouses.length !== 1 ? "s" : ""}
+                      {storehousesCount} account{storehousesCount !== 1 ? "s" : ""}
                     </p>
                   </div>
                   <div className="text-right shrink-0">
-                    <p className="text-lg font-bold">{formatCurrency(totalStorehouses)}</p>
+                    <p className="text-lg font-bold">{formatCurrency(storehousesDisplayTotal)}</p>
                   </div>
                   {openSidebarStorehouses ? (
                     <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
