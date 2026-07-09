@@ -195,8 +195,8 @@ const VfoPortal = () => {
         ? (hierarchy?.households?.find((h: any) => h.id === householdId)?.members || [])
         : (hierarchy?.members || []);
       const selfInMembers = members.some((m: any) => m.id === contact.id);
-      // HoF viewing a sibling household: restrict to family_shared only.
-      const isHoFSibling = contact.family_role === "head_of_family" && !selfInMembers;
+      // Viewing a sibling household: restrict to family_shared only (privacy firewall).
+      const isHoFSibling = !selfInMembers;
       const allowed = isHoFSibling
         ? new Set(["family_shared"])
         : new Set(["household_shared", "family_shared"]);
@@ -278,8 +278,6 @@ const VfoPortal = () => {
   const renderFamilyView = () => {
     const households = hierarchy?.households || [];
     const fa = aggregateAssetsAtLevel("family");
-    const totalShared = sumValues(fa.vineyard) + sumValues(fa.storehouses)
-      + insuranceCashForStorehouses(insurance_policies, fa.storehouses);
 
     return (
       <div className="grid gap-6 lg:grid-cols-3">
@@ -296,22 +294,19 @@ const VfoPortal = () => {
                     {households.length} household{households.length !== 1 ? "s" : ""} · {memberCount} members
                   </p>
                 </div>
-                <div className="text-right">
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Family-Shared</p>
-                  <p className="font-serif text-xl text-amber-500">{fmt(totalShared)}</p>
-                </div>
               </div>
             </CardContent>
           </Card>
+
 
           <div className="grid gap-4 sm:grid-cols-2">
             {households.map((hh: any) => {
               const members = hh.members || [];
               const isOwnHousehold = members.some((m: any) => m.id === contact.id);
-              const isHoF = contact.family_role === "head_of_family";
-              const restrictToFamilyShared = isHoF && !isOwnHousehold;
+              const restrictToFamilyShared = !isOwnHousehold;
               const scopeOk = (a: any) =>
                 restrictToFamilyShared ? a?.visibility_scope === "family_shared" : true;
+
 
               const hhV = members.flatMap((m: any) => (m.vineyard_accounts || []).filter(scopeOk));
               const hhS = members.flatMap((m: any) =>
