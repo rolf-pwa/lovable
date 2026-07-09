@@ -834,12 +834,14 @@ const Portal = () => {
                 const isSelf = m._isSelf;
                 const mVineyard = isSelf ? vineyard_accounts : (m.vineyard_accounts || []);
                 const mStorehouses = isSelf ? storehouses : (m.storehouses || []);
-                const mTotal = mVineyard
-                      .filter((a: any) => a.visibility_scope === "household_shared" || a.visibility_scope === "family_shared")
-                      .reduce((s: number, a: any) => s + (Number(a.current_value) || 0), 0)
-                    + mStorehouses
-                      .filter((a: any) => (a.visibility_scope === "household_shared" || a.visibility_scope === "family_shared") && a.asset_type !== 'Primary Residence & Protected Legacy Accounts')
-                      .reduce((s: number, a: any) => s + (Number(a.current_value) || 0), 0);
+                const mVineyardShared = mVineyard.filter((a: any) => a.visibility_scope === "household_shared" || a.visibility_scope === "family_shared");
+                const mStoreShared = mStorehouses.filter((a: any) => (a.visibility_scope === "household_shared" || a.visibility_scope === "family_shared") && isAumStorehouse(a));
+                const mTank = ((isSelf ? (holding_tank || []) : []) as any[])
+                  .concat((household_holding_tank || []).filter((t: any) => t.contact_id === m.id));
+                const mTankDedup = Array.from(new Map(mTank.map((t: any) => [t.id, t])).values());
+                const mTotal = sumValues(mVineyardShared) + sumValues(mStoreShared)
+                  + sumValues(mTankDedup)
+                  + insuranceCashForStorehouses(insurance_policies.filter((p: any) => p.contact_id === m.id), mStoreShared);
 
                 return (
                   <button
