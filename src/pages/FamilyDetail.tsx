@@ -223,13 +223,13 @@ const FamilyDetail = () => {
     const mems = contactsByHousehold(hid).map((c) => c.id);
     let total = 0;
     mems.forEach((m) => {
-      total += (vineyardByContact[m] || 0) + (storehouseByContact[m] || 0) + (holdingByContact[m] || 0);
+      total += (vineyardByContact[m] || 0) + (storehouseByContact[m] || 0) + (holdingByContact[m] || 0) + (insuranceCashByContact[m] || 0);
     });
     return total;
   };
 
   const contactTotal = (cid: string) =>
-    (vineyardByContact[cid] || 0) + (storehouseByContact[cid] || 0) + (holdingByContact[cid] || 0);
+    (vineyardByContact[cid] || 0) + (storehouseByContact[cid] || 0) + (holdingByContact[cid] || 0) + (insuranceCashByContact[cid] || 0);
 
   const storehouseName = (num: number) => {
     const names: Record<number, string> = {
