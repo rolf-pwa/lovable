@@ -705,6 +705,7 @@ const Portal = () => {
                 const vTotal = (m.vineyard_accounts || [])
                   .reduce((s: number, a: any) => s + (Number(a.current_value) || 0), 0);
                 const sTotal = (m.storehouses || [])
+                  .filter((a: any) => a.asset_type !== 'Primary Residence & Protected Legacy Accounts')
                   .reduce((s: number, a: any) => s + (Number(a.current_value) || 0), 0);
                 return sum + vTotal + sTotal;
               }, 0);
@@ -762,7 +763,9 @@ const Portal = () => {
               const members = hh.members || [];
               return famSum + members.reduce((mSum: number, m: any) => {
                 const v = (m.vineyard_accounts || []).reduce((s: number, a: any) => s + (Number(a.current_value) || 0), 0);
-                const st = (m.storehouses || []).reduce((s: number, a: any) => s + (Number(a.current_value) || 0), 0);
+                const st = (m.storehouses || [])
+                  .filter((a: any) => a.asset_type !== 'Primary Residence & Protected Legacy Accounts')
+                  .reduce((s: number, a: any) => s + (Number(a.current_value) || 0), 0);
                 return mSum + v + st;
               }, 0);
             }, 0);
@@ -837,7 +840,7 @@ const Portal = () => {
                       .filter((a: any) => a.visibility_scope === "household_shared" || a.visibility_scope === "family_shared")
                       .reduce((s: number, a: any) => s + (Number(a.current_value) || 0), 0)
                     + mStorehouses
-                      .filter((a: any) => a.visibility_scope === "household_shared" || a.visibility_scope === "family_shared")
+                      .filter((a: any) => (a.visibility_scope === "household_shared" || a.visibility_scope === "family_shared") && a.asset_type !== 'Primary Residence & Protected Legacy Accounts')
                       .reduce((s: number, a: any) => s + (Number(a.current_value) || 0), 0);
 
                 return (

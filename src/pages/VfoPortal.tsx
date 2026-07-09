@@ -158,7 +158,9 @@ const VfoPortal = () => {
     hierarchy.households.forEach((hh: any) => {
       (hh.members || []).forEach((m: any) => {
         famVineyard += (m.vineyard_accounts || []).reduce((s: number, a: any) => s + (Number(a.current_value) || 0), 0);
-        famStorehouse += (m.storehouses || []).reduce((s: number, a: any) => s + (Number(a.current_value) || 0), 0);
+        famStorehouse += (m.storehouses || [])
+          .filter((a: any) => a.asset_type !== 'Primary Residence & Protected Legacy Accounts')
+          .reduce((s: number, a: any) => s + (Number(a.current_value) || 0), 0);
       });
     });
   } else {
