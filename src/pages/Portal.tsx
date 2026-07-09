@@ -752,24 +752,43 @@ const Portal = () => {
           </div>
         </div>
 
-        {/* Right Sidebar: Family-Shared Territory */}
+        {/* Right Sidebar: Aggregate Family AUM (no per-account detail — household privacy preserved) */}
         <div className="space-y-4">
-          {family_holding_tank.length > 0 && (
-            <PortalHoldingTank accounts={family_holding_tank} />
-          )}
-          <PortalTerritory
-            vineyardAccounts={familyAssets.vineyard}
-            storehouses={familyAssets.storehouses}
-            insurancePolicies={insurance_policies}
-            contact={contact}
-            family={family}
-            household={null}
-            householdMembers={[]}
-            scopeLabel="Family Shared"
-            portalToken={portalToken}
-            onScopeChange={() => refreshData(portalToken)}
-          />
+          {(() => {
+            // Aggregate every household's assets into a single family AUM number.
+            // Individual account/household breakdowns are intentionally omitted here
+            // to respect household-level privacy within the family.
+            const familyAUM = households.reduce((famSum: number, hh: any) => {
+              const members = hh.members || [];
+              return famSum + members.reduce((mSum: number, m: any) => {
+                const v = (m.vineyard_accounts || []).reduce((s: number, a: any) => s + (Number(a.current_value) || 0), 0);
+                const st = (m.storehouses || []).reduce((s: number, a: any) => s + (Number(a.current_value) || 0), 0);
+                return mSum + v + st;
+              }, 0);
+            }, 0);
+
+            return (
+              <Card>
+                <CardContent className="p-5 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Home className="h-4 w-4 text-accent" />
+                    <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Family AUM</h3>
+                  </div>
+                  <div>
+                    <p className="text-3xl font-bold text-accent font-serif">${familyAUM.toLocaleString()}</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Aggregate across {households.length} household{households.length !== 1 ? "s" : ""}
+                    </p>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground leading-relaxed pt-2 border-t border-border">
+                    Individual household account details are private. Drill into a household tile to view what each member has shared with you.
+                  </p>
+                </CardContent>
+              </Card>
+            );
+          })()}
         </div>
+
       </div>
     );
   };
