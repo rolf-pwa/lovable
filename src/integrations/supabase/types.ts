@@ -3304,7 +3304,8 @@ export type Database = {
           asset_type: string | null
           book_value: number | null
           charter_alignment: Database["public"]["Enums"]["charter_alignment"]
-          contact_id: string
+          contact_id: string | null
+          corporation_id: string | null
           created_at: string
           current_value: number | null
           id: string
@@ -3320,7 +3321,8 @@ export type Database = {
           asset_type?: string | null
           book_value?: number | null
           charter_alignment?: Database["public"]["Enums"]["charter_alignment"]
-          contact_id: string
+          contact_id?: string | null
+          corporation_id?: string | null
           created_at?: string
           current_value?: number | null
           id?: string
@@ -3336,7 +3338,8 @@ export type Database = {
           asset_type?: string | null
           book_value?: number | null
           charter_alignment?: Database["public"]["Enums"]["charter_alignment"]
-          contact_id?: string
+          contact_id?: string | null
+          corporation_id?: string | null
           created_at?: string
           current_value?: number | null
           id?: string
@@ -3354,6 +3357,13 @@ export type Database = {
             columns: ["contact_id"]
             isOneToOne: false
             referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "storehouses_corporation_id_fkey"
+            columns: ["corporation_id"]
+            isOneToOne: false
+            referencedRelation: "corporations"
             referencedColumns: ["id"]
           },
         ]
