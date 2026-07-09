@@ -300,13 +300,12 @@ const VfoPortal = () => {
 
           <div className="grid gap-4 sm:grid-cols-2">
             {households.map((hh: any) => {
-              const hhTotal = (hh.members || []).reduce((sum: number, m: any) => {
-                return sum
-                  + (m.vineyard_accounts || []).reduce((s: number, a: any) => s + (Number(a.current_value) || 0), 0)
-                  + (m.storehouses || [])
-                      .filter((a: any) => a.asset_type !== 'Primary Residence & Protected Legacy Accounts')
-                      .reduce((s: number, a: any) => s + (Number(a.current_value) || 0), 0);
-              }, 0);
+              const members = hh.members || [];
+              const hhV = members.flatMap((m: any) => m.vineyard_accounts || []);
+              const hhS = members.flatMap((m: any) => (m.storehouses || []).filter(isAumStorehouse));
+              const hhT = (family_holding_tank || []).filter((t: any) => members.some((m: any) => m.id === t.contact_id));
+              const hhTotal = sumValues(hhV) + sumValues(hhS) + sumValues(hhT)
+                + insuranceCashForStorehouses(insurance_policies, hhS);
               return (
                 <button
                   key={hh.id}
