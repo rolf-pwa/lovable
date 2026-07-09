@@ -640,23 +640,32 @@ const Portal = () => {
         });
       });
     } else if (level === "household") {
-      // Household level: household_shared + family_shared assets from household members
+      // Household level: household_shared + family_shared assets from household members.
+      // If the viewer is a HoF drilling into a sibling household, restrict to family_shared only.
       const members = householdId
         ? (hierarchy?.households?.find((h: any) => h.id === householdId)?.members || [])
         : (hierarchy?.members || []);
-      // Deduplicate: if the logged-in contact is already in members, skip adding self separately
       const selfInMembers = members.some((m: any) => m.id === contact.id);
+      const isHoFSibling = contact.family_role === "head_of_family" && !selfInMembers;
+      const scopesAllowed = isHoFSibling
+        ? new Set(["family_shared"])
+        : new Set(["household_shared", "family_shared"]);
       if (!selfInMembers) {
-        const selfVineyard = vineyard_accounts.filter((a: any) => a.visibility_scope === "household_shared" || a.visibility_scope === "family_shared");
-        const selfStorehouses = storehouses.filter((a: any) => (a.visibility_scope === "household_shared" || a.visibility_scope === "family_shared") && a.asset_type !== 'Primary Residence & Protected Legacy Accounts');
-        allVineyard.push(...selfVineyard);
-        allStorehouses.push(...selfStorehouses);
+        const selfVineyard = vineyard_accounts.filter((a: any) => scopesAllowed.has(a.visibility_scope));
+        const selfStorehouses = storehouses.filter((a: any) => scopesAllowed.has(a.visibility_scope) && a.asset_type !== 'Primary Residence & Protected Legacy Accounts');
+        // Only include self assets if the logged-in contact belongs to this household context.
+        // For HoF viewing a sibling household, do not inject own assets.
+        if (!isHoFSibling) {
+          allVineyard.push(...selfVineyard);
+          allStorehouses.push(...selfStorehouses);
+        }
       }
       members.forEach((m: any) => {
-        (m.vineyard_accounts || []).filter((a: any) => a.visibility_scope === "household_shared" || a.visibility_scope === "family_shared").forEach((a: any) => allVineyard.push(a));
-        (m.storehouses || []).filter((a: any) => (a.visibility_scope === "household_shared" || a.visibility_scope === "family_shared") && a.asset_type !== 'Primary Residence & Protected Legacy Accounts').forEach((a: any) => allStorehouses.push(a));
+        (m.vineyard_accounts || []).filter((a: any) => scopesAllowed.has(a.visibility_scope)).forEach((a: any) => allVineyard.push(a));
+        (m.storehouses || []).filter((a: any) => scopesAllowed.has(a.visibility_scope) && a.asset_type !== 'Primary Residence & Protected Legacy Accounts').forEach((a: any) => allStorehouses.push(a));
       });
     }
+
 
     return { vineyard: allVineyard, storehouses: allStorehouses };
   };
@@ -702,48 +711,47 @@ const Portal = () => {
               const members = hh.members || [];
               const isOwnHousehold = members.some((m: any) => m.id === contact.id);
               const isHoF = contact.family_role === "head_of_family";
-              // HoF cannot drill into or see details of sibling households,
-              // but their AUM still rolls up into the Family AUM total.
-              const canViewDetails = !isHoF || isOwnHousehold;
+              // HoF may drill into sibling households, but only sees
+              // accounts explicitly designated as `family_shared`. All other
+              // scopes stay private to that household.
+              const restrictToFamilyShared = isHoF && !isOwnHousehold;
 
-              const hhVineyard = members.flatMap((m: any) => m.vineyard_accounts || []);
+              const scopeOk = (a: any) =>
+                restrictToFamilyShared ? a?.visibility_scope === "family_shared" : true;
+
+              const hhVineyard = members.flatMap((m: any) =>
+                (m.vineyard_accounts || []).filter(scopeOk)
+              );
               const hhStore = members.flatMap((m: any) =>
-                (m.storehouses || []).filter((a: any) => isAumStorehouse(a))
+                (m.storehouses || []).filter((a: any) => isAumStorehouse(a) && scopeOk(a))
               );
-              const hhTank = (family_holding_tank || []).filter((t: any) =>
-                members.some((m: any) => m.id === t.contact_id)
-              );
+              const hhTank = restrictToFamilyShared
+                ? []
+                : (family_holding_tank || []).filter((t: any) =>
+                    members.some((m: any) => m.id === t.contact_id)
+                  );
               const memberIds = new Set(members.map((m: any) => m.id));
-              const hhInsurance = (insurance_policies || []).filter((p: any) => memberIds.has(p.contact_id));
+              const hhInsurance = restrictToFamilyShared
+                ? []
+                : (insurance_policies || []).filter((p: any) => memberIds.has(p.contact_id));
               const hhTotal = sumValues(hhVineyard) + sumValues(hhStore)
                 + sumValues(hhTank)
                 + insuranceCashForStorehouses(hhInsurance, hhStore);
 
-              const Wrapper: any = canViewDetails ? "button" : "div";
               return (
-                <Wrapper
+                <button
                   key={hh.id}
-                  {...(canViewDetails
-                    ? {
-                        onClick: () => setDrilldown({ level: "household", householdId: hh.id }),
-                        className:
-                          "text-left rounded-lg border border-border bg-card p-5 hover:border-accent/30 hover:bg-muted/30 transition-colors group",
-                      }
-                    : {
-                        className:
-                          "text-left rounded-lg border border-border bg-card/60 p-5 opacity-90",
-                      })}
+                  onClick={() => setDrilldown({ level: "household", householdId: hh.id })}
+                  className="text-left rounded-lg border border-border bg-card p-5 hover:border-accent/30 hover:bg-muted/30 transition-colors group"
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-2">
                       <Home className="h-4 w-4 text-accent" />
                       <h3 className="font-semibold text-foreground font-serif">{hh.label} Household</h3>
                     </div>
-                    {canViewDetails && (
-                      <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                    )}
+                    <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                   </div>
-                  {canViewDetails && hh.address && (
+                  {hh.address && (
                     <p className="text-xs text-muted-foreground mb-3">{hh.address}</p>
                   )}
                   <div className="flex items-center justify-between">
@@ -753,29 +761,29 @@ const Portal = () => {
                         {members.length} member{members.length !== 1 ? "s" : ""}
                       </span>
                     </div>
-                    {canViewDetails ? (
-                      <span className="text-sm font-semibold text-foreground">${hhTotal.toLocaleString()}</span>
-                    ) : (
-                      <span className="text-[11px] text-muted-foreground italic">Private</span>
+                    <span className="text-sm font-semibold text-foreground">
+                      ${hhTotal.toLocaleString()}
+                      {restrictToFamilyShared && (
+                        <span className="ml-1 text-[10px] font-normal text-muted-foreground">shared</span>
+                      )}
+                    </span>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-1">
+                    {members.slice(0, 4).map((m: any) => (
+                      <span key={m.id} className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
+                        {m.first_name}
+                      </span>
+                    ))}
+                    {members.length > 4 && (
+                      <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
+                        +{members.length - 4}
+                      </span>
                     )}
                   </div>
-                  {canViewDetails && (
-                    <div className="mt-3 flex flex-wrap gap-1">
-                      {members.slice(0, 4).map((m: any) => (
-                        <span key={m.id} className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
-                          {m.first_name}
-                        </span>
-                      ))}
-                      {members.length > 4 && (
-                        <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
-                          +{members.length - 4}
-                        </span>
-                      )}
-                    </div>
-                  )}
-                </Wrapper>
+                </button>
               );
             })}
+
           </div>
 
         </div>
@@ -828,6 +836,11 @@ const Portal = () => {
     const members = currentHousehold?.members || hierarchy?.members || [];
     const hhLabel = currentHousehold?.label || household?.label || "Household";
     const hhAssets = aggregateAssetsAtLevel("household", drilldown.householdId);
+    const viewingOwnHousehold = members.some((m: any) => m.id === contact.id);
+    const isHoFSibling = contact.family_role === "head_of_family" && !viewingOwnHousehold;
+    const allowedScopes = isHoFSibling
+      ? new Set(["family_shared"])
+      : new Set(["household_shared", "family_shared"]);
 
     return (
       <div className="grid gap-6 lg:grid-cols-3">
@@ -842,7 +855,8 @@ const Portal = () => {
                 <div>
                   <h2 className="text-lg font-semibold text-foreground font-serif">{hhLabel} Household</h2>
                   <p className="text-xs text-muted-foreground">
-                    {members.length + 1} member{members.length !== 0 ? "s" : ""}
+                    {members.length + (viewingOwnHousehold ? 0 : 1)} member{members.length !== 0 ? "s" : ""}
+                    {isHoFSibling && " · Family-shared view"}
                   </p>
                 </div>
               </div>
@@ -851,10 +865,12 @@ const Portal = () => {
 
           {/* Member cards — ordered: Head, Spouse, Beneficiary, Minor */}
           <div className="grid gap-3">
-            {[
-              { ...contact, _isSelf: true },
-              ...members.filter((m: any) => m.id !== contact.id).map((m: any) => ({ ...m, _isSelf: false })),
-            ]
+            {(isHoFSibling
+              ? members.map((m: any) => ({ ...m, _isSelf: false }))
+              : [
+                  { ...contact, _isSelf: true },
+                  ...members.filter((m: any) => m.id !== contact.id).map((m: any) => ({ ...m, _isSelf: false })),
+                ])
               .sort((a: any, b: any) => {
                 const order: Record<string, number> = { head_of_family: 0, head_of_household: 1, spouse: 2, beneficiary: 3, minor: 4 };
                 return (order[a.family_role] ?? 4) - (order[b.family_role] ?? 4);
@@ -863,14 +879,20 @@ const Portal = () => {
                 const isSelf = m._isSelf;
                 const mVineyard = isSelf ? vineyard_accounts : (m.vineyard_accounts || []);
                 const mStorehouses = isSelf ? storehouses : (m.storehouses || []);
-                const mVineyardShared = mVineyard.filter((a: any) => a.visibility_scope === "household_shared" || a.visibility_scope === "family_shared");
-                const mStoreShared = mStorehouses.filter((a: any) => (a.visibility_scope === "household_shared" || a.visibility_scope === "family_shared") && isAumStorehouse(a));
-                const mTank = ((isSelf ? (holding_tank || []) : []) as any[])
-                  .concat((household_holding_tank || []).filter((t: any) => t.contact_id === m.id));
+                const mVineyardShared = mVineyard.filter((a: any) => allowedScopes.has(a.visibility_scope));
+                const mStoreShared = mStorehouses.filter((a: any) => allowedScopes.has(a.visibility_scope) && isAumStorehouse(a));
+                const mTank = isHoFSibling
+                  ? []
+                  : ((isSelf ? (holding_tank || []) : []) as any[])
+                      .concat((household_holding_tank || []).filter((t: any) => t.contact_id === m.id));
                 const mTankDedup = Array.from(new Map(mTank.map((t: any) => [t.id, t])).values());
+                const mInsurance = isHoFSibling
+                  ? []
+                  : insurance_policies.filter((p: any) => p.contact_id === m.id);
                 const mTotal = sumValues(mVineyardShared) + sumValues(mStoreShared)
                   + sumValues(mTankDedup)
-                  + insuranceCashForStorehouses(insurance_policies.filter((p: any) => p.contact_id === m.id), mStoreShared);
+                  + insuranceCashForStorehouses(mInsurance, mStoreShared);
+
 
                 return (
                   <button
@@ -1021,14 +1043,23 @@ const Portal = () => {
   // ─── Individual View (tasks + meetings main, territory sidebar) ───
   const getIndividualData = () => {
     if (currentMember) {
-      // Viewing another member's data
+      // Viewing another member's data. If the viewer is a HoF and this
+      // member belongs to a sibling household, only surface family_shared
+      // accounts — everything else remains private.
+      const memberHousehold = hierarchy?.households?.find((h: any) =>
+        (h.members || []).some((mm: any) => mm.id === currentMember.id)
+      );
+      const inOwnHousehold = (memberHousehold?.members || []).some((mm: any) => mm.id === contact.id);
+      const restrict = contact.family_role === "head_of_family" && !inOwnHousehold;
+      const scopeOk = (a: any) => (restrict ? a?.visibility_scope === "family_shared" : true);
       return {
         name: `${currentMember.first_name} ${currentMember.last_name || ""}`.trim(),
         role: currentMember.family_role,
-        vineyardAccounts: currentMember.vineyard_accounts || [],
-        memberStorehouses: currentMember.storehouses || [],
+        vineyardAccounts: (currentMember.vineyard_accounts || []).filter(scopeOk),
+        memberStorehouses: (currentMember.storehouses || []).filter(scopeOk),
       };
     }
+
     // Viewing self
     return {
       name: `${contact.first_name} ${contact.last_name || ""}`.trim(),
