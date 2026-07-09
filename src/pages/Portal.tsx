@@ -698,12 +698,13 @@ const Portal = () => {
           <div className="grid gap-4 sm:grid-cols-2">
             {households.map((hh: any) => {
               const members = hh.members || [];
+              // HoF has full visibility into every household under the family,
+              // so household tile totals sum all member assets (not just the
+              // family_shared subset used for the family-level rollup).
               const hhTotal = members.reduce((sum: number, m: any) => {
                 const vTotal = (m.vineyard_accounts || [])
-                  .filter((a: any) => a.visibility_scope === "family_shared")
                   .reduce((s: number, a: any) => s + (Number(a.current_value) || 0), 0);
                 const sTotal = (m.storehouses || [])
-                  .filter((a: any) => a.visibility_scope === "family_shared")
                   .reduce((s: number, a: any) => s + (Number(a.current_value) || 0), 0);
                 return sum + vTotal + sTotal;
               }, 0);
