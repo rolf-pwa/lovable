@@ -762,19 +762,19 @@ const Portal = () => {
         {/* Right Sidebar: Aggregate Family AUM (no per-account detail — household privacy preserved) */}
         <div className="space-y-4">
           {(() => {
-            // Aggregate family AUM: only family_shared assets are visible at
-            // the family scope. Household- and individual-scoped holdings stay
-            // private to their household.
+            // Aggregate family AUM rolls up ALL scopes across every household
+            // (family_shared + household_shared + individual). Per-account
+            // details remain private to each household — only the totals
+            // appear in the family view.
             const allMembers = households.flatMap((hh: any) => hh.members || []);
-            const allVineyard = allMembers.flatMap((m: any) =>
-              (m.vineyard_accounts || []).filter((a: any) => a.visibility_scope === "family_shared")
-            );
+            const allVineyard = allMembers.flatMap((m: any) => m.vineyard_accounts || []);
             const allStore = allMembers.flatMap((m: any) =>
-              (m.storehouses || []).filter((a: any) => a.visibility_scope === "family_shared" && isAumStorehouse(a))
+              (m.storehouses || []).filter((a: any) => isAumStorehouse(a))
             );
+            const allInsurance = allMembers.flatMap((m: any) => m.insurance_policies || []);
             const familyAUM = sumValues(allVineyard) + sumValues(allStore)
               + sumValues(family_holding_tank)
-              + insuranceCashForStorehouses(insurance_policies, allStore);
+              + insuranceCashForStorehouses(allInsurance, allStore);
 
             return (
               <Card>
