@@ -1180,9 +1180,12 @@ const ContactDetail = () => {
           <div className="space-y-4">
             {(() => {
               const totalVineyard = vineyardAccounts.reduce((s, a) => s + (Number(a.current_value) || 0), 0);
-              const totalStorehouses = storehouses
-                .filter((s: any) => s.asset_type !== 'Primary Residence & Protected Legacy Accounts')
-                .reduce((s, a) => s + (Number(a.current_value) || 0), 0);
+              const nonRealEstateStorehouses = storehouses.filter((s: any) => s.asset_type !== 'Primary Residence & Protected Legacy Accounts');
+              const storehouseIds = new Set(nonRealEstateStorehouses.map((s: any) => s.id));
+              const insuranceCashInStorehouses = insurancePolicies
+                .filter((p: any) => p.cash_value_storehouse_id && storehouseIds.has(p.cash_value_storehouse_id))
+                .reduce((sum: number, p: any) => sum + (Number(p.cash_value) || 0), 0);
+              const totalStorehouses = nonRealEstateStorehouses.reduce((s, a) => s + (Number(a.current_value) || 0), 0) + insuranceCashInStorehouses;
               const totalHoldingTank = holdingTankAccounts.reduce((s, a) => s + (Number(a.current_value) || 0), 0);
               const totalCorpAssets = corporateStakes.reduce((s, st) =>
                 s + (Number(st.pro_rata) || 0) + st.subsidiaries.reduce((ss, sub) => ss + (Number(sub.indirect_pro_rata) || 0), 0)
