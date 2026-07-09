@@ -165,7 +165,9 @@ const VfoPortal = () => {
     });
   } else {
     famVineyard = vineyard_accounts.reduce((s: number, a: any) => s + (Number(a.current_value) || 0), 0);
-    famStorehouse = storehouses.reduce((s: number, a: any) => s + (Number(a.current_value) || 0), 0);
+    famStorehouse = storehouses
+      .filter((a: any) => a.asset_type !== 'Primary Residence & Protected Legacy Accounts')
+      .reduce((s: number, a: any) => s + (Number(a.current_value) || 0), 0);
   }
   const famHolding = (family_holding_tank.length ? family_holding_tank
     : household_holding_tank.length ? household_holding_tank : holding_tank)
@@ -184,7 +186,7 @@ const VfoPortal = () => {
       (hierarchy?.households || []).forEach((hh: any) => {
         (hh.members || []).forEach((m: any) => {
           (m.vineyard_accounts || []).filter((a: any) => a.visibility_scope === "family_shared").forEach((a: any) => v.push(a));
-          (m.storehouses || []).filter((a: any) => a.visibility_scope === "family_shared").forEach((a: any) => s.push(a));
+          (m.storehouses || []).filter((a: any) => a.visibility_scope === "family_shared" && a.asset_type !== 'Primary Residence & Protected Legacy Accounts').forEach((a: any) => s.push(a));
         });
       });
     } else {
@@ -194,11 +196,11 @@ const VfoPortal = () => {
       const selfInMembers = members.some((m: any) => m.id === contact.id);
       if (!selfInMembers) {
         vineyard_accounts.filter((a: any) => a.visibility_scope === "household_shared" || a.visibility_scope === "family_shared").forEach((a: any) => v.push(a));
-        storehouses.filter((a: any) => a.visibility_scope === "household_shared" || a.visibility_scope === "family_shared").forEach((a: any) => s.push(a));
+        storehouses.filter((a: any) => (a.visibility_scope === "household_shared" || a.visibility_scope === "family_shared") && a.asset_type !== 'Primary Residence & Protected Legacy Accounts').forEach((a: any) => s.push(a));
       }
       members.forEach((m: any) => {
         (m.vineyard_accounts || []).filter((a: any) => a.visibility_scope === "household_shared" || a.visibility_scope === "family_shared").forEach((a: any) => v.push(a));
-        (m.storehouses || []).filter((a: any) => a.visibility_scope === "household_shared" || a.visibility_scope === "family_shared").forEach((a: any) => s.push(a));
+        (m.storehouses || []).filter((a: any) => (a.visibility_scope === "household_shared" || a.visibility_scope === "family_shared") && a.asset_type !== 'Primary Residence & Protected Legacy Accounts').forEach((a: any) => s.push(a));
       });
     }
     return { vineyard: v, storehouses: s };

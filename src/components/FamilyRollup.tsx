@@ -96,7 +96,7 @@ export const FamilyRollup = ({
       contactIds.length > 0
         ? supabase
             .from("storehouses")
-            .select("contact_id, current_value")
+            .select("contact_id, current_value, asset_type")
             .in("contact_id", contactIds)
         : Promise.resolve({ data: [] }),
     ]);
@@ -111,7 +111,7 @@ export const FamilyRollup = ({
           .filter((v: any) => v.contact_id === c.id)
           .reduce((sum: number, v: any) => sum + (Number(v.current_value) || 0), 0);
         const sTotal = storehouseData
-          .filter((s: any) => s.contact_id === c.id)
+          .filter((s: any) => s.contact_id === c.id && s.asset_type !== 'Primary Residence & Protected Legacy Accounts')
           .reduce((sum: number, s: any) => sum + (Number(s.current_value) || 0), 0);
         return {
           contactId: c.id,
