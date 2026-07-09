@@ -75,6 +75,7 @@ const FamilyDetail = () => {
   const [vineyard, setVineyard] = useState<any[]>([]);
   const [storehouses, setStorehouses] = useState<any[]>([]);
   const [holdingTank, setHoldingTank] = useState<any[]>([]);
+  const [insurancePolicies, setInsurancePolicies] = useState<any[]>([]);
   const [openHouseholds, setOpenHouseholds] = useState<Set<string>>(new Set());
   const [openSidebarHoldingTank, setOpenSidebarHoldingTank] = useState(false);
   const [openSidebarVineyard, setOpenSidebarVineyard] = useState(false);
@@ -111,18 +112,21 @@ const FamilyDetail = () => {
 
     const memberIds = (cs || []).map((c: any) => c.id);
     if (memberIds.length > 0) {
-      const [{ data: v }, { data: s }, { data: t }] = await Promise.all([
+      const [{ data: v }, { data: s }, { data: t }, { data: ins }] = await Promise.all([
         supabase.from("vineyard_accounts").select("id, contact_id, account_name, account_type, current_value, book_value").in("contact_id", memberIds),
         supabase.from("storehouses").select("id, contact_id, storehouse_number, label, current_value, book_value, asset_type").in("contact_id", memberIds),
         supabase.from("holding_tank").select("id, contact_id, account_name, account_type, current_value, book_value, custodian, expected_deposit_date").in("contact_id", memberIds).neq("status", "moved"),
+        supabase.from("insurance_policies").select("id, contact_id, cash_value, coverage_amount, cash_value_storehouse_id, coverage_storehouse_id").in("contact_id", memberIds),
       ]);
       setVineyard(v || []);
       setStorehouses(s || []);
       setHoldingTank(t || []);
+      setInsurancePolicies(ins || []);
     } else {
       setVineyard([]);
       setStorehouses([]);
       setHoldingTank([]);
+      setInsurancePolicies([]);
     }
 
     setLoading(false);
@@ -171,8 +175,31 @@ const FamilyDetail = () => {
   const totalStorehouses = storehouses
     .filter((s: any) => s.asset_type !== 'Primary Residence & Protected Legacy Accounts')
     .reduce((s, a) => s + (Number(a.current_value) || 0), 0);
+  const insuranceCashInStorehouses = insurancePolicies
+    .filter((p: any) => !!p.cash_value_storehouse_id)
+    .reduce((s: number, p: any) => s + (Number(p.cash_value) || 0), 0);
   const totalHolding = holdingTank.reduce((s, a) => s + (Number(a.current_value) || 0), 0);
-  const totalAUM = totalVineyard + totalStorehouses + totalHolding;
+  const totalAUM = totalVineyard + totalStorehouses + insuranceCashInStorehouses + totalHolding;
+
+  const storehouseBreakdown = [1, 2, 3, 4].map((num) => {
+    const shForNum = storehouses.filter((s: any) => s.storehouse_number === num);
+    const shIds = new Set(shForNum.map((s: any) => s.id));
+    const isLegacy = num === 4;
+    const shTotal = shForNum
+      .filter((s: any) => isLegacy || s.asset_type !== 'Primary Residence & Protected Legacy Accounts')
+      .reduce((sum: number, s: any) => sum + (Number(s.current_value) || 0), 0);
+    const cashTotal = insurancePolicies
+      .filter((p: any) => p.cash_value_storehouse_id && shIds.has(p.cash_value_storehouse_id))
+      .reduce((sum: number, p: any) => sum + (Number(p.cash_value) || 0), 0);
+    const coverageTotal = isLegacy
+      ? insurancePolicies
+          .filter((p: any) => p.coverage_storehouse_id && shIds.has(p.coverage_storehouse_id))
+          .reduce((sum: number, p: any) => sum + (Number(p.coverage_amount) || 0), 0)
+      : 0;
+    return { num, count: shForNum.length, total: shTotal + cashTotal + coverageTotal };
+  });
+  const storehousesCount = storehouseBreakdown.reduce((s, r) => s + r.count, 0);
+  const storehousesDisplayTotal = storehouseBreakdown.reduce((s, r) => s + r.total, 0);
 
   const toggleHousehold = (hid: string) => {
     setOpenHouseholds((prev) => {
@@ -399,11 +426,11 @@ const FamilyDetail = () => {
                   <div className="flex-1 min-w-0">
                     <CardTitle className="text-base font-serif">Storehouses</CardTitle>
                     <p className="text-xs text-muted-foreground">
-                      {storehouses.length} account{storehouses.length !== 1 ? "s" : ""}
+                      {storehousesCount} account{storehousesCount !== 1 ? "s" : ""}
                     </p>
                   </div>
                   <div className="text-right shrink-0">
-                    <p className="text-lg font-bold">{formatCurrency(totalStorehouses)}</p>
+                    <p className="text-lg font-bold">{formatCurrency(storehousesDisplayTotal)}</p>
                   </div>
                   {openSidebarStorehouses ? (
                     <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -414,6 +441,12 @@ const FamilyDetail = () => {
               </CardHeader>
               {openSidebarStorehouses && (
                 <CardContent className="space-y-2 pt-0">
+                  {storehouseBreakdown.filter((r) => r.count > 0 || r.total > 0).map((r) => (
+                    <div key={r.num} className="flex items-center justify-between rounded-md border border-border bg-muted/20 px-3 py-2">
+                      <span className="text-xs font-medium">{storehouseName(r.num)}</span>
+                      <span className="text-sm font-semibold text-accent">{formatCurrency(r.total)}</span>
+                    </div>
+                  ))}
                   {storehouses.length === 0 ? (
                     <p className="text-xs text-muted-foreground text-center py-2">No accounts</p>
                   ) : (
