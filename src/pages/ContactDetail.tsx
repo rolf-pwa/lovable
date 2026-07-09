@@ -1084,6 +1084,7 @@ const ContactDetail = () => {
                       }))}
                       extraTotal={
                         cashValuePolicies.reduce((s, p) => s + (Number(p.cash_value) || 0), 0)
+                        + coveragePolicies.reduce((s, p) => s + (Number(p.coverage_amount) || 0), 0)
                       }
                       footerContent={
                         (coveragePolicies.length > 0 || cashValuePolicies.length > 0) ? (
