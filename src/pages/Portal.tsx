@@ -667,8 +667,9 @@ const Portal = () => {
     const familyAssets = aggregateAssetsAtLevel("family");
     
     // Aggregate financials across all households (family_shared only)
-    const totalAssets = familyAssets.vineyard.reduce((s: number, a: any) => s + (Number(a.current_value) || 0), 0)
-      + familyAssets.storehouses.reduce((s: number, a: any) => s + (Number(a.current_value) || 0), 0);
+    const totalAssets = sumValues(familyAssets.vineyard)
+      + sumValues(familyAssets.storehouses)
+      + insuranceCashForStorehouses(insurance_policies, familyAssets.storehouses);
 
     return (
       <div className="grid gap-6 lg:grid-cols-3">
