@@ -183,6 +183,7 @@ export function InsurancePanel({ scope, storehouses, onStorehousesChanged }: { s
       toast.error(`Failed to create ${STOREHOUSE_NAMES[num]}: ${error.message}`);
       return null;
     }
+    onStorehousesChanged?.();
     return (data as any)?.id ?? null;
   };
 
