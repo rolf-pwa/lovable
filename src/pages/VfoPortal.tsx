@@ -154,26 +154,26 @@ const VfoPortal = () => {
     : null;
 
   // ── Family AUM (all assets across hierarchy) ──
-  let famVineyard = 0, famStorehouse = 0;
+  let famVineyardArr: any[] = [];
+  let famStorehouseArr: any[] = [];
   if (hierarchy?.households) {
     hierarchy.households.forEach((hh: any) => {
       (hh.members || []).forEach((m: any) => {
-        famVineyard += (m.vineyard_accounts || []).reduce((s: number, a: any) => s + (Number(a.current_value) || 0), 0);
-        famStorehouse += (m.storehouses || [])
-          .filter((a: any) => a.asset_type !== 'Primary Residence & Protected Legacy Accounts')
-          .reduce((s: number, a: any) => s + (Number(a.current_value) || 0), 0);
+        famVineyardArr.push(...(m.vineyard_accounts || []));
+        famStorehouseArr.push(...((m.storehouses || []).filter(isAumStorehouse)));
       });
     });
   } else {
-    famVineyard = vineyard_accounts.reduce((s: number, a: any) => s + (Number(a.current_value) || 0), 0);
-    famStorehouse = storehouses
-      .filter((a: any) => a.asset_type !== 'Primary Residence & Protected Legacy Accounts')
-      .reduce((s: number, a: any) => s + (Number(a.current_value) || 0), 0);
+    famVineyardArr = vineyard_accounts;
+    famStorehouseArr = storehouses.filter(isAumStorehouse);
   }
-  const famHolding = (family_holding_tank.length ? family_holding_tank
-    : household_holding_tank.length ? household_holding_tank : holding_tank)
-    .reduce((s: number, a: any) => s + (Number(a.current_value) || 0), 0);
-  const totalAum = famVineyard + famStorehouse + famHolding;
+  const famHoldingArr = (family_holding_tank.length ? family_holding_tank
+    : household_holding_tank.length ? household_holding_tank : holding_tank);
+  const famVineyard = sumValues(famVineyardArr);
+  const famStorehouse = sumValues(famStorehouseArr);
+  const famHolding = sumValues(famHoldingArr);
+  const famInsuranceCash = insuranceCashForStorehouses(insurance_policies, famStorehouseArr);
+  const totalAum = famVineyard + famStorehouse + famHolding + famInsuranceCash;
 
   const householdCount = hierarchy?.households?.length ?? (household ? 1 : 0);
   const memberCount = hierarchy?.households
