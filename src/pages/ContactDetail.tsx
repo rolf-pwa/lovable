@@ -1082,7 +1082,10 @@ const ContactDetail = () => {
                         charterAlignment: sh.charter_alignment,
                         sourceTable: "storehouses" as const,
                       }))}
-                      extraTotal={cashValuePolicies.reduce((s, p) => s + (Number(p.cash_value) || 0), 0)}
+                      extraTotal={
+                        cashValuePolicies.reduce((s, p) => s + (Number(p.cash_value) || 0), 0) +
+                        coveragePolicies.reduce((s, p) => s + (Number(p.coverage_amount) || 0), 0)
+                      }
                       footerContent={
                         (coveragePolicies.length > 0 || cashValuePolicies.length > 0) ? (
                           <div className="rounded-md border border-accent/30 bg-accent/5 p-1.5 space-y-0.5">
