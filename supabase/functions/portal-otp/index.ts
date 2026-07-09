@@ -99,20 +99,36 @@ async function fetchMeetingsForContact(supabase: any, contactEmail: string | nul
   return [];
 }
 
-const ALLOWED_ORIGINS = [
+const ALLOWED_ORIGIN_EXACT = new Set([
   "https://prosperwise.lovable.app",
   "https://app.prosperwise.ca",
-  "https://id-preview--339dfc8f-3e82-4b05-8a36-a9f66fc58449.lovable.app",
+]);
+const ALLOWED_ORIGIN_SUFFIXES = [
+  ".lovable.app",
+  ".lovableproject.com",
+  ".lovable.dev",
 ];
 
 function getCorsHeaders(req: Request) {
   const origin = req.headers.get("Origin") || "";
-  const allowed = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  let allowed = "https://prosperwise.lovable.app";
+  try {
+    const url = new URL(origin);
+    const host = url.hostname;
+    if (
+      ALLOWED_ORIGIN_EXACT.has(origin) ||
+      ALLOWED_ORIGIN_SUFFIXES.some((s) => host.endsWith(s))
+    ) {
+      allowed = origin;
+    }
+  } catch { /* ignore */ }
   return {
     "Access-Control-Allow-Origin": allowed,
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Vary": "Origin",
   };
 }
+
 
 function generateOtp(): string {
   // Cryptographically secure 6-digit OTP with rejection sampling to avoid modulo bias.
