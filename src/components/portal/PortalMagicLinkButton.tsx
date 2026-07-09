@@ -10,12 +10,14 @@ interface Props {
 }
 
 export async function getOrCreateToken(contactId: string, userId: string): Promise<string> {
-  // Check for existing valid token
+  // Check for an existing valid token that has NOT been used yet.
+  // Magic-link tokens are single_use — reusing a consumed token yields "Invalid link".
   const { data: existing } = await supabase
     .from("portal_tokens" as any)
-    .select("token, expires_at")
+    .select("token, expires_at, used_at")
     .eq("contact_id", contactId)
     .eq("revoked", false)
+    .is("used_at", null)
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
