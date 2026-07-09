@@ -272,8 +272,8 @@ const VfoPortal = () => {
   const renderFamilyView = () => {
     const households = hierarchy?.households || [];
     const fa = aggregateAssetsAtLevel("family");
-    const totalShared = fa.vineyard.reduce((s, a: any) => s + (Number(a.current_value) || 0), 0)
-      + fa.storehouses.reduce((s, a: any) => s + (Number(a.current_value) || 0), 0);
+    const totalShared = sumValues(fa.vineyard) + sumValues(fa.storehouses)
+      + insuranceCashForStorehouses(insurance_policies, fa.storehouses);
 
     return (
       <div className="grid gap-6 lg:grid-cols-3">
