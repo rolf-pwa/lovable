@@ -75,6 +75,7 @@ const FamilyDetail = () => {
   const [vineyard, setVineyard] = useState<any[]>([]);
   const [storehouses, setStorehouses] = useState<any[]>([]);
   const [holdingTank, setHoldingTank] = useState<any[]>([]);
+  const [insurancePolicies, setInsurancePolicies] = useState<any[]>([]);
   const [openHouseholds, setOpenHouseholds] = useState<Set<string>>(new Set());
   const [openSidebarHoldingTank, setOpenSidebarHoldingTank] = useState(false);
   const [openSidebarVineyard, setOpenSidebarVineyard] = useState(false);
