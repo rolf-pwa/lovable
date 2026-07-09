@@ -23,6 +23,7 @@ import { PortalUpdates } from "@/components/portal/PortalUpdates";
 import { PortalGeorgiaChat } from "@/components/portal/PortalGeorgiaChat";
 import { PortalYourTeam } from "@/components/portal/PortalYourTeam";
 import { PortalProfessionals } from "@/components/portal/PortalProfessionals";
+import { insuranceCashForStorehouses, sumValues, isAumStorehouse } from "@/lib/portalAum";
 import { PortalDynamicLinks } from "@/components/portal/PortalDynamicLinks";
 import prosperwiseLogo from "@/assets/prosperwise-logo.png";
 
@@ -153,26 +154,26 @@ const VfoPortal = () => {
     : null;
 
   // ── Family AUM (all assets across hierarchy) ──
-  let famVineyard = 0, famStorehouse = 0;
+  let famVineyardArr: any[] = [];
+  let famStorehouseArr: any[] = [];
   if (hierarchy?.households) {
     hierarchy.households.forEach((hh: any) => {
       (hh.members || []).forEach((m: any) => {
-        famVineyard += (m.vineyard_accounts || []).reduce((s: number, a: any) => s + (Number(a.current_value) || 0), 0);
-        famStorehouse += (m.storehouses || [])
-          .filter((a: any) => a.asset_type !== 'Primary Residence & Protected Legacy Accounts')
-          .reduce((s: number, a: any) => s + (Number(a.current_value) || 0), 0);
+        famVineyardArr.push(...(m.vineyard_accounts || []));
+        famStorehouseArr.push(...((m.storehouses || []).filter(isAumStorehouse)));
       });
     });
   } else {
-    famVineyard = vineyard_accounts.reduce((s: number, a: any) => s + (Number(a.current_value) || 0), 0);
-    famStorehouse = storehouses
-      .filter((a: any) => a.asset_type !== 'Primary Residence & Protected Legacy Accounts')
-      .reduce((s: number, a: any) => s + (Number(a.current_value) || 0), 0);
+    famVineyardArr = vineyard_accounts;
+    famStorehouseArr = storehouses.filter(isAumStorehouse);
   }
-  const famHolding = (family_holding_tank.length ? family_holding_tank
-    : household_holding_tank.length ? household_holding_tank : holding_tank)
-    .reduce((s: number, a: any) => s + (Number(a.current_value) || 0), 0);
-  const totalAum = famVineyard + famStorehouse + famHolding;
+  const famHoldingArr = (family_holding_tank.length ? family_holding_tank
+    : household_holding_tank.length ? household_holding_tank : holding_tank);
+  const famVineyard = sumValues(famVineyardArr);
+  const famStorehouse = sumValues(famStorehouseArr);
+  const famHolding = sumValues(famHoldingArr);
+  const famInsuranceCash = insuranceCashForStorehouses(insurance_policies, famStorehouseArr);
+  const totalAum = famVineyard + famStorehouse + famHolding + famInsuranceCash;
 
   const householdCount = hierarchy?.households?.length ?? (household ? 1 : 0);
   const memberCount = hierarchy?.households
@@ -271,8 +272,8 @@ const VfoPortal = () => {
   const renderFamilyView = () => {
     const households = hierarchy?.households || [];
     const fa = aggregateAssetsAtLevel("family");
-    const totalShared = fa.vineyard.reduce((s, a: any) => s + (Number(a.current_value) || 0), 0)
-      + fa.storehouses.reduce((s, a: any) => s + (Number(a.current_value) || 0), 0);
+    const totalShared = sumValues(fa.vineyard) + sumValues(fa.storehouses)
+      + insuranceCashForStorehouses(insurance_policies, fa.storehouses);
 
     return (
       <div className="grid gap-6 lg:grid-cols-3">
@@ -299,13 +300,12 @@ const VfoPortal = () => {
 
           <div className="grid gap-4 sm:grid-cols-2">
             {households.map((hh: any) => {
-              const hhTotal = (hh.members || []).reduce((sum: number, m: any) => {
-                return sum
-                  + (m.vineyard_accounts || []).reduce((s: number, a: any) => s + (Number(a.current_value) || 0), 0)
-                  + (m.storehouses || [])
-                      .filter((a: any) => a.asset_type !== 'Primary Residence & Protected Legacy Accounts')
-                      .reduce((s: number, a: any) => s + (Number(a.current_value) || 0), 0);
-              }, 0);
+              const members = hh.members || [];
+              const hhV = members.flatMap((m: any) => m.vineyard_accounts || []);
+              const hhS = members.flatMap((m: any) => (m.storehouses || []).filter(isAumStorehouse));
+              const hhT = (family_holding_tank || []).filter((t: any) => members.some((m: any) => m.id === t.contact_id));
+              const hhTotal = sumValues(hhV) + sumValues(hhS) + sumValues(hhT)
+                + insuranceCashForStorehouses(insurance_policies, hhS);
               return (
                 <button
                   key={hh.id}
@@ -399,10 +399,12 @@ const VfoPortal = () => {
               const isSelf = m._isSelf;
               const mVineyard = isSelf ? vineyard_accounts : (m.vineyard_accounts || []);
               const mStorehouses = isSelf ? storehouses : (m.storehouses || []);
-              const mTotal = mVineyard.reduce((s: number, a: any) => s + (Number(a.current_value) || 0), 0)
-                + mStorehouses
-                    .filter((a: any) => a.asset_type !== 'Primary Residence & Protected Legacy Accounts')
-                    .reduce((s: number, a: any) => s + (Number(a.current_value) || 0), 0);
+              const mStoreAum = mStorehouses.filter(isAumStorehouse);
+              const mTank = ((isSelf ? (holding_tank || []) : []) as any[])
+                .concat((household_holding_tank || []).filter((t: any) => t.contact_id === m.id));
+              const mTankDedup = Array.from(new Map(mTank.map((t: any) => [t.id, t])).values());
+              const mTotal = sumValues(mVineyard) + sumValues(mStoreAum) + sumValues(mTankDedup)
+                + insuranceCashForStorehouses(insurance_policies.filter((p: any) => p.contact_id === m.id), mStoreAum);
               return (
                 <button
                   key={m.id}
