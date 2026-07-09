@@ -441,6 +441,12 @@ const FamilyDetail = () => {
               </CardHeader>
               {openSidebarStorehouses && (
                 <CardContent className="space-y-2 pt-0">
+                  {storehouseBreakdown.filter((r) => r.count > 0 || r.total > 0).map((r) => (
+                    <div key={r.num} className="flex items-center justify-between rounded-md border border-border bg-muted/20 px-3 py-2">
+                      <span className="text-xs font-medium">{storehouseName(r.num)}</span>
+                      <span className="text-sm font-semibold text-accent">{formatCurrency(r.total)}</span>
+                    </div>
+                  ))}
                   {storehouses.length === 0 ? (
                     <p className="text-xs text-muted-foreground text-center py-2">No accounts</p>
                   ) : (
