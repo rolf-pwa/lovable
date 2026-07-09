@@ -400,7 +400,9 @@ const VfoPortal = () => {
               const mVineyard = isSelf ? vineyard_accounts : (m.vineyard_accounts || []);
               const mStorehouses = isSelf ? storehouses : (m.storehouses || []);
               const mTotal = mVineyard.reduce((s: number, a: any) => s + (Number(a.current_value) || 0), 0)
-                + mStorehouses.reduce((s: number, a: any) => s + (Number(a.current_value) || 0), 0);
+                + mStorehouses
+                    .filter((a: any) => a.asset_type !== 'Primary Residence & Protected Legacy Accounts')
+                    .reduce((s: number, a: any) => s + (Number(a.current_value) || 0), 0);
               return (
                 <button
                   key={m.id}
