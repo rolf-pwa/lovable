@@ -178,9 +178,10 @@ export function PortalTerritory({ vineyardAccounts, storehouses, contact, family
     byType[t].total += Number(a.current_value) || 0;
   });
 
-  const visibleStorehouses = scopeLabel
+  const visibleStorehouses = (scopeLabel
     ? storehouses
-    : storehouses.filter((s: any) => s.visibility_scope !== "private");
+    : storehouses.filter((s: any) => s.visibility_scope !== "private")
+  ).filter((s: any) => s.asset_type !== 'Primary Residence & Protected Legacy Accounts');
 
   return (
     <div className="space-y-6">

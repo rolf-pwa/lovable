@@ -73,7 +73,7 @@ const Households = () => {
       supabase.from("families").select("id, name"),
       supabase.from("contacts").select("id, first_name, last_name, household_id"),
       supabase.from("vineyard_accounts").select("contact_id, current_value"),
-      supabase.from("storehouses").select("contact_id, current_value"),
+      supabase.from("storehouses").select("contact_id, current_value, asset_type"),
       supabase.from("holding_tank").select("household_id, current_value").eq("status", "holding"),
     ]);
 
@@ -87,7 +87,14 @@ const Households = () => {
 
     // Aggregate assets per household
     const householdAssets = new Map<string, number>();
-    for (const acc of [...(vineyard || []), ...(storehouses || [])]) {
+    for (const acc of vineyard || []) {
+      const hhId = contactHouseholdMap.get(acc.contact_id);
+      if (hhId) {
+        householdAssets.set(hhId, (householdAssets.get(hhId) || 0) + (Number(acc.current_value) || 0));
+      }
+    }
+    for (const acc of storehouses || []) {
+      if (acc.asset_type === 'Primary Residence & Protected Legacy Accounts') continue;
       const hhId = contactHouseholdMap.get(acc.contact_id);
       if (hhId) {
         householdAssets.set(hhId, (householdAssets.get(hhId) || 0) + (Number(acc.current_value) || 0));
