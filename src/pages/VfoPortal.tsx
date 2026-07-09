@@ -195,17 +195,23 @@ const VfoPortal = () => {
         ? (hierarchy?.households?.find((h: any) => h.id === householdId)?.members || [])
         : (hierarchy?.members || []);
       const selfInMembers = members.some((m: any) => m.id === contact.id);
-      if (!selfInMembers) {
-        vineyard_accounts.filter((a: any) => a.visibility_scope === "household_shared" || a.visibility_scope === "family_shared").forEach((a: any) => v.push(a));
-        storehouses.filter((a: any) => (a.visibility_scope === "household_shared" || a.visibility_scope === "family_shared") && a.asset_type !== 'Primary Residence & Protected Legacy Accounts').forEach((a: any) => s.push(a));
+      // HoF viewing a sibling household: restrict to family_shared only.
+      const isHoFSibling = contact.family_role === "head_of_family" && !selfInMembers;
+      const allowed = isHoFSibling
+        ? new Set(["family_shared"])
+        : new Set(["household_shared", "family_shared"]);
+      if (!selfInMembers && !isHoFSibling) {
+        vineyard_accounts.filter((a: any) => allowed.has(a.visibility_scope)).forEach((a: any) => v.push(a));
+        storehouses.filter((a: any) => allowed.has(a.visibility_scope) && a.asset_type !== 'Primary Residence & Protected Legacy Accounts').forEach((a: any) => s.push(a));
       }
       members.forEach((m: any) => {
-        (m.vineyard_accounts || []).filter((a: any) => a.visibility_scope === "household_shared" || a.visibility_scope === "family_shared").forEach((a: any) => v.push(a));
-        (m.storehouses || []).filter((a: any) => (a.visibility_scope === "household_shared" || a.visibility_scope === "family_shared") && a.asset_type !== 'Primary Residence & Protected Legacy Accounts').forEach((a: any) => s.push(a));
+        (m.vineyard_accounts || []).filter((a: any) => allowed.has(a.visibility_scope)).forEach((a: any) => v.push(a));
+        (m.storehouses || []).filter((a: any) => allowed.has(a.visibility_scope) && a.asset_type !== 'Primary Residence & Protected Legacy Accounts').forEach((a: any) => s.push(a));
       });
     }
     return { vineyard: v, storehouses: s };
   };
+
 
   // ── Header subtitle ──
   const subtitle = (() => {
