@@ -761,16 +761,12 @@ const Portal = () => {
             // Aggregate every household's assets into a single family AUM number.
             // Individual account/household breakdowns are intentionally omitted here
             // to respect household-level privacy within the family.
-            const familyAUM = households.reduce((famSum: number, hh: any) => {
-              const members = hh.members || [];
-              return famSum + members.reduce((mSum: number, m: any) => {
-                const v = (m.vineyard_accounts || []).reduce((s: number, a: any) => s + (Number(a.current_value) || 0), 0);
-                const st = (m.storehouses || [])
-                  .filter((a: any) => a.asset_type !== 'Primary Residence & Protected Legacy Accounts')
-                  .reduce((s: number, a: any) => s + (Number(a.current_value) || 0), 0);
-                return mSum + v + st;
-              }, 0);
-            }, 0);
+            const allMembers = households.flatMap((hh: any) => hh.members || []);
+            const allVineyard = allMembers.flatMap((m: any) => m.vineyard_accounts || []);
+            const allStore = allMembers.flatMap((m: any) => (m.storehouses || []).filter(isAumStorehouse));
+            const familyAUM = sumValues(allVineyard) + sumValues(allStore)
+              + sumValues(family_holding_tank)
+              + insuranceCashForStorehouses(insurance_policies, allStore);
 
             return (
               <Card>
