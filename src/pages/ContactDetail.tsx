@@ -1225,13 +1225,21 @@ const ContactDetail = () => {
                       ].map(({ num, label }) => {
                         const shForNum = storehouses.filter((s: any) => s.storehouse_number === num);
                         const shIds = new Set(shForNum.map((s: any) => s.id));
+                        // Legacy Trust displays full container total (incl. real estate + coverage);
+                        // other rows follow AUM rules (exclude real estate, exclude coverage).
+                        const isLegacy = num === 4;
                         const shTotal = shForNum
-                          .filter((s: any) => s.asset_type !== 'Primary Residence & Protected Legacy Accounts')
+                          .filter((s: any) => isLegacy || s.asset_type !== 'Primary Residence & Protected Legacy Accounts')
                           .reduce((sum: number, s: any) => sum + (Number(s.current_value) || 0), 0);
                         const cashTotal = insurancePolicies
                           .filter((p: any) => p.cash_value_storehouse_id && shIds.has(p.cash_value_storehouse_id))
                           .reduce((sum: number, p: any) => sum + (Number(p.cash_value) || 0), 0);
-                        const rowTotal = shTotal + cashTotal;
+                        const coverageTotal = isLegacy
+                          ? insurancePolicies
+                              .filter((p: any) => p.coverage_storehouse_id && shIds.has(p.coverage_storehouse_id))
+                              .reduce((sum: number, p: any) => sum + (Number(p.coverage_amount) || 0), 0)
+                          : 0;
+                        const rowTotal = shTotal + cashTotal + coverageTotal;
                         if (rowTotal === 0 && shForNum.length === 0) return null;
                         return (
                           <div key={num} className="flex items-center justify-between text-sm">
