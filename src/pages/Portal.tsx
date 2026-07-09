@@ -700,11 +700,15 @@ const Portal = () => {
           <div className="grid gap-4 sm:grid-cols-2">
             {households.map((hh: any) => {
               const members = hh.members || [];
-              // HoF has full visibility into every household under the family,
-              // so household tile totals sum all member assets (not just the
-              // family_shared subset used for the family-level rollup).
-              const hhVineyard = members.flatMap((m: any) => m.vineyard_accounts || []);
-              const hhStore = members.flatMap((m: any) => (m.storehouses || []).filter(isAumStorehouse));
+              // Household privacy: at the family level we only surface assets
+              // explicitly marked family_shared. Household- and individual-
+              // scoped holdings are hidden from siblings in the family view.
+              const hhVineyard = members.flatMap((m: any) =>
+                (m.vineyard_accounts || []).filter((a: any) => a.visibility_scope === "family_shared")
+              );
+              const hhStore = members.flatMap((m: any) =>
+                (m.storehouses || []).filter((a: any) => a.visibility_scope === "family_shared" && isAumStorehouse(a))
+              );
               const hhTank = (family_holding_tank || []).filter((t: any) =>
                 members.some((m: any) => m.id === t.contact_id)
               );
