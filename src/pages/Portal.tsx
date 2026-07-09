@@ -700,21 +700,21 @@ const Portal = () => {
           <div className="grid gap-4 sm:grid-cols-2">
             {households.map((hh: any) => {
               const members = hh.members || [];
-              // Household privacy: at the family level we only surface assets
-              // explicitly marked family_shared. Household- and individual-
-              // scoped holdings are hidden from siblings in the family view.
-              const hhVineyard = members.flatMap((m: any) =>
-                (m.vineyard_accounts || []).filter((a: any) => a.visibility_scope === "family_shared")
-              );
+              // Household privacy: totals roll up ALL scopes (family_shared,
+              // household_shared, and individual) so the Family AUM reflects
+              // the full picture — but per-account details remain private to
+              // the household and are not surfaced here.
+              const hhVineyard = members.flatMap((m: any) => m.vineyard_accounts || []);
               const hhStore = members.flatMap((m: any) =>
-                (m.storehouses || []).filter((a: any) => a.visibility_scope === "family_shared" && isAumStorehouse(a))
+                (m.storehouses || []).filter((a: any) => isAumStorehouse(a))
               );
               const hhTank = (family_holding_tank || []).filter((t: any) =>
                 members.some((m: any) => m.id === t.contact_id)
               );
+              const hhInsurance = members.flatMap((m: any) => m.insurance_policies || []);
               const hhTotal = sumValues(hhVineyard) + sumValues(hhStore)
                 + sumValues(hhTank)
-                + insuranceCashForStorehouses(insurance_policies, hhStore);
+                + insuranceCashForStorehouses(hhInsurance, hhStore);
 
               return (
                 <button
