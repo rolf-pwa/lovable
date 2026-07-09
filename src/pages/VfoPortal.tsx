@@ -582,12 +582,30 @@ const VfoPortal = () => {
   // ── Individual View ──
   const renderIndividualView = () => {
     const isSelf = !currentMember;
-    const ind = isSelf
-      ? { vineyardAccounts: vineyard_accounts, memberStorehouses: storehouses, name: `${contact.first_name || ""} ${contact.last_name || ""}`.trim() }
-      : { vineyardAccounts: currentMember.vineyard_accounts || [], memberStorehouses: currentMember.storehouses || [], name: `${currentMember.first_name || ""} ${currentMember.last_name || ""}`.trim() };
+    // HoF viewing a sibling household's member: restrict to family_shared only.
+    let indVineyard: any[] = [];
+    let indStorehouses: any[] = [];
+    let indName = "";
+    if (isSelf) {
+      indVineyard = vineyard_accounts;
+      indStorehouses = storehouses;
+      indName = `${contact.first_name || ""} ${contact.last_name || ""}`.trim();
+    } else {
+      const memberHousehold = hierarchy?.households?.find((h: any) =>
+        (h.members || []).some((mm: any) => mm.id === currentMember.id)
+      );
+      const inOwnHousehold = (memberHousehold?.members || []).some((mm: any) => mm.id === contact.id);
+      const restrict = contact.family_role === "head_of_family" && !inOwnHousehold;
+      const scopeOk = (a: any) => (restrict ? a?.visibility_scope === "family_shared" : true);
+      indVineyard = (currentMember.vineyard_accounts || []).filter(scopeOk);
+      indStorehouses = (currentMember.storehouses || []).filter(scopeOk);
+      indName = `${currentMember.first_name || ""} ${currentMember.last_name || ""}`.trim();
+    }
+    const ind = { vineyardAccounts: indVineyard, memberStorehouses: indStorehouses, name: indName };
     const hasHolding = isSelf && holding_tank.length > 0;
     const hasTerritory = (ind.vineyardAccounts.length + ind.memberStorehouses.length) > 0;
     const hasFinancials = hasHolding || hasTerritory;
+
 
     return (
       <div className="grid gap-6 lg:grid-cols-3">
