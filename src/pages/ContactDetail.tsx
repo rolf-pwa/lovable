@@ -1217,12 +1217,31 @@ const ContactDetail = () => {
                         </span>
                         <span className="font-semibold text-accent">{formatCurrency(totalHoldingTank)}</span>
                       </div>
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="flex items-center gap-2 text-muted-foreground">
-                          <Landmark className="h-3.5 w-3.5" /> Storehouses
-                        </span>
-                        <span className="font-semibold text-accent">{formatCurrency(totalStorehouses)}</span>
-                      </div>
+                      {[
+                        { num: 1, label: "Liquidity Reserve" },
+                        { num: 2, label: "Strategic Reserve" },
+                        { num: 3, label: "Philanthropic Trust" },
+                        { num: 4, label: "Legacy Trust" },
+                      ].map(({ num, label }) => {
+                        const shForNum = storehouses.filter((s: any) => s.storehouse_number === num);
+                        const shIds = new Set(shForNum.map((s: any) => s.id));
+                        const shTotal = shForNum
+                          .filter((s: any) => s.asset_type !== 'Primary Residence & Protected Legacy Accounts')
+                          .reduce((sum: number, s: any) => sum + (Number(s.current_value) || 0), 0);
+                        const cashTotal = insurancePolicies
+                          .filter((p: any) => p.cash_value_storehouse_id && shIds.has(p.cash_value_storehouse_id))
+                          .reduce((sum: number, p: any) => sum + (Number(p.cash_value) || 0), 0);
+                        const rowTotal = shTotal + cashTotal;
+                        if (rowTotal === 0 && shForNum.length === 0) return null;
+                        return (
+                          <div key={num} className="flex items-center justify-between text-sm">
+                            <span className="flex items-center gap-2 text-muted-foreground">
+                              <Landmark className="h-3.5 w-3.5" /> {label}
+                            </span>
+                            <span className="font-semibold text-accent">{formatCurrency(rowTotal)}</span>
+                          </div>
+                        );
+                      })}
                       {corporateStakes.length > 0 && (
                         <div className="flex items-center justify-between text-sm">
                           <span className="flex items-center gap-2 text-muted-foreground">
