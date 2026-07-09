@@ -887,7 +887,9 @@ const ContactDetail = () => {
                 <InsurancePanel
                   scope={insuranceScope}
                   storehouses={insuranceStorehouses}
+                  onStorehousesChanged={() => fetchData()}
                 />
+
 
 
 

@@ -95,7 +95,7 @@ const blank: Partial<Policy> = {
   notes: "",
 };
 
-export function InsurancePanel({ scope, storehouses }: { scope: OwnerScope; storehouses: Storehouse[] }) {
+export function InsurancePanel({ scope, storehouses, onStorehousesChanged }: { scope: OwnerScope; storehouses: Storehouse[]; onStorehousesChanged?: () => void }) {
   const [policies, setPolicies] = useState<Policy[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Partial<Policy> | null>(null);
@@ -183,6 +183,7 @@ export function InsurancePanel({ scope, storehouses }: { scope: OwnerScope; stor
       toast.error(`Failed to create ${STOREHOUSE_NAMES[num]}: ${error.message}`);
       return null;
     }
+    onStorehousesChanged?.();
     return (data as any)?.id ?? null;
   };
 

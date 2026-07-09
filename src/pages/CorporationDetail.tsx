@@ -583,6 +583,7 @@ const CorporationDetail = () => {
             storehouses={linkedStorehouses.map((s) => ({
               id: s.id, storehouse_number: s.storehouse_number, label: s.label,
             }))}
+            onStorehousesChanged={() => fetchData()}
           />
         </div>
 
