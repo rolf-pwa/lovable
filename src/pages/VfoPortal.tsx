@@ -303,10 +303,10 @@ const VfoPortal = () => {
             {households.map((hh: any) => {
               const members = hh.members || [];
               const isOwnHousehold = members.some((m: any) => m.id === contact.id);
-              const isHoF = contact.family_role === "head_of_family";
-              const restrictToFamilyShared = isHoF && !isOwnHousehold;
+              const restrictToFamilyShared = !isOwnHousehold;
               const scopeOk = (a: any) =>
                 restrictToFamilyShared ? a?.visibility_scope === "family_shared" : true;
+
 
               const hhV = members.flatMap((m: any) => (m.vineyard_accounts || []).filter(scopeOk));
               const hhS = members.flatMap((m: any) =>
