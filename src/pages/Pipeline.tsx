@@ -114,8 +114,8 @@ export default function Pipeline() {
   };
 
   const handleSave = async () => {
-    if (!formContactId || !formAmount) {
-      toast.error("Contact and amount are required");
+    if (!formContactId) {
+      toast.error("Contact is required");
       return;
     }
     setSaving(true);
@@ -123,7 +123,7 @@ export default function Pipeline() {
       contact_id: formContactId,
       category: formCategory,
       status: formStatus,
-      amount: Number(formAmount),
+      amount: formAmount ? Number(formAmount) : 0,
       aum_amount: Number(formAum) || 0,
       insurance_coverage_amount: Number(formInsuranceCoverage) || 0,
       commission_amount: Number(formCommission) || 0,
