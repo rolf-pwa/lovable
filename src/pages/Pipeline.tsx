@@ -163,16 +163,31 @@ export default function Pipeline() {
   const aum = items.filter((i) => i.category === "new_aum");
   const sumByStatus = (arr: PipelineItem[], status: string) =>
     arr.filter((i) => i.status === status).reduce((s, i) => s + Number(i.amount), 0);
+  const sumFieldByStatus = (arr: PipelineItem[], status: string, field: keyof PipelineItem) =>
+    arr.filter((i) => i.status === status).reduce((s, i) => s + Number((i as any)[field] || 0), 0);
 
   const revenuePending = sumByStatus(revenue, "pending");
   const revenueInProcess = sumByStatus(revenue, "in_process");
   const revenueCompleted = sumByStatus(revenue, "completed");
   const totalActiveRevenue = revenuePending + revenueInProcess;
 
+  // Consulting fees + Commissions across active revenue items
+  const activeRevenueItems = revenue.filter((i) => i.status !== "completed");
+  const consultingActive = activeRevenueItems.reduce((s, i) => s + Number(i.amount || 0), 0);
+  const commissionsActive = activeRevenueItems.reduce((s, i) => s + Number(i.commission_amount || 0), 0);
+  const totalRevenueValue = consultingActive + commissionsActive;
+
   const aumPending = sumByStatus(aum, "pending");
   const aumInProcess = sumByStatus(aum, "in_process");
   const aumCompleted = sumByStatus(aum, "completed");
   const totalActiveAum = aumPending + aumInProcess;
+
+  // Insurance coverage totals
+  const insuranceItems = items.filter((i) => i.category === "insurance");
+  const insCoveragePending = sumFieldByStatus(insuranceItems, "pending", "insurance_coverage_amount");
+  const insCoverageInProcess = sumFieldByStatus(insuranceItems, "in_process", "insurance_coverage_amount");
+  const insCoverageCompleted = sumFieldByStatus(insuranceItems, "completed", "insurance_coverage_amount");
+  const totalActiveInsCoverage = insCoveragePending + insCoverageInProcess;
 
   return (
     <AppLayout>
