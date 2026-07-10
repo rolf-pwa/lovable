@@ -91,6 +91,9 @@ export default function Pipeline() {
     setFormCategory("pws_consulting");
     setFormStatus("pending");
     setFormAmount("");
+    setFormAum("");
+    setFormInsuranceCoverage("");
+    setFormCommission("");
     setFormDate("");
     setFormNotes("");
     setEditingItem(null);
@@ -102,6 +105,9 @@ export default function Pipeline() {
     setFormCategory(item.category);
     setFormStatus(item.status);
     setFormAmount(String(item.amount));
+    setFormAum(item.aum_amount ? String(item.aum_amount) : "");
+    setFormInsuranceCoverage(item.insurance_coverage_amount ? String(item.insurance_coverage_amount) : "");
+    setFormCommission(item.commission_amount ? String(item.commission_amount) : "");
     setFormDate(item.expected_close_date || "");
     setFormNotes(item.notes || "");
     setDialogOpen(true);
@@ -118,6 +124,9 @@ export default function Pipeline() {
       category: formCategory,
       status: formStatus,
       amount: Number(formAmount),
+      aum_amount: Number(formAum) || 0,
+      insurance_coverage_amount: Number(formInsuranceCoverage) || 0,
+      commission_amount: Number(formCommission) || 0,
       expected_close_date: formDate || null,
       notes: formNotes || null,
     };
