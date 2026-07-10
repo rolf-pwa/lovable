@@ -21,6 +21,9 @@ interface PipelineItem {
   category: "pws_consulting" | "new_aum" | "insurance";
   status: "pending" | "in_process" | "completed";
   amount: number;
+  aum_amount: number;
+  insurance_coverage_amount: number;
+  commission_amount: number;
   expected_close_date: string | null;
   notes: string | null;
   created_at: string;
@@ -63,6 +66,9 @@ export default function Pipeline() {
   const [formCategory, setFormCategory] = useState<string>("pws_consulting");
   const [formStatus, setFormStatus] = useState<string>("pending");
   const [formAmount, setFormAmount] = useState("");
+  const [formAum, setFormAum] = useState("");
+  const [formInsuranceCoverage, setFormInsuranceCoverage] = useState("");
+  const [formCommission, setFormCommission] = useState("");
   const [formDate, setFormDate] = useState("");
   const [formNotes, setFormNotes] = useState("");
   const [saving, setSaving] = useState(false);
@@ -85,6 +91,9 @@ export default function Pipeline() {
     setFormCategory("pws_consulting");
     setFormStatus("pending");
     setFormAmount("");
+    setFormAum("");
+    setFormInsuranceCoverage("");
+    setFormCommission("");
     setFormDate("");
     setFormNotes("");
     setEditingItem(null);
@@ -96,6 +105,9 @@ export default function Pipeline() {
     setFormCategory(item.category);
     setFormStatus(item.status);
     setFormAmount(String(item.amount));
+    setFormAum(item.aum_amount ? String(item.aum_amount) : "");
+    setFormInsuranceCoverage(item.insurance_coverage_amount ? String(item.insurance_coverage_amount) : "");
+    setFormCommission(item.commission_amount ? String(item.commission_amount) : "");
     setFormDate(item.expected_close_date || "");
     setFormNotes(item.notes || "");
     setDialogOpen(true);
@@ -112,6 +124,9 @@ export default function Pipeline() {
       category: formCategory,
       status: formStatus,
       amount: Number(formAmount),
+      aum_amount: Number(formAum) || 0,
+      insurance_coverage_amount: Number(formInsuranceCoverage) || 0,
+      commission_amount: Number(formCommission) || 0,
       expected_close_date: formDate || null,
       notes: formNotes || null,
     };
@@ -209,6 +224,21 @@ export default function Pipeline() {
                 <div>
                   <Label>Amount ($)</Label>
                   <Input type="number" value={formAmount} onChange={(e) => setFormAmount(e.target.value)} placeholder="0" />
+                  <p className="text-xs text-muted-foreground mt-1">Primary opportunity value for pipeline summaries.</p>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 rounded-md border border-border p-3 bg-muted/30">
+                  <div>
+                    <Label className="text-xs">AUM ($)</Label>
+                    <Input type="number" value={formAum} onChange={(e) => setFormAum(e.target.value)} placeholder="0" />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Insurance Coverage ($)</Label>
+                    <Input type="number" value={formInsuranceCoverage} onChange={(e) => setFormInsuranceCoverage(e.target.value)} placeholder="0" />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Commissions ($)</Label>
+                    <Input type="number" value={formCommission} onChange={(e) => setFormCommission(e.target.value)} placeholder="0" />
+                  </div>
                 </div>
                 <div>
                   <Label>Expected Close Date</Label>
@@ -306,6 +336,9 @@ export default function Pipeline() {
                     <TableHead>Category</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Amount</TableHead>
+                    <TableHead className="text-right">AUM</TableHead>
+                    <TableHead className="text-right">Insurance Coverage</TableHead>
+                    <TableHead className="text-right">Commissions</TableHead>
                     <TableHead>Expected Close</TableHead>
                     <TableHead>Notes</TableHead>
                     <TableHead className="w-[80px]"></TableHead>
@@ -324,6 +357,9 @@ export default function Pipeline() {
                         <Badge className={STATUS_COLORS[item.status]}>{STATUS_LABELS[item.status]}</Badge>
                       </TableCell>
                       <TableCell className="text-right font-medium">{formatCurrency(Number(item.amount))}</TableCell>
+                      <TableCell className="text-right text-muted-foreground">{Number(item.aum_amount) ? formatCurrency(Number(item.aum_amount)) : "—"}</TableCell>
+                      <TableCell className="text-right text-muted-foreground">{Number(item.insurance_coverage_amount) ? formatCurrency(Number(item.insurance_coverage_amount)) : "—"}</TableCell>
+                      <TableCell className="text-right text-muted-foreground">{Number(item.commission_amount) ? formatCurrency(Number(item.commission_amount)) : "—"}</TableCell>
                       <TableCell>{item.expected_close_date || "—"}</TableCell>
                       <TableCell className="max-w-[200px] truncate text-muted-foreground text-sm">{item.notes || "—"}</TableCell>
                       <TableCell>
