@@ -335,7 +335,7 @@ export default function Pipeline() {
                     <TableHead>Contact</TableHead>
                     <TableHead>Category</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Amount</TableHead>
+                    <TableHead className="text-right">Consulting Fee</TableHead>
                     <TableHead className="text-right">AUM</TableHead>
                     <TableHead className="text-right">Insurance Coverage</TableHead>
                     <TableHead className="text-right">Commissions</TableHead>
