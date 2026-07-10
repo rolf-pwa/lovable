@@ -163,16 +163,31 @@ export default function Pipeline() {
   const aum = items.filter((i) => i.category === "new_aum");
   const sumByStatus = (arr: PipelineItem[], status: string) =>
     arr.filter((i) => i.status === status).reduce((s, i) => s + Number(i.amount), 0);
+  const sumFieldByStatus = (arr: PipelineItem[], status: string, field: keyof PipelineItem) =>
+    arr.filter((i) => i.status === status).reduce((s, i) => s + Number((i as any)[field] || 0), 0);
 
   const revenuePending = sumByStatus(revenue, "pending");
   const revenueInProcess = sumByStatus(revenue, "in_process");
   const revenueCompleted = sumByStatus(revenue, "completed");
   const totalActiveRevenue = revenuePending + revenueInProcess;
 
+  // Consulting fees + Commissions across active revenue items
+  const activeRevenueItems = revenue.filter((i) => i.status !== "completed");
+  const consultingActive = activeRevenueItems.reduce((s, i) => s + Number(i.amount || 0), 0);
+  const commissionsActive = activeRevenueItems.reduce((s, i) => s + Number(i.commission_amount || 0), 0);
+  const totalRevenueValue = consultingActive + commissionsActive;
+
   const aumPending = sumByStatus(aum, "pending");
   const aumInProcess = sumByStatus(aum, "in_process");
   const aumCompleted = sumByStatus(aum, "completed");
   const totalActiveAum = aumPending + aumInProcess;
+
+  // Insurance coverage totals
+  const insuranceItems = items.filter((i) => i.category === "insurance");
+  const insCoveragePending = sumFieldByStatus(insuranceItems, "pending", "insurance_coverage_amount");
+  const insCoverageInProcess = sumFieldByStatus(insuranceItems, "in_process", "insurance_coverage_amount");
+  const insCoverageCompleted = sumFieldByStatus(insuranceItems, "completed", "insurance_coverage_amount");
+  const totalActiveInsCoverage = insCoveragePending + insCoverageInProcess;
 
   return (
     <AppLayout>
@@ -257,8 +272,8 @@ export default function Pipeline() {
           </Dialog>
         </div>
 
-        {/* Summary cards — Revenue vs AUM */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* Summary cards — Revenue, AUM, Insurance Coverage */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {/* Revenue Pipeline: Consulting + Insurance */}
           <Card>
             <CardHeader className="pb-2">
@@ -267,13 +282,17 @@ export default function Pipeline() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <p className="text-2xl font-bold text-foreground">{formatCurrency(totalActiveRevenue)}</p>
-              <div className="flex gap-3 text-xs text-muted-foreground">
+              <p className="text-2xl font-bold text-foreground">{formatCurrency(totalRevenueValue)}</p>
+              <div className="flex flex-wrap gap-1.5">
+                <Badge variant="secondary" className="text-xs">Consulting: {formatCurrency(consultingActive)}</Badge>
+                <Badge variant="secondary" className="text-xs">Commissions: {formatCurrency(commissionsActive)}</Badge>
+              </div>
+              <div className="flex gap-3 text-xs text-muted-foreground pt-1 border-t border-border">
                 <span>Pending: <strong className="text-foreground">{formatCurrency(revenuePending)}</strong></span>
                 <span>In Process: <strong className="text-foreground">{formatCurrency(revenueInProcess)}</strong></span>
               </div>
               {revenueCompleted > 0 && (
-                <p className="text-xs text-muted-foreground">Completed: {formatCurrency(revenueCompleted)}</p>
+                <p className="text-xs text-muted-foreground">Completed (fees): {formatCurrency(revenueCompleted)}</p>
               )}
             </CardContent>
           </Card>
@@ -294,6 +313,26 @@ export default function Pipeline() {
               <p className="text-xs text-muted-foreground italic">Subject to AUM fees</p>
               {aumCompleted > 0 && (
                 <p className="text-xs text-muted-foreground">Completed: {formatCurrency(aumCompleted)}</p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Insurance Coverage */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                <ShieldCheck className="h-4 w-4" />Insurance Coverage
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-2xl font-bold text-foreground">{formatCurrency(totalActiveInsCoverage)}</p>
+              <div className="flex gap-3 text-xs text-muted-foreground">
+                <span>Pending: <strong className="text-foreground">{formatCurrency(insCoveragePending)}</strong></span>
+                <span>In Process: <strong className="text-foreground">{formatCurrency(insCoverageInProcess)}</strong></span>
+              </div>
+              <p className="text-xs text-muted-foreground italic">Face amount of pending policies</p>
+              {insCoverageCompleted > 0 && (
+                <p className="text-xs text-muted-foreground">Completed: {formatCurrency(insCoverageCompleted)}</p>
               )}
             </CardContent>
           </Card>
