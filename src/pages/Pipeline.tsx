@@ -224,6 +224,21 @@ export default function Pipeline() {
                 <div>
                   <Label>Amount ($)</Label>
                   <Input type="number" value={formAmount} onChange={(e) => setFormAmount(e.target.value)} placeholder="0" />
+                  <p className="text-xs text-muted-foreground mt-1">Primary opportunity value for pipeline summaries.</p>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 rounded-md border border-border p-3 bg-muted/30">
+                  <div>
+                    <Label className="text-xs">AUM ($)</Label>
+                    <Input type="number" value={formAum} onChange={(e) => setFormAum(e.target.value)} placeholder="0" />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Insurance Coverage ($)</Label>
+                    <Input type="number" value={formInsuranceCoverage} onChange={(e) => setFormInsuranceCoverage(e.target.value)} placeholder="0" />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Commissions ($)</Label>
+                    <Input type="number" value={formCommission} onChange={(e) => setFormCommission(e.target.value)} placeholder="0" />
+                  </div>
                 </div>
                 <div>
                   <Label>Expected Close Date</Label>
