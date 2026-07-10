@@ -326,8 +326,9 @@ serve(async (req) => {
         expires_at: expiresAt,
       });
 
-      // Outbound channels: Resend (default), Wix relay, and/or Gmail (admin@)
-      const channel = (Deno.env.get("NOTIFICATION_CHANNEL") || "resend").toLowerCase();
+      // Client-facing email must use the approved Wix relay. Other channels remain
+      // available only when explicitly configured for diagnostics.
+      const channel = (Deno.env.get("NOTIFICATION_CHANNEL") || "wix").toLowerCase();
       const useResend = channel === "resend" || channel === "all";
       const useWix = channel === "wix" || channel === "both" || channel === "all";
       const useGmail = channel === "gmail" || channel === "both" || channel === "all";
@@ -339,7 +340,7 @@ serve(async (req) => {
       const OTP_FROM_ADDRESS = Deno.env.get("OTP_FROM_ADDRESS") || "ProsperWise <noreply@prosperwise.ca>";
 
       const sendTasks: Promise<unknown>[] = [];
-      let resendOk = false;
+      let deliverySucceeded = false;
 
       if (useResend && RESEND_API_KEY) {
         sendTasks.push((async () => {
@@ -371,7 +372,7 @@ serve(async (req) => {
               const body = await resendRes.text();
               console.error(`[OTP] Resend failed: ${resendRes.status} ${body}`);
             } else {
-              resendOk = true;
+              deliverySucceeded = true;
               console.log(`[OTP] Resend delivered to ${cleanEmail}`);
             }
           } catch (rErr) {
@@ -395,8 +396,12 @@ serve(async (req) => {
               headers: { "Content-Type": "application/json" },
               body: wixPayload,
             });
+            const wixBody = await wixRes.text();
             if (!wixRes.ok) {
-              console.error("[WixRelay] Failed to send OTP. Status:", wixRes.status);
+              console.error(`[WixRelay] Failed to send OTP: ${wixRes.status} ${wixBody}`);
+            } else {
+              deliverySucceeded = true;
+              console.log(`[OTP] Wix relay accepted delivery to ${cleanEmail}: ${wixRes.status}`);
             }
           } catch (wixErr) {
             console.error("[WixRelay] Error calling Wix endpoint:", wixErr);
@@ -429,6 +434,9 @@ serve(async (req) => {
             if (!gmRes.ok) {
               const body = await gmRes.text();
               console.error(`[OTP] Gmail relay failed: ${gmRes.status} ${body}`);
+            } else {
+              deliverySucceeded = true;
+              console.log(`[OTP] Gmail relay accepted delivery to ${cleanEmail}`);
             }
           } catch (gmErr) {
             console.error("[OTP] Error calling send-admin-email:", gmErr);
@@ -438,6 +446,12 @@ serve(async (req) => {
 
       await Promise.all(sendTasks);
 
+      if (!deliverySucceeded) {
+        return new Response(JSON.stringify({ error: "We couldn't send the access code. Please try again shortly." }), {
+          status: 502,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
 
       return new Response(JSON.stringify({ sent: true }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
