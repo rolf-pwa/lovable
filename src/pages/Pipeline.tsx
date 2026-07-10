@@ -158,28 +158,30 @@ export default function Pipeline() {
     return true;
   });
 
-  // Summary stats — split revenue (consulting + insurance) vs AUM
-  const revenue = items.filter((i) => i.category === "pws_consulting" || i.category === "insurance");
+  // Summary stats
   const aum = items.filter((i) => i.category === "new_aum");
   const sumByStatus = (arr: PipelineItem[], status: string) =>
     arr.filter((i) => i.status === status).reduce((s, i) => s + Number(i.amount), 0);
   const sumFieldByStatus = (arr: PipelineItem[], status: string, field: keyof PipelineItem) =>
     arr.filter((i) => i.status === status).reduce((s, i) => s + Number((i as any)[field] || 0), 0);
 
-  const revenuePending = sumByStatus(revenue, "pending");
-  const revenueInProcess = sumByStatus(revenue, "in_process");
-  const revenueCompleted = sumByStatus(revenue, "completed");
-  const totalActiveRevenue = revenuePending + revenueInProcess;
-
-  // Consulting fees + Commissions across active revenue items
-  const activeRevenueItems = revenue.filter((i) => i.status !== "completed");
-  const consultingActive = activeRevenueItems.reduce((s, i) => s + Number(i.amount || 0), 0);
-  const commissionsActive = activeRevenueItems.reduce((s, i) => s + Number(i.commission_amount || 0), 0);
+  // Revenue = Consulting Fees (amount) + Commissions across ALL active opportunities,
+  // regardless of category (consulting fees & commissions can attach to AUM or insurance deals).
+  const activeItems = items.filter((i) => i.status !== "completed");
+  const consultingActive = activeItems.reduce((s, i) => s + Number(i.amount || 0), 0);
+  const commissionsActive = activeItems.reduce((s, i) => s + Number(i.commission_amount || 0), 0);
   const totalRevenueValue = consultingActive + commissionsActive;
 
-  const aumPending = sumByStatus(aum, "pending");
-  const aumInProcess = sumByStatus(aum, "in_process");
-  const aumCompleted = sumByStatus(aum, "completed");
+  const revenuePending =
+    sumByStatus(items, "pending") + sumFieldByStatus(items, "pending", "commission_amount");
+  const revenueInProcess =
+    sumByStatus(items, "in_process") + sumFieldByStatus(items, "in_process", "commission_amount");
+  const revenueCompleted =
+    sumByStatus(items, "completed") + sumFieldByStatus(items, "completed", "commission_amount");
+
+  const aumPending = sumFieldByStatus(aum, "pending", "aum_amount") + sumByStatus(aum.filter(i => !i.aum_amount), "pending");
+  const aumInProcess = sumFieldByStatus(aum, "in_process", "aum_amount") + sumByStatus(aum.filter(i => !i.aum_amount), "in_process");
+  const aumCompleted = sumFieldByStatus(aum, "completed", "aum_amount") + sumByStatus(aum.filter(i => !i.aum_amount), "completed");
   const totalActiveAum = aumPending + aumInProcess;
 
   // Insurance coverage totals
@@ -188,6 +190,7 @@ export default function Pipeline() {
   const insCoverageInProcess = sumFieldByStatus(insuranceItems, "in_process", "insurance_coverage_amount");
   const insCoverageCompleted = sumFieldByStatus(insuranceItems, "completed", "insurance_coverage_amount");
   const totalActiveInsCoverage = insCoveragePending + insCoverageInProcess;
+
 
   return (
     <AppLayout>
