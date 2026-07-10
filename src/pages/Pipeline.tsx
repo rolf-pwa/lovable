@@ -336,6 +336,9 @@ export default function Pipeline() {
                     <TableHead>Category</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Amount</TableHead>
+                    <TableHead className="text-right">AUM</TableHead>
+                    <TableHead className="text-right">Insurance Coverage</TableHead>
+                    <TableHead className="text-right">Commissions</TableHead>
                     <TableHead>Expected Close</TableHead>
                     <TableHead>Notes</TableHead>
                     <TableHead className="w-[80px]"></TableHead>
@@ -354,6 +357,9 @@ export default function Pipeline() {
                         <Badge className={STATUS_COLORS[item.status]}>{STATUS_LABELS[item.status]}</Badge>
                       </TableCell>
                       <TableCell className="text-right font-medium">{formatCurrency(Number(item.amount))}</TableCell>
+                      <TableCell className="text-right text-muted-foreground">{Number(item.aum_amount) ? formatCurrency(Number(item.aum_amount)) : "—"}</TableCell>
+                      <TableCell className="text-right text-muted-foreground">{Number(item.insurance_coverage_amount) ? formatCurrency(Number(item.insurance_coverage_amount)) : "—"}</TableCell>
+                      <TableCell className="text-right text-muted-foreground">{Number(item.commission_amount) ? formatCurrency(Number(item.commission_amount)) : "—"}</TableCell>
                       <TableCell>{item.expected_close_date || "—"}</TableCell>
                       <TableCell className="max-w-[200px] truncate text-muted-foreground text-sm">{item.notes || "—"}</TableCell>
                       <TableCell>
