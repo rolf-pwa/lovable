@@ -114,8 +114,8 @@ export default function Pipeline() {
   };
 
   const handleSave = async () => {
-    if (!formContactId || !formAmount) {
-      toast.error("Contact and amount are required");
+    if (!formContactId) {
+      toast.error("Contact is required");
       return;
     }
     setSaving(true);
@@ -123,7 +123,7 @@ export default function Pipeline() {
       contact_id: formContactId,
       category: formCategory,
       status: formStatus,
-      amount: Number(formAmount),
+      amount: formAmount ? Number(formAmount) : 0,
       aum_amount: Number(formAum) || 0,
       insurance_coverage_amount: Number(formInsuranceCoverage) || 0,
       commission_amount: Number(formCommission) || 0,
@@ -222,9 +222,9 @@ export default function Pipeline() {
                   </Select>
                 </div>
                 <div>
-                  <Label>Amount ($)</Label>
+                  <Label>Consulting Fee ($)</Label>
                   <Input type="number" value={formAmount} onChange={(e) => setFormAmount(e.target.value)} placeholder="0" />
-                  <p className="text-xs text-muted-foreground mt-1">Primary opportunity value for pipeline summaries.</p>
+                  <p className="text-xs text-muted-foreground mt-1">PWS consulting fee for this opportunity. Optional.</p>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 rounded-md border border-border p-3 bg-muted/30">
                   <div>
@@ -335,7 +335,7 @@ export default function Pipeline() {
                     <TableHead>Contact</TableHead>
                     <TableHead>Category</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Amount</TableHead>
+                    <TableHead className="text-right">Consulting Fee</TableHead>
                     <TableHead className="text-right">AUM</TableHead>
                     <TableHead className="text-right">Insurance Coverage</TableHead>
                     <TableHead className="text-right">Commissions</TableHead>
