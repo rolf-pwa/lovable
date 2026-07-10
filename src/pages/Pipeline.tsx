@@ -272,8 +272,8 @@ export default function Pipeline() {
           </Dialog>
         </div>
 
-        {/* Summary cards — Revenue vs AUM */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* Summary cards — Revenue, AUM, Insurance Coverage */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {/* Revenue Pipeline: Consulting + Insurance */}
           <Card>
             <CardHeader className="pb-2">
@@ -282,13 +282,17 @@ export default function Pipeline() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <p className="text-2xl font-bold text-foreground">{formatCurrency(totalActiveRevenue)}</p>
-              <div className="flex gap-3 text-xs text-muted-foreground">
+              <p className="text-2xl font-bold text-foreground">{formatCurrency(totalRevenueValue)}</p>
+              <div className="flex flex-wrap gap-1.5">
+                <Badge variant="secondary" className="text-xs">Consulting: {formatCurrency(consultingActive)}</Badge>
+                <Badge variant="secondary" className="text-xs">Commissions: {formatCurrency(commissionsActive)}</Badge>
+              </div>
+              <div className="flex gap-3 text-xs text-muted-foreground pt-1 border-t border-border">
                 <span>Pending: <strong className="text-foreground">{formatCurrency(revenuePending)}</strong></span>
                 <span>In Process: <strong className="text-foreground">{formatCurrency(revenueInProcess)}</strong></span>
               </div>
               {revenueCompleted > 0 && (
-                <p className="text-xs text-muted-foreground">Completed: {formatCurrency(revenueCompleted)}</p>
+                <p className="text-xs text-muted-foreground">Completed (fees): {formatCurrency(revenueCompleted)}</p>
               )}
             </CardContent>
           </Card>
@@ -309,6 +313,26 @@ export default function Pipeline() {
               <p className="text-xs text-muted-foreground italic">Subject to AUM fees</p>
               {aumCompleted > 0 && (
                 <p className="text-xs text-muted-foreground">Completed: {formatCurrency(aumCompleted)}</p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Insurance Coverage */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                <ShieldCheck className="h-4 w-4" />Insurance Coverage
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-2xl font-bold text-foreground">{formatCurrency(totalActiveInsCoverage)}</p>
+              <div className="flex gap-3 text-xs text-muted-foreground">
+                <span>Pending: <strong className="text-foreground">{formatCurrency(insCoveragePending)}</strong></span>
+                <span>In Process: <strong className="text-foreground">{formatCurrency(insCoverageInProcess)}</strong></span>
+              </div>
+              <p className="text-xs text-muted-foreground italic">Face amount of pending policies</p>
+              {insCoverageCompleted > 0 && (
+                <p className="text-xs text-muted-foreground">Completed: {formatCurrency(insCoverageCompleted)}</p>
               )}
             </CardContent>
           </Card>
