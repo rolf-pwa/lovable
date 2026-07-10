@@ -66,6 +66,9 @@ export default function Pipeline() {
   const [formCategory, setFormCategory] = useState<string>("pws_consulting");
   const [formStatus, setFormStatus] = useState<string>("pending");
   const [formAmount, setFormAmount] = useState("");
+  const [formAum, setFormAum] = useState("");
+  const [formInsuranceCoverage, setFormInsuranceCoverage] = useState("");
+  const [formCommission, setFormCommission] = useState("");
   const [formDate, setFormDate] = useState("");
   const [formNotes, setFormNotes] = useState("");
   const [saving, setSaving] = useState(false);
