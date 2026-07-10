@@ -118,36 +118,45 @@ export type Database = {
       business_pipeline: {
         Row: {
           amount: number
+          aum_amount: number
           category: Database["public"]["Enums"]["pipeline_category"]
+          commission_amount: number
           contact_id: string
           created_at: string
           created_by: string
           expected_close_date: string | null
           id: string
+          insurance_coverage_amount: number
           notes: string | null
           status: Database["public"]["Enums"]["pipeline_status"]
           updated_at: string
         }
         Insert: {
           amount?: number
+          aum_amount?: number
           category: Database["public"]["Enums"]["pipeline_category"]
+          commission_amount?: number
           contact_id: string
           created_at?: string
           created_by: string
           expected_close_date?: string | null
           id?: string
+          insurance_coverage_amount?: number
           notes?: string | null
           status?: Database["public"]["Enums"]["pipeline_status"]
           updated_at?: string
         }
         Update: {
           amount?: number
+          aum_amount?: number
           category?: Database["public"]["Enums"]["pipeline_category"]
+          commission_amount?: number
           contact_id?: string
           created_at?: string
           created_by?: string
           expected_close_date?: string | null
           id?: string
+          insurance_coverage_amount?: number
           notes?: string | null
           status?: Database["public"]["Enums"]["pipeline_status"]
           updated_at?: string
