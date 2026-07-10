@@ -222,9 +222,9 @@ export default function Pipeline() {
                   </Select>
                 </div>
                 <div>
-                  <Label>Amount ($)</Label>
+                  <Label>Consulting Fee ($)</Label>
                   <Input type="number" value={formAmount} onChange={(e) => setFormAmount(e.target.value)} placeholder="0" />
-                  <p className="text-xs text-muted-foreground mt-1">Primary opportunity value for pipeline summaries.</p>
+                  <p className="text-xs text-muted-foreground mt-1">PWS consulting fee for this opportunity. Optional.</p>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 rounded-md border border-border p-3 bg-muted/30">
                   <div>
