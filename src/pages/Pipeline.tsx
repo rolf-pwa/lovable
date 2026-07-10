@@ -21,6 +21,9 @@ interface PipelineItem {
   category: "pws_consulting" | "new_aum" | "insurance";
   status: "pending" | "in_process" | "completed";
   amount: number;
+  aum_amount: number;
+  insurance_coverage_amount: number;
+  commission_amount: number;
   expected_close_date: string | null;
   notes: string | null;
   created_at: string;
