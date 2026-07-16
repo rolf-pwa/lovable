@@ -76,6 +76,9 @@ const App = () => (
             <Route path="/discovery" element={<Discovery />} />
             <Route path="/discovery/embed" element={<DiscoveryEmbed />} />
             <Route path="/discovery-embed" element={<DiscoveryEmbed />} />
+            <Route path="/discovery-v2" element={<DiscoveryV2 />} />
+            <Route path="/discovery-v2/embed" element={<DiscoveryV2Embed />} />
+            <Route path="/discovery-v2-embed" element={<DiscoveryV2Embed />} />
             <Route path="/vfo-onboarding" element={<VfoOnboardingEmbed />} />
             <Route path="/vfo-onboarding/embed" element={<VfoOnboardingEmbed />} />
             <Route path="/portal" element={<Portal />} />
