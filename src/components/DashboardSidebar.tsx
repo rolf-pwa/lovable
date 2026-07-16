@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Loader2, TrendingUp, Anchor, Landmark, Castle, Sword, Wheat } from "lucide-react";
+import { Loader2, TrendingUp, Anchor, Landmark, Castle, Sword, Wheat, ExternalLink } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 
