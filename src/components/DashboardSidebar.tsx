@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Loader2, TrendingUp, Anchor, Landmark, Castle, Sword, Wheat } from "lucide-react";
+import { Loader2, TrendingUp, Anchor, Landmark, Castle, Sword, Wheat, ExternalLink } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 
@@ -161,6 +161,16 @@ export function DashboardSidebar() {
           <span className="text-muted-foreground">({stats.holdingTankCount} staged)</span>
         </button>
       )}
+
+      <a
+        href="https://id-preview--339dfc8f-3e82-4b05-8a36-a9f66fc58449.lovable.app"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="ml-auto flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+      >
+        <ExternalLink className="h-3.5 w-3.5" />
+        <span>Sandbox</span>
+      </a>
     </div>
   );
 }
