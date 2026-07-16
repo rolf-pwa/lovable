@@ -21,6 +21,8 @@ import Families from "./pages/Families";
 import FamilyDetail from "./pages/FamilyDetail";
 import Discovery from "./pages/Discovery";
 import DiscoveryEmbed from "./pages/DiscoveryEmbed";
+import DiscoveryV2 from "./pages/DiscoveryV2";
+import DiscoveryV2Embed from "./pages/DiscoveryV2Embed";
 import VfoOnboardingEmbed from "./pages/VfoOnboardingEmbed";
 import ProPortalLogin from "./pages/ProPortalLogin";
 import ProPortal from "./pages/ProPortal";
