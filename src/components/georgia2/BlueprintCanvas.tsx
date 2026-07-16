@@ -6,6 +6,7 @@ import {
   computeGauges,
   deriveResult,
   formatCAD,
+  georgiaInsights,
 } from "@/lib/georgia2/derive";
 import { cn } from "@/lib/utils";
 
@@ -13,6 +14,7 @@ export function BlueprintCanvas() {
   const { state } = useGeorgia2();
   const gauges = computeGauges(state.domain, state.catalyst, state.answers, state.scale);
   const notes = bcContextNotes(state.domain, state.catalyst, state.answers);
+  const insights = georgiaInsights(state.domain, state.catalyst, state.answers, state.scale);
   const timeline = state.catalyst ? CATALYST_TIMELINES[state.catalyst] : null;
   const result = state.domain ? deriveResult(state.domain, state.scale) : null;
 
@@ -28,6 +30,16 @@ export function BlueprintCanvas() {
         <p className="text-sm text-muted-foreground">
           {result ? result.pathwayHeadline : "Live-render updates as you answer."}
         </p>
+      </div>
+
+      {/* Georgia Insights */}
+      <div className="space-y-2">
+        {insights.map((ins, i) => (
+          <div key={i} className="rounded-lg border border-accent/30 bg-accent/5 p-3">
+            <p className="text-[10px] uppercase tracking-widest text-accent">{ins.tag}</p>
+            <p className="mt-1 text-xs leading-relaxed text-foreground">{ins.body}</p>
+          </div>
+        ))}
       </div>
 
       {/* Timeline */}
@@ -92,7 +104,6 @@ export function BlueprintCanvas() {
         </div>
       </div>
 
-      {/* Scale summary */}
       {state.scale > 0 && (
         <div className="rounded-lg border border-border bg-card p-4 text-center">
           <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
@@ -114,7 +125,6 @@ function Gauge({
   value: number;
   tone: "risk" | "safety";
 }) {
-  // For risk: high = bad (accent red-ish via destructive); for safety: high = good.
   const isBad = tone === "risk" ? value >= 60 : value < 40;
   return (
     <div className="rounded-lg border border-border bg-card p-3">

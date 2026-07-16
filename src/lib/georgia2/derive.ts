@@ -1,7 +1,7 @@
 // Georgia 2.0 — pure derivation logic (unit-testable)
+// Copy & routing per "Georgia Interactive Questionnaire Scripts & Micro-Copy" spec.
 
 export type Domain = "corporate" | "personal";
-export type Answer = "yes" | "no" | "unsure" | null;
 
 export type CorporateCatalyst = "founder_exit" | "growth_stage_founder";
 export type PersonalCatalyst =
@@ -12,17 +12,12 @@ export type PersonalCatalyst =
   | "sudden_windfall";
 export type Catalyst = CorporateCatalyst | PersonalCatalyst;
 
-export interface CorporateAnswers {
-  bc_registered: Answer;
-  lcge_used: Answer;
-  holdco_active: Answer;
-}
-export interface PersonalAnswers {
-  cross_border: Answer;
-  probate_active: Answer;
-  trusts_exist: Answer;
-}
-export type Answers = CorporateAnswers | PersonalAnswers;
+export type RiskKey = "tax" | "structure" | "noise" | "readiness";
+
+export type OptionId = string;
+export type Answers = Record<string, OptionId>;
+// Legacy alias for state typing
+export type Answer = OptionId | null;
 
 export const VELVET_ROPE = 1_000_000;
 export const SCALE_MIN = 100_000;
@@ -34,19 +29,19 @@ export const CATALYST_LABELS: Record<Catalyst, string> = {
   growth_stage_founder: "Growth Stage Founder",
   inheritance: "Inheritance",
   executive_exit: "Executive Exit",
-  divorce_restructuring: "Divorce Restructuring",
+  divorce_restructuring: "Matrimonial Restructuring",
   insurance_settlement: "Insurance Settlement",
   sudden_windfall: "Sudden Windfall",
 };
 
 export const CATALYST_DESCRIPTIONS: Record<Catalyst, string> = {
   founder_exit: "M&A, liquidation, or third-party transitions.",
-  growth_stage_founder: "Restructuring, venture influx, or prepping exit.",
+  growth_stage_founder: "Restructure, venture influx, or long-horizon exit prep.",
   inheritance: "Legacy transfers, estate & trust windfalls.",
-  executive_exit: "Vesting options, severance packages.",
+  executive_exit: "Vesting options, severance, retiring allowance.",
   divorce_restructuring: "Matrimonial division, asset splitting.",
-  insurance_settlement: "Personal injury or corporate critical illness payouts.",
-  sudden_windfall: "Outlier capital events, sudden crypto liquidations.",
+  insurance_settlement: "Personal injury or critical illness payouts.",
+  sudden_windfall: "Crypto, lottery, or outlier capital events.",
 };
 
 export const CORPORATE_CATALYSTS: CorporateCatalyst[] = [
@@ -61,6 +56,201 @@ export const PERSONAL_CATALYSTS: PersonalCatalyst[] = [
   "sudden_windfall",
 ];
 
+export const DOMAIN_GREETING: Record<Domain, string> = {
+  corporate:
+    "Building a company takes intense focus. Stepping out of that momentum — or preparing to — can feel like stepping off a fast-moving train. Let's look at the structure of your transition so we can protect what you have built.",
+  personal:
+    "Sudden personal wealth — whether from loss, transition, or luck — carries a quiet weight. Before we look at any numbers, remember: you do not need to make any irreversible decisions today. This is a safe space to map out your sequence.",
+};
+
+// ---- Question schema -------------------------------------------------------
+
+export interface QOption {
+  id: OptionId;
+  label: string;
+  risks: Partial<Record<RiskKey, 1 | 2 | 3>>;
+}
+
+export interface Question {
+  key: string;
+  text: string;
+  tooltip: string;
+  options: QOption[];
+}
+
+export const CATALYST_QUESTIONS: Record<Catalyst, Question[]> = {
+  founder_exit: [
+    {
+      key: "jurisdiction",
+      text: "Where is your operating company legally registered and active?",
+      tooltip:
+        "Tax optimization sequences depend heavily on provincial jurisdiction. BC has unique rules regarding corporate capital distributions.",
+      options: [
+        { id: "bc", label: "British Columbia", risks: { tax: 1 } },
+        { id: "other_ca", label: "Other Canadian Province", risks: { tax: 2 } },
+        { id: "cross_border", label: "Cross-Border / Multi-Jurisdictional", risks: { tax: 3 } },
+      ],
+    },
+    {
+      key: "lcge",
+      text: "Have you or your co-founders utilized your Lifetime Capital Gains Exemption (LCGE) yet?",
+      tooltip:
+        "For BC founders, the LCGE represents over $1M of completely tax-sheltered capital per shareholder if structured correctly before the sale.",
+      options: [
+        { id: "intact", label: "No — it is fully intact", risks: { tax: 1 } },
+        { id: "used", label: "Yes — it has been used", risks: { tax: 1 } },
+        { id: "unsure", label: "Unsure / not structured yet", risks: { tax: 3, readiness: 2 } },
+      ],
+    },
+    {
+      key: "holdco",
+      text: "Are the proceeds of your active business held within, or passing through, a HoldCo?",
+      tooltip:
+        "Without a HoldCo, direct capital liquidation triggers immediate personal tax at the highest marginal rate.",
+      options: [
+        { id: "yes", label: "Yes — we have a HoldCo structure", risks: { structure: 1 } },
+        { id: "no", label: "No — paid directly to me", risks: { structure: 3, tax: 2 } },
+        { id: "unsure", label: "Unsure of the flow", risks: { structure: 2, readiness: 2 } },
+      ],
+    },
+  ],
+  growth_stage_founder: [
+    {
+      key: "purification",
+      text: "Are you currently using your active business accounts to hold passive investments or excess cash?",
+      tooltip:
+        "To qualify for a tax-free sale later, your business must be 'purified' — at least 90% of assets actively used in the business.",
+      options: [
+        { id: "yes", label: "Yes — most cash sits in the OpCo", risks: { structure: 3, tax: 2 } },
+        { id: "no", label: "No — we run a purified structure", risks: { structure: 1 } },
+        { id: "unsure", label: "Unsure / basic corporate account", risks: { structure: 2, readiness: 2 } },
+      ],
+    },
+    {
+      key: "shareholder_agreement",
+      text: "Do you have a current, signed Shareholder Agreement addressing sudden exits or forced transition events?",
+      tooltip:
+        "In growth phases, the lack of an updated agreement is the single biggest cause of paralyzing shareholder deadlocks.",
+      options: [
+        { id: "yes", label: "Yes — up to date", risks: { readiness: 1 } },
+        { id: "no", label: "No — or severely outdated", risks: { readiness: 3, structure: 2 } },
+        { id: "unsure", label: "Unsure", risks: { readiness: 2 } },
+      ],
+    },
+  ],
+  inheritance: [
+    {
+      key: "capital_location",
+      text: "Where is the inherited capital currently sitting?",
+      tooltip:
+        "Capital sitting in an estate account is often subject to BC Probate delays and administrative drag before it can be safely integrated.",
+      options: [
+        { id: "estate", label: "Held in the deceased's estate account", risks: { structure: 2 } },
+        { id: "personal", label: "Already transferred to my personal accounts", risks: { structure: 3 } },
+        { id: "trust", label: "Held in an active trust structure", risks: { structure: 1 } },
+      ],
+    },
+    {
+      key: "probate",
+      text: "Is the transfer subject to British Columbia's flat 1.4% Probate fees?",
+      tooltip:
+        "BC Probate is a flat 1.4% tax drag on all assets over $50k passing through a will. It is entirely legal to structure around this.",
+      options: [
+        { id: "yes", label: "Yes — currently going through probate", risks: { tax: 3 } },
+        { id: "no", label: "No — structured to bypass it", risks: { tax: 1 } },
+        { id: "unsure", label: "Unsure", risks: { tax: 2, readiness: 2 } },
+      ],
+    },
+    {
+      key: "noise",
+      text: "Are family expectations or unsolicited opinions adding pressure to how you manage this money?",
+      tooltip:
+        "We call this Noise Exposure. Emotional and familial expectations often force sudden inheritors into fast, regretful investment commitments.",
+      options: [
+        { id: "yes", label: "Yes — meaningful pressure or conflict", risks: { noise: 3 } },
+        { id: "moderate", label: "Moderate — everyone is watching closely", risks: { noise: 2 } },
+        { id: "no", label: "No — I am navigating this privately", risks: { noise: 1 } },
+      ],
+    },
+  ],
+  executive_exit: [
+    {
+      key: "comp_structure",
+      text: "What is the primary structure of your transition compensation?",
+      tooltip:
+        "Vesting schedules and concentrated corporate stock carry massive market downside risks if not systematically hedged or liquidated.",
+      options: [
+        { id: "lump", label: "Lump-sum severance payout", risks: { structure: 2 } },
+        { id: "stock", label: "Vesting options / concentrated stock", risks: { structure: 3 } },
+        { id: "retiring", label: "Retiring allowance / deferred payouts", risks: { structure: 1 } },
+      ],
+    },
+    {
+      key: "tax_deferral",
+      text: "Do you have a plan to roll your retirement allowance or severance into tax-deferred structures?",
+      tooltip:
+        "In BC, failure to use specialized rollover provisions for retiring allowances can cost up to 53.5% of your payout to immediate taxation.",
+      options: [
+        { id: "no", label: "No — I expect a massive tax bill this year", risks: { tax: 3 } },
+        { id: "yes", label: "Yes — my accounts are optimized", risks: { tax: 1 } },
+        { id: "unsure", label: "Unsure of my contribution limits", risks: { tax: 2, readiness: 2 } },
+      ],
+    },
+  ],
+  divorce_restructuring: [
+    {
+      key: "integration_status",
+      text: "Are the assets currently divided, or are you in active negotiations?",
+      tooltip:
+        "Dividing complex portfolios or business shares under the BC Family Law Act requires deep structural forensic valuation before signing.",
+      options: [
+        { id: "active", label: "Active legal negotiations / contested", risks: { noise: 3, readiness: 3 } },
+        { id: "signed", label: "Separation agreement is signed & complete", risks: { readiness: 1 } },
+        { id: "beginning", label: "Just beginning the separation process", risks: { readiness: 2, noise: 2 } },
+      ],
+    },
+    {
+      key: "splitting_method",
+      text: "How will the capital transition to you?",
+      tooltip:
+        "Cash is simple. Splitting investment assets or private corporate shares carries hidden capital gains liabilities that can devastate net value.",
+      options: [
+        { id: "cash", label: "Lump-sum cash settlement", risks: { tax: 1 } },
+        { id: "portfolios", label: "Investment portfolios & real estate", risks: { tax: 2 } },
+        { id: "shares", label: "Corporate shares / HoldCo equity", risks: { tax: 3, structure: 2 } },
+      ],
+    },
+  ],
+  insurance_settlement: [
+    {
+      key: "allocation",
+      text: "How is your settlement capital structured to support your long-term needs?",
+      tooltip:
+        "Lump sums carry extreme long-term management pressure. If you deplete the capital early, you cannot renegotiate the settlement.",
+      options: [
+        { id: "lump", label: "All cash paid as a single lump sum", risks: { structure: 3 } },
+        { id: "annuity", label: "Structured annuity (scheduled payouts)", risks: { structure: 1 } },
+        { id: "unsure", label: "Unsure of the final payout structure", risks: { structure: 2, readiness: 2 } },
+      ],
+    },
+  ],
+  sudden_windfall: [
+    {
+      key: "safe_harbor",
+      text: "Where does this windfall capital currently reside?",
+      tooltip:
+        "We recommend establishing a 'Quiet Period.' Keeping new wealth in your primary chequing account creates subconscious pressure to make rapid decisions.",
+      options: [
+        { id: "chequing", label: "My standard, everyday chequing account", risks: { structure: 3, noise: 2 } },
+        { id: "separate", label: "Separate holding or high-interest account", risks: { structure: 1 } },
+        { id: "wallets", label: "Still held in digital wallets / brokerages", risks: { structure: 2 } },
+      ],
+    },
+  ],
+};
+
+// ---- Routing ---------------------------------------------------------------
+
 export type Pathway =
   | "vfo_stabilization"
   | "vfo_catalyst_guide"
@@ -69,7 +259,7 @@ export type Pathway =
 
 export interface DerivedResult {
   qualified: boolean;
-  fee: number | null; // Standalone build fee (null for VFO path)
+  fee: number | null;
   pathwayHeadline: string;
 }
 
@@ -78,13 +268,13 @@ export function deriveResult(domain: Domain, scale: number): DerivedResult {
     return {
       qualified: true,
       fee: null,
-      pathwayHeadline: "Scale qualifies for full ongoing VFO Oversight.",
+      pathwayHeadline: "Scale qualifies for the Full Sovereignty Route — ongoing VFO oversight.",
     };
   }
   return {
     qualified: false,
     fee: domain === "corporate" ? 10_000 : 5_000,
-    pathwayHeadline: "VFO Limit Met. Standalone setup & Academy pathways unlocked.",
+    pathwayHeadline: "Structured Builder Route — 90-day Sovereignty OS™ Build, then self-directed.",
   };
 }
 
@@ -101,57 +291,63 @@ export interface Gauges {
   readiness: number;
 }
 
+interface RiskTotals {
+  tax: { sum: number; count: number };
+  structure: { sum: number; count: number };
+  noise: { sum: number; count: number };
+  readiness: { sum: number; count: number };
+}
+
+function accumulateRisks(
+  catalyst: Catalyst | null,
+  answers: Answers
+): RiskTotals {
+  const totals: RiskTotals = {
+    tax: { sum: 0, count: 0 },
+    structure: { sum: 0, count: 0 },
+    noise: { sum: 0, count: 0 },
+    readiness: { sum: 0, count: 0 },
+  };
+  if (!catalyst) return totals;
+  const qs = CATALYST_QUESTIONS[catalyst];
+  for (const q of qs) {
+    const chosen = answers[q.key];
+    if (!chosen) continue;
+    const opt = q.options.find((o) => o.id === chosen);
+    if (!opt) continue;
+    for (const [k, v] of Object.entries(opt.risks) as [RiskKey, 1 | 2 | 3][]) {
+      totals[k].sum += v;
+      totals[k].count += 1;
+    }
+  }
+  return totals;
+}
+
+function avg(t: { sum: number; count: number }, fallback: number): number {
+  return t.count === 0 ? fallback : t.sum / t.count;
+}
+
 export function computeGauges(
   domain: Domain | null,
   catalyst: Catalyst | null,
-  answers: Partial<CorporateAnswers & PersonalAnswers>,
+  answers: Answers,
   scale: number
 ): Gauges {
-  // Tax Drag
-  let tax = 20;
-  if (domain === "corporate") {
-    if (answers.lcge_used === "no") tax += 45;
-    if (answers.lcge_used === "unsure") tax += 25;
-    if (answers.holdco_active === "no") tax += 20;
-    if (answers.bc_registered === "no") tax += 10;
-  } else if (domain === "personal") {
-    if (answers.probate_active === "yes") tax += 40;
-    if (answers.probate_active === "unsure") tax += 20;
-    if (answers.cross_border === "yes") tax += 25;
-    if (answers.trusts_exist === "no") tax += 15;
-  }
+  const t = accumulateRisks(catalyst, answers);
 
-  // Structure Safety (higher = safer)
-  let structure = 40;
-  if (domain === "corporate") {
-    if (answers.holdco_active === "yes") structure += 35;
-    if (answers.holdco_active === "no") structure -= 20;
-    if (answers.bc_registered === "yes") structure += 15;
-    if (answers.lcge_used === "yes") structure += 15;
-  } else if (domain === "personal") {
-    if (answers.trusts_exist === "yes") structure += 35;
-    if (answers.trusts_exist === "no") structure -= 20;
-    if (answers.probate_active === "no") structure += 15;
-    if (answers.cross_border === "no") structure += 10;
-  }
+  // Map 1..3 -> percentage. 1 = 20, 2 = 55, 3 = 90.
+  const toRisk = (v: number) => 20 + (v - 1) * 35;
+  const toSafety = (v: number) => 90 - (v - 1) * 35;
 
-  // Noise Strain
-  let noise = 25;
-  if (catalyst === "inheritance") noise += 40;
-  if (catalyst === "divorce_restructuring") noise += 55;
-  if (catalyst === "sudden_windfall") noise += 45;
-  if (catalyst === "insurance_settlement") noise += 35;
-  if (catalyst === "founder_exit") noise += 30;
-  if (catalyst === "executive_exit") noise += 25;
-  if (catalyst === "growth_stage_founder") noise += 15;
+  const tax = toRisk(avg(t.tax, 1.5));
+  const noise = toRisk(avg(t.noise, catalyst ? 1.5 : 1));
+  const structure = toSafety(avg(t.structure, 2));
+  let readiness = toSafety(avg(t.readiness, 2));
 
-  // Readiness (higher = more ready)
-  let readiness = 50;
-  const unsureCount = Object.values(answers).filter((a) => a === "unsure").length;
-  readiness -= unsureCount * 15;
-  if (scale >= VELVET_ROPE) readiness += 15;
-  if (scale >= 5_000_000) readiness += 10;
-  if (domain && catalyst) readiness += 10;
+  // Scale nudges readiness upward once serious capital is on the table.
+  if (scale >= VELVET_ROPE) readiness += 5;
+  if (scale >= 5_000_000) readiness += 5;
+  if (domain && catalyst) readiness += 5;
 
   return {
     taxDragRisk: clamp(tax),
@@ -177,8 +373,8 @@ export const CATALYST_TIMELINES: Record<Catalyst, Milestone[]> = {
   ],
   growth_stage_founder: [
     { label: "Assess", detail: "Corporate structure review" },
-    { label: "Restructure", detail: "Optimize HoldCo & shares" },
-    { label: "Deploy", detail: "Capital allocation" },
+    { label: "Purify", detail: "Optimize HoldCo & shares" },
+    { label: "Align", detail: "Shareholder agreements" },
     { label: "Govern", detail: "Ongoing oversight" },
   ],
   inheritance: [
@@ -207,43 +403,106 @@ export const CATALYST_TIMELINES: Record<Catalyst, Milestone[]> = {
   ],
   sudden_windfall: [
     { label: "Land", detail: "Capital arrives" },
-    { label: "Pause", detail: "90-day quiet period" },
+    { label: "Pause", detail: "90-day Quiet Period" },
     { label: "Design", detail: "Sovereignty blueprint" },
     { label: "Deploy", detail: "Structured deployment" },
   ],
 };
+
+// ---- Georgia Insights (dynamic quotes) ------------------------------------
+
+export interface GeorgiaInsight {
+  tag: string;
+  body: string;
+}
+
+export function georgiaInsights(
+  domain: Domain | null,
+  catalyst: Catalyst | null,
+  answers: Answers,
+  scale: number
+): GeorgiaInsight[] {
+  const insights: GeorgiaInsight[] = [];
+  const gauges = computeGauges(domain, catalyst, answers, scale);
+
+  if (domain && scale < VELVET_ROPE) {
+    insights.push({
+      tag: "Decoupled Build",
+      body:
+        "While your current transition scale sits below our ongoing VFO threshold of $1M, your structural complexity is highly evident. Our decoupled Sovereignty OS™ Build is a dedicated 90-day project to construct your private container and Sovereignty Charter — then you transition to the self-directed Academy with zero ongoing advisory fees.",
+    });
+  }
+
+  if (gauges.noiseStrain >= 70) {
+    insights.push({
+      tag: "Noise Exposure",
+      body:
+        "With many eyes on this transition, the noise level around you is incredibly high. You have a legal and emotional right to step back. The single best decision right now is to declare a Quiet Period while we sort the sequence.",
+    });
+  }
+
+  if (gauges.taxDragRisk >= 70) {
+    insights.push({
+      tag: "Tax Exposure",
+      body:
+        "There are structural tax drags apparent in your profile. In British Columbia, the sequence of how you receive and shelter capital dictates what you keep. Let's address tax exposures before any money moves.",
+    });
+  }
+
+  if (gauges.readiness <= 40) {
+    insights.push({
+      tag: "Decision Readiness",
+      body:
+        "It is completely normal to feel paralyzed right now. Your nervous system is catching up with a massive life change. We will prioritize reducing your cognitive overhead — no major plans are needed today.",
+    });
+  }
+
+  if (insights.length === 0) {
+    insights.push({
+      tag: "Georgia's Note",
+      body: domain
+        ? DOMAIN_GREETING[domain]
+        : "Answer a few grounded questions and your private blueprint will render live on this side of the screen.",
+    });
+  }
+
+  return insights;
+}
 
 // ---- BC context notes ------------------------------------------------------
 
 export function bcContextNotes(
   domain: Domain | null,
   catalyst: Catalyst | null,
-  answers: Partial<CorporateAnswers & PersonalAnswers>
+  answers: Answers
 ): string[] {
   const notes: string[] = [];
   if (domain === "corporate") {
     notes.push(
       "BC-registered CCPCs may access the Lifetime Capital Gains Exemption (LCGE): $1,016,836 (2024) per shareholder."
     );
-    if (answers.holdco_active !== "yes") {
+    if (answers.holdco && answers.holdco !== "yes") {
       notes.push("Without an active HoldCo, retained earnings face full corporate + personal tax on distribution.");
     }
-    if (answers.lcge_used === "no" || answers.lcge_used === "unsure") {
+    if (answers.lcge === "unsure") {
       notes.push("Multiplying the LCGE through family trusts requires 24-month share holding rules — plan early.");
+    }
+    if (answers.purification === "yes") {
+      notes.push("Excess passive cash inside the OpCo can disqualify the LCGE — purification is the first move.");
     }
   }
   if (domain === "personal") {
     notes.push(
       "BC Probate fees: ~1.4% on estates over $50,000. Assets in joint tenancy or trust may bypass probate."
     );
-    if (answers.cross_border === "yes") {
-      notes.push("Cross-border exposure triggers US estate tax at >$13.6M and PFIC treatment on Canadian ETFs.");
-    }
     if (catalyst === "divorce_restructuring") {
-      notes.push("BC Family Law Act: family property presumed 50/50 unless a cohabitation or marriage agreement applies.");
+      notes.push("BC Family Law Act: family property is presumed 50/50 unless a cohabitation or marriage agreement applies.");
     }
-    if (answers.trusts_exist !== "yes") {
-      notes.push("Alter-ego, joint partner, or family trusts can shield BC assets from probate and provide governance continuity.");
+    if (catalyst === "executive_exit" && answers.tax_deferral === "no") {
+      notes.push("Retiring allowance rollovers into RRSP room can shelter significant severance from immediate BC tax.");
+    }
+    if (catalyst === "sudden_windfall") {
+      notes.push("A 90-day Quiet Period in a separate high-interest account is the strongest first structural move.");
     }
   }
   if (notes.length === 0) {
