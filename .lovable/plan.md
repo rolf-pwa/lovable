@@ -1,89 +1,108 @@
 
-## Goal
+# Georgia 2.0 — Decoupled Sovereignty OS™ Diagnostic
 
-Turn the Pro Portal into a real workspace. Clicking a family expands the family → household → contact tree (scoped to what the pro actually serves). Household and contact pages mirror the Family Portal look, plus vault docs and Sovereignty Charter status. Message threads retire; Asana tasks become the collaboration surface.
+Staging build at `/discovery-v2` (and `/discovery-v2/embed`). Existing `/discovery` remains untouched until we sign off end-to-end. Nothing in production changes.
 
-## Structure
+## 1. Routes & files
+
+- `src/pages/DiscoveryV2.tsx` — full-page layout (Sanctuary aesthetic).
+- `src/pages/DiscoveryV2Embed.tsx` — iframe-safe wrapper reusing the same shell.
+- `src/components/georgia2/` — split-screen shell + all step/canvas components.
+- `public/discovery-v2-embed.html` — Wix embed loader (mirrors existing pattern).
+- Routes registered in `src/App.tsx` (public, no auth).
+
+## 2. Layout
+
+Responsive CSS grid: **Left 60% / Right 40%** on ≥ md; stacks on mobile. Left = interactive wizard. Right = live "Generative Blueprint Canvas" (read-only, updates on every input).
 
 ```text
-/pro-portal                     Dashboard: families the pro serves (grid)
-  /pro-portal/family/:id        Family workspace: scoped tree + rollup
-  /pro-portal/household/:id     Household workspace: directory + charter + vault + tasks
-  /pro-portal/contact/:id       Contact workspace: profile + vault + tasks
+┌────────────────────────────────┬────────────────────┐
+│ Left: stepper + inputs         │ Right: canvas      │
+│  1 Domain                      │  • Timeline        │
+│  2 Catalyst                    │  • 4 risk gauges   │
+│  3 Questions + $ slider        │  • BC context box  │
+│  4 Results dashboard           │                    │
+│  5 Lead capture                │                    │
+└────────────────────────────────┴────────────────────┘
 ```
 
-All routes reuse the Forest-green header band and cream card treatment from the current Pro Portal (matches VFO branding).
+## 3. Wizard state (Left Panel)
 
-## Data scoping (what "assigned" means)
+Single reducer (`useGeorgia2State`) holding:
+`domain`, `catalyst`, `answers` (3 keys per domain), `scale` (number), `chosenPathway`, `contact`.
 
-For a professional record, "assigned" rows come from `professional_engagements`:
+### Step 1 — Domain
+Two large tactile cards: **Corporate Wealth Event** / **Personal Wealth Event**.
 
-- Direct contact links (`contact_id`)
-- Household links (`household_id`) → include every member of that household
-- Family links (`family_id`) → include every household + member in the family
+### Step 2 — Catalyst
+Card grid keyed off domain. Corporate: Founder Exit, Growth Stage Founder. Personal: Inheritance, Executive Exit, Divorce Restructuring, Insurance Settlement, Sudden Windfall.
 
-Anything outside those sets is hidden. Households/contacts the pro is not linked to are omitted from the tree entirely (per your choice).
+### Step 3 — Dynamic questionnaire + BC scale slider
+3 Yes/No/Unsure segmented controls (domain-specific, exactly as spec'd).
+Premium range slider: **$100k → $10M CAD**, $100k steps, "Velvet Rope" marker at $1M. Banner flips based on threshold.
 
-## Page contents
+### Step 4 — Decoupled results (routing math)
+- `scale ≥ 1_000_000` → **Ongoing VFO Path**: primary "Book $249 Stabilization Session with Rolf"; secondary "Request Catalyst Guide" (mapped to catalyst).
+- `scale < 1_000_000` → **Decoupled Build Path**: choose (a) 90-Day Standalone Build — $5,000 personal / $10,000 corporate; (b) Complimentary ProsperWise Academy Pass.
 
-**Family workspace `/pro-portal/family/:id`**
-- Header: family name, "Assigned as {role}" chip, family stats (households I serve, contacts I serve, open tasks).
-- Directory tree (collapsible): each household → expandable to its members. Only assigned households/contacts render. Each node links to its workspace page.
-- Sidebar: Collaborators (other pros on this family) + Recent Activity (last 10 Asana task events touching this family).
+### Step 5 — Confidential lead capture
+Slide-over form: First Name, Email, Mobile (optional). Zod validation. Privacy banner: "Montréal Data Pinning Active. Zero Tracking Cookies." Submit → success screen tailored to chosen pathway (next steps + optional catalyst-guide PDF placeholder link).
 
-**Household workspace `/pro-portal/household/:id`**
-- Header: household name, family breadcrumb.
-- Contacts panel: directory of household members the pro is assigned to (name, role, email, phone).
-- Sovereignty Charter panel: status (`none` / `core` / `stabilization` / `sovereign`), ratification date, most recent governance-review findings summary.
-- Vault panel: only files/folders granted to this pro via `vault_collaborator_grants`, with view/download.
-- **Tasks panel (Asana)**: replaces threads. See workflow section below.
+## 4. Right Panel — Generative Blueprint Canvas
 
-**Contact workspace `/pro-portal/contact/:id`**
-- Header: contact name, role, household + family breadcrumb.
-- Profile card: email, phone, relationship, DOB range (not exact — privacy).
-- Vault panel: files granted specifically to this pro at contact scope.
-- Tasks panel: same Asana component, filtered to this contact.
+Recomputes on every state change (pure derivations, no server round-trips):
 
-## Asana task workflow (replaces engagement threads)
+- **Timeline strip** — horizontal SVG segment; catalyst-specific milestones (e.g. Founder Exit → LOI → Diligence → Close → 90-Day Stabilization).
+- **Risk gauges** (4 ring/bar meters, 0–100):
+  - Tax Drag Risk — spikes when `lcge=no` or `probate=yes`.
+  - Structure Safety — inverse: low when `holdco=no` or `trusts=no`.
+  - Noise Strain — high for inheritance/divorce catalysts.
+  - Readiness / Overwhelm — composite of unsure answers + scale bracket.
+- **BC Context Box** — bulleted, catalyst-aware notes on BC Family Law Act, BC Probate Fees, LCGE, cross-border, HoldCo integration.
 
-Existing Asana structure: Family = Project, Household = Section, Phase = Task, Action = Subtask (per project memory). We extend this with a **Pro assignment convention**:
+All formulas live in `src/lib/georgia2/derive.ts` (pure, unit-testable).
 
-- Each pro-facing subtask carries an Asana **custom field `Pro`** = the professional's name (or a project-wide tag `pro:{slug}`). Ghost User PAT keeps the assignee abstracted.
-- New edge function `pro-portal-tasks`:
-  - `GET ?scope=family|household|contact&id=…` — pulls Asana subtasks whose custom field matches this pro AND whose Section/parent maps to the requested scope. Returns task name, notes, due date, completion, comment count, direct portal link.
-  - `POST /comment` — pro adds a comment (goes into Asana as a story). Comments are attributed as "{Pro name} (via Portal)".
-  - `POST /complete` — pro marks subtask complete.
-  - `POST /create` — pro can open a new task; lands in a "Pro Requests" section of the family project for staff triage. Notifies staff via existing `staff_notifications` bell.
-- UI component `ProTasksPanel` shared across family/household/contact pages: task list (open / done tabs), inline comment thread per task, "New task" button.
+## 5. Optional AI helper (deferred, wired but off by default)
 
-**Migration:** existing `professional_engagements` rows stay for reference (audit) but the Pro Portal UI stops surfacing message threads. Staff-side `EngagementsPanel` on Contact/Household detail pages is replaced with a "Pro Tasks" panel pointing at the same Asana data.
+Floating "Ask Georgia" button on Left Panel; opens a side sheet using the existing `discovery-assistant` edge function. Behind a `GEORGIA2_CHAT_ENABLED` flag (const) so we can verify the deterministic flow first, then enable.
 
-## Files to change / add
+## 6. Backend (dedicated tables)
 
-Frontend
-- `src/pages/ProPortal.tsx` — family cards become links to `/pro-portal/family/:id`; drop the current expanded engagements/threads list.
-- `src/pages/ProPortalFamily.tsx` — new. Scoped tree + collaborators + activity.
-- `src/pages/ProPortalHousehold.tsx` — new. Directory + charter + vault + tasks.
-- `src/pages/ProPortalContact.tsx` — new. Profile + vault + tasks.
-- `src/components/pro/ProTasksPanel.tsx` — new. Shared Asana task UI.
-- `src/components/pro/ProVaultPanel.tsx` — new. Reads `vault_collaborator_grants`.
-- `src/components/pro/ProCharterPanel.tsx` — new. Reads `sovereignty_charters` + latest `monthly_governance_reviews`.
-- `src/App.tsx` — register new pro-portal routes behind the pro session guard.
-- `src/components/EngagementsPanel.tsx` on staff-side Contact/Household detail → swap for `ProTasksPanel` (staff variant).
+Migration creates:
 
-Edge functions
-- `supabase/functions/pro-portal-tree/index.ts` — resolves the scoped family → household → contact tree for the authenticated pro.
-- `supabase/functions/pro-portal-tasks/index.ts` — Asana read/comment/complete/create, filtered by pro custom field.
-- Extend `supabase/functions/pro-portal-engagements/index.ts` (or retire it) to no longer be the main data source for the workspace views.
+- `georgia2_sessions` — session_key, domain, catalyst, answers (jsonb), scale, chosen_pathway, phase, message_count, timestamps, ended_at. Anonymous insert/update via edge function (service role); no client RLS reads.
+- `georgia2_leads` — session_key (fk), first_name, email, mobile, chosen_pathway, catalyst, scale, domain, submitted_at. Write-only from edge function; staff (`authenticated`) can select.
 
-Database
-- No new tables required. The scoped tree resolves off `professional_engagements`, `families`, `households`, `contacts`, `family_relationships`, `household_relationships`.
-- One optional migration: add index on `professional_engagements(professional_id, family_id, household_id, contact_id)` for tree queries.
+GRANTs + RLS explicit; no anon direct table access. Data mirrors current `discovery_leads` firewall pattern.
 
-## Assumptions to confirm
+Two edge functions:
+- `georgia2-session` — upsert session snapshot on each meaningful step (debounced from client, `keepalive` beacon on exit).
+- `georgia2-lead` — validates Zod payload, inserts lead, notifies staff via existing `notify-portal-request` / Wix relay path, returns success payload with pathway metadata.
 
-1. Asana custom field `Pro` (text) — I'll create it on the project template if it doesn't already exist. OK to standardize on that?
-2. Retiring the message-thread UI is one-directional — no email replies from clients come back through the old Gmail relay for pros anymore. Staff can still email pros directly outside the portal.
-3. Vault access shown to the pro is strictly what's already in `vault_collaborator_grants`; no new sharing UI in this phase.
+CORS: allow `prosperwise.ca`, `app.prosperwise.ca`, `prosperwise.lovable.app`, `*.lovable.app`, `*.lovableproject.com` (suffix-matched, same pattern we hardened in `portal-otp`).
 
-Once you approve, I'll do it in two passes: (1) new pages + tree edge function scaffolded against real data, (2) Asana task panel + retire the threads panel.
+## 7. Design system
+
+Sanctuary tokens only — Forest Green, Bronze, Vellum background, Adobe Caslon headers, DM Sans body. No hardcoded hex. Gauges/timelines use `--sanctuary-bronze` / `--primary`. Fully responsive; mobile stacks canvas below wizard with sticky mini-summary.
+
+## 8. Verification before production
+
+- Unit tests for `derive.ts` (routing math + gauge values across representative fixtures).
+- Playwright smoke: run through both domains, both scale brackets, submit lead, assert success screen + row in `georgia2_leads`.
+- Manual QA checklist covering: mobile stack, iframe embed on Wix staging URL, keyboard nav, screen-reader labels on slider/segmented controls, session beacon on tab close.
+- Only after sign-off: swap `/discovery` (or add redirect) in a follow-up change.
+
+## 9. Out of scope for this pass
+
+Real Stripe checkout, PDF catalyst-guide generation, and the AI chat helper going live. All buttons route through the lead-capture form; catalyst-guide download link is a placeholder until PDFs are supplied.
+
+---
+
+### Technical details
+
+- Reducer + context in `src/components/georgia2/state.tsx`; components consume via a typed hook.
+- Slider: shadcn `Slider` primitive, custom track marker for $1M threshold.
+- Gauges: lightweight SVG (no chart lib) for consistent Sanctuary styling.
+- Session tracker follows the existing `georgia-session-tracker.ts` pattern (debounce + `sendBeacon` on `pagehide`).
+- Lead insert re-uses the `pii-shield` middleware for the free-form name field.
+- Edge functions use `npm:@supabase/supabase-js@2` with service role and Zod validation, mirroring `georgia-session-update`.
