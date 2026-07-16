@@ -3,6 +3,7 @@ import {
   CATALYST_DESCRIPTIONS,
   CATALYST_LABELS,
   CORPORATE_CATALYSTS,
+  DOMAIN_GREETING,
   PERSONAL_CATALYSTS,
   type Catalyst,
 } from "@/lib/georgia2/derive";
@@ -29,6 +30,16 @@ export function StepCatalyst() {
           <ArrowLeft className="mr-1 h-4 w-4" /> Back
         </Button>
       </div>
+
+      {state.domain && (
+        <div className="rounded-lg border border-accent/30 bg-accent/5 p-4">
+          <p className="text-[10px] uppercase tracking-widest text-accent">Georgia's Note</p>
+          <p className="mt-1 text-sm leading-relaxed text-foreground">
+            {DOMAIN_GREETING[state.domain]}
+          </p>
+        </div>
+      )}
+
       <div className="grid gap-3 sm:grid-cols-2">
         {catalysts.map((c) => (
           <button

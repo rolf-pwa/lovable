@@ -1,49 +1,32 @@
 import { useGeorgia2 } from "./state";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
-import { ArrowLeft, ArrowRight } from "lucide-react";
+import { ArrowLeft, ArrowRight, Info } from "lucide-react";
 import {
+  CATALYST_QUESTIONS,
   formatCAD,
   SCALE_MAX,
   SCALE_MIN,
   SCALE_STEP,
   VELVET_ROPE,
-  type Answer,
   deriveResult,
 } from "@/lib/georgia2/derive";
 import { cn } from "@/lib/utils";
 import { trackGeorgia2 } from "@/lib/georgia2/session-tracker";
 
-const CORP_QUESTIONS: { key: string; text: string }[] = [
-  { key: "bc_registered", text: "Is your operating company registered and active in British Columbia?" },
-  { key: "lcge_used", text: "Have you utilized your Lifetime Capital Gains Exemption (LCGE) yet?" },
-  { key: "holdco_active", text: "Are your corporate assets held within an active holding company (HoldCo)?" },
-];
-const PERSONAL_QUESTIONS: { key: string; text: string }[] = [
-  { key: "cross_border", text: "Are there cross-border / US tax exposures or out-of-province assets?" },
-  { key: "probate_active", text: "Is the estate or capital transfer currently subject to BC Probate fees?" },
-  { key: "trusts_exist", text: "Do you have existing trusts or family legal structures set up?" },
-];
-
-const OPTIONS: { value: Answer; label: string }[] = [
-  { value: "yes", label: "Yes" },
-  { value: "no", label: "No" },
-  { value: "unsure", label: "Unsure" },
-];
-
 export function StepDiagnostic() {
   const { state, dispatch } = useGeorgia2();
-  const questions = state.domain === "corporate" ? CORP_QUESTIONS : PERSONAL_QUESTIONS;
-  const allAnswered = questions.every((q) => state.answers[q.key as keyof typeof state.answers]);
+  const questions = state.catalyst ? CATALYST_QUESTIONS[state.catalyst] : [];
+  const allAnswered = questions.every((q) => state.answers[q.key]);
   const result = state.domain ? deriveResult(state.domain, state.scale) : null;
 
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-2xl">Three quick BC-context questions.</h2>
+          <h2 className="text-2xl">A few grounded questions.</h2>
           <p className="mt-2 text-sm text-muted-foreground">
-            Then set your capital scale — this determines your pathway.
+            No right answers. Each response quietly shapes your blueprint on the right.
           </p>
         </div>
         <Button variant="ghost" size="sm" onClick={() => dispatch({ type: "set_step", step: 2 })}>
@@ -53,23 +36,27 @@ export function StepDiagnostic() {
 
       <div className="space-y-4">
         {questions.map((q) => {
-          const value = state.answers[q.key as keyof typeof state.answers] ?? null;
+          const value = state.answers[q.key] ?? null;
           return (
             <div key={q.key} className="rounded-lg border border-border bg-card p-4">
-              <p className="mb-3 text-sm font-medium">{q.text}</p>
-              <div className="grid grid-cols-3 gap-2">
-                {OPTIONS.map((o) => (
+              <p className="text-sm font-medium">{q.text}</p>
+              <p className="mt-1 flex items-start gap-1.5 text-[11px] leading-relaxed text-muted-foreground">
+                <Info className="mt-0.5 h-3 w-3 shrink-0 text-accent" />
+                <span>{q.tooltip}</span>
+              </p>
+              <div className="mt-3 grid gap-2">
+                {q.options.map((o) => (
                   <button
-                    key={o.value}
+                    key={o.id}
                     type="button"
                     onClick={() => {
-                      dispatch({ type: "set_answer", key: q.key, value: o.value });
-                      const nextAnswers = { ...state.answers, [q.key]: o.value };
+                      dispatch({ type: "set_answer", key: q.key, value: o.id });
+                      const nextAnswers = { ...state.answers, [q.key]: o.id };
                       trackGeorgia2({ answers: nextAnswers as Record<string, unknown> });
                     }}
                     className={cn(
-                      "rounded-md border px-3 py-2 text-sm transition-colors",
-                      value === o.value
+                      "rounded-md border px-3 py-2 text-left text-sm transition-colors",
+                      value === o.id
                         ? "border-accent bg-accent text-accent-foreground"
                         : "border-border bg-background hover:border-accent/60"
                     )}
@@ -99,7 +86,6 @@ export function StepDiagnostic() {
               trackGeorgia2({ scale: v[0] });
             }}
           />
-          {/* Velvet Rope marker at $1M */}
           <div
             className="pointer-events-none absolute top-0 flex flex-col items-center"
             style={{ left: `${((VELVET_ROPE - SCALE_MIN) / (SCALE_MAX - SCALE_MIN)) * 100}%` }}
@@ -129,10 +115,7 @@ export function StepDiagnostic() {
       </div>
 
       <div className="flex justify-end">
-        <Button
-          disabled={!allAnswered}
-          onClick={() => dispatch({ type: "set_step", step: 4 })}
-        >
+        <Button disabled={!allAnswered} onClick={() => dispatch({ type: "set_step", step: 4 })}>
           See my pathway <ArrowRight className="ml-1 h-4 w-4" />
         </Button>
       </div>

@@ -28,6 +28,13 @@ export function StepResults() {
         </Button>
       </div>
 
+      <div className="rounded-lg border border-primary/30 bg-primary/5 p-4">
+        <p className="text-[10px] uppercase tracking-widest text-primary">Rolf's Voice</p>
+        <p className="mt-1 text-xs leading-relaxed text-foreground">
+          The way our Virtual Family Office works: two entirely separate phases. First is the <em>Sovereignty OS™ Build</em> — a 90-day project where we act as your system developers, mapping structures, building your Vault, and signing your Charter. Open to any family ready to invest the flat setup fee ($5,000 personal / $10,000 corporate). Second is <em>Ongoing System Oversight</em>, which requires a strict $1M velvet rope so ongoing fees are mathematically justified. The moment your assets cross $1M, we flip the switch to permanent Family Office oversight. Simple, mathematically sound, and protective.
+        </p>
+      </div>
+
       {result.qualified ? (
         <div className="space-y-4">
           <div className="rounded-xl border-2 border-primary/40 bg-primary/5 p-6">
