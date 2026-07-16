@@ -996,6 +996,131 @@ export type Database = {
         }
         Relationships: []
       }
+      georgia2_leads: {
+        Row: {
+          answers: Json
+          catalyst: string
+          chosen_pathway: string
+          created_at: string
+          domain: string
+          email: string
+          first_name: string
+          id: string
+          mobile: string | null
+          notes: string | null
+          scale: number
+          session_key: string | null
+          status: string
+          submitted_at: string
+          updated_at: string
+        }
+        Insert: {
+          answers?: Json
+          catalyst: string
+          chosen_pathway: string
+          created_at?: string
+          domain: string
+          email: string
+          first_name: string
+          id?: string
+          mobile?: string | null
+          notes?: string | null
+          scale: number
+          session_key?: string | null
+          status?: string
+          submitted_at?: string
+          updated_at?: string
+        }
+        Update: {
+          answers?: Json
+          catalyst?: string
+          chosen_pathway?: string
+          created_at?: string
+          domain?: string
+          email?: string
+          first_name?: string
+          id?: string
+          mobile?: string | null
+          notes?: string | null
+          scale?: number
+          session_key?: string | null
+          status?: string
+          submitted_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "georgia2_leads_session_key_fkey"
+            columns: ["session_key"]
+            isOneToOne: false
+            referencedRelation: "georgia2_sessions"
+            referencedColumns: ["session_key"]
+          },
+        ]
+      }
+      georgia2_sessions: {
+        Row: {
+          answers: Json
+          catalyst: string | null
+          chosen_pathway: string | null
+          created_at: string
+          domain: string | null
+          ended_at: string | null
+          final_phase: string | null
+          id: string
+          last_activity_at: string
+          lead_captured: boolean
+          message_count: number
+          reached_lead_capture: boolean
+          referrer: string | null
+          scale: number | null
+          session_key: string
+          source: string | null
+          updated_at: string
+          user_agent: string | null
+        }
+        Insert: {
+          answers?: Json
+          catalyst?: string | null
+          chosen_pathway?: string | null
+          created_at?: string
+          domain?: string | null
+          ended_at?: string | null
+          final_phase?: string | null
+          id?: string
+          last_activity_at?: string
+          lead_captured?: boolean
+          message_count?: number
+          reached_lead_capture?: boolean
+          referrer?: string | null
+          scale?: number | null
+          session_key: string
+          source?: string | null
+          updated_at?: string
+          user_agent?: string | null
+        }
+        Update: {
+          answers?: Json
+          catalyst?: string | null
+          chosen_pathway?: string | null
+          created_at?: string
+          domain?: string | null
+          ended_at?: string | null
+          final_phase?: string | null
+          id?: string
+          last_activity_at?: string
+          lead_captured?: boolean
+          message_count?: number
+          reached_lead_capture?: boolean
+          referrer?: string | null
+          scale?: number | null
+          session_key?: string
+          source?: string | null
+          updated_at?: string
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       google_tokens: {
         Row: {
           access_token: string
