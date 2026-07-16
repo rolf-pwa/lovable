@@ -105,10 +105,9 @@ serve(async (req) => {
     try {
       await supabase.from("staff_notifications").insert({
         title: `Georgia 2.0 lead · ${data.first_name}`,
-        body: `${data.domain} / ${data.catalyst} · $${data.scale.toLocaleString()} · ${data.chosen_pathway}`,
-        kind: "georgia2_lead",
+        body: `${data.domain} / ${data.catalyst} · $${data.scale.toLocaleString()} · ${data.chosen_pathway} · ${data.email}`,
+        source_type: "georgia2_lead",
         link: "/leads",
-        metadata: { lead_id: lead.id, email: data.email },
       });
     } catch (notifyErr) {
       console.warn("staff_notifications insert failed (non-fatal):", notifyErr);
