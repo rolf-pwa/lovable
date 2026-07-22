@@ -827,10 +827,10 @@ const Portal = () => {
     const hhLabel = currentHousehold?.label || household?.label || "Household";
     const hhAssets = aggregateAssetsAtLevel("household", drilldown.householdId);
     const viewingOwnHousehold = members.some((m: any) => m.id === contact.id);
-    const isHoFSibling = contact.family_role === "head_of_family" && !viewingOwnHousehold;
-    const allowedScopes = isHoFSibling
-      ? new Set(["family_shared"])
-      : new Set(["household_shared", "family_shared"]);
+    // hof_visible gating happens on the backend — every household that
+    // reaches the client is fully accessible to this viewer.
+    const allowedScopes = new Set(["household_shared", "family_shared"]);
+
 
     return (
       <div className="grid gap-6 lg:grid-cols-3">
