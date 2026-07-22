@@ -704,6 +704,67 @@ const Portal = () => {
         {/* Household Cards */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {households.map((hh: any) => {
+            const members = hh.members || [];
+            const hhVineyard = members.flatMap((m: any) => m.vineyard_accounts || []);
+            const hhStore = members.flatMap((m: any) =>
+              (m.storehouses || []).filter((a: any) => isAumStorehouse(a))
+            );
+            const hhTank = (family_holding_tank || []).filter((t: any) =>
+              members.some((m: any) => m.id === t.contact_id)
+            );
+            const memberIds = new Set(members.map((m: any) => m.id));
+            const hhInsurance = (insurance_policies || []).filter(
+              (p: any) => memberIds.has(p.contact_id)
+            );
+            const hhTotal = sumValues(hhVineyard) + sumValues(hhStore)
+              + sumValues(hhTank)
+              + insuranceCashForStorehouses(hhInsurance, hhStore);
+
+            return (
+              <button
+                key={hh.id}
+                onClick={() => setDrilldown({ level: "household", householdId: hh.id })}
+                className="text-left rounded-lg border border-border bg-card p-5 hover:border-accent/30 hover:bg-muted/30 transition-colors group"
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Home className="h-4 w-4 text-accent" />
+                    <h3 className="font-semibold text-foreground font-serif">{hh.label} Household</h3>
+                  </div>
+                  <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
+                {hh.address && (
+                  <p className="text-xs text-muted-foreground mb-3">{hh.address}</p>
+                )}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <Users className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground">
+                      {members.length} member{members.length !== 1 ? "s" : ""}
+                    </span>
+                  </div>
+                  <span className="text-sm font-semibold text-foreground">
+                    ${hhTotal.toLocaleString()}
+                  </span>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-1">
+                  {members.slice(0, 4).map((m: any) => (
+                    <span key={m.id} className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
+                      {m.first_name}
+                    </span>
+                  ))}
+                  {members.length > 4 && (
+                    <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
+                      +{members.length - 4}
+                    </span>
+                  )}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
   };
 
   // ─── Household View (shows member cards + territory sidebar) ───
