@@ -299,23 +299,13 @@ const VfoPortal = () => {
           <div className="grid gap-4 sm:grid-cols-2">
             {households.map((hh: any) => {
               const members = hh.members || [];
-              const isOwnHousehold = members.some((m: any) => m.id === contact.id);
-              const restrictToFamilyShared = !isOwnHousehold;
-              const scopeOk = (a: any) =>
-                restrictToFamilyShared ? a?.visibility_scope === "family_shared" : true;
-
-
-              const hhV = members.flatMap((m: any) => (m.vineyard_accounts || []).filter(scopeOk));
+              const hhV = members.flatMap((m: any) => m.vineyard_accounts || []);
               const hhS = members.flatMap((m: any) =>
-                (m.storehouses || []).filter((a: any) => isAumStorehouse(a) && scopeOk(a))
+                (m.storehouses || []).filter((a: any) => isAumStorehouse(a))
               );
-              const hhT = restrictToFamilyShared
-                ? []
-                : (family_holding_tank || []).filter((t: any) => members.some((m: any) => m.id === t.contact_id));
+              const hhT = (family_holding_tank || []).filter((t: any) => members.some((m: any) => m.id === t.contact_id));
               const memberIds = new Set(members.map((m: any) => m.id));
-              const hhInsurance = restrictToFamilyShared
-                ? []
-                : (insurance_policies || []).filter((p: any) => memberIds.has(p.contact_id));
+              const hhInsurance = (insurance_policies || []).filter((p: any) => memberIds.has(p.contact_id));
               const hhTotal = sumValues(hhV) + sumValues(hhS) + sumValues(hhT)
                 + insuranceCashForStorehouses(hhInsurance, hhS);
               return (
@@ -339,11 +329,9 @@ const VfoPortal = () => {
                     </span>
                     <span className="font-serif text-foreground">
                       {fmt(hhTotal)}
-                      {restrictToFamilyShared && (
-                        <span className="ml-1 text-[10px] font-normal text-muted-foreground">shared</span>
-                      )}
                     </span>
                   </div>
+
                   <div className="mt-3 flex flex-wrap gap-1">
                     {(hh.members || []).slice(0, 5).map((m: any) => (
                       <span key={m.id} className="rounded-full bg-amber-500/5 border border-amber-500/15 px-2 py-0.5 text-[10px] text-muted-foreground">
