@@ -388,12 +388,8 @@ const VfoPortal = () => {
     const hhLabel = currentHousehold?.label || household?.label || "Household";
     const hhAssets = aggregateAssetsAtLevel("household", drilldown.householdId);
     const viewingOwnHousehold = members.some((m: any) => m.id === contact.id);
-    const isHoFSibling = contact.family_role === "head_of_family" && !viewingOwnHousehold;
-    const allowedScopes = isHoFSibling
-      ? new Set(["family_shared"])
-      : new Set(["household_shared", "family_shared"]);
 
-    const orderedMembers = (isHoFSibling
+    const orderedMembers = (!viewingOwnHousehold
       ? members.map((m: any) => ({ ...m, _isSelf: false }))
       : [
           { ...contact, _isSelf: true },
@@ -416,7 +412,6 @@ const VfoPortal = () => {
                 <h2 className="font-serif text-lg text-foreground">{hhLabel} Household</h2>
                 <p className="text-xs text-muted-foreground">
                   {orderedMembers.length} member{orderedMembers.length !== 1 ? "s" : ""}
-                  {isHoFSibling && " · Family-shared view"}
                 </p>
               </div>
             </CardContent>
@@ -425,25 +420,16 @@ const VfoPortal = () => {
           <div className="grid gap-3">
             {orderedMembers.map((m: any) => {
               const isSelf = m._isSelf;
-              const mVineyardRaw = isSelf ? vineyard_accounts : (m.vineyard_accounts || []);
-              const mStorehousesRaw = isSelf ? storehouses : (m.storehouses || []);
-              const mVineyard = isHoFSibling
-                ? mVineyardRaw.filter((a: any) => allowedScopes.has(a.visibility_scope))
-                : mVineyardRaw;
-              const mStoreAum = (isHoFSibling
-                ? mStorehousesRaw.filter((a: any) => allowedScopes.has(a.visibility_scope))
-                : mStorehousesRaw
-              ).filter(isAumStorehouse);
-              const mTank = isHoFSibling
-                ? []
-                : ((isSelf ? (holding_tank || []) : []) as any[])
-                    .concat((household_holding_tank || []).filter((t: any) => t.contact_id === m.id));
+              const mVineyard = isSelf ? vineyard_accounts : (m.vineyard_accounts || []);
+              const mStoreAum = (isSelf ? storehouses : (m.storehouses || [])).filter(isAumStorehouse);
+              const mTank = ((isSelf ? (holding_tank || []) : []) as any[])
+                .concat((household_holding_tank || []).filter((t: any) => t.contact_id === m.id))
+                .concat((family_holding_tank || []).filter((t: any) => t.contact_id === m.id));
               const mTankDedup = Array.from(new Map(mTank.map((t: any) => [t.id, t])).values());
-              const mInsurance = isHoFSibling
-                ? []
-                : insurance_policies.filter((p: any) => p.contact_id === m.id);
+              const mInsurance = insurance_policies.filter((p: any) => p.contact_id === m.id);
               const mTotal = sumValues(mVineyard) + sumValues(mStoreAum) + sumValues(mTankDedup)
                 + insuranceCashForStorehouses(mInsurance, mStoreAum);
+
 
               return (
                 <button
