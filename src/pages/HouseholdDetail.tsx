@@ -31,6 +31,7 @@ import { VaultView } from "@/pages/Vault";
 import { CharterRatificationTile } from "@/components/CharterRatificationTile";
 import EngagementsPanel from "@/components/EngagementsPanel";
 import { ProsPanel } from "@/components/ProsPanel";
+import { AddCompanyDialog } from "@/components/AddCompanyDialog";
 import {
   Home,
   User,
