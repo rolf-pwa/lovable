@@ -625,50 +625,45 @@ const Portal = () => {
     );
   };
 
-  // Helper: aggregate assets from hierarchy at a given scope level
+  // Helper: aggregate assets from hierarchy at a given scope level.
+  // Note: backend already filters out households where hof_visible=false for
+  // HoFs, so every household present in `hierarchy` is fully accessible.
   const aggregateAssetsAtLevel = (level: "family" | "household", householdId?: string) => {
     const allVineyard: any[] = [];
     const allStorehouses: any[] = [];
 
     if (level === "family") {
-      // Family level: only family_shared assets across all households
       const households = hierarchy?.households || [];
       households.forEach((hh: any) => {
         (hh.members || []).forEach((m: any) => {
-          (m.vineyard_accounts || []).filter((a: any) => a.visibility_scope === "family_shared").forEach((a: any) => allVineyard.push(a));
-          (m.storehouses || []).filter((a: any) => a.visibility_scope === "family_shared" && a.asset_type !== 'Primary Residence & Protected Legacy Accounts').forEach((a: any) => allStorehouses.push(a));
+          (m.vineyard_accounts || []).forEach((a: any) => allVineyard.push(a));
+          (m.storehouses || [])
+            .filter((a: any) => a.asset_type !== 'Primary Residence & Protected Legacy Accounts')
+            .forEach((a: any) => allStorehouses.push(a));
         });
       });
     } else if (level === "household") {
-      // Household level: household_shared + family_shared assets from household members.
-      // If the viewer is a HoF drilling into a sibling household, restrict to family_shared only.
       const members = householdId
         ? (hierarchy?.households?.find((h: any) => h.id === householdId)?.members || [])
         : (hierarchy?.members || []);
       const selfInMembers = members.some((m: any) => m.id === contact.id);
-      const isHoFSibling = contact.family_role === "head_of_family" && !selfInMembers;
-      const scopesAllowed = isHoFSibling
-        ? new Set(["family_shared"])
-        : new Set(["household_shared", "family_shared"]);
       if (!selfInMembers) {
-        const selfVineyard = vineyard_accounts.filter((a: any) => scopesAllowed.has(a.visibility_scope));
-        const selfStorehouses = storehouses.filter((a: any) => scopesAllowed.has(a.visibility_scope) && a.asset_type !== 'Primary Residence & Protected Legacy Accounts');
-        // Only include self assets if the logged-in contact belongs to this household context.
-        // For HoF viewing a sibling household, do not inject own assets.
-        if (!isHoFSibling) {
-          allVineyard.push(...selfVineyard);
-          allStorehouses.push(...selfStorehouses);
-        }
+        allVineyard.push(...vineyard_accounts);
+        allStorehouses.push(
+          ...storehouses.filter((a: any) => a.asset_type !== 'Primary Residence & Protected Legacy Accounts')
+        );
       }
       members.forEach((m: any) => {
-        (m.vineyard_accounts || []).filter((a: any) => scopesAllowed.has(a.visibility_scope)).forEach((a: any) => allVineyard.push(a));
-        (m.storehouses || []).filter((a: any) => scopesAllowed.has(a.visibility_scope) && a.asset_type !== 'Primary Residence & Protected Legacy Accounts').forEach((a: any) => allStorehouses.push(a));
+        (m.vineyard_accounts || []).forEach((a: any) => allVineyard.push(a));
+        (m.storehouses || [])
+          .filter((a: any) => a.asset_type !== 'Primary Residence & Protected Legacy Accounts')
+          .forEach((a: any) => allStorehouses.push(a));
       });
     }
 
-
     return { vineyard: allVineyard, storehouses: allStorehouses };
   };
+
 
   // ─── Family Overview (drill-down landing) ───
   const renderFamilyView = () => {
