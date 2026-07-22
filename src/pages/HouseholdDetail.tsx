@@ -771,25 +771,39 @@ const HouseholdDetail = () => {
             </Card>
 
             {/* Corporate Holdings */}
-            {corporations.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                      <Building2 className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-lg font-serif">Corporate Holdings</CardTitle>
-                      <p className="text-xs text-muted-foreground">
-                        {corporations.length} entit{corporations.length === 1 ? "y" : "ies"}
-                      </p>
-                    </div>
-                    <div className="ml-auto text-right">
-                      <p className="text-2xl font-bold text-foreground">{formatCurrency(totalCorpAssets)}</p>
-                    </div>
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                    <Building2 className="h-5 w-5 text-primary" />
                   </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
+                  <div>
+                    <CardTitle className="text-lg font-serif">Corporate Holdings</CardTitle>
+                    <p className="text-xs text-muted-foreground">
+                      {corporations.length} entit{corporations.length === 1 ? "y" : "ies"}
+                    </p>
+                  </div>
+                  <div className="ml-auto flex items-center gap-3">
+                    <p className="text-2xl font-bold text-foreground">{formatCurrency(totalCorpAssets)}</p>
+                    <AddCompanyDialog
+                      members={members
+                        .filter((m: any) => !m.is_minor)
+                        .map((m: any) => ({
+                          id: m.id,
+                          name: `${m.first_name} ${m.last_name || ""}`.trim(),
+                        }))}
+                      existingCorpIds={corporations.map((c: any) => c.id)}
+                      onCreated={fetchData}
+                    />
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {corporations.length === 0 && (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    No corporate entities linked to this household yet.
+                  </p>
+                )}
                   {corporations.map((corp: any) => (
                     <div key={corp.id} className="space-y-2">
                       <div className="flex items-center justify-between">
