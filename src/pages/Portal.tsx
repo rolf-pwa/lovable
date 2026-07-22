@@ -683,142 +683,27 @@ const Portal = () => {
 
 
     return (
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Main Content: Summary + Household Cards */}
-        <div className="space-y-6 lg:col-span-2">
-          {/* Family Summary */}
-          <Card>
-            <CardContent className="p-5">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent/10">
-                  <Home className="h-5 w-5 text-accent" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-semibold text-foreground font-serif">{family?.name || "Family"}</h2>
-                  <p className="text-xs text-muted-foreground">
-                    {households.length} household{households.length !== 1 ? "s" : ""} · {households.reduce((s: number, h: any) => s + (h.members?.length || 0), 0)} members
-                  </p>
-                </div>
-                <div className="ml-auto text-right">
-                  <p className="text-2xl font-bold text-accent">${totalAssets.toLocaleString()}</p>
-                  <p className="text-xs text-muted-foreground">Family Shared Assets</p>
-                </div>
+      <div className="space-y-6">
+        {/* Family Summary (AUM totals intentionally hidden in /portal — VFO only) */}
+        <Card>
+          <CardContent className="p-5">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent/10">
+                <Home className="h-5 w-5 text-accent" />
               </div>
-            </CardContent>
-          </Card>
+              <div>
+                <h2 className="text-lg font-semibold text-foreground font-serif">{family?.name || "Family"}</h2>
+                <p className="text-xs text-muted-foreground">
+                  {households.length} household{households.length !== 1 ? "s" : ""} · {households.reduce((s: number, h: any) => s + (h.members?.length || 0), 0)} members
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-          {/* Household Cards */}
-          <div className="grid gap-4 sm:grid-cols-2">
-            {households.map((hh: any) => {
-              const members = hh.members || [];
-              // Backend already gates households by `hof_visible`, so every
-              // household in the hierarchy is fully accessible.
-              const hhVineyard = members.flatMap((m: any) => m.vineyard_accounts || []);
-              const hhStore = members.flatMap((m: any) =>
-                (m.storehouses || []).filter((a: any) => isAumStorehouse(a))
-              );
-              const hhTank = (family_holding_tank || []).filter((t: any) =>
-                members.some((m: any) => m.id === t.contact_id)
-              );
-              const memberIds = new Set(members.map((m: any) => m.id));
-              const hhInsurance = (insurance_policies || []).filter(
-                (p: any) => memberIds.has(p.contact_id)
-              );
-
-              const hhTotal = sumValues(hhVineyard) + sumValues(hhStore)
-                + sumValues(hhTank)
-                + insuranceCashForStorehouses(hhInsurance, hhStore);
-
-
-              return (
-                <button
-                  key={hh.id}
-                  onClick={() => setDrilldown({ level: "household", householdId: hh.id })}
-                  className="text-left rounded-lg border border-border bg-card p-5 hover:border-accent/30 hover:bg-muted/30 transition-colors group"
-                >
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <Home className="h-4 w-4 text-accent" />
-                      <h3 className="font-semibold text-foreground font-serif">{hh.label} Household</h3>
-                    </div>
-                    <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </div>
-                  {hh.address && (
-                    <p className="text-xs text-muted-foreground mb-3">{hh.address}</p>
-                  )}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1.5">
-                      <Users className="h-3.5 w-3.5 text-muted-foreground" />
-                      <span className="text-xs text-muted-foreground">
-                        {members.length} member{members.length !== 1 ? "s" : ""}
-                      </span>
-                    </div>
-                    <span className="text-sm font-semibold text-foreground">
-                      ${hhTotal.toLocaleString()}
-                    </span>
-
-                  </div>
-                  <div className="mt-3 flex flex-wrap gap-1">
-                    {members.slice(0, 4).map((m: any) => (
-                      <span key={m.id} className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
-                        {m.first_name}
-                      </span>
-                    ))}
-                    {members.length > 4 && (
-                      <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
-                        +{members.length - 4}
-                      </span>
-                    )}
-                  </div>
-                </button>
-              );
-            })}
-
-          </div>
-
-        </div>
-
-        {/* Right Sidebar: Aggregate Family AUM (no per-account detail — household privacy preserved) */}
-        <div className="space-y-4">
-          {(() => {
-            // Aggregate family AUM rolls up ALL scopes across every household
-            // (family_shared + household_shared + individual). Per-account
-            // details remain private to each household — only the totals
-            // appear in the family view.
-            const allMembers = households.flatMap((hh: any) => hh.members || []);
-            const allVineyard = allMembers.flatMap((m: any) => m.vineyard_accounts || []);
-            const allStore = allMembers.flatMap((m: any) =>
-              (m.storehouses || []).filter((a: any) => isAumStorehouse(a))
-            );
-            const allInsurance = insurance_policies || [];
-            const familyAUM = sumValues(allVineyard) + sumValues(allStore)
-              + sumValues(family_holding_tank)
-              + insuranceCashForStorehouses(allInsurance, allStore);
-
-            return (
-              <Card>
-                <CardContent className="p-5 space-y-3">
-                  <div className="flex items-center gap-2">
-                    <Home className="h-4 w-4 text-accent" />
-                    <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Family AUM</h3>
-                  </div>
-                  <div>
-                    <p className="text-3xl font-bold text-accent font-serif">${familyAUM.toLocaleString()}</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Aggregate across {households.length} household{households.length !== 1 ? "s" : ""}
-                    </p>
-                  </div>
-                  <p className="text-[11px] text-muted-foreground leading-relaxed pt-2 border-t border-border">
-                    Individual household account details are private. Drill into a household tile to view what each member has shared with you.
-                  </p>
-                </CardContent>
-              </Card>
-            );
-          })()}
-        </div>
-
-      </div>
-    );
+        {/* Household Cards */}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {households.map((hh: any) => {
   };
 
   // ─── Household View (shows member cards + territory sidebar) ───
