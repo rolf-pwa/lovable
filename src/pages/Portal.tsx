@@ -668,23 +668,30 @@ const Portal = () => {
   // ─── Family Overview (drill-down landing) ───
   const renderFamilyView = () => {
     const households = hierarchy?.households || [];
-    const familyAssets = aggregateAssetsAtLevel("family");
-    
-    // Aggregate financials across all HoF-visible households (backend already
-    // excludes households toggled hof_visible=false).
-    const memberIdSet = new Set<string>(households.flatMap((hh: any) => (hh.members || []).map((m: any) => m.id)));
-    const familyTank = (family_holding_tank || []).filter((t: any) => memberIdSet.has(t.contact_id));
-    const familyInsurance = (insurance_policies || []).filter((p: any) => memberIdSet.has(p.contact_id));
-    const totalAssets = sumValues(familyAssets.vineyard)
-      + sumValues(familyAssets.storehouses)
-      + sumValues(familyTank)
-      + insuranceCashForStorehouses(familyInsurance, familyAssets.storehouses);
 
-
+    // Family Shared total: only assets explicitly scoped `family_shared`
+    // across all HoF-visible households (respects household privacy).
+    const allMembers = households.flatMap((hh: any) => hh.members || []);
+    const memberIdSet = new Set<string>(allMembers.map((m: any) => m.id));
+    const sharedVineyard = allMembers.flatMap((m: any) =>
+      (m.vineyard_accounts || []).filter((a: any) => a.visibility_scope === "family_shared")
+    );
+    const sharedStore = allMembers.flatMap((m: any) =>
+      (m.storehouses || []).filter((a: any) => a.visibility_scope === "family_shared" && isAumStorehouse(a))
+    );
+    const sharedTank = (family_holding_tank || []).filter(
+      (t: any) => memberIdSet.has(t.contact_id) && t.visibility_scope === "family_shared"
+    );
+    const sharedInsurance = (insurance_policies || []).filter(
+      (p: any) => memberIdSet.has(p.contact_id) && p.visibility_scope === "family_shared"
+    );
+    const familySharedTotal = sumValues(sharedVineyard) + sumValues(sharedStore)
+      + sumValues(sharedTank)
+      + insuranceCashForStorehouses(sharedInsurance, sharedStore);
 
     return (
       <div className="space-y-6">
-        {/* Family Summary (AUM totals intentionally hidden in /portal — VFO only) */}
+        {/* Family Summary — shows only assets explicitly shared with the family */}
         <Card>
           <CardContent className="p-5">
             <div className="flex items-center gap-3">
@@ -697,9 +704,14 @@ const Portal = () => {
                   {households.length} household{households.length !== 1 ? "s" : ""} · {households.reduce((s: number, h: any) => s + (h.members?.length || 0), 0)} members
                 </p>
               </div>
+              <div className="ml-auto text-right">
+                <p className="text-2xl font-bold text-accent">${familySharedTotal.toLocaleString()}</p>
+                <p className="text-xs text-muted-foreground">Family Shared Assets</p>
+              </div>
             </div>
           </CardContent>
         </Card>
+
 
         {/* Household Cards */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
