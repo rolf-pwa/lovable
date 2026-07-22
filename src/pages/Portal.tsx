@@ -670,13 +670,16 @@ const Portal = () => {
     const households = hierarchy?.households || [];
     const familyAssets = aggregateAssetsAtLevel("family");
     
-    // Aggregate financials across all households (family_shared only)
-    const familyTank = (family_holding_tank || []).filter((t: any) => t?.visibility_scope === "family_shared");
-    const familyInsurance = (insurance_policies || []).filter((p: any) => p?.visibility_scope === "family_shared");
+    // Aggregate financials across all HoF-visible households (backend already
+    // excludes households toggled hof_visible=false).
+    const memberIdSet = new Set<string>(households.flatMap((hh: any) => (hh.members || []).map((m: any) => m.id)));
+    const familyTank = (family_holding_tank || []).filter((t: any) => memberIdSet.has(t.contact_id));
+    const familyInsurance = (insurance_policies || []).filter((p: any) => memberIdSet.has(p.contact_id));
     const totalAssets = sumValues(familyAssets.vineyard)
       + sumValues(familyAssets.storehouses)
       + sumValues(familyTank)
       + insuranceCashForStorehouses(familyInsurance, familyAssets.storehouses);
+
 
 
     return (
