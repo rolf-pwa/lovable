@@ -855,9 +855,8 @@ const HouseholdDetail = () => {
                       )}
                     </div>
                   ))}
-                </CardContent>
-              </Card>
-            )}
+              </CardContent>
+            </Card>
 
             {/* The Storehouses */}
             <Card>
