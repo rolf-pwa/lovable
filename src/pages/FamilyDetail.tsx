@@ -491,11 +491,24 @@ const FamilyDetail = () => {
           {/* Main column — Households & Members */}
           <div className="flex-1 min-w-0">
             <Card>
-              <CardHeader className="pb-4">
+              <CardHeader className="pb-4 flex flex-row items-center justify-between">
                 <CardTitle className="text-lg flex items-center gap-2">
                   <Home className="h-4 w-4 text-sanctuary-bronze" />
                   Households & Members
                 </CardTitle>
+                <AddCompanyDialog
+                  members={contacts
+                    .filter((c) => !c.is_minor)
+                    .map((c) => {
+                      const hh = households.find((h) => h.id === c.household_id);
+                      return {
+                        id: c.id,
+                        name: `${c.first_name} ${c.last_name || ""}`.trim(),
+                        sublabel: hh?.label,
+                      };
+                    })}
+                  onCreated={fetchData}
+                />
               </CardHeader>
               <CardContent className="px-0 pb-0">
                 {households.length === 0 ? (
