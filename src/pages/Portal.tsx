@@ -1030,22 +1030,16 @@ const Portal = () => {
   // ─── Individual View (tasks + meetings main, territory sidebar) ───
   const getIndividualData = () => {
     if (currentMember) {
-      // Viewing another member's data. If the viewer is a HoF and this
-      // member belongs to a sibling household, only surface family_shared
-      // accounts — everything else remains private.
-      const memberHousehold = hierarchy?.households?.find((h: any) =>
-        (h.members || []).some((mm: any) => mm.id === currentMember.id)
-      );
-      const inOwnHousehold = (memberHousehold?.members || []).some((mm: any) => mm.id === contact.id);
-      const restrict = contact.family_role === "head_of_family" && !inOwnHousehold;
-      const scopeOk = (a: any) => (restrict ? a?.visibility_scope === "family_shared" : true);
+      // Backend gates households by hof_visible; any member reaching the
+      // client is fully accessible.
       return {
         name: `${currentMember.first_name} ${currentMember.last_name || ""}`.trim(),
         role: currentMember.family_role,
-        vineyardAccounts: (currentMember.vineyard_accounts || []).filter(scopeOk),
-        memberStorehouses: (currentMember.storehouses || []).filter(scopeOk),
+        vineyardAccounts: currentMember.vineyard_accounts || [],
+        memberStorehouses: currentMember.storehouses || [],
       };
     }
+
 
     // Viewing self
     return {
