@@ -711,33 +711,24 @@ const Portal = () => {
           <div className="grid gap-4 sm:grid-cols-2">
             {households.map((hh: any) => {
               const members = hh.members || [];
-              const isOwnHousehold = members.some((m: any) => m.id === contact.id);
-              const isHoF = contact.family_role === "head_of_family";
-              // HoF may drill into sibling households, but only sees
-              // accounts explicitly designated as `family_shared`. All other
-              // scopes stay private to that household.
-              const restrictToFamilyShared = isHoF && !isOwnHousehold;
-
-              const scopeOk = (a: any) =>
-                restrictToFamilyShared ? a?.visibility_scope === "family_shared" : true;
-
-              const hhVineyard = members.flatMap((m: any) =>
-                (m.vineyard_accounts || []).filter(scopeOk)
-              );
+              // Backend already gates households by `hof_visible`, so every
+              // household in the hierarchy is fully accessible.
+              const hhVineyard = members.flatMap((m: any) => m.vineyard_accounts || []);
               const hhStore = members.flatMap((m: any) =>
-                (m.storehouses || []).filter((a: any) => isAumStorehouse(a) && scopeOk(a))
+                (m.storehouses || []).filter((a: any) => isAumStorehouse(a))
               );
               const hhTank = (family_holding_tank || []).filter((t: any) =>
-                members.some((m: any) => m.id === t.contact_id) && scopeOk(t)
+                members.some((m: any) => m.id === t.contact_id)
               );
               const memberIds = new Set(members.map((m: any) => m.id));
               const hhInsurance = (insurance_policies || []).filter(
-                (p: any) => memberIds.has(p.contact_id) && scopeOk(p)
+                (p: any) => memberIds.has(p.contact_id)
               );
 
               const hhTotal = sumValues(hhVineyard) + sumValues(hhStore)
                 + sumValues(hhTank)
                 + insuranceCashForStorehouses(hhInsurance, hhStore);
+
 
               return (
                 <button
