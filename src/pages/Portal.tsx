@@ -846,7 +846,6 @@ const Portal = () => {
                   <h2 className="text-lg font-semibold text-foreground font-serif">{hhLabel} Household</h2>
                   <p className="text-xs text-muted-foreground">
                     {members.length + (viewingOwnHousehold ? 0 : 1)} member{members.length !== 0 ? "s" : ""}
-                    {isHoFSibling && " · Family-shared view"}
                   </p>
                 </div>
               </div>
@@ -855,7 +854,7 @@ const Portal = () => {
 
           {/* Member cards — ordered: Head, Spouse, Beneficiary, Minor */}
           <div className="grid gap-3">
-            {(isHoFSibling
+            {(!viewingOwnHousehold
               ? members.map((m: any) => ({ ...m, _isSelf: false }))
               : [
                   { ...contact, _isSelf: true },
@@ -871,17 +870,15 @@ const Portal = () => {
                 const mStorehouses = isSelf ? storehouses : (m.storehouses || []);
                 const mVineyardShared = mVineyard.filter((a: any) => allowedScopes.has(a.visibility_scope));
                 const mStoreShared = mStorehouses.filter((a: any) => allowedScopes.has(a.visibility_scope) && isAumStorehouse(a));
-                const mTank = isHoFSibling
-                  ? []
-                  : ((isSelf ? (holding_tank || []) : []) as any[])
-                      .concat((household_holding_tank || []).filter((t: any) => t.contact_id === m.id));
+                const mTank = ((isSelf ? (holding_tank || []) : []) as any[])
+                  .concat((household_holding_tank || []).filter((t: any) => t.contact_id === m.id))
+                  .concat((family_holding_tank || []).filter((t: any) => t.contact_id === m.id));
                 const mTankDedup = Array.from(new Map(mTank.map((t: any) => [t.id, t])).values());
-                const mInsurance = isHoFSibling
-                  ? []
-                  : insurance_policies.filter((p: any) => p.contact_id === m.id);
+                const mInsurance = insurance_policies.filter((p: any) => p.contact_id === m.id);
                 const mTotal = sumValues(mVineyardShared) + sumValues(mStoreShared)
                   + sumValues(mTankDedup)
                   + insuranceCashForStorehouses(mInsurance, mStoreShared);
+
 
 
                 return (
