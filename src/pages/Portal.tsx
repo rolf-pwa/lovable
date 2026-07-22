@@ -676,9 +676,13 @@ const Portal = () => {
     const familyAssets = aggregateAssetsAtLevel("family");
     
     // Aggregate financials across all households (family_shared only)
+    const familyTank = (family_holding_tank || []).filter((t: any) => t?.visibility_scope === "family_shared");
+    const familyInsurance = (insurance_policies || []).filter((p: any) => p?.visibility_scope === "family_shared");
     const totalAssets = sumValues(familyAssets.vineyard)
       + sumValues(familyAssets.storehouses)
-      + insuranceCashForStorehouses(insurance_policies, familyAssets.storehouses);
+      + sumValues(familyTank)
+      + insuranceCashForStorehouses(familyInsurance, familyAssets.storehouses);
+
 
     return (
       <div className="grid gap-6 lg:grid-cols-3">
@@ -725,15 +729,14 @@ const Portal = () => {
               const hhStore = members.flatMap((m: any) =>
                 (m.storehouses || []).filter((a: any) => isAumStorehouse(a) && scopeOk(a))
               );
-              const hhTank = restrictToFamilyShared
-                ? []
-                : (family_holding_tank || []).filter((t: any) =>
-                    members.some((m: any) => m.id === t.contact_id)
-                  );
+              const hhTank = (family_holding_tank || []).filter((t: any) =>
+                members.some((m: any) => m.id === t.contact_id) && scopeOk(t)
+              );
               const memberIds = new Set(members.map((m: any) => m.id));
-              const hhInsurance = restrictToFamilyShared
-                ? []
-                : (insurance_policies || []).filter((p: any) => memberIds.has(p.contact_id));
+              const hhInsurance = (insurance_policies || []).filter(
+                (p: any) => memberIds.has(p.contact_id) && scopeOk(p)
+              );
+
               const hhTotal = sumValues(hhVineyard) + sumValues(hhStore)
                 + sumValues(hhTank)
                 + insuranceCashForStorehouses(hhInsurance, hhStore);
