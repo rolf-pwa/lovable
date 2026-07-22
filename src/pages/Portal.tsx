@@ -755,10 +755,8 @@ const Portal = () => {
                     </div>
                     <span className="text-sm font-semibold text-foreground">
                       ${hhTotal.toLocaleString()}
-                      {restrictToFamilyShared && (
-                        <span className="ml-1 text-[10px] font-normal text-muted-foreground">shared</span>
-                      )}
                     </span>
+
                   </div>
                   <div className="mt-3 flex flex-wrap gap-1">
                     {members.slice(0, 4).map((m: any) => (
