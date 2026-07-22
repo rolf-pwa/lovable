@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { FamilyRollup } from "@/components/FamilyRollup";
 import { ProsPanel } from "@/components/ProsPanel";
+import { AddCompanyDialog } from "@/components/AddCompanyDialog";
 
 const ROLE_ICONS: Record<string, typeof Crown> = {
   head_of_family: Crown,
