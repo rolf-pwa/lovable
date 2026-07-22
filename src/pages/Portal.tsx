@@ -717,20 +717,31 @@ const Portal = () => {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {households.map((hh: any) => {
             const members = hh.members || [];
-            const hhVineyard = members.flatMap((m: any) => m.vineyard_accounts || []);
-            const hhStore = members.flatMap((m: any) =>
-              (m.storehouses || []).filter((a: any) => isAumStorehouse(a))
+            const isOwnHousehold = hh.id === contact.household_id;
+
+            // Non-owners (HoFs viewing sibling households) only see
+            // family_shared assets and totals — private household assets are hidden.
+            const scopeFilter = (a: any) =>
+              isOwnHousehold ? true : a.visibility_scope === "family_shared";
+
+            const hhVineyard = members.flatMap((m: any) =>
+              (m.vineyard_accounts || []).filter(scopeFilter)
             );
-            const hhTank = (family_holding_tank || []).filter((t: any) =>
-              members.some((m: any) => m.id === t.contact_id)
+            const hhStore = members.flatMap((m: any) =>
+              (m.storehouses || []).filter((a: any) => isAumStorehouse(a) && scopeFilter(a))
             );
             const memberIds = new Set(members.map((m: any) => m.id));
+            const hhTank = (family_holding_tank || []).filter(
+              (t: any) => memberIds.has(t.contact_id) && scopeFilter(t)
+            );
             const hhInsurance = (insurance_policies || []).filter(
-              (p: any) => memberIds.has(p.contact_id)
+              (p: any) => memberIds.has(p.contact_id) && scopeFilter(p)
             );
             const hhTotal = sumValues(hhVineyard) + sumValues(hhStore)
               + sumValues(hhTank)
               + insuranceCashForStorehouses(hhInsurance, hhStore);
+
+            const hasSharedAssets = hhTotal > 0;
 
             return (
               <button
@@ -755,9 +766,13 @@ const Portal = () => {
                       {members.length} member{members.length !== 1 ? "s" : ""}
                     </span>
                   </div>
-                  <span className="text-sm font-semibold text-foreground">
-                    ${hhTotal.toLocaleString()}
-                  </span>
+                  {isOwnHousehold || hasSharedAssets ? (
+                    <span className="text-sm font-semibold text-foreground">
+                      ${hhTotal.toLocaleString()}
+                    </span>
+                  ) : (
+                    <span className="text-xs italic text-muted-foreground">Private</span>
+                  )}
                 </div>
                 <div className="mt-3 flex flex-wrap gap-1">
                   {members.slice(0, 4).map((m: any) => (
