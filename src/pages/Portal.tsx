@@ -625,63 +625,61 @@ const Portal = () => {
     );
   };
 
-  // Helper: aggregate assets from hierarchy at a given scope level
+  // Helper: aggregate assets from hierarchy at a given scope level.
+  // Note: backend already filters out households where hof_visible=false for
+  // HoFs, so every household present in `hierarchy` is fully accessible.
   const aggregateAssetsAtLevel = (level: "family" | "household", householdId?: string) => {
     const allVineyard: any[] = [];
     const allStorehouses: any[] = [];
 
     if (level === "family") {
-      // Family level: only family_shared assets across all households
       const households = hierarchy?.households || [];
       households.forEach((hh: any) => {
         (hh.members || []).forEach((m: any) => {
-          (m.vineyard_accounts || []).filter((a: any) => a.visibility_scope === "family_shared").forEach((a: any) => allVineyard.push(a));
-          (m.storehouses || []).filter((a: any) => a.visibility_scope === "family_shared" && a.asset_type !== 'Primary Residence & Protected Legacy Accounts').forEach((a: any) => allStorehouses.push(a));
+          (m.vineyard_accounts || []).forEach((a: any) => allVineyard.push(a));
+          (m.storehouses || [])
+            .filter((a: any) => a.asset_type !== 'Primary Residence & Protected Legacy Accounts')
+            .forEach((a: any) => allStorehouses.push(a));
         });
       });
     } else if (level === "household") {
-      // Household level: household_shared + family_shared assets from household members.
-      // If the viewer is a HoF drilling into a sibling household, restrict to family_shared only.
       const members = householdId
         ? (hierarchy?.households?.find((h: any) => h.id === householdId)?.members || [])
         : (hierarchy?.members || []);
       const selfInMembers = members.some((m: any) => m.id === contact.id);
-      const isHoFSibling = contact.family_role === "head_of_family" && !selfInMembers;
-      const scopesAllowed = isHoFSibling
-        ? new Set(["family_shared"])
-        : new Set(["household_shared", "family_shared"]);
       if (!selfInMembers) {
-        const selfVineyard = vineyard_accounts.filter((a: any) => scopesAllowed.has(a.visibility_scope));
-        const selfStorehouses = storehouses.filter((a: any) => scopesAllowed.has(a.visibility_scope) && a.asset_type !== 'Primary Residence & Protected Legacy Accounts');
-        // Only include self assets if the logged-in contact belongs to this household context.
-        // For HoF viewing a sibling household, do not inject own assets.
-        if (!isHoFSibling) {
-          allVineyard.push(...selfVineyard);
-          allStorehouses.push(...selfStorehouses);
-        }
+        allVineyard.push(...vineyard_accounts);
+        allStorehouses.push(
+          ...storehouses.filter((a: any) => a.asset_type !== 'Primary Residence & Protected Legacy Accounts')
+        );
       }
       members.forEach((m: any) => {
-        (m.vineyard_accounts || []).filter((a: any) => scopesAllowed.has(a.visibility_scope)).forEach((a: any) => allVineyard.push(a));
-        (m.storehouses || []).filter((a: any) => scopesAllowed.has(a.visibility_scope) && a.asset_type !== 'Primary Residence & Protected Legacy Accounts').forEach((a: any) => allStorehouses.push(a));
+        (m.vineyard_accounts || []).forEach((a: any) => allVineyard.push(a));
+        (m.storehouses || [])
+          .filter((a: any) => a.asset_type !== 'Primary Residence & Protected Legacy Accounts')
+          .forEach((a: any) => allStorehouses.push(a));
       });
     }
 
-
     return { vineyard: allVineyard, storehouses: allStorehouses };
   };
+
 
   // ─── Family Overview (drill-down landing) ───
   const renderFamilyView = () => {
     const households = hierarchy?.households || [];
     const familyAssets = aggregateAssetsAtLevel("family");
     
-    // Aggregate financials across all households (family_shared only)
-    const familyTank = (family_holding_tank || []).filter((t: any) => t?.visibility_scope === "family_shared");
-    const familyInsurance = (insurance_policies || []).filter((p: any) => p?.visibility_scope === "family_shared");
+    // Aggregate financials across all HoF-visible households (backend already
+    // excludes households toggled hof_visible=false).
+    const memberIdSet = new Set<string>(households.flatMap((hh: any) => (hh.members || []).map((m: any) => m.id)));
+    const familyTank = (family_holding_tank || []).filter((t: any) => memberIdSet.has(t.contact_id));
+    const familyInsurance = (insurance_policies || []).filter((p: any) => memberIdSet.has(p.contact_id));
     const totalAssets = sumValues(familyAssets.vineyard)
       + sumValues(familyAssets.storehouses)
       + sumValues(familyTank)
       + insuranceCashForStorehouses(familyInsurance, familyAssets.storehouses);
+
 
 
     return (
@@ -713,33 +711,24 @@ const Portal = () => {
           <div className="grid gap-4 sm:grid-cols-2">
             {households.map((hh: any) => {
               const members = hh.members || [];
-              const isOwnHousehold = members.some((m: any) => m.id === contact.id);
-              const isHoF = contact.family_role === "head_of_family";
-              // HoF may drill into sibling households, but only sees
-              // accounts explicitly designated as `family_shared`. All other
-              // scopes stay private to that household.
-              const restrictToFamilyShared = isHoF && !isOwnHousehold;
-
-              const scopeOk = (a: any) =>
-                restrictToFamilyShared ? a?.visibility_scope === "family_shared" : true;
-
-              const hhVineyard = members.flatMap((m: any) =>
-                (m.vineyard_accounts || []).filter(scopeOk)
-              );
+              // Backend already gates households by `hof_visible`, so every
+              // household in the hierarchy is fully accessible.
+              const hhVineyard = members.flatMap((m: any) => m.vineyard_accounts || []);
               const hhStore = members.flatMap((m: any) =>
-                (m.storehouses || []).filter((a: any) => isAumStorehouse(a) && scopeOk(a))
+                (m.storehouses || []).filter((a: any) => isAumStorehouse(a))
               );
               const hhTank = (family_holding_tank || []).filter((t: any) =>
-                members.some((m: any) => m.id === t.contact_id) && scopeOk(t)
+                members.some((m: any) => m.id === t.contact_id)
               );
               const memberIds = new Set(members.map((m: any) => m.id));
               const hhInsurance = (insurance_policies || []).filter(
-                (p: any) => memberIds.has(p.contact_id) && scopeOk(p)
+                (p: any) => memberIds.has(p.contact_id)
               );
 
               const hhTotal = sumValues(hhVineyard) + sumValues(hhStore)
                 + sumValues(hhTank)
                 + insuranceCashForStorehouses(hhInsurance, hhStore);
+
 
               return (
                 <button
@@ -766,10 +755,8 @@ const Portal = () => {
                     </div>
                     <span className="text-sm font-semibold text-foreground">
                       ${hhTotal.toLocaleString()}
-                      {restrictToFamilyShared && (
-                        <span className="ml-1 text-[10px] font-normal text-muted-foreground">shared</span>
-                      )}
                     </span>
+
                   </div>
                   <div className="mt-3 flex flex-wrap gap-1">
                     {members.slice(0, 4).map((m: any) => (
@@ -840,10 +827,10 @@ const Portal = () => {
     const hhLabel = currentHousehold?.label || household?.label || "Household";
     const hhAssets = aggregateAssetsAtLevel("household", drilldown.householdId);
     const viewingOwnHousehold = members.some((m: any) => m.id === contact.id);
-    const isHoFSibling = contact.family_role === "head_of_family" && !viewingOwnHousehold;
-    const allowedScopes = isHoFSibling
-      ? new Set(["family_shared"])
-      : new Set(["household_shared", "family_shared"]);
+    // hof_visible gating happens on the backend — every household that
+    // reaches the client is fully accessible to this viewer.
+    const allowedScopes = new Set(["household_shared", "family_shared"]);
+
 
     return (
       <div className="grid gap-6 lg:grid-cols-3">
@@ -859,7 +846,6 @@ const Portal = () => {
                   <h2 className="text-lg font-semibold text-foreground font-serif">{hhLabel} Household</h2>
                   <p className="text-xs text-muted-foreground">
                     {members.length + (viewingOwnHousehold ? 0 : 1)} member{members.length !== 0 ? "s" : ""}
-                    {isHoFSibling && " · Family-shared view"}
                   </p>
                 </div>
               </div>
@@ -868,7 +854,7 @@ const Portal = () => {
 
           {/* Member cards — ordered: Head, Spouse, Beneficiary, Minor */}
           <div className="grid gap-3">
-            {(isHoFSibling
+            {(!viewingOwnHousehold
               ? members.map((m: any) => ({ ...m, _isSelf: false }))
               : [
                   { ...contact, _isSelf: true },
@@ -884,17 +870,15 @@ const Portal = () => {
                 const mStorehouses = isSelf ? storehouses : (m.storehouses || []);
                 const mVineyardShared = mVineyard.filter((a: any) => allowedScopes.has(a.visibility_scope));
                 const mStoreShared = mStorehouses.filter((a: any) => allowedScopes.has(a.visibility_scope) && isAumStorehouse(a));
-                const mTank = isHoFSibling
-                  ? []
-                  : ((isSelf ? (holding_tank || []) : []) as any[])
-                      .concat((household_holding_tank || []).filter((t: any) => t.contact_id === m.id));
+                const mTank = ((isSelf ? (holding_tank || []) : []) as any[])
+                  .concat((household_holding_tank || []).filter((t: any) => t.contact_id === m.id))
+                  .concat((family_holding_tank || []).filter((t: any) => t.contact_id === m.id));
                 const mTankDedup = Array.from(new Map(mTank.map((t: any) => [t.id, t])).values());
-                const mInsurance = isHoFSibling
-                  ? []
-                  : insurance_policies.filter((p: any) => p.contact_id === m.id);
+                const mInsurance = insurance_policies.filter((p: any) => p.contact_id === m.id);
                 const mTotal = sumValues(mVineyardShared) + sumValues(mStoreShared)
                   + sumValues(mTankDedup)
                   + insuranceCashForStorehouses(mInsurance, mStoreShared);
+
 
 
                 return (
@@ -1046,22 +1030,16 @@ const Portal = () => {
   // ─── Individual View (tasks + meetings main, territory sidebar) ───
   const getIndividualData = () => {
     if (currentMember) {
-      // Viewing another member's data. If the viewer is a HoF and this
-      // member belongs to a sibling household, only surface family_shared
-      // accounts — everything else remains private.
-      const memberHousehold = hierarchy?.households?.find((h: any) =>
-        (h.members || []).some((mm: any) => mm.id === currentMember.id)
-      );
-      const inOwnHousehold = (memberHousehold?.members || []).some((mm: any) => mm.id === contact.id);
-      const restrict = contact.family_role === "head_of_family" && !inOwnHousehold;
-      const scopeOk = (a: any) => (restrict ? a?.visibility_scope === "family_shared" : true);
+      // Backend gates households by hof_visible; any member reaching the
+      // client is fully accessible.
       return {
         name: `${currentMember.first_name} ${currentMember.last_name || ""}`.trim(),
         role: currentMember.family_role,
-        vineyardAccounts: (currentMember.vineyard_accounts || []).filter(scopeOk),
-        memberStorehouses: (currentMember.storehouses || []).filter(scopeOk),
+        vineyardAccounts: currentMember.vineyard_accounts || [],
+        memberStorehouses: currentMember.storehouses || [],
       };
     }
+
 
     // Viewing self
     return {
