@@ -798,11 +798,23 @@ const Portal = () => {
   const renderHouseholdView = () => {
     const members = currentHousehold?.members || hierarchy?.members || [];
     const hhLabel = currentHousehold?.label || household?.label || "Household";
-    const hhAssets = aggregateAssetsAtLevel("household", drilldown.householdId);
     const viewingOwnHousehold = members.some((m: any) => m.id === contact.id);
-    // hof_visible gating happens on the backend — every household that
-    // reaches the client is fully accessible to this viewer.
-    const allowedScopes = new Set(["household_shared", "family_shared"]);
+    // Privacy firewall: when viewing a sibling household, only assets
+    // explicitly scoped `family_shared` are visible. Household-internal
+    // assets stay private to that household's members.
+    const allowedScopes = viewingOwnHousehold
+      ? new Set(["household_shared", "family_shared"])
+      : new Set(["family_shared"]);
+    const rawHhAssets = aggregateAssetsAtLevel("household", drilldown.householdId);
+    const hhAssets = viewingOwnHousehold
+      ? rawHhAssets
+      : {
+          vineyard: rawHhAssets.vineyard.filter((a: any) => a.visibility_scope === "family_shared"),
+          storehouses: rawHhAssets.storehouses.filter((a: any) => a.visibility_scope === "family_shared"),
+        };
+    const visibleInsurance = viewingOwnHousehold
+      ? insurance_policies
+      : (insurance_policies || []).filter((p: any) => p.visibility_scope === "family_shared");
 
 
     return (
