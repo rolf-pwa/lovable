@@ -855,11 +855,17 @@ const Portal = () => {
                 const mStorehouses = isSelf ? storehouses : (m.storehouses || []);
                 const mVineyardShared = mVineyard.filter((a: any) => allowedScopes.has(a.visibility_scope));
                 const mStoreShared = mStorehouses.filter((a: any) => allowedScopes.has(a.visibility_scope) && isAumStorehouse(a));
-                const mTank = ((isSelf ? (holding_tank || []) : []) as any[])
+                const rawTank = ((isSelf ? (holding_tank || []) : []) as any[])
                   .concat((household_holding_tank || []).filter((t: any) => t.contact_id === m.id))
                   .concat((family_holding_tank || []).filter((t: any) => t.contact_id === m.id));
-                const mTankDedup = Array.from(new Map(mTank.map((t: any) => [t.id, t])).values());
-                const mInsurance = insurance_policies.filter((p: any) => p.contact_id === m.id);
+                const mTankAll = Array.from(new Map(rawTank.map((t: any) => [t.id, t])).values());
+                const mTankDedup = viewingOwnHousehold
+                  ? mTankAll
+                  : mTankAll.filter((t: any) => t.visibility_scope === "family_shared");
+                const mInsuranceAll = insurance_policies.filter((p: any) => p.contact_id === m.id);
+                const mInsurance = viewingOwnHousehold
+                  ? mInsuranceAll
+                  : mInsuranceAll.filter((p: any) => p.visibility_scope === "family_shared");
                 const mTotal = sumValues(mVineyardShared) + sumValues(mStoreShared)
                   + sumValues(mTankDedup)
                   + insuranceCashForStorehouses(mInsurance, mStoreShared);
