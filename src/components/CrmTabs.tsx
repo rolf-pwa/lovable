@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 const TABS = [
   { label: "Individuals", to: "/contacts" },
   { label: "Households", to: "/households" },
+  { label: "Corporate Holdings", to: "/corporations" },
   { label: "Families", to: "/families" },
   { label: "Pros", to: "/professionals" },
   { label: "Leads", to: "/leads" },
