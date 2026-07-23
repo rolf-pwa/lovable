@@ -872,20 +872,25 @@ const Portal = () => {
 
 
 
+                const canDrill = isSelf || viewingOwnHousehold;
                 return (
                   <button
                     key={m.id}
-                    onClick={() =>
+                    disabled={!canDrill}
+                    onClick={() => {
+                      if (!canDrill) return;
                       setDrilldown({
                         level: "individual",
                         householdId: drilldown.householdId,
                         memberId: isSelf ? undefined : m.id,
-                      })
-                    }
+                      });
+                    }}
                     className={`text-left rounded-lg p-4 transition-colors group ${
                       isSelf
                         ? "border border-primary/30 bg-primary/5 hover:bg-primary/10"
-                        : "border border-border bg-card hover:border-primary/30 hover:bg-muted/30"
+                        : canDrill
+                          ? "border border-border bg-card hover:border-primary/30 hover:bg-muted/30"
+                          : "border border-border bg-card cursor-default"
                     }`}
                   >
                     <div className="flex items-center justify-between">
@@ -903,7 +908,7 @@ const Portal = () => {
                       </div>
                       <div className="flex items-center gap-3">
                         {<span className="text-sm font-semibold text-foreground">${mTotal.toLocaleString()}</span>}
-                        <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                        {canDrill && <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />}
                       </div>
                     </div>
                   </button>
