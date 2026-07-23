@@ -798,11 +798,23 @@ const Portal = () => {
   const renderHouseholdView = () => {
     const members = currentHousehold?.members || hierarchy?.members || [];
     const hhLabel = currentHousehold?.label || household?.label || "Household";
-    const hhAssets = aggregateAssetsAtLevel("household", drilldown.householdId);
     const viewingOwnHousehold = members.some((m: any) => m.id === contact.id);
-    // hof_visible gating happens on the backend — every household that
-    // reaches the client is fully accessible to this viewer.
-    const allowedScopes = new Set(["household_shared", "family_shared"]);
+    // Privacy firewall: when viewing a sibling household, only assets
+    // explicitly scoped `family_shared` are visible. Household-internal
+    // assets stay private to that household's members.
+    const allowedScopes = viewingOwnHousehold
+      ? new Set(["household_shared", "family_shared"])
+      : new Set(["family_shared"]);
+    const rawHhAssets = aggregateAssetsAtLevel("household", drilldown.householdId);
+    const hhAssets = viewingOwnHousehold
+      ? rawHhAssets
+      : {
+          vineyard: rawHhAssets.vineyard.filter((a: any) => a.visibility_scope === "family_shared"),
+          storehouses: rawHhAssets.storehouses.filter((a: any) => a.visibility_scope === "family_shared"),
+        };
+    const visibleInsurance = viewingOwnHousehold
+      ? insurance_policies
+      : (insurance_policies || []).filter((p: any) => p.visibility_scope === "family_shared");
 
 
     return (
@@ -843,31 +855,42 @@ const Portal = () => {
                 const mStorehouses = isSelf ? storehouses : (m.storehouses || []);
                 const mVineyardShared = mVineyard.filter((a: any) => allowedScopes.has(a.visibility_scope));
                 const mStoreShared = mStorehouses.filter((a: any) => allowedScopes.has(a.visibility_scope) && isAumStorehouse(a));
-                const mTank = ((isSelf ? (holding_tank || []) : []) as any[])
+                const rawTank = ((isSelf ? (holding_tank || []) : []) as any[])
                   .concat((household_holding_tank || []).filter((t: any) => t.contact_id === m.id))
                   .concat((family_holding_tank || []).filter((t: any) => t.contact_id === m.id));
-                const mTankDedup = Array.from(new Map(mTank.map((t: any) => [t.id, t])).values());
-                const mInsurance = insurance_policies.filter((p: any) => p.contact_id === m.id);
+                const mTankAll = Array.from(new Map(rawTank.map((t: any) => [t.id, t])).values());
+                const mTankDedup = viewingOwnHousehold
+                  ? mTankAll
+                  : mTankAll.filter((t: any) => t.visibility_scope === "family_shared");
+                const mInsuranceAll = insurance_policies.filter((p: any) => p.contact_id === m.id);
+                const mInsurance = viewingOwnHousehold
+                  ? mInsuranceAll
+                  : mInsuranceAll.filter((p: any) => p.visibility_scope === "family_shared");
                 const mTotal = sumValues(mVineyardShared) + sumValues(mStoreShared)
                   + sumValues(mTankDedup)
                   + insuranceCashForStorehouses(mInsurance, mStoreShared);
 
 
 
+                const canDrill = isSelf || viewingOwnHousehold;
                 return (
                   <button
                     key={m.id}
-                    onClick={() =>
+                    disabled={!canDrill}
+                    onClick={() => {
+                      if (!canDrill) return;
                       setDrilldown({
                         level: "individual",
                         householdId: drilldown.householdId,
                         memberId: isSelf ? undefined : m.id,
-                      })
-                    }
+                      });
+                    }}
                     className={`text-left rounded-lg p-4 transition-colors group ${
                       isSelf
                         ? "border border-primary/30 bg-primary/5 hover:bg-primary/10"
-                        : "border border-border bg-card hover:border-primary/30 hover:bg-muted/30"
+                        : canDrill
+                          ? "border border-border bg-card hover:border-primary/30 hover:bg-muted/30"
+                          : "border border-border bg-card cursor-default"
                     }`}
                   >
                     <div className="flex items-center justify-between">
@@ -885,7 +908,7 @@ const Portal = () => {
                       </div>
                       <div className="flex items-center gap-3">
                         {<span className="text-sm font-semibold text-foreground">${mTotal.toLocaleString()}</span>}
-                        <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                        {canDrill && <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />}
                       </div>
                     </div>
                   </button>
@@ -977,23 +1000,23 @@ const Portal = () => {
 
         {/* Right Sidebar: Household-Shared Territory */}
         <div className="space-y-4">
-          {/* Household Holding Tank */}
-          {household_holding_tank.length > 0 && (
+          {/* Household Holding Tank — private to household members only */}
+          {viewingOwnHousehold && household_holding_tank.length > 0 && (
             <PortalHoldingTank accounts={household_holding_tank} />
           )}
 
           <PortalTerritory
             vineyardAccounts={hhAssets.vineyard}
             storehouses={hhAssets.storehouses}
-            insurancePolicies={insurance_policies}
+            insurancePolicies={visibleInsurance}
             contact={contact}
             family={family}
             household={currentHousehold || household}
             householdMembers={[]}
-            scopeLabel="Household Shared"
+            scopeLabel={viewingOwnHousehold ? "Household Shared" : "Family-Shared"}
             portalToken={portalToken}
             onScopeChange={() => refreshData(portalToken)}
-            corporations={corporations}
+            corporations={viewingOwnHousehold ? corporations : []}
           />
         </div>
       </div>
