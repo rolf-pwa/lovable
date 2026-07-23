@@ -534,7 +534,92 @@ const HouseholdDetail = () => {
                     )}
                   </CardContent>
                 </Card>
+
+                {/* Corporations Directory */}
+                <Card>
+                  <CardHeader className="pb-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <CardTitle className="text-lg">Corporations Directory</CardTitle>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {corporations.length} entit{corporations.length === 1 ? "y" : "ies"} · {formatCurrency(totalCorpAssets)}
+                        </p>
+                      </div>
+                      <AddCompanyDialog
+                        members={members
+                          .filter((m: any) => !m.is_minor)
+                          .map((m: any) => ({
+                            id: m.id,
+                            name: `${m.first_name} ${m.last_name || ""}`.trim(),
+                          }))}
+                        existingCorpIds={corporations.map((c: any) => c.id)}
+                        onCreated={fetchData}
+                      />
+                    </div>
+                  </CardHeader>
+                  <CardContent className="px-0 pb-0">
+                    {corporations.length === 0 ? (
+                      <p className="px-6 pb-6 text-sm text-muted-foreground">
+                        No corporate entities linked to this household yet.
+                      </p>
+                    ) : (
+                      <div className="overflow-x-auto border-t border-border">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-border text-[10px] uppercase tracking-widest text-muted-foreground">
+                              <th className="text-left font-medium px-6 py-3">Entity</th>
+                              <th className="text-left font-medium px-3 py-3">Type</th>
+                              <th className="text-left font-medium px-3 py-3">Jurisdiction</th>
+                              <th className="text-left font-medium px-3 py-3">Shareholders</th>
+                              <th className="text-right font-medium px-6 py-3">Assets</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {corporations.map((corp: any) => {
+                              const shareholderNames = (corp.shareholders || [])
+                                .map((sh: any) => {
+                                  const member = members.find((m: any) => m.id === sh.contact_id);
+                                  const name = member ? `${member.first_name} ${member.last_name || ""}`.trim() : "Member";
+                                  return `${name} (${sh.ownership_percentage}%)`;
+                                })
+                                .join(", ");
+                              return (
+                                <tr
+                                  key={corp.id}
+                                  onClick={() => navigate(`/corporations/${corp.id}`)}
+                                  className="border-b border-border last:border-0 cursor-pointer hover:bg-muted/40 transition-colors"
+                                >
+                                  <td className="px-6 py-4">
+                                    <div className="flex items-center gap-3 min-w-0">
+                                      <div className="h-8 w-8 shrink-0 rounded-lg bg-primary/10 flex items-center justify-center">
+                                        <Building2 className="h-4 w-4 text-primary" />
+                                      </div>
+                                      <span className="font-semibold text-foreground truncate">{corp.name}</span>
+                                    </div>
+                                  </td>
+                                  <td className="px-3 py-4">
+                                    <Badge variant="outline" className="text-[9px] uppercase">
+                                      {TYPE_LABELS[corp.corporation_type] || corp.corporation_type}
+                                    </Badge>
+                                  </td>
+                                  <td className="px-3 py-4 text-foreground/80">{corp.jurisdiction || "—"}</td>
+                                  <td className="px-3 py-4 text-foreground/80 truncate max-w-[240px]">
+                                    {shareholderNames || "—"}
+                                  </td>
+                                  <td className="px-6 py-4 text-right font-medium text-foreground">
+                                    {formatCurrency(corp.total_assets || 0)}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
               </div>
+
 
               {/* Right rail: AUM Stats */}
               <div className="space-y-4">
