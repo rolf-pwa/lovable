@@ -1000,23 +1000,23 @@ const Portal = () => {
 
         {/* Right Sidebar: Household-Shared Territory */}
         <div className="space-y-4">
-          {/* Household Holding Tank */}
-          {household_holding_tank.length > 0 && (
+          {/* Household Holding Tank — private to household members only */}
+          {viewingOwnHousehold && household_holding_tank.length > 0 && (
             <PortalHoldingTank accounts={household_holding_tank} />
           )}
 
           <PortalTerritory
             vineyardAccounts={hhAssets.vineyard}
             storehouses={hhAssets.storehouses}
-            insurancePolicies={insurance_policies}
+            insurancePolicies={visibleInsurance}
             contact={contact}
             family={family}
             household={currentHousehold || household}
             householdMembers={[]}
-            scopeLabel="Household Shared"
+            scopeLabel={viewingOwnHousehold ? "Household Shared" : "Family-Shared"}
             portalToken={portalToken}
             onScopeChange={() => refreshData(portalToken)}
-            corporations={corporations}
+            corporations={viewingOwnHousehold ? corporations : []}
           />
         </div>
       </div>
