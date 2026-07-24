@@ -115,6 +115,50 @@ export type Database = {
           },
         ]
       }
+      asana_sync_events: {
+        Row: {
+          contact_id: string | null
+          created_at: string
+          event_key: string
+        }
+        Insert: {
+          contact_id?: string | null
+          created_at?: string
+          event_key: string
+        }
+        Update: {
+          contact_id?: string | null
+          created_at?: string
+          event_key?: string
+        }
+        Relationships: []
+      }
+      asana_sync_state: {
+        Row: {
+          contact_id: string
+          last_synced_at: string
+          updated_at: string
+        }
+        Insert: {
+          contact_id: string
+          last_synced_at?: string
+          updated_at?: string
+        }
+        Update: {
+          contact_id?: string
+          last_synced_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "asana_sync_state_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: true
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       business_pipeline: {
         Row: {
           amount: number
