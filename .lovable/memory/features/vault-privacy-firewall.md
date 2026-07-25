@@ -34,3 +34,5 @@ Routes:
 **PIPEDA:** Drive bytes only ever decrypted inside Montreal Edge Function. No Drive URLs leave the server.
 
 **Auto-email (Wix Velo relay):** `inviteCollaborator` always emails the guest the `/vault/guest/{token}` URL with link only — unlock code is sent separately/manually. `createShareLink` accepts optional `notify_email` + `recipient_name`; when present, emails the share URL only. All sends are PII-Shield filtered and logged as `vault_invite_email_sent` / `share_link_email_sent` in `vault_audit_log`.
+
+**Shoebox upload rule:** portal clients need NO `vault_contact_roles` row to upload into their household Shoebox — `ensureAccess` grants `upload` implicitly when the target is the Shoebox (or a descendant). Clients may also rename/delete their own Shoebox drops. Everything outside the Shoebox still requires an explicit contributor/manager role or grant.
