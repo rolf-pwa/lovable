@@ -450,24 +450,34 @@ async function ensureAccess(
 
     if (need === "upload") {
       if (rank(cap) >= 1) return { ok: true, cap };
+      // Every portal client may always drop files into their household Shoebox —
+      // it exists for exactly that purpose (staff triage the contents later).
+      const shoeboxId = await getShoeboxFolderId(actor.householdId, actor.vaultRootId, accessToken);
+      if (shoeboxId && chain.includes(shoeboxId)) return { ok: true, cap: "upload" };
       return { ok: false, reason: "client_no_upload" };
     }
+
     if (need === "create_folder") {
       if (cap === "manage") return { ok: true, cap };
       return { ok: false, reason: "client_no_create_folder" };
     }
     if (need === "rename" || need === "delete") {
       if (cap === "manage") return { ok: true, cap };
-      if (cap === "upload") {
-        const { data: f } = await supabaseAdmin
-          .from("vault_files")
-          .select("uploaded_by_contact_id")
-          .eq("drive_id", driveId)
-          .maybeSingle();
-        if (f?.uploaded_by_contact_id === actor.contactId) return { ok: true, cap };
+      const { data: f } = await supabaseAdmin
+        .from("vault_files")
+        .select("uploaded_by_contact_id")
+        .eq("drive_id", driveId)
+        .maybeSingle();
+      const ownUpload = f?.uploaded_by_contact_id === actor.contactId;
+      if (cap === "upload" && ownUpload) return { ok: true, cap };
+      // Clients may also clean up their own Shoebox drops even without a role.
+      if (ownUpload) {
+        const shoeboxId = await getShoeboxFolderId(actor.householdId, actor.vaultRootId, accessToken);
+        if (shoeboxId && chain.includes(shoeboxId)) return { ok: true, cap: "upload" };
       }
       return { ok: false, reason: "client_can_modify_own_only" };
     }
+
     return { ok: false, reason: "unknown_need" };
   }
 
