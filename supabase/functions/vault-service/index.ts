@@ -450,8 +450,13 @@ async function ensureAccess(
 
     if (need === "upload") {
       if (rank(cap) >= 1) return { ok: true, cap };
+      // Every portal client may always drop files into their household Shoebox —
+      // it exists for exactly that purpose (staff triage the contents later).
+      const shoeboxId = await getShoeboxFolderId(actor.householdId, actor.vaultRootId, accessToken);
+      if (shoeboxId && chain.includes(shoeboxId)) return { ok: true, cap: "upload" };
       return { ok: false, reason: "client_no_upload" };
     }
+
     if (need === "create_folder") {
       if (cap === "manage") return { ok: true, cap };
       return { ok: false, reason: "client_no_create_folder" };
