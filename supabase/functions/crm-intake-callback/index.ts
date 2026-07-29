@@ -107,11 +107,18 @@ serve(async (req) => {
 
     // Persist the Drive root folder on the household so the CRM links straight in.
     if (provisioned && vaultRootFolderId) {
-      await admin
-        .from("households")
-        .update({ vault_root_folder_id: vaultRootFolderId })
-        .eq("id", householdId);
+      // If the agent's folder tree already contains a Shoebox, link it now.
+      const folders: any[] = Array.isArray(payload?.folders) ? payload.folders : [];
+      const shoebox = folders.find((f) => /shoebox/i.test(String(f?.path ?? f?.name ?? "")));
+      const patch: Record<string, string> = { vault_root_folder_id: vaultRootFolderId };
+      if (shoebox?.driveFolderId) patch.vault_shoebox_folder_id = shoebox.driveFolderId;
+      await admin.from("households").update(patch).eq("id", householdId);
+
+      // If the agent's tree has no Shoebox, vault-service creates and caches one
+      // on first access (getShoeboxFolderId / ensureShoebox).
+
     }
+
 
 
     return json({ success: true });
