@@ -105,6 +105,9 @@ serve(async (req) => {
       .select("id, first_name, last_name, full_name, family_role")
       .eq("household_id", householdId);
 
+    const refOf = (s: string, fallback: string) =>
+      ((s || "").trim().toUpperCase().replace(/[^A-Z0-9]+/g, "_").replace(/^_+|_+$/g, "") || fallback).slice(0, 40);
+
     const members = (contacts || []).map((c: any) => {
       const parts = (c.full_name || "").trim().split(/\s+/);
       const firstName = c.first_name || parts[0] || "Unknown";
@@ -113,6 +116,7 @@ serve(async (req) => {
         crmMemberId: c.id,
         firstName,
         lastName,
+        initial: initialsOf(firstName, lastName),
         initials: initialsOf(firstName, lastName),
         role: c.family_role || "Member",
       };
