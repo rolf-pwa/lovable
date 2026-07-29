@@ -256,7 +256,8 @@ serve(async (req) => {
         const { error: upErr } = await admin
           .from("crm_intake_pushes")
           .update({ status: "failed", error: message, ...extra })
-          .eq("id", logRow.id);
+          .eq("id", logRow.id)
+          .eq("status", "sent");
         if (upErr) console.error("[crm-intake-push] log update failed", upErr.message);
       }
       return json({ error: message }, status);
@@ -322,8 +323,10 @@ serve(async (req) => {
     if (logRow?.id) {
       const { error: upErr } = await admin
         .from("crm_intake_pushes")
+        // Only if the agent's callback hasn't already landed and marked this row.
         .update({ status: "accepted", response_body: { raw: parsed } })
-        .eq("id", logRow.id);
+        .eq("id", logRow.id)
+        .eq("status", "sent");
       if (upErr) console.error("[crm-intake-push] log update failed", upErr.message);
     }
 
