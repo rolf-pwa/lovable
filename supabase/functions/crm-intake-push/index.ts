@@ -221,7 +221,11 @@ serve(async (req) => {
       .select("id")
       .single();
 
-    const target = agentUrl.replace(/\/+$/, "") + "/api/public/crm/intake";
+    // Accept either a bare host or a full endpoint URL in CRM_INTAKE_AGENT_URL
+    const base = agentUrl.trim().replace(/\/+$/, "");
+    const target = /\/api\/public\/crm\/intake$/.test(base)
+      ? base
+      : `${base.replace(/\/api\/public\/crm\/?$/, "")}/api/public/crm/intake`;
     console.log(`[crm-intake-push] POST ${target} (household ${household.id})`);
 
     const fail = async (message: string, status: number, extra: Record<string, unknown> = {}) => {
