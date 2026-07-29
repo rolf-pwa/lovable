@@ -830,10 +830,18 @@ serve(async (req) => {
       if (!shoebox) {
         shoebox = await driveCreateFolder(SHOEBOX_NAME, rootFolderId, accessToken);
       }
+      const hhIdForCache = actor.kind === "client" ? actor.householdId : body.householdId;
+      if (hhIdForCache && shoebox?.id) {
+        await supabaseAdmin
+          .from("households")
+          .update({ vault_shoebox_folder_id: shoebox.id })
+          .eq("id", hhIdForCache);
+      }
       return new Response(
         JSON.stringify({ folderId: shoebox.id, name: shoebox.name }),
         { headers: { ...cors, "Content-Type": "application/json" } },
       );
+
     }
 
     // ─── COLLABORATOR: list own grant roots (post-unlock) ───
