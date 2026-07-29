@@ -16,6 +16,7 @@ import { PortalGeorgiaChat } from "@/components/portal/PortalGeorgiaChat";
 import { PortalNotificationBell } from "@/components/portal/PortalNotificationBell";
 import { PortalMessages } from "@/components/portal/PortalMessages";
 import { PortalVault } from "@/components/portal/PortalVault";
+import { PortalIntake } from "@/components/portal/PortalIntake";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
