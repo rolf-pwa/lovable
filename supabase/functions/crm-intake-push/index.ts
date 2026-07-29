@@ -224,6 +224,18 @@ serve(async (req) => {
     const target = agentUrl.replace(/\/+$/, "") + "/api/public/crm/intake";
     console.log(`[crm-intake-push] POST ${target} (household ${household.id})`);
 
+    const fail = async (message: string, status: number, extra: Record<string, unknown> = {}) => {
+      console.error(`[crm-intake-push] ${message}`);
+      if (logRow?.id) {
+        const { error: upErr } = await admin
+          .from("crm_intake_pushes")
+          .update({ status: "failed", error: message, ...extra })
+          .eq("id", logRow.id);
+        if (upErr) console.error("[crm-intake-push] log update failed", upErr.message);
+      }
+      return json({ error: message }, status);
+    };
+
     let res: Response;
     try {
       res = await fetch(target, {
@@ -233,6 +245,7 @@ serve(async (req) => {
           "X-CRM-Signature": `sha256=${signature}`,
         },
         body: rawBody,
+        redirect: "manual",
         signal: AbortSignal.timeout(25_000),
       });
     } catch (fetchErr) {
@@ -243,39 +256,49 @@ serve(async (req) => {
           : `Could not reach intake agent at ${target}: ${
             fetchErr instanceof Error ? fetchErr.message : String(fetchErr)
           }`;
-      console.error(`[crm-intake-push] ${message}`);
-      if (logRow?.id) {
-        await admin
-          .from("crm_intake_pushes")
-          .update({ status: "failed", error: message })
-          .eq("id", logRow.id);
-      }
-      return json({ error: message }, 504);
+      return await fail(message, 504);
     }
 
+    // A redirect means we hit a website (e.g. a Lovable preview auth bridge), not the API.
+    if (res.status >= 300 && res.status < 400) {
+      const loc = res.headers.get("location") || "(no location)";
+      return await fail(
+        `Intake agent URL redirected (${res.status} -> ${loc}). CRM_INTAKE_AGENT_URL must point at the agent's deployed API host, not a preview/site URL.`,
+        502,
+      );
+    }
+
+    const contentType = res.headers.get("content-type") || "";
     const text = await res.text();
-    console.log(`[crm-intake-push] agent responded ${res.status}`);
-    let parsed: unknown = text;
+    console.log(`[crm-intake-push] agent responded ${res.status} (${contentType || "no content-type"})`);
+
+    let parsed: unknown = text.slice(0, 2000);
+    let isJson = false;
     try {
       parsed = JSON.parse(text);
-    } catch { /* keep raw text */ }
+      isJson = true;
+    } catch { /* keep truncated raw text */ }
 
     if (!res.ok) {
-      console.error(`Intake agent rejected push [${res.status}]: ${text}`);
-      if (logRow?.id) {
-        await admin
-          .from("crm_intake_pushes")
-          .update({ status: "failed", response_body: { raw: parsed }, error: `HTTP ${res.status}` })
-          .eq("id", logRow.id);
-      }
-      return json({ error: "Intake agent request failed", status: res.status, details: parsed }, res.status);
+      return await fail(`HTTP ${res.status} from intake agent`, res.status, {
+        response_body: { raw: parsed },
+      });
+    }
+
+    if (!isJson) {
+      return await fail(
+        `Intake agent returned ${contentType || "non-JSON"} instead of a JSON acknowledgement — the configured URL is serving a web page, not the intake API.`,
+        502,
+        { response_body: { raw: parsed } },
+      );
     }
 
     if (logRow?.id) {
-      await admin
+      const { error: upErr } = await admin
         .from("crm_intake_pushes")
         .update({ status: "accepted", response_body: { raw: parsed } })
         .eq("id", logRow.id);
+      if (upErr) console.error("[crm-intake-push] log update failed", upErr.message);
     }
 
     return json({ success: true, itemsSent: knownItems.length, members: members.length, response: parsed });
