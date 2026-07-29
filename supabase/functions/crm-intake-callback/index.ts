@@ -114,23 +114,9 @@ serve(async (req) => {
       if (shoebox?.driveFolderId) patch.vault_shoebox_folder_id = shoebox.driveFolderId;
       await admin.from("households").update(patch).eq("id", householdId);
 
-      // No Shoebox in the provisioned tree — create it under the new root so
-      // portal clients can upload immediately.
-      if (!shoebox?.driveFolderId) {
-        try {
-          await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/vault-service`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
-              "x-internal-secret": Deno.env.get("INTERNAL_FUNCTION_SECRET") ?? "",
-            },
-            body: JSON.stringify({ action: "ensureShoebox", householdId }),
-          });
-        } catch (e) {
-          console.error("shoebox ensure failed", e);
-        }
-      }
+      // If the agent's tree has no Shoebox, vault-service creates and caches one
+      // on first access (getShoeboxFolderId / ensureShoebox).
+
     }
 
 
