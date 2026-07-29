@@ -185,25 +185,43 @@ serve(async (req) => {
       pushItem(`${p.carrier || "Policy"}${p.policy_type ? ` — ${p.policy_type}` : ""}`, "06_Insurance", p.contact_id, p.policy_type),
     );
 
-    const corporateEntities = (corps || []).map((c: any) => ({
-      name: c.name,
-      structure: STRUCTURES[String(c.corporation_type || "other").toLowerCase()] || "OTHER",
-      ...(c.jurisdiction ? { taxId: undefined } : {}),
-      shareholders: (shareholders || [])
-        .filter((s: any) => s.corporation_id === c.id)
-        .map((s: any) => ({
-          crmMemberId: s.contact_id,
-          ...(s.ownership_percentage != null ? { ownershipPercent: Number(s.ownership_percentage) } : {}),
-        })),
-    }));
+    const nameById = new Map(
+      (contacts || []).map((c: any, i: number) => [
+        c.id,
+        `${members[i].firstName} ${members[i].lastName}`.trim(),
+      ]),
+    );
+
+    const corporateEntities = (corps || []).map((c: any) => {
+      const structure = STRUCTURES[String(c.corporation_type || "other").toLowerCase()] || "OTHER";
+      return {
+        name: c.name,
+        shortName: String(c.name || "Entity").trim().slice(0, 30),
+        corpRef: refOf(c.name, "ENTITY"),
+        entityType: structure,
+        structure,
+        shareholders: (shareholders || [])
+          .filter((s: any) => s.corporation_id === c.id)
+          .map((s: any) => ({
+            crmMemberId: s.contact_id,
+            holderName: nameById.get(s.contact_id) || "Shareholder",
+            ...(s.ownership_percentage != null ? { ownershipPercent: Number(s.ownership_percentage) } : {}),
+          })),
+      };
+    });
 
     const callbackUrl = `${Deno.env.get("SUPABASE_URL")}/functions/v1/crm-intake-callback`;
 
+    const familyName = family?.name || "Unassigned Family";
+    const householdName = household.label || "Household";
+
     const payload = {
       crmFamilyId: household.family_id,
-      familyName: family?.name || "Unassigned Family",
+      familyName,
+      familyRef: refOf(familyName, "FAMILY"),
       crmHouseholdId: household.id,
-      householdName: household.label || "Household",
+      householdName,
+      householdRef: refOf(householdName, "HOUSEHOLD"),
       members,
       ...(knownItems.length ? { knownItems } : {}),
       ...(corporateEntities.length ? { corporateEntities } : {}),
