@@ -1493,7 +1493,9 @@ export type Database = {
           governance_status: Database["public"]["Enums"]["governance_status"]
           hof_visible: boolean
           id: string
+          intake_manifest_url: string | null
           intake_share_token: string | null
+          intake_upload_url: string | null
           label: string
           quiet_period_start_date: string | null
           updated_at: string
@@ -1508,7 +1510,9 @@ export type Database = {
           governance_status?: Database["public"]["Enums"]["governance_status"]
           hof_visible?: boolean
           id?: string
+          intake_manifest_url?: string | null
           intake_share_token?: string | null
+          intake_upload_url?: string | null
           label?: string
           quiet_period_start_date?: string | null
           updated_at?: string
@@ -1523,7 +1527,9 @@ export type Database = {
           governance_status?: Database["public"]["Enums"]["governance_status"]
           hof_visible?: boolean
           id?: string
+          intake_manifest_url?: string | null
           intake_share_token?: string | null
+          intake_upload_url?: string | null
           label?: string
           quiet_period_start_date?: string | null
           updated_at?: string

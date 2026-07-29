@@ -44,6 +44,8 @@ function agentBase(): string | null {
 interface Resolved {
   householdId: string;
   shareToken: string | null;
+  manifestUrl: string | null;
+  uploadUrl: string | null;
 }
 
 async function resolveHousehold(req: Request): Promise<Resolved | null> {
@@ -65,11 +67,16 @@ async function resolveHousehold(req: Request): Promise<Resolved | null> {
 
   const { data: hh } = await admin
     .from("households")
-    .select("id, intake_share_token")
+    .select("id, intake_share_token, intake_manifest_url, intake_upload_url")
     .eq("id", contact.household_id)
     .maybeSingle();
   if (!hh) return null;
-  return { householdId: hh.id, shareToken: hh.intake_share_token ?? null };
+  return {
+    householdId: hh.id,
+    shareToken: hh.intake_share_token ?? null,
+    manifestUrl: hh.intake_manifest_url ?? null,
+    uploadUrl: hh.intake_upload_url ?? null,
+  };
 }
 
 serve(async (req) => {
@@ -84,14 +91,21 @@ serve(async (req) => {
 
   try {
     const base = agentBase();
-    if (!base) return json({ error: "Intake agent not configured" }, 503);
-
     const resolved = await resolveHousehold(req);
     if (!resolved) return json({ error: "Unauthorized" }, 401);
-    if (!resolved.shareToken) {
+    if (!resolved.shareToken && !resolved.manifestUrl) {
       // Not yet linked — the portal simply hides the intake panel.
       return json({ enabled: false, reason: "not_linked" });
     }
+
+    // Prefer the agent's ready-made endpoints; fall back to composing them.
+    const tokenPath = resolved.shareToken ? encodeURIComponent(resolved.shareToken) : null;
+    const manifestUrl =
+      resolved.manifestUrl ?? (base && tokenPath ? `${base}/api/public/vault/${tokenPath}/manifest` : null);
+    const uploadUrl =
+      resolved.uploadUrl ?? (base && tokenPath ? `${base}/api/public/vault/${tokenPath}/upload` : null);
+    if (!manifestUrl || !uploadUrl) return json({ error: "Intake agent not configured" }, 503);
+
 
     const contentType = req.headers.get("content-type") ?? "";
 
@@ -104,10 +118,8 @@ serve(async (req) => {
 
       const out = new FormData();
       out.append("file", file, file.name);
-      const res = await fetch(
-        `${base}/api/public/vault/${encodeURIComponent(resolved.shareToken)}/upload`,
-        { method: "POST", body: out },
-      );
+      const res = await fetch(uploadUrl, { method: "POST", body: out });
+
       const text = await res.text();
       let body: unknown;
       try {
@@ -123,10 +135,8 @@ serve(async (req) => {
     const action = (payload as { action?: string })?.action ?? "manifest";
     if (action !== "manifest") return json({ error: "Unknown action" }, 400);
 
-    const res = await fetch(
-      `${base}/api/public/vault/${encodeURIComponent(resolved.shareToken)}/manifest`,
-      { headers: { Accept: "application/json" } },
-    );
+    const res = await fetch(manifestUrl, { headers: { Accept: "application/json" } });
+
     const text = await res.text();
     let manifest: Record<string, unknown>;
     try {
