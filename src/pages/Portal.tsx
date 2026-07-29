@@ -1063,6 +1063,9 @@ const Portal = () => {
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Main Content: Tabbed Interface */}
         <div className="space-y-4 lg:col-span-2">
+          {/* Document Intake — auto-hides once intake is complete */}
+          {isSelf && <PortalIntake portalToken={portalToken} />}
+
           {/* Ask for Help — pinned above tabs */}
           {isSelf && (
             <Button
