@@ -799,30 +799,41 @@ const HouseholdDetail = () => {
                 <ShieldCheck className="h-4 w-4 text-accent" />
                 Household document vault — manage visibility and share with collaborators.
               </div>
-              {household.vault_root_folder_id ? (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    const url = `https://drive.google.com/drive/folders/${household.vault_root_folder_id}`;
-                    const w = window.open(url, "_blank", "noopener,noreferrer");
-                    if (!w) {
-                      navigator.clipboard?.writeText(url);
-                      toast.success("Drive link copied — paste in a new tab");
-                    }
-                  }}
-                >
-                  <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
-                  Open in Drive
+              <div className="flex items-center gap-2">
+                <Button size="sm" variant="outline" onClick={pushToIntakeAgent} disabled={pushingIntake}>
+                  {pushingIntake ? (
+                    <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                  ) : (
+                    <ShieldCheck className="h-3.5 w-3.5 mr-1.5" />
+                  )}
+                  Push to Intake Agent
                 </Button>
-              ) : (
-                <Button asChild size="sm" variant="outline">
-                  <Link to={`/vault/household/${id}`}>
+                {household.vault_root_folder_id ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      const url = `https://drive.google.com/drive/folders/${household.vault_root_folder_id}`;
+                      const w = window.open(url, "_blank", "noopener,noreferrer");
+                      if (!w) {
+                        navigator.clipboard?.writeText(url);
+                        toast.success("Drive link copied — paste in a new tab");
+                      }
+                    }}
+                  >
                     <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
-                    Open Full Page
-                  </Link>
-                </Button>
-              )}
+                    Open in Drive
+                  </Button>
+                ) : (
+                  <Button asChild size="sm" variant="outline">
+                    <Link to={`/vault/household/${id}`}>
+                      <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
+                      Open Full Page
+                    </Link>
+                  </Button>
+                )}
+              </div>
+
             </div>
             <VaultView forcedHouseholdId={id!} embedded />
           </TabsContent>
