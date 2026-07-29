@@ -65,9 +65,21 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    const status = payload?.status === "provisioned" ? "provisioned" : "failed";
-    const householdFolderUrl: string | null = payload?.householdFolderUrl ?? null;
+    // The agent may signal success either as { status: "provisioned" } or
+    // { event: "vault.provisioned" }, and names the household root
+    // "vaultRoot*" rather than "householdFolder*".
+    const provisioned =
+      payload?.status === "provisioned" || payload?.event === "vault.provisioned";
+    const status = provisioned ? "provisioned" : "failed";
+    const householdFolderUrl: string | null =
+      payload?.householdFolderUrl ?? payload?.vaultRootUrl ?? null;
     const familyFolderUrl: string | null = payload?.familyFolderUrl ?? null;
+    const vaultRootFolderId: string | null =
+      payload?.vaultRootFolderId ??
+      payload?.householdFolderId ??
+      (householdFolderUrl
+        ? String(householdFolderUrl).match(/folders\/([A-Za-z0-9_-]+)/)?.[1] ?? null
+        : null);
 
     const { data: latest } = await admin
       .from("crm_intake_pushes")
@@ -94,15 +106,13 @@ serve(async (req) => {
     }
 
     // Persist the Drive root folder on the household so the CRM links straight in.
-    if (status === "provisioned" && householdFolderUrl) {
-      const match = String(householdFolderUrl).match(/folders\/([A-Za-z0-9_-]+)/);
-      if (match?.[1]) {
-        await admin
-          .from("households")
-          .update({ vault_root_folder_id: match[1] })
-          .eq("id", householdId);
-      }
+    if (provisioned && vaultRootFolderId) {
+      await admin
+        .from("households")
+        .update({ vault_root_folder_id: vaultRootFolderId })
+        .eq("id", householdId);
     }
+
 
     return json({ success: true });
   } catch (e) {
