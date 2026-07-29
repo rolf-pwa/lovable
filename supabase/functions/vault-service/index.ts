@@ -382,12 +382,17 @@ async function getShoeboxFolderId(
 
   try {
     const children = await driveListChildren(vaultRootId, accessToken);
-    const match = (children ?? []).find(
+    let match = (children ?? []).find(
       (f: any) =>
         f.mimeType === "application/vnd.google-apps.folder" &&
         (f.name === shoeboxName || /shoebox/i.test(f.name)),
     );
-    if (!match) return null;
+    // Externally-provisioned vaults (AI Intake Agent) don't create a Shoebox —
+    // create it under the household root so client uploads always have a target.
+    if (!match) {
+      match = await driveCreateFolder(shoeboxName, vaultRootId, accessToken);
+    }
+    if (!match?.id) return null;
     await supabaseAdmin
       .from("households")
       .update({ vault_shoebox_folder_id: match.id })
@@ -396,6 +401,7 @@ async function getShoeboxFolderId(
   } catch {
     return null;
   }
+
 }
 
 type Need = false | "upload" | "rename" | "delete" | "create_folder";
