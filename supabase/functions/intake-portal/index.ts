@@ -118,10 +118,8 @@ serve(async (req) => {
 
       const out = new FormData();
       out.append("file", file, file.name);
-      const res = await fetch(
-        `${base}/api/public/vault/${encodeURIComponent(resolved.shareToken)}/upload`,
-        { method: "POST", body: out },
-      );
+      const res = await fetch(uploadUrl, { method: "POST", body: out });
+
       const text = await res.text();
       let body: unknown;
       try {
