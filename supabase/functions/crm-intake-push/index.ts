@@ -222,16 +222,39 @@ serve(async (req) => {
       .single();
 
     const target = agentUrl.replace(/\/+$/, "") + "/api/public/crm/intake";
-    const res = await fetch(target, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-CRM-Signature": `sha256=${signature}`,
-      },
-      body: rawBody,
-    });
+    console.log(`[crm-intake-push] POST ${target} (household ${household.id})`);
+
+    let res: Response;
+    try {
+      res = await fetch(target, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CRM-Signature": `sha256=${signature}`,
+        },
+        body: rawBody,
+        signal: AbortSignal.timeout(25_000),
+      });
+    } catch (fetchErr) {
+      const reason = fetchErr instanceof Error ? fetchErr.name : "";
+      const message =
+        reason === "TimeoutError" || reason === "AbortError"
+          ? `Intake agent did not respond within 25s (${target})`
+          : `Could not reach intake agent at ${target}: ${
+            fetchErr instanceof Error ? fetchErr.message : String(fetchErr)
+          }`;
+      console.error(`[crm-intake-push] ${message}`);
+      if (logRow?.id) {
+        await admin
+          .from("crm_intake_pushes")
+          .update({ status: "failed", error: message })
+          .eq("id", logRow.id);
+      }
+      return json({ error: message }, 504);
+    }
 
     const text = await res.text();
+    console.log(`[crm-intake-push] agent responded ${res.status}`);
     let parsed: unknown = text;
     try {
       parsed = JSON.parse(text);
