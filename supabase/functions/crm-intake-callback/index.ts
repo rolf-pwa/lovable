@@ -107,11 +107,32 @@ serve(async (req) => {
 
     // Persist the Drive root folder on the household so the CRM links straight in.
     if (provisioned && vaultRootFolderId) {
-      await admin
-        .from("households")
-        .update({ vault_root_folder_id: vaultRootFolderId })
-        .eq("id", householdId);
+      // If the agent's folder tree already contains a Shoebox, link it now.
+      const folders: any[] = Array.isArray(payload?.folders) ? payload.folders : [];
+      const shoebox = folders.find((f) => /shoebox/i.test(String(f?.path ?? f?.name ?? "")));
+      const patch: Record<string, string> = { vault_root_folder_id: vaultRootFolderId };
+      if (shoebox?.driveFolderId) patch.vault_shoebox_folder_id = shoebox.driveFolderId;
+      await admin.from("households").update(patch).eq("id", householdId);
+
+      // No Shoebox in the provisioned tree — create it under the new root so
+      // portal clients can upload immediately.
+      if (!shoebox?.driveFolderId) {
+        try {
+          await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/vault-service`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+              "x-internal-secret": Deno.env.get("INTERNAL_FUNCTION_SECRET") ?? "",
+            },
+            body: JSON.stringify({ action: "ensureShoebox", householdId }),
+          });
+        } catch (e) {
+          console.error("shoebox ensure failed", e);
+        }
+      }
     }
+
 
 
     return json({ success: true });
