@@ -135,10 +135,8 @@ serve(async (req) => {
     const action = (payload as { action?: string })?.action ?? "manifest";
     if (action !== "manifest") return json({ error: "Unknown action" }, 400);
 
-    const res = await fetch(
-      `${base}/api/public/vault/${encodeURIComponent(resolved.shareToken)}/manifest`,
-      { headers: { Accept: "application/json" } },
-    );
+    const res = await fetch(manifestUrl, { headers: { Accept: "application/json" } });
+
     const text = await res.text();
     let manifest: Record<string, unknown>;
     try {
