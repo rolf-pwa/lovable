@@ -641,6 +641,69 @@ export type Database = {
         }
         Relationships: []
       }
+      crm_intake_pushes: {
+        Row: {
+          callback_payload: Json | null
+          created_at: string
+          error: string | null
+          family_folder_url: string | null
+          family_id: string | null
+          household_folder_url: string | null
+          household_id: string
+          id: string
+          pushed_by: string | null
+          request_payload: Json | null
+          response_body: Json | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          callback_payload?: Json | null
+          created_at?: string
+          error?: string | null
+          family_folder_url?: string | null
+          family_id?: string | null
+          household_folder_url?: string | null
+          household_id: string
+          id?: string
+          pushed_by?: string | null
+          request_payload?: Json | null
+          response_body?: Json | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          callback_payload?: Json | null
+          created_at?: string
+          error?: string | null
+          family_folder_url?: string | null
+          family_id?: string | null
+          household_folder_url?: string | null
+          household_id?: string
+          id?: string
+          pushed_by?: string | null
+          request_payload?: Json | null
+          response_body?: Json | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_intake_pushes_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_intake_pushes_household_id_fkey"
+            columns: ["household_id"]
+            isOneToOne: false
+            referencedRelation: "households"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       daily_recaps: {
         Row: {
           ai_draft: string | null
