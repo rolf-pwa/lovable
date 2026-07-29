@@ -105,23 +105,32 @@ serve(async (req) => {
       await admin.from("crm_intake_pushes").insert(record);
     }
 
-    // Persist the Drive root folder on the household so the CRM links straight in.
-    if (provisioned && vaultRootFolderId) {
+    // Persist the Drive root + token-scoped intake endpoints on the household.
+    if (provisioned) {
+      const patch: Record<string, string> = {};
+      if (vaultRootFolderId) patch.vault_root_folder_id = vaultRootFolderId;
+
       // If the agent's folder tree already contains a Shoebox, link it now.
       const folders: any[] = Array.isArray(payload?.folders) ? payload.folders : [];
       const shoebox = folders.find((f) => /shoebox/i.test(String(f?.path ?? f?.name ?? "")));
-      const patch: Record<string, string> = { vault_root_folder_id: vaultRootFolderId };
       if (shoebox?.driveFolderId) patch.vault_shoebox_folder_id = shoebox.driveFolderId;
-      // Share token powers the client-portal intake panel (server-side only).
+
+      // Share token + ready-made endpoints power the client-portal intake panel
+      // (server-side only — never exposed to the browser).
       const shareToken =
         payload?.shareToken ?? payload?.share_token ?? payload?.householdShareToken ?? null;
       if (shareToken) patch.intake_share_token = String(shareToken);
-      await admin.from("households").update(patch).eq("id", householdId);
+      if (payload?.manifestUrl) patch.intake_manifest_url = String(payload.manifestUrl);
+      if (payload?.uploadUrl) patch.intake_upload_url = String(payload.uploadUrl);
+
+      if (Object.keys(patch).length > 0) {
+        await admin.from("households").update(patch).eq("id", householdId);
+      }
 
       // If the agent's tree has no Shoebox, vault-service creates and caches one
       // on first access (getShoeboxFolderId / ensureShoebox).
-
     }
+
 
 
 
