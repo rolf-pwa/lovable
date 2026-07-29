@@ -94,3 +94,6 @@ verify_jwt = false
 
 
 
+
+[functions.crm-intake-callback]
+verify_jwt = false
