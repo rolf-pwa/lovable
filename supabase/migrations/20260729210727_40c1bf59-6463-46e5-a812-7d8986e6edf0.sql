@@ -1,0 +1,2 @@
+ALTER TABLE public.households ADD COLUMN IF NOT EXISTS intake_share_token text;
+COMMENT ON COLUMN public.households.intake_share_token IS 'Share token issued by the Sovereignty Intake Agent for this household. Used server-side only by the intake-portal proxy; never exposed to the browser.';

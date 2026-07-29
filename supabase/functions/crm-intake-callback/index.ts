@@ -112,6 +112,10 @@ serve(async (req) => {
       const shoebox = folders.find((f) => /shoebox/i.test(String(f?.path ?? f?.name ?? "")));
       const patch: Record<string, string> = { vault_root_folder_id: vaultRootFolderId };
       if (shoebox?.driveFolderId) patch.vault_shoebox_folder_id = shoebox.driveFolderId;
+      // Share token powers the client-portal intake panel (server-side only).
+      const shareToken =
+        payload?.shareToken ?? payload?.share_token ?? payload?.householdShareToken ?? null;
+      if (shareToken) patch.intake_share_token = String(shareToken);
       await admin.from("households").update(patch).eq("id", householdId);
 
       // If the agent's tree has no Shoebox, vault-service creates and caches one

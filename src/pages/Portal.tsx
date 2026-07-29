@@ -16,6 +16,7 @@ import { PortalGeorgiaChat } from "@/components/portal/PortalGeorgiaChat";
 import { PortalNotificationBell } from "@/components/portal/PortalNotificationBell";
 import { PortalMessages } from "@/components/portal/PortalMessages";
 import { PortalVault } from "@/components/portal/PortalVault";
+import { PortalIntake } from "@/components/portal/PortalIntake";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -1063,6 +1064,9 @@ const Portal = () => {
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Main Content: Tabbed Interface */}
         <div className="space-y-4 lg:col-span-2">
+          {/* Document Intake — auto-hides once intake is complete */}
+          {isSelf && <PortalIntake portalToken={portalToken} />}
+
           {/* Ask for Help — pinned above tabs */}
           {isSelf && (
             <Button
