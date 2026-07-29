@@ -203,6 +203,33 @@ const HouseholdDetail = () => {
     fetchData();
   }, [fetchData]);
 
+  const [pushingIntake, setPushingIntake] = useState(false);
+  const pushToIntakeAgent = useCallback(async () => {
+    if (!id) return;
+    setPushingIntake(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("crm-intake-push", {
+        body: { household_id: id },
+      });
+      if (error) {
+        const details =
+          (error as any)?.context && typeof (error as any).context.text === "function"
+            ? await (error as any).context.text()
+            : error.message;
+        console.error("crm-intake-push failed:", details);
+        toast.error("Vault push failed — see console for details");
+        return;
+      }
+      toast.success(
+        `Pushed to Intake Agent — ${data?.members ?? 0} members, ${data?.itemsSent ?? 0} known items`,
+      );
+      fetchData();
+    } finally {
+      setPushingIntake(false);
+    }
+  }, [id, fetchData]);
+
+
   if (loading) {
     return (
       <AppLayout>
