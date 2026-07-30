@@ -43,7 +43,20 @@ export interface IntakeManifest {
       needsReview?: number;
       failed?: number;
     };
+    audit?: {
+      track?: "PERSONAL" | "CORPORATE";
+      criticalTotal?: number;
+      criticalSatisfied?: number;
+      total?: number;
+      satisfiedTotal?: number;
+      percent?: number;
+      criticalComplete?: boolean;
+      processing?: number;
+      missingCritical?: string[];
+      missingRecommended?: string[];
+    } | null;
   } | null;
+
   checklist?: IntakeChecklistItem[];
   uploads?: IntakeUpload[];
   limits?: { maxBytes?: number; allowedTypes?: string[] } | null;
@@ -92,14 +105,18 @@ export function useIntakeManifest(portalToken: string, options: Options = {}) {
     load();
   }, [load]);
 
-  // Poll while classification is running, or continuously on the intake page.
+  // Poll while documents are still being classified/swept, or continuously on
+  // the intake page. The agent sweeps on a ~5 minute debounce, so 60s is enough.
   useEffect(() => {
-    const pending = manifest?.completion?.classification?.pending ?? 0;
+    const pending =
+      (manifest?.completion?.classification?.pending ?? 0) +
+      (manifest?.completion?.audit?.processing ?? 0);
     if (!manifest?.enabled) return;
     if (pending <= 0 && !active) return;
-    const interval = setInterval(load, pending > 0 ? 10000 : 30000);
+    const interval = setInterval(load, pending > 0 ? 60000 : 120000);
     return () => clearInterval(interval);
   }, [manifest, active, load]);
+
 
   const uploadOne = (file: File, taskId: string) =>
     new Promise<void>((resolve) => {
@@ -192,11 +209,15 @@ export function useIntakeManifest(portalToken: string, options: Options = {}) {
   }, []);
 
   const completion = manifest?.completion ?? null;
+  const audit = completion?.audit ?? null;
   const visible = Boolean(
     manifest?.enabled && manifest.ready !== false && completion?.status !== "complete",
   );
   const isComplete = completion?.status === "complete";
-  const percent = Math.min(100, Math.max(0, Number(completion?.percent ?? 0)));
+  // Prefer the agent's audit completeness (AI-verified documents) over raw
+  // upload counts — it is what the client actually needs to finish.
+  const rawPercent = audit && typeof audit.percent === "number" ? audit.percent : completion?.percent;
+  const percent = Math.min(100, Math.max(0, Number(rawPercent ?? 0)));
 
   return {
     manifest,
@@ -209,5 +230,8 @@ export function useIntakeManifest(portalToken: string, options: Options = {}) {
     visible,
     isComplete,
     percent,
+    audit,
+    processing: audit?.processing ?? 0,
   };
 }
+

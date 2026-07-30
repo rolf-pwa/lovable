@@ -53,7 +53,10 @@ export function PortalIntakePage({ portalToken, onBack, onAskForHelp }: Props) {
     uploading,
     isComplete,
     percent,
+    audit,
+    processing,
   } = useIntakeManifest(portalToken, { active: true });
+
   const [dragging, setDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
@@ -159,18 +162,23 @@ export function PortalIntakePage({ portalToken, onBack, onAskForHelp }: Props) {
         <CardContent className="space-y-3 p-5">
           <div className="flex items-center justify-between text-sm">
             <span className="text-foreground">
-              {c.uploadedFiles ?? 0} received
-              {c.expectedItems ? ` of ${c.expectedItems} expected` : ""}
+              {audit && typeof audit.criticalTotal === "number" && audit.criticalTotal > 0
+                ? `${audit.criticalSatisfied ?? 0} of ${audit.criticalTotal} essential documents confirmed`
+                : `${c.uploadedFiles ?? 0} received${c.expectedItems ? ` of ${c.expectedItems} expected` : ""}`}
             </span>
             <span className="text-muted-foreground">{percent}%</span>
           </div>
           <Progress value={percent} className="h-2" />
           <p className="text-xs text-muted-foreground">
-            Every document you send is renamed and filed into the right vault folder automatically,
-            usually within a minute. Our team reviews anything that needs a second look.
+            Every document you send is renamed and filed into the right vault folder automatically.
+            Our team reviews anything that needs a second look.
+            {processing > 0
+              ? ` ${processing} document${processing === 1 ? " is" : "s are"} still being processed — this list updates on its own.`
+              : ""}
           </p>
         </CardContent>
       </Card>
+
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Dropzone */}

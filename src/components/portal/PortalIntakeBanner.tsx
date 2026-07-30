@@ -15,13 +15,15 @@ interface Props {
  * intake agent reports the household's vault as complete.
  */
 export function PortalIntakeBanner({ portalToken, to = "/portal/intake" }: Props) {
-  const { manifest, loading, visible, percent } = useIntakeManifest(portalToken);
+  const { manifest, loading, visible, percent, audit } = useIntakeManifest(portalToken);
 
   if (loading || !visible) return null;
 
   const c = manifest?.completion ?? {};
-  const received = c.uploadedFiles ?? 0;
-  const expected = c.expectedItems ?? 0;
+  const hasAudit = audit && typeof audit.criticalTotal === "number" && audit.criticalTotal > 0;
+  const label = hasAudit
+    ? `Document Intake — ${audit!.criticalSatisfied ?? 0} of ${audit!.criticalTotal} essentials confirmed`
+    : `Document Intake — ${c.uploadedFiles ?? 0} ${c.expectedItems ? `of ${c.expectedItems} ` : ""}received`;
 
   return (
     <div className="rounded-lg border border-amber-500/30 bg-amber-500/[0.04] p-4">
@@ -29,14 +31,13 @@ export function PortalIntakeBanner({ portalToken, to = "/portal/intake" }: Props
         <div className="flex min-w-0 items-start gap-3">
           <Inbox className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
           <div className="min-w-0">
-            <p className="font-serif text-sm text-foreground">
-              Document Intake — {received} {expected ? `of ${expected} ` : ""}received
-            </p>
+            <p className="font-serif text-sm text-foreground">{label}</p>
             <p className="text-xs text-muted-foreground">
               Send us your documents and we file them into your vault automatically.
             </p>
           </div>
         </div>
+
         <Button asChild size="sm" className="gap-1.5">
           <Link to={to}>
             Continue intake
