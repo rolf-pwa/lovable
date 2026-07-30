@@ -258,34 +258,54 @@ export function PortalIntakePage({ portalToken, onBack, onAskForHelp }: Props) {
                 will follow up if anything is missing.
               </p>
             ) : (
-              <ul className="divide-y divide-border/60">
-                {checklist.map((item, i) => {
-                  const meta =
-                    CHECKLIST_META[item.status ?? "waiting"] ?? CHECKLIST_META.waiting;
-                  const Icon = meta.icon;
-                  return (
-                    <li
-                      key={`${item.name}-${i}`}
-                      className="flex items-center justify-between gap-3 px-4 py-2.5"
-                    >
-                      <div className="min-w-0">
-                        <p className="truncate text-sm text-foreground">{item.name}</p>
-                        <p className="truncate text-[11px] text-muted-foreground">
-                          {prettyCategory(item.category)}
-                          {item.subType ? ` · ${item.subType}` : ""}
-                        </p>
+              <div>
+                {(
+                  [
+                    ["required", "Required", checklist.filter((i) => i.requirement === "required")],
+                    ["optional", "Optional", checklist.filter((i) => i.requirement !== "required")],
+                  ] as const
+                ).map(([key, label, group]) =>
+                  group.length === 0 ? null : (
+                    <div key={key}>
+                      <div className="flex items-center justify-between border-b border-border/60 bg-muted/30 px-4 py-2">
+                        <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                          {label}
+                        </span>
+                        <span className="text-[11px] text-muted-foreground">{group.length}</span>
                       </div>
-                      <Badge variant="outline" className="shrink-0 gap-1 text-[10px]">
-                        <Icon className="h-3 w-3" />
-                        {meta.label}
-                      </Badge>
-                    </li>
-                  );
-                })}
-              </ul>
+                      <ul className="divide-y divide-border/60">
+                        {group.map((item, i) => {
+                          const meta =
+                            CHECKLIST_META[item.status ?? "waiting"] ?? CHECKLIST_META.waiting;
+                          const Icon = meta.icon;
+                          return (
+                            <li
+                              key={`${key}-${item.name}-${i}`}
+                              className="flex items-center justify-between gap-3 px-4 py-2.5"
+                            >
+                              <div className="min-w-0">
+                                <p className="truncate text-sm text-foreground">{item.name}</p>
+                                <p className="truncate text-[11px] text-muted-foreground">
+                                  {prettyCategory(item.category)}
+                                  {item.subType ? ` · ${item.subType}` : ""}
+                                </p>
+                              </div>
+                              <Badge variant="outline" className="shrink-0 gap-1 text-[10px]">
+                                <Icon className="h-3 w-3" />
+                                {meta.label}
+                              </Badge>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </div>
+                  ),
+                )}
+              </div>
             )}
           </CardContent>
         </Card>
+
       </div>
 
       {/* Activity */}
