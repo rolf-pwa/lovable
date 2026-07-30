@@ -106,9 +106,11 @@ serve(async (req) => {
     }
 
     // Persist the Drive root + token-scoped intake endpoints on the household.
-    if (provisioned) {
+    // Runs on every callback (not just `provisioned`) so a re-issued share token
+    // still lands.
+    {
       const patch: Record<string, string> = {};
-      if (vaultRootFolderId) patch.vault_root_folder_id = vaultRootFolderId;
+      if (provisioned && vaultRootFolderId) patch.vault_root_folder_id = vaultRootFolderId;
 
       // If the agent's folder tree already contains a Shoebox, link it now.
       const folders: any[] = Array.isArray(payload?.folders) ? payload.folders : [];
@@ -116,12 +118,40 @@ serve(async (req) => {
       if (shoebox?.driveFolderId) patch.vault_shoebox_folder_id = shoebox.driveFolderId;
 
       // Share token + ready-made endpoints power the client-portal intake panel
-      // (server-side only — never exposed to the browser).
-      const shareToken =
-        payload?.shareToken ?? payload?.share_token ?? payload?.householdShareToken ?? null;
-      if (shareToken) patch.intake_share_token = String(shareToken);
-      if (payload?.manifestUrl) patch.intake_manifest_url = String(payload.manifestUrl);
-      if (payload?.uploadUrl) patch.intake_upload_url = String(payload.uploadUrl);
+      // (server-side only — never exposed to the browser). The agent has shipped
+      // these at a few nesting levels across spec revisions, so check all of them.
+      const nests = [payload, payload?.vault, payload?.data, payload?.intake, payload?.portal]
+        .filter((n) => n && typeof n === "object");
+      const pick = (...keys: string[]) => {
+        for (const n of nests) {
+          for (const k of keys) {
+            const v = (n as any)[k];
+            if (v) return String(v);
+          }
+        }
+        return null;
+      };
+
+      const shareToken = pick("shareToken", "share_token", "householdShareToken");
+      const manifestUrl = pick("manifestUrl", "manifest_url");
+      const uploadUrl = pick("uploadUrl", "upload_url");
+
+      if (shareToken) patch.intake_share_token = shareToken;
+      if (manifestUrl) patch.intake_manifest_url = manifestUrl;
+      if (uploadUrl) patch.intake_upload_url = uploadUrl;
+
+      // Fill in a missing sibling endpoint from whichever one we did receive.
+      const base = (manifestUrl ?? uploadUrl ?? "").replace(/\/(manifest|upload)\/?$/, "");
+      if (base) {
+        if (!manifestUrl) patch.intake_manifest_url = `${base}/manifest`;
+        if (!uploadUrl) patch.intake_upload_url = `${base}/upload`;
+      }
+
+      console.log(
+        `[crm-intake-callback] household ${householdId} patch: ${
+          Object.keys(patch).join(", ") || "(none)"
+        }${shareToken ? "" : " — no shareToken in payload"}`,
+      );
 
       if (Object.keys(patch).length > 0) {
         await admin.from("households").update(patch).eq("id", householdId);
