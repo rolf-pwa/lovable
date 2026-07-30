@@ -1382,6 +1382,15 @@ const Portal = ({ intakeRoute = false }: { intakeRoute?: boolean }) => {
 
   // ─── Determine what to render based on drilldown ───
   const renderContent = () => {
+    if (intakeRoute) {
+      return (
+        <PortalIntakePage
+          portalToken={portalToken}
+          onBack={() => navigate(token ? `/portal/${token}` : "/portal")}
+          onAskForHelp={() => setGeorgiaOpen(true)}
+        />
+      );
+    }
     if (drilldown.level === "family" && hierarchyLevel === "family") {
       return renderFamilyView();
     }
