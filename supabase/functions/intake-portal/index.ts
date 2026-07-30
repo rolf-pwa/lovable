@@ -161,9 +161,9 @@ serve(async (req) => {
       folders,
     } = manifest as Record<string, any>;
 
-    // Checklist: only the agent's per-item list, and only items the client is
-    // actually expected to send (required or optional). Vault folders that carry
-    // no requirement are internal structure and stay hidden from the client.
+    // Checklist: prefer the agent's Spec v2 audit checklist (AI-detected document
+    // completeness). `critical` items are Required, the rest Optional. Vault
+    // folders that carry no requirement are internal structure and stay hidden.
     const normalizeRequirement = (it: any): "required" | "optional" | null => {
       const raw = String(
         it?.requirement ?? it?.priority ?? it?.necessity ?? (it?.required === true ? "required" : it?.required === false ? "optional" : it?.optional === true ? "optional" : ""),
@@ -177,18 +177,32 @@ serve(async (req) => {
       return null;
     };
 
-    const rawItems = Array.isArray(items) ? items : Array.isArray(knownItems) ? knownItems : [];
-    const checklist = rawItems
-      .map((it: any) => ({
-        name: it?.name ?? it?.label ?? "Document",
-        category: it?.category ?? null,
-        ownerInitials: it?.ownerInitials ?? null,
-        subType: it?.subType ?? null,
-        status: it?.status ?? (it?.received ? "received" : "waiting"),
-        receivedCount: typeof it?.receivedCount === "number" ? it.receivedCount : undefined,
-        requirement: normalizeRequirement(it),
-      }))
-      .filter((it: any) => it.requirement !== null);
+    const auditItems = Array.isArray((completion as any)?.audit?.items)
+      ? (completion as any).audit.items
+      : [];
+
+    const checklist = auditItems.length
+      ? auditItems.map((it: any) => ({
+          name: it?.label ?? it?.key ?? "Document",
+          category: it?.category ?? null,
+          ownerInitials: null,
+          subType: null,
+          status: it?.satisfied ? "filed" : "waiting",
+          receivedCount: typeof it?.matches === "number" ? it.matches : undefined,
+          requirement: it?.critical ? "required" : "optional",
+        }))
+      : (Array.isArray(items) ? items : Array.isArray(knownItems) ? knownItems : [])
+          .map((it: any) => ({
+            name: it?.name ?? it?.label ?? "Document",
+            category: it?.category ?? null,
+            ownerInitials: it?.ownerInitials ?? null,
+            subType: it?.subType ?? null,
+            status: it?.status ?? (it?.received ? "received" : "waiting"),
+            receivedCount: typeof it?.receivedCount === "number" ? it.receivedCount : undefined,
+            requirement: normalizeRequirement(it),
+          }))
+          .filter((it: any) => it.requirement !== null);
+
 
 
     return json({
