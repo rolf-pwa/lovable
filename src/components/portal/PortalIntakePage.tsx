@@ -53,7 +53,10 @@ export function PortalIntakePage({ portalToken, onBack, onAskForHelp }: Props) {
     uploading,
     isComplete,
     percent,
+    audit,
+    processing,
   } = useIntakeManifest(portalToken, { active: true });
+
   const [dragging, setDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
