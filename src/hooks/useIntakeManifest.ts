@@ -105,14 +105,18 @@ export function useIntakeManifest(portalToken: string, options: Options = {}) {
     load();
   }, [load]);
 
-  // Poll while classification is running, or continuously on the intake page.
+  // Poll while documents are still being classified/swept, or continuously on
+  // the intake page. The agent sweeps on a ~5 minute debounce, so 60s is enough.
   useEffect(() => {
-    const pending = manifest?.completion?.classification?.pending ?? 0;
+    const pending =
+      (manifest?.completion?.classification?.pending ?? 0) +
+      (manifest?.completion?.audit?.processing ?? 0);
     if (!manifest?.enabled) return;
     if (pending <= 0 && !active) return;
-    const interval = setInterval(load, pending > 0 ? 10000 : 30000);
+    const interval = setInterval(load, pending > 0 ? 60000 : 120000);
     return () => clearInterval(interval);
   }, [manifest, active, load]);
+
 
   const uploadOne = (file: File, taskId: string) =>
     new Promise<void>((resolve) => {
