@@ -209,11 +209,15 @@ export function useIntakeManifest(portalToken: string, options: Options = {}) {
   }, []);
 
   const completion = manifest?.completion ?? null;
+  const audit = completion?.audit ?? null;
   const visible = Boolean(
     manifest?.enabled && manifest.ready !== false && completion?.status !== "complete",
   );
   const isComplete = completion?.status === "complete";
-  const percent = Math.min(100, Math.max(0, Number(completion?.percent ?? 0)));
+  // Prefer the agent's audit completeness (AI-verified documents) over raw
+  // upload counts — it is what the client actually needs to finish.
+  const rawPercent = audit && typeof audit.percent === "number" ? audit.percent : completion?.percent;
+  const percent = Math.min(100, Math.max(0, Number(rawPercent ?? 0)));
 
   return {
     manifest,
@@ -226,5 +230,8 @@ export function useIntakeManifest(portalToken: string, options: Options = {}) {
     visible,
     isComplete,
     percent,
+    audit,
+    processing: audit?.processing ?? 0,
   };
 }
+
