@@ -1,0 +1,50 @@
+import { Link } from "react-router-dom";
+import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
+import { Inbox, ArrowRight } from "lucide-react";
+import { useIntakeManifest } from "@/hooks/useIntakeManifest";
+
+interface Props {
+  portalToken: string;
+  /** Route to send the client to (keeps advisor token links working). */
+  to?: string;
+}
+
+/**
+ * Slim dashboard entry point for document intake. Renders nothing once the
+ * intake agent reports the household's vault as complete.
+ */
+export function PortalIntakeBanner({ portalToken, to = "/portal/intake" }: Props) {
+  const { manifest, loading, visible, percent } = useIntakeManifest(portalToken);
+
+  if (loading || !visible) return null;
+
+  const c = manifest?.completion ?? {};
+  const received = c.uploadedFiles ?? 0;
+  const expected = c.expectedItems ?? 0;
+
+  return (
+    <div className="rounded-lg border border-amber-500/30 bg-amber-500/[0.04] p-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex min-w-0 items-start gap-3">
+          <Inbox className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
+          <div className="min-w-0">
+            <p className="font-serif text-sm text-foreground">
+              Document Intake — {received} {expected ? `of ${expected} ` : ""}received
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Send us your documents and we file them into your vault automatically.
+            </p>
+          </div>
+        </div>
+        <Button asChild size="sm" className="gap-1.5">
+          <Link to={to}>
+            Continue intake
+            <ArrowRight className="h-3.5 w-3.5" />
+          </Link>
+        </Button>
+      </div>
+      <Progress value={percent} className="mt-3 h-1.5" />
+    </div>
+  );
+}

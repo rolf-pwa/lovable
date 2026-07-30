@@ -1,0 +1,332 @@
+import { useRef, useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import {
+  Upload,
+  Loader2,
+  FileCheck2,
+  Clock,
+  AlertCircle,
+  Inbox,
+  CheckCircle2,
+  ArrowLeft,
+  HelpCircle,
+  Circle,
+} from "lucide-react";
+import { toast } from "sonner";
+import { format } from "date-fns";
+import { useIntakeManifest, type IntakeChecklistItem } from "@/hooks/useIntakeManifest";
+
+interface Props {
+  portalToken: string;
+  onBack: () => void;
+  onAskForHelp?: () => void;
+}
+
+const STATUS_META: Record<string, { label: string; icon: typeof Clock }> = {
+  pending: { label: "Filing", icon: Clock },
+  filed: { label: "Filed", icon: FileCheck2 },
+  needs_review: { label: "In review", icon: AlertCircle },
+  failed: { label: "Needs attention", icon: AlertCircle },
+};
+
+const CHECKLIST_META: Record<string, { label: string; icon: typeof Circle }> = {
+  waiting: { label: "Waiting", icon: Circle },
+  received: { label: "Received", icon: Clock },
+  filed: { label: "Filed", icon: FileCheck2 },
+  needs_review: { label: "In review", icon: AlertCircle },
+};
+
+function prettyCategory(raw?: string | null) {
+  if (!raw) return "Other documents";
+  return raw.replace(/^\d+[_\-\s]*/, "").replace(/[_&]+/g, " ").replace(/\s+/g, " ").trim();
+}
+
+export function PortalIntakePage({ portalToken, onBack, onAskForHelp }: Props) {
+  const {
+    manifest,
+    loading,
+    upload,
+    tasks,
+    uploading,
+    isComplete,
+    percent,
+  } = useIntakeManifest(portalToken, { active: true });
+  const [dragging, setDragging] = useState(false);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  const handleFiles = async (files: FileList | File[] | null) => {
+    if (!files) return;
+    const list = Array.from(files as FileList);
+    if (!list.length) return;
+    const { accepted, rejected } = await upload(list);
+    rejected.forEach((r) => toast.error(r));
+    if (accepted) {
+      toast.success(
+        accepted === 1 ? "Document received" : `${accepted} documents received`,
+        { description: "We're filing it into your vault now." },
+      );
+    }
+    if (inputRef.current) inputRef.current.value = "";
+  };
+
+  const header = (
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <button
+          onClick={onBack}
+          className="mb-2 inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" />
+          Back to portal
+        </button>
+        <h1 className="font-serif text-2xl text-foreground">Document Intake</h1>
+        <p className="text-sm text-muted-foreground">
+          {manifest?.householdName
+            ? `${manifest.householdName} · secure Canadian infrastructure`
+            : "Secure Canadian infrastructure"}
+        </p>
+      </div>
+      {onAskForHelp && (
+        <Button variant="outline" size="sm" className="gap-1.5" onClick={onAskForHelp}>
+          <HelpCircle className="h-4 w-4" />
+          Not sure what to send?
+        </Button>
+      )}
+    </div>
+  );
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        {header}
+        <div className="p-16 text-center text-muted-foreground">Loading your checklist…</div>
+      </div>
+    );
+  }
+
+  if (!manifest?.enabled || manifest.ready === false) {
+    return (
+      <div className="space-y-6">
+        {header}
+        <Card>
+          <CardContent className="p-10 text-center">
+            <Inbox className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
+            <p className="text-sm text-muted-foreground">
+              Your vault is still being prepared. We'll let you know as soon as document intake is
+              open.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (isComplete) {
+    return (
+      <div className="space-y-6">
+        {header}
+        <Card className="border-emerald-600/30 bg-emerald-600/[0.04]">
+          <CardContent className="p-10 text-center">
+            <CheckCircle2 className="mx-auto mb-3 h-8 w-8 text-emerald-500" />
+            <p className="font-serif text-lg text-foreground">Your vault is complete</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {manifest.completion?.uploadedFiles ?? 0} documents received and filed. Nothing further
+              is needed from you right now.
+            </p>
+            <Button variant="outline" className="mt-5" onClick={onBack}>
+              Return to portal
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  const c = manifest.completion ?? {};
+  const uploads = manifest.uploads ?? [];
+  const checklist: IntakeChecklistItem[] = manifest.checklist ?? [];
+  const maxMb = Math.round((manifest.limits?.maxBytes ?? 25 * 1024 * 1024) / 1024 / 1024);
+
+  return (
+    <div className="space-y-6">
+      {header}
+
+      {/* Progress */}
+      <Card className="border-amber-500/30 bg-amber-500/[0.03]">
+        <CardContent className="space-y-3 p-5">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-foreground">
+              {c.uploadedFiles ?? 0} received
+              {c.expectedItems ? ` of ${c.expectedItems} expected` : ""}
+            </span>
+            <span className="text-muted-foreground">{percent}%</span>
+          </div>
+          <Progress value={percent} className="h-2" />
+          <p className="text-xs text-muted-foreground">
+            Every document you send is renamed and filed into the right vault folder automatically,
+            usually within a minute. Our team reviews anything that needs a second look.
+          </p>
+        </CardContent>
+      </Card>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Dropzone */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="font-serif text-base">Send documents</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div
+              onDragOver={(e) => {
+                e.preventDefault();
+                setDragging(true);
+              }}
+              onDragLeave={() => setDragging(false)}
+              onDrop={(e) => {
+                e.preventDefault();
+                setDragging(false);
+                handleFiles(e.dataTransfer.files);
+              }}
+              onClick={() => inputRef.current?.click()}
+              className={`cursor-pointer rounded-lg border-2 border-dashed p-8 text-center transition ${
+                dragging
+                  ? "border-amber-500 bg-amber-500/[0.06]"
+                  : "border-border hover:border-amber-500/50"
+              }`}
+            >
+              <input
+                ref={inputRef}
+                type="file"
+                multiple
+                className="hidden"
+                onChange={(e) => handleFiles(e.target.files)}
+              />
+              {uploading ? (
+                <Loader2 className="mx-auto mb-2 h-6 w-6 animate-spin text-amber-500" />
+              ) : (
+                <Upload className="mx-auto mb-2 h-6 w-6 text-amber-500" />
+              )}
+              <p className="text-sm text-foreground">
+                {uploading ? "Uploading…" : "Drag files here, or click to browse"}
+              </p>
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                Up to {maxMb}MB per file. Statements, tax returns, policies, IDs and legal documents
+                all welcome.
+              </p>
+            </div>
+
+            {tasks.length > 0 && (
+              <ul className="space-y-2">
+                {tasks.map((t) => (
+                  <li key={t.id} className="rounded-md border border-border/60 px-3 py-2">
+                    <div className="flex items-center justify-between gap-3 text-xs">
+                      <span className="truncate text-foreground">{t.name}</span>
+                      <span
+                        className={
+                          t.state === "error" ? "text-destructive" : "text-muted-foreground"
+                        }
+                      >
+                        {t.state === "error"
+                          ? t.error || "Failed"
+                          : t.state === "done"
+                            ? "Sent"
+                            : `${t.progress}%`}
+                      </span>
+                    </div>
+                    {t.state !== "error" && (
+                      <Progress value={t.progress} className="mt-1.5 h-1" />
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Checklist */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="font-serif text-base">What we're expecting</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            {checklist.length === 0 ? (
+              <p className="p-5 text-sm text-muted-foreground">
+                No specific checklist yet — send whatever you have and we'll sort it. Your advisor
+                will follow up if anything is missing.
+              </p>
+            ) : (
+              <ul className="divide-y divide-border/60">
+                {checklist.map((item, i) => {
+                  const meta =
+                    CHECKLIST_META[item.status ?? "waiting"] ?? CHECKLIST_META.waiting;
+                  const Icon = meta.icon;
+                  return (
+                    <li
+                      key={`${item.name}-${i}`}
+                      className="flex items-center justify-between gap-3 px-4 py-2.5"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm text-foreground">{item.name}</p>
+                        <p className="truncate text-[11px] text-muted-foreground">
+                          {prettyCategory(item.category)}
+                          {item.subType ? ` · ${item.subType}` : ""}
+                        </p>
+                      </div>
+                      <Badge variant="outline" className="shrink-0 gap-1 text-[10px]">
+                        <Icon className="h-3 w-3" />
+                        {meta.label}
+                      </Badge>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Activity */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="font-serif text-base">Received documents</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          {uploads.length === 0 ? (
+            <p className="p-5 text-sm text-muted-foreground">Nothing received yet.</p>
+          ) : (
+            <ul className="divide-y divide-border/60">
+              {uploads.map((u, i) => {
+                const meta =
+                  STATUS_META[u.classification?.status ?? "pending"] ?? STATUS_META.pending;
+                const Icon = meta.icon;
+                return (
+                  <li
+                    key={`${u.fileName}-${i}`}
+                    className="flex items-center justify-between gap-3 px-4 py-2.5"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm text-foreground">{u.fileName}</p>
+                      <p className="truncate text-[11px] text-muted-foreground">
+                        {[u.folderName ? prettyCategory(u.folderName) : null,
+                          u.createdAt ? format(new Date(u.createdAt), "PP") : null]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </p>
+                    </div>
+                    <Badge variant="outline" className="shrink-0 gap-1 text-[10px]">
+                      <Icon className="h-3 w-3" />
+                      {meta.label}
+                    </Badge>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

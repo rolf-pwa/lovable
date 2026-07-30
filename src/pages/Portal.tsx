@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -16,7 +16,8 @@ import { PortalGeorgiaChat } from "@/components/portal/PortalGeorgiaChat";
 import { PortalNotificationBell } from "@/components/portal/PortalNotificationBell";
 import { PortalMessages } from "@/components/portal/PortalMessages";
 import { PortalVault } from "@/components/portal/PortalVault";
-import { PortalIntake } from "@/components/portal/PortalIntake";
+import { PortalIntakeBanner } from "@/components/portal/PortalIntakeBanner";
+import { PortalIntakePage } from "@/components/portal/PortalIntakePage";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -222,8 +223,9 @@ function PortalDynamicLinks({ contact }: { contact: any }) {
   );
 }
 
-const Portal = () => {
+const Portal = ({ intakeRoute = false }: { intakeRoute?: boolean }) => {
   const { token } = useParams<{ token: string }>();
+  const navigate = useNavigate();
   const [data, setData] = useState<PortalData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(!!token);
@@ -1065,7 +1067,12 @@ const Portal = () => {
         {/* Main Content: Tabbed Interface */}
         <div className="space-y-4 lg:col-span-2">
           {/* Document Intake — auto-hides once intake is complete */}
-          {isSelf && <PortalIntake portalToken={portalToken} />}
+          {isSelf && (
+            <PortalIntakeBanner
+              portalToken={portalToken}
+              to={token ? `/portal/${token}/intake` : "/portal/intake"}
+            />
+          )}
 
           {/* Ask for Help — pinned above tabs */}
           {isSelf && (
@@ -1375,6 +1382,15 @@ const Portal = () => {
 
   // ─── Determine what to render based on drilldown ───
   const renderContent = () => {
+    if (intakeRoute) {
+      return (
+        <PortalIntakePage
+          portalToken={portalToken}
+          onBack={() => navigate(token ? `/portal/${token}` : "/portal")}
+          onAskForHelp={() => setGeorgiaOpen(true)}
+        />
+      );
+    }
     if (drilldown.level === "family" && hierarchyLevel === "family") {
       return renderFamilyView();
     }
