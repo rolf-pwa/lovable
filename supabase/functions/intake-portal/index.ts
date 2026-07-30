@@ -156,7 +156,33 @@ serve(async (req) => {
       completion,
       uploads,
       limits,
+      items,
+      knownItems,
+      folders,
     } = manifest as Record<string, any>;
+
+    // Checklist: prefer the agent's per-item list; fall back to vault folders.
+    const rawItems = Array.isArray(items) ? items : Array.isArray(knownItems) ? knownItems : null;
+    const checklist = rawItems
+      ? rawItems.map((it: any) => ({
+          name: it?.name ?? it?.label ?? "Document",
+          category: it?.category ?? null,
+          ownerInitials: it?.ownerInitials ?? null,
+          subType: it?.subType ?? null,
+          status: it?.status ?? (it?.received ? "received" : "waiting"),
+          receivedCount: typeof it?.receivedCount === "number" ? it.receivedCount : undefined,
+        }))
+      : Array.isArray(folders)
+        ? folders
+            .filter((f: any) => f?.name || f?.path)
+            .map((f: any) => ({
+              name: f?.name ?? f?.path,
+              category: f?.category ?? f?.path ?? null,
+              ownerInitials: null,
+              subType: null,
+              status: null,
+            }))
+        : [];
 
     return json({
       enabled: true,
@@ -165,6 +191,7 @@ serve(async (req) => {
       status,
       ready,
       completion: completion ?? null,
+      checklist,
       uploads: Array.isArray(uploads)
         ? uploads.map((u: any) => ({
             fileName: u?.fileName,
@@ -175,6 +202,7 @@ serve(async (req) => {
                   status: u.classification.status,
                   category: u.classification.category,
                   typeTag: u.classification.typeTag,
+                  identifier: u.classification.identifier,
                 }
               : null,
           }))
