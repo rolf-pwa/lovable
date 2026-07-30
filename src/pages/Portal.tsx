@@ -223,8 +223,9 @@ function PortalDynamicLinks({ contact }: { contact: any }) {
   );
 }
 
-const Portal = () => {
+const Portal = ({ intakeRoute = false }: { intakeRoute?: boolean }) => {
   const { token } = useParams<{ token: string }>();
+  const navigate = useNavigate();
   const [data, setData] = useState<PortalData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(!!token);
