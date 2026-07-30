@@ -1066,7 +1066,12 @@ const Portal = () => {
         {/* Main Content: Tabbed Interface */}
         <div className="space-y-4 lg:col-span-2">
           {/* Document Intake — auto-hides once intake is complete */}
-          {isSelf && <PortalIntake portalToken={portalToken} />}
+          {isSelf && (
+            <PortalIntakeBanner
+              portalToken={portalToken}
+              to={token ? `/portal/${token}/intake` : "/portal/intake"}
+            />
+          )}
 
           {/* Ask for Help — pinned above tabs */}
           {isSelf && (
