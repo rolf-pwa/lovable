@@ -43,7 +43,20 @@ export interface IntakeManifest {
       needsReview?: number;
       failed?: number;
     };
+    audit?: {
+      track?: "PERSONAL" | "CORPORATE";
+      criticalTotal?: number;
+      criticalSatisfied?: number;
+      total?: number;
+      satisfiedTotal?: number;
+      percent?: number;
+      criticalComplete?: boolean;
+      processing?: number;
+      missingCritical?: string[];
+      missingRecommended?: string[];
+    } | null;
   } | null;
+
   checklist?: IntakeChecklistItem[];
   uploads?: IntakeUpload[];
   limits?: { maxBytes?: number; allowedTypes?: string[] } | null;
