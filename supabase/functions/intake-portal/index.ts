@@ -161,28 +161,35 @@ serve(async (req) => {
       folders,
     } = manifest as Record<string, any>;
 
-    // Checklist: prefer the agent's per-item list; fall back to vault folders.
-    const rawItems = Array.isArray(items) ? items : Array.isArray(knownItems) ? knownItems : null;
+    // Checklist: only the agent's per-item list, and only items the client is
+    // actually expected to send (required or optional). Vault folders that carry
+    // no requirement are internal structure and stay hidden from the client.
+    const normalizeRequirement = (it: any): "required" | "optional" | null => {
+      const raw = String(
+        it?.requirement ?? it?.priority ?? it?.necessity ?? (it?.required === true ? "required" : it?.required === false ? "optional" : it?.optional === true ? "optional" : ""),
+      )
+        .trim()
+        .toLowerCase();
+      if (["required", "mandatory", "must", "high"].includes(raw)) return "required";
+      if (["optional", "nice_to_have", "nice-to-have", "recommended", "low"].includes(raw)) {
+        return "optional";
+      }
+      return null;
+    };
+
+    const rawItems = Array.isArray(items) ? items : Array.isArray(knownItems) ? knownItems : [];
     const checklist = rawItems
-      ? rawItems.map((it: any) => ({
-          name: it?.name ?? it?.label ?? "Document",
-          category: it?.category ?? null,
-          ownerInitials: it?.ownerInitials ?? null,
-          subType: it?.subType ?? null,
-          status: it?.status ?? (it?.received ? "received" : "waiting"),
-          receivedCount: typeof it?.receivedCount === "number" ? it.receivedCount : undefined,
-        }))
-      : Array.isArray(folders)
-        ? folders
-            .filter((f: any) => f?.name || f?.path)
-            .map((f: any) => ({
-              name: f?.name ?? f?.path,
-              category: f?.category ?? f?.path ?? null,
-              ownerInitials: null,
-              subType: null,
-              status: null,
-            }))
-        : [];
+      .map((it: any) => ({
+        name: it?.name ?? it?.label ?? "Document",
+        category: it?.category ?? null,
+        ownerInitials: it?.ownerInitials ?? null,
+        subType: it?.subType ?? null,
+        status: it?.status ?? (it?.received ? "received" : "waiting"),
+        receivedCount: typeof it?.receivedCount === "number" ? it.receivedCount : undefined,
+        requirement: normalizeRequirement(it),
+      }))
+      .filter((it: any) => it.requirement !== null);
+
 
     return json({
       enabled: true,

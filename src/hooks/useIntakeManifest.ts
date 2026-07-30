@@ -22,6 +22,7 @@ export interface IntakeChecklistItem {
   subType?: string | null;
   status?: string | null;
   receivedCount?: number;
+  requirement?: "required" | "optional" | null;
 }
 
 export interface IntakeManifest {
