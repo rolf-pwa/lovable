@@ -3,8 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/shared/components/ui/card";
 import { Crown, ArrowRight, Users } from "lucide-react";
 import { toast } from "sonner";
-import ProPortalShell, { FN, proFetch } from "@/components/pro/ProPortalShell";
-import ProTasksPanel from "@/components/pro/ProTasksPanel";
+import ProPortalShell, { FN, proFetch } from "@/modules/pro/components/ProPortalShell";
+import ProTasksPanel from "@/modules/pro/components/ProTasksPanel";
 
 const PRO_TYPE_LABELS: Record<string, string> = {
   lawyer: "Legal Counsel", accountant: "Tax & Accounting", insurance: "Insurance",

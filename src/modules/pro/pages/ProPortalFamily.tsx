@@ -3,8 +3,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Badge } from "@/shared/components/ui/badge";
 import { Users, Crown, Home, ChevronRight, ChevronDown } from "lucide-react";
-import ProPortalShell, { FN, proFetch } from "@/components/pro/ProPortalShell";
-import ProTasksPanel from "@/components/pro/ProTasksPanel";
+import ProPortalShell, { FN, proFetch } from "@/modules/pro/components/ProPortalShell";
+import ProTasksPanel from "@/modules/pro/components/ProTasksPanel";
 import { toast } from "sonner";
 
 const PRO_TYPE_LABELS: Record<string, string> = {
