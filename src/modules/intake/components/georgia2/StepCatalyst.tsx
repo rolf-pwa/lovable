@@ -6,11 +6,11 @@ import {
   DOMAIN_GREETING,
   PERSONAL_CATALYSTS,
   type Catalyst,
-} from "@/shared/lib/georgia2/derive";
+} from "@/modules/intake/lib/derive";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/components/ui/button";
 import { ArrowLeft } from "lucide-react";
-import { trackGeorgia2 } from "@/shared/lib/georgia2/session-tracker";
+import { trackGeorgia2 } from "@/modules/intake/lib/session-tracker";
 
 export function StepCatalyst() {
   const { state, dispatch } = useGeorgia2();

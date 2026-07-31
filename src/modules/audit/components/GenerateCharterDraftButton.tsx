@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Sparkles, Loader2 } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { supabase } from "@/shared/integrations/supabase/client";
-import { draftSovereigntyCharter, type DraftCharterPayload } from "@/shared/lib/charter";
+import { draftSovereigntyCharter, type DraftCharterPayload } from "@/modules/audit/lib/charter";
 import { toast } from "sonner";
 import {
   AlertDialog,

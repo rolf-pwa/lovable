@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { AppLayout } from "@/components/AppLayout";
 import { PageBreadcrumbs } from "@/components/PageBreadcrumbs";
-import { CashflowAnalyst } from "@/components/workbench/CashflowAnalyst";
+import { CashflowAnalyst } from "@/modules/audit/components/workbench/CashflowAnalyst";
 
 import { Card, CardContent } from "@/shared/components/ui/card";
 import { Badge } from "@/shared/components/ui/badge";

@@ -5,7 +5,7 @@ import { Label } from "@/shared/components/ui/label";
 import { ArrowLeft, Lock, Loader2 } from "lucide-react";
 import { z } from "zod";
 import { useState } from "react";
-import { trackGeorgia2 } from "@/shared/lib/georgia2/session-tracker";
+import { trackGeorgia2 } from "@/modules/intake/lib/session-tracker";
 
 const ContactSchema = z.object({
   first_name: z.string().trim().min(1, "First name required").max(80),

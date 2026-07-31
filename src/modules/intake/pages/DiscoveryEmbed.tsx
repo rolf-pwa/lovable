@@ -8,7 +8,7 @@ import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/shared/integrations/supabase/client";
-import { attachExitBeacon, bindGeorgiaSession, trackSessionUpdate } from "@/shared/lib/georgia-session-tracker";
+import { attachExitBeacon, bindGeorgiaSession, trackSessionUpdate } from "@/modules/intake/lib/georgia-session-tracker";
 
 const FUNCTIONS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
 const SESSION_START_KEY = "georgia_embed_started_v1";

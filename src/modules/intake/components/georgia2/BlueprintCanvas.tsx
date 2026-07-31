@@ -7,7 +7,7 @@ import {
   deriveResult,
   formatCAD,
   georgiaInsights,
-} from "@/shared/lib/georgia2/derive";
+} from "@/modules/intake/lib/derive";
 import { cn } from "@/shared/lib/utils";
 
 export function BlueprintCanvas() {

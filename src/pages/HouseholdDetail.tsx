@@ -28,7 +28,7 @@ import { Progress } from "@/shared/components/ui/progress";
 import { HouseholdTaskRollup } from "@/components/HouseholdTaskRollup";
 import { HoldingTank } from "@/components/HoldingTank";
 import { VaultView } from "@/pages/Vault";
-import { CharterRatificationTile } from "@/components/CharterRatificationTile";
+import { CharterRatificationTile } from "@/modules/audit/components/CharterRatificationTile";
 import EngagementsPanel from "@/components/EngagementsPanel";
 import { ProsPanel } from "@/components/ProsPanel";
 import { AddCompanyDialog } from "@/components/AddCompanyDialog";

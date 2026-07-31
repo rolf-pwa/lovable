@@ -10,9 +10,9 @@ import {
   SCALE_STEP,
   VELVET_ROPE,
   deriveResult,
-} from "@/shared/lib/georgia2/derive";
+} from "@/modules/intake/lib/derive";
 import { cn } from "@/shared/lib/utils";
-import { trackGeorgia2 } from "@/shared/lib/georgia2/session-tracker";
+import { trackGeorgia2 } from "@/modules/intake/lib/session-tracker";
 
 export function StepDiagnostic() {
   const { state, dispatch } = useGeorgia2();

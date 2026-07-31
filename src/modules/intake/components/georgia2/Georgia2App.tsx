@@ -7,7 +7,7 @@ import { StepResults } from "./StepResults";
 import { StepLeadCapture } from "./StepLeadCapture";
 import { StepSuccess } from "./StepSuccess";
 import { BlueprintCanvas } from "./BlueprintCanvas";
-import { useGeorgia2ExitBeacon } from "@/shared/lib/georgia2/session-tracker";
+import { useGeorgia2ExitBeacon } from "@/modules/intake/lib/session-tracker";
 
 function Shell({ embed }: { embed?: boolean }) {
   const { state } = useGeorgia2();

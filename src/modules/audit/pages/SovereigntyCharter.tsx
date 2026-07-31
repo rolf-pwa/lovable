@@ -12,7 +12,7 @@ import { Textarea } from "@/shared/components/ui/textarea";
 import { useAuth } from "@/shared/hooks/useAuth";
 import { useGoogleStatus, useSyncCharterDriveSources } from "@/shared/hooks/useGoogle";
 import { useAutoSave, AutoSaveIndicator } from "@/shared/hooks/useAutoSave";
-import { draftSovereigntyCharter, isValidSourceUrl, sanitizeSourceText, sanitizeSourceTitle, sanitizeSourceUrl, uploadCharterSourceFile, type CharterDraftStatus, type CharterSourceInputMode, type CharterSourceKind, type CharterSourceRecord } from "@/shared/lib/charter";
+import { draftSovereigntyCharter, isValidSourceUrl, sanitizeSourceText, sanitizeSourceTitle, sanitizeSourceUrl, uploadCharterSourceFile, type CharterDraftStatus, type CharterSourceInputMode, type CharterSourceKind, type CharterSourceRecord } from "@/modules/audit/lib/charter";
 import pwLogoWhite from "@/assets/prosperwise-logo-white.png";
 
 type ContactRecord = {

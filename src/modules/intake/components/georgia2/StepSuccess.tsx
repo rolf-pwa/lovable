@@ -1,7 +1,7 @@
 import { useGeorgia2 } from "./state";
 import { Button } from "@/shared/components/ui/button";
 import { CheckCircle2 } from "lucide-react";
-import { CATALYST_LABELS, formatCAD } from "@/shared/lib/georgia2/derive";
+import { CATALYST_LABELS, formatCAD } from "@/modules/intake/lib/derive";
 
 const PATHWAY_COPY: Record<
   string,
