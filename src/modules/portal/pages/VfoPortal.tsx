@@ -12,19 +12,19 @@ import {
   ClipboardList, MessageCircle, ScrollText, Megaphone, Home, Users, ChevronLeft,
   ChevronDown, ChevronRight, ArrowRight, Building2, Briefcase,
 } from "lucide-react";
-import { PortalTerritory } from "@/components/portal/PortalTerritory";
-import { PortalHoldingTank } from "@/components/portal/PortalHoldingTank";
-import { PortalRequests } from "@/components/portal/PortalRequests";
-import { PortalMeetings } from "@/components/portal/PortalMeetings";
-import { PortalCharter } from "@/components/portal/PortalCharter";
-import { PortalTasks } from "@/components/portal/PortalTasks";
-import { PortalVault } from "@/components/portal/PortalVault";
-import { PortalUpdates } from "@/components/portal/PortalUpdates";
-import { PortalGeorgiaChat } from "@/components/portal/PortalGeorgiaChat";
-import { PortalYourTeam } from "@/components/portal/PortalYourTeam";
-import { PortalProfessionals } from "@/components/portal/PortalProfessionals";
-import { insuranceCashForStorehouses, sumValues, isAumStorehouse } from "@/shared/lib/portalAum";
-import { PortalDynamicLinks } from "@/components/portal/PortalDynamicLinks";
+import { PortalTerritory } from "@/modules/portal/components/PortalTerritory";
+import { PortalHoldingTank } from "@/modules/portal/components/PortalHoldingTank";
+import { PortalRequests } from "@/modules/portal/components/PortalRequests";
+import { PortalMeetings } from "@/modules/portal/components/PortalMeetings";
+import { PortalCharter } from "@/modules/portal/components/PortalCharter";
+import { PortalTasks } from "@/modules/portal/components/PortalTasks";
+import { PortalVault } from "@/modules/portal/components/PortalVault";
+import { PortalUpdates } from "@/modules/portal/components/PortalUpdates";
+import { PortalGeorgiaChat } from "@/modules/portal/components/PortalGeorgiaChat";
+import { PortalYourTeam } from "@/modules/portal/components/PortalYourTeam";
+import { PortalProfessionals } from "@/modules/portal/components/PortalProfessionals";
+import { insuranceCashForStorehouses, sumValues, isAumStorehouse } from "@/modules/portal/lib/portalAum";
+import { PortalDynamicLinks } from "@/modules/portal/components/PortalDynamicLinks";
 import prosperwiseLogo from "@/assets/prosperwise-logo.png";
 
 const CORP_TYPE_LABELS: Record<string, string> = { opco: "Operating Co", holdco: "Holding Co", trust: "Trust", partnership: "Partnership", other: "Entity" };

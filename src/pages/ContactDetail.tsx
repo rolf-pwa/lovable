@@ -26,7 +26,7 @@ import { toast } from "sonner";
 import { format, differenceInDays, addDays } from "date-fns";
 import { PageBreadcrumbs } from "@/components/PageBreadcrumbs";
 import { ContactMerge } from "@/components/ContactMerge";
-import { getOrCreateToken } from "@/components/portal/PortalMagicLinkButton";
+import { getOrCreateToken } from "@/modules/portal/components/PortalMagicLinkButton";
 
 async function resolvePortalBase(contactId: string): Promise<"portal" | "vfo"> {
   // Single round-trip: fetch contact + family via nested join on both direct and household paths.
