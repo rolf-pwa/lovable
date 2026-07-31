@@ -1,66 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { getIntakeAgent } from "@/shared/lib/agents";
+import type {
+  IntakeAuditSummary,
+  IntakeChecklistItem,
+  IntakeManifest,
+  IntakeUpload,
+} from "@/shared/lib/agents";
 
-const FUNCTIONS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
-const INTAKE_URL = `${FUNCTIONS_URL}/intake-portal`;
-
-export interface IntakeUpload {
-  fileName?: string;
-  folderName?: string;
-  createdAt?: string;
-  classification?: {
-    status?: string;
-    category?: string;
-    typeTag?: string;
-    identifier?: string;
-  } | null;
-}
-
-export interface IntakeChecklistItem {
-  name: string;
-  category?: string | null;
-  ownerInitials?: string | null;
-  subType?: string | null;
-  status?: string | null;
-  receivedCount?: number;
-  requirement?: "required" | "optional" | null;
-}
-
-export interface IntakeManifest {
-  enabled: boolean;
-  ready?: boolean;
-  status?: string;
-  familyName?: string;
-  householdName?: string;
-  completion?: {
-    status?: "not_started" | "in_progress" | "complete";
-    expectedItems?: number;
-    uploadedFiles?: number;
-    percent?: number;
-    lastUploadAt?: string;
-    classification?: {
-      pending?: number;
-      filed?: number;
-      needsReview?: number;
-      failed?: number;
-    };
-    audit?: {
-      track?: "PERSONAL" | "CORPORATE";
-      criticalTotal?: number;
-      criticalSatisfied?: number;
-      total?: number;
-      satisfiedTotal?: number;
-      percent?: number;
-      criticalComplete?: boolean;
-      processing?: number;
-      missingCritical?: string[];
-      missingRecommended?: string[];
-    } | null;
-  } | null;
-
-  checklist?: IntakeChecklistItem[];
-  uploads?: IntakeUpload[];
-  limits?: { maxBytes?: number; allowedTypes?: string[] } | null;
-}
+export type { IntakeManifest, IntakeChecklistItem, IntakeUpload, IntakeAuditSummary };
 
 export interface UploadTask {
   id: string;
@@ -78,6 +25,7 @@ interface Options {
 
 export function useIntakeManifest(portalToken: string, options: Options = {}) {
   const { active = false } = options;
+  const agent = getIntakeAgent();
   const [manifest, setManifest] = useState<IntakeManifest | null>(null);
   const [loading, setLoading] = useState(true);
   const [tasks, setTasks] = useState<UploadTask[]>([]);
@@ -86,20 +34,13 @@ export function useIntakeManifest(portalToken: string, options: Options = {}) {
   const load = useCallback(async () => {
     if (!portalToken) return;
     try {
-      const res = await fetch(INTAKE_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-portal-token": portalToken },
-        body: JSON.stringify({ action: "manifest" }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || "Unable to load your document checklist");
-      setManifest(data);
+      setManifest(await agent.getManifest({ portalToken }));
     } catch {
       setManifest({ enabled: false });
     } finally {
       setLoading(false);
     }
-  }, [portalToken]);
+  }, [portalToken, agent]);
 
   useEffect(() => {
     load();
@@ -117,51 +58,29 @@ export function useIntakeManifest(portalToken: string, options: Options = {}) {
     return () => clearInterval(interval);
   }, [manifest, active, load]);
 
-
-  const uploadOne = (file: File, taskId: string) =>
-    new Promise<void>((resolve) => {
-      const form = new FormData();
-      form.append("file", file);
-      const xhr = new XMLHttpRequest();
-      xhr.open("POST", INTAKE_URL);
-      xhr.setRequestHeader("x-portal-token", portalToken);
-      xhr.upload.onprogress = (e) => {
-        if (!e.lengthComputable) return;
-        const pct = Math.round((e.loaded / e.total) * 100);
-        setTasks((prev) =>
-          prev.map((t) => (t.id === taskId ? { ...t, state: "uploading", progress: pct } : t)),
-        );
-      };
-      xhr.onload = () => {
-        let body: any = {};
-        try {
-          body = JSON.parse(xhr.responseText);
-        } catch {}
-        const ok = xhr.status >= 200 && xhr.status < 300 && !body?.error;
-        setTasks((prev) =>
-          prev.map((t) =>
-            t.id === taskId
-              ? {
-                  ...t,
-                  progress: 100,
-                  state: ok ? "done" : "error",
-                  error: ok ? undefined : body?.error || `Upload failed (${xhr.status})`,
-                }
-              : t,
+  const uploadOne = useCallback(
+    async (file: File, taskId: string) => {
+      const result = await agent.uploadDocument({ portalToken }, file, {
+        onProgress: (pct) =>
+          setTasks((prev) =>
+            prev.map((t) => (t.id === taskId ? { ...t, state: "uploading", progress: pct } : t)),
           ),
-        );
-        resolve();
-      };
-      xhr.onerror = () => {
-        setTasks((prev) =>
-          prev.map((t) =>
-            t.id === taskId ? { ...t, state: "error", error: "Network error" } : t,
-          ),
-        );
-        resolve();
-      };
-      xhr.send(form);
-    });
+      });
+      setTasks((prev) =>
+        prev.map((t) =>
+          t.id === taskId
+            ? {
+                ...t,
+                progress: 100,
+                state: result.ok ? "done" : "error",
+                error: result.ok ? undefined : result.error,
+              }
+            : t,
+        ),
+      );
+    },
+    [agent, portalToken],
+  );
 
   const upload = useCallback(
     async (files: File[]) => {
@@ -201,7 +120,7 @@ export function useIntakeManifest(portalToken: string, options: Options = {}) {
       await load();
       return { accepted: accepted.length, rejected };
     },
-    [manifest, load],
+    [manifest, load, uploadOne],
   );
 
   const clearFinishedTasks = useCallback(() => {
@@ -234,4 +153,3 @@ export function useIntakeManifest(portalToken: string, options: Options = {}) {
     processing: audit?.processing ?? 0,
   };
 }
-
