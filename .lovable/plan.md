@@ -1,53 +1,55 @@
-# Intake-First Portal, Staged Toward the VFO
+# Sovereignty OS Platform — Modular Monolith, Phase 1 (Structure)
 
-The portal becomes stage-gated. A client only ever sees the surface that matches their current stage, so there is one obvious next action at all times.
+Refactor this existing project in place into the modular monolith described in your blueprint. Nothing user-visible changes in this phase: same routes, same database, same portal tokens, same 63 edge functions. Only where files live and how they import each other changes.
+
+## Target shape
 
 ```text
-Stage 1  intake     → /portal/intake only          (live now)
-Stage 2  audit      → /portal/audit only           (future AI agent)
-Stage 3  vfo        → full portal / VFO unlocked   (existing portal)
+src/
+├── modules/
+│   ├── intake/     onboarding, bulk onboarding, discovery, Georgia 2.0, portal intake UI
+│   ├── crm/        households, families, contacts, corporations, pipeline, dashboard
+│   ├── portal/     client + VFO portal pages and portal components
+│   ├── pro/        professional spoke alliance portal
+│   └── audit/      governance review, quarterly review, stabilization map, charter
+├── shared/
+│   ├── components/ui/   shadcn primitives
+│   ├── components/      cross-module app shell (layout, sidebar, breadcrumbs, protected route)
+│   ├── hooks/           useAuth, useGoogle, use-toast
+│   ├── lib/             utils, auth, dates, charter, portalAum
+│   ├── types/           household, vault manifest, document interfaces
+│   └── integrations/    backend client + generated types (untouched, auto-generated)
+└── App.tsx              role-based router
 ```
 
-## Behaviour by stage
+Boundary rule: a module may import from `@/shared/*` and its own folder only. Cross-module communication goes through `@/shared` or database state. `@/modules/crm` never imports from `@/modules/portal`, and so on.
 
-1. **Intake** — client logs in and lands on the intake page regardless of the URL they hit. No dashboard, no tabs, no family/household drill-down, no sidebar. The page shows the checklist, upload area, progress, and "Not sure what to send?" help. No "Back to portal" link, since there is nothing behind it yet.
-2. **Audit** — once the intake agent reports intake complete, the client is routed to `/portal/audit`. Until the audit agent exists, this stage renders a simple holding panel ("Your Sovereignty Audit is being prepared") so the flow is complete end to end and the real UI drops in later without re-plumbing.
-3. **VFO** — after the audit is marked complete, the full portal/VFO opens and becomes the login landing page. `/portal/intake` and `/portal/audit` stop rendering their panels and redirect to the portal.
+## Phase 1 steps (this build)
 
-While stage data is loading, show the existing spinner rather than flashing the wrong surface.
+1. **Scaffold + aliases.** Create `src/modules/*` and `src/shared/*` with barrel `index.ts` files. Add `@/modules/*` and `@/shared/*` path aliases in `tsconfig` and `vite.config.ts` (the existing `@/*` alias keeps working, so nothing breaks mid-migration).
+2. **Move shared core first (lowest risk).** `src/components/ui/` → `src/shared/components/ui/`, `src/hooks/` → `src/shared/hooks/`, `src/lib/` → `src/shared/lib/`, `src/integrations/` → `src/shared/integrations/`. Re-point imports across the app; leave the generated backend client file's contents untouched.
+3. **Move module feature folders**, one module per commit-sized step, in this order: `intake`, `pro`, `audit`, `portal`, `crm`. Each step moves the pages and components listed in the mapping below and updates their imports.
+4. **Enforce the boundary in lint.** Add an ESLint `no-restricted-imports` rule set that fails any cross-module deep import, so the structure can't silently rot.
+5. **Verify per step.** After each module moves: typecheck, load the affected routes in the preview, and confirm the portal/pro/CRM screens render before moving to the next module. Nothing gets published until all five modules are green.
 
-## Stage source of truth
+## File mapping
 
-Add a single `portal_stage` value on the household (`intake` | `audit` | `vfo`) that the portal reads to decide what to render:
+| Module | Pages | Components |
+| --- | --- | --- |
+| intake | `Onboarding`, `BulkOnboarding`, `Discovery`, `DiscoveryV2`, `IntakeTest` | `georgia2/*`, `PortalIntakePage`, `PortalIntakeBanner`, `IntakeBackfillTile` |
+| crm | `Households`, `HouseholdDetail`, `Families`, `FamilyDetail`, `Contacts`, `ContactDetail`, `Pipeline`, dashboard | `AddCompanyDialog`, `CrmTabs`, `HoldingTank`, `HouseholdTaskRollup`, `AssigneePicker`, `ContactMerge`, `DecouplerWizard`, `Pros/Insurance/Engagements` panels |
+| portal | `Portal`, `VfoPortal` | `components/portal/*` (minus the intake pieces above) |
+| pro | `ProPortal`, `ProPortalContact` | `components/pro/*` |
+| audit | `GovernanceReview`, `QuarterlyReview`, `StabilizationMap` | `StabilizationMapButton`, `CharterRatificationTile`, `SovereigntyCharterButton`, `AuditTrail`, `workbench/*` |
 
-- `intake → audit` advances automatically when the intake agent's manifest reports `completion.status === "complete"`.
-- `audit → vfo` advances when the audit is marked complete — by the future audit agent's callback, and manually by staff in the meantime.
-- Staff can override the stage from the household page, so you can open the VFO early or send someone back to intake.
+Edge functions stay where they are; they already carry domain-name prefixes (`portal-*`, `crm-intake-*`, `pro-portal-*`, `governance-*`). Existing tables keep their names — renaming live tables to `intake_*`/`crm_*` prefixes would break the portal and every deployed function, so new tables adopt prefixes going forward instead.
 
-This keeps the gate off the client and off ad-hoc checks: one field, two advancement events.
+## Phase 2 (next, not in this build)
 
-## Drive file movement (intake → VFO folder)
+- **Agent adapter layer.** `src/shared/lib/agents/` with `IIntakeAgentProvider`, `IAuditAgentProvider`, `ILibrarianProvider` plus an env-flag factory, so today's implementations (intake agent API, Vertex functions) sit behind interfaces and can move to Cloud Run later without UI changes.
+- **Absorb the intake UI.** The intake checklist/upload UI becomes a first-class `modules/intake` surface behind the adapter; the external agent keeps owning Drive provisioning, classification, and its PII-free store.
+- **Audit module build-out.** `/audit` route and the audit agent adapter, per the staged Intake → Audit → VFO flow.
 
-When a household advances to `vfo`, intake files move from the Drive intake folder into the VFO folder tree. Two options:
+## Notes
 
-- **Agent-owned (recommended):** we notify the intake agent on stage change and it relocates the files it provisioned, since it owns the Drive tree and the classification map. Requires a small contract addition on their side (a `vault.finalize` / stage-change endpoint).
-- **CRM-owned:** we move files ourselves via the existing Google Drive integration in `vault-service`, using the stored vault root and shoebox folder IDs.
-
-I'd raise the agent-owned option with their team first; the CRM-owned fallback is buildable now but risks fighting the agent's sweeper.
-
-## Technical notes
-
-- `src/pages/Portal.tsx` already receives an `intakeRoute` flag and resolves `portalToken`. Add a stage resolver at the top of the page that branches rendering; drill-down, tab state, and data loading stay untouched.
-- New route `/portal/audit` (and `/portal/:token/audit`) rendering a placeholder `PortalAuditPage` component.
-- `PortalIntakePage` gains a prop to hide the back button while the portal is gated.
-- `useIntakeManifest` already exposes `isComplete`; the stage advance hooks off that plus a persisted stage field so a manifest hiccup can't bounce a VFO client back to intake.
-- Scope: `/portal` and `/portal/:token`. `/vfo` unchanged for now — say the word and I'll apply the same gate there.
-
-## Migration
-
-One column on `households`: `portal_stage` defaulting to `intake`, plus a stage-changed timestamp for the audit trail. Existing clients get backfilled to `vfo` so nobody currently using the portal is pushed back into intake.
-
-## Not in this change
-
-- The audit agent itself, its scoring, or its UI beyond the holding panel.
-- The Drive relocation implementation (pending the agent-vs-CRM decision above).
+This is a mechanical refactor with a large blast radius, so it moves in five verifiable steps rather than one sweep, and each step ends with the app running. Everything stays on the current preview until the whole set is verified.
