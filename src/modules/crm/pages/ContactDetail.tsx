@@ -26,7 +26,7 @@ import { toast } from "sonner";
 import { format, differenceInDays, addDays } from "date-fns";
 import { PageBreadcrumbs } from "@/shared/components/PageBreadcrumbs";
 import { ContactMerge } from "@/modules/crm/components/ContactMerge";
-import { getOrCreateToken } from "@/modules/portal/components/PortalMagicLinkButton";
+import { getOrCreateToken } from "@/modules/portal";
 
 async function resolvePortalBase(contactId: string): Promise<"portal" | "vfo"> {
   // Single round-trip: fetch contact + family via nested join on both direct and household paths.
@@ -49,17 +49,17 @@ import { ContactEmails } from "@/modules/crm/components/ContactEmails";
 import QuoCommunications from "@/modules/crm/components/QuoCommunications";
 import ManualActivityLog from "@/modules/crm/components/ManualActivityLog";
 import { SovereigntyAssistant } from "@/modules/crm/components/SovereigntyAssistant";
-import { AuditTrail } from "@/modules/audit/components/AuditTrail";
-import { StatementUpload } from "@/modules/crm/components/StatementUpload";
+import { AuditTrail } from "@/modules/audit";
+import { StatementUpload } from "@/modules/crm";
 import { HoldingTank } from "@/modules/crm/components/HoldingTank";
 import { AssetContainer, type MoveTarget } from "@/modules/crm/components/AssetContainer";
 import { InsurancePanel } from "@/modules/crm/components/InsurancePanel";
 import { ProfessionalLinker } from "@/modules/crm/components/ProfessionalLinker";
 import EngagementsPanel from "@/modules/crm/components/EngagementsPanel";
-import { StabilizationMapButton } from "@/modules/audit/components/StabilizationMapButton";
-import { QuarterlySystemReviewButton } from "@/modules/audit/components/QuarterlySystemReviewButton";
-import { SovereigntyCharterButton } from "@/modules/audit/components/SovereigntyCharterButton";
-import { GenerateCharterDraftButton } from "@/modules/audit/components/GenerateCharterDraftButton";
+import { StabilizationMapButton } from "@/modules/audit";
+import { QuarterlySystemReviewButton } from "@/modules/audit";
+import { SovereigntyCharterButton } from "@/modules/audit";
+import { GenerateCharterDraftButton } from "@/modules/audit";
 import { VaultView } from "@/modules/crm/pages/Vault";
 import { dialViaQuo } from "@/shared/lib/quo-dial";
 import { 

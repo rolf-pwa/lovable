@@ -7,8 +7,8 @@ import { Badge } from "@/shared/components/ui/badge";
 import { Input } from "@/shared/components/ui/input";
 import { PageBreadcrumbs } from "@/shared/components/PageBreadcrumbs";
 import { CrmTabs } from "@/modules/crm/components/CrmTabs";
-import { CharterRatificationTile } from "@/modules/audit/components/CharterRatificationTile";
-import { IntakeBackfillTile } from "@/modules/intake/components/IntakeBackfillTile";
+import { CharterRatificationTile } from "@/modules/audit";
+import { IntakeBackfillTile } from "@/modules/intake";
 
 import {
   Select,

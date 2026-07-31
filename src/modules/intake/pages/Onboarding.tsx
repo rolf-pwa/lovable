@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/sha
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Badge } from "@/shared/components/ui/badge";
-import { StatementUpload } from "@/modules/crm/components/StatementUpload";
+import { StatementUpload } from "@/modules/crm";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { toast } from "sonner";
 import {

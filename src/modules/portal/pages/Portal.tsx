@@ -16,8 +16,8 @@ import { PortalGeorgiaChat } from "@/modules/portal/components/PortalGeorgiaChat
 import { PortalNotificationBell } from "@/modules/portal/components/PortalNotificationBell";
 import { PortalMessages } from "@/modules/portal/components/PortalMessages";
 import { PortalVault } from "@/modules/portal/components/PortalVault";
-import { PortalIntakeBanner } from "@/modules/intake/components/PortalIntakeBanner";
-import { PortalIntakePage } from "@/modules/intake/components/PortalIntakePage";
+import { PortalIntakeBanner } from "@/modules/intake";
+import { PortalIntakePage } from "@/modules/intake";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
 import { Input } from "@/shared/components/ui/input";
 import { Button } from "@/shared/components/ui/button";
