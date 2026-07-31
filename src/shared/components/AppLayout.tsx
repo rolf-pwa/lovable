@@ -1,12 +1,12 @@
 import { AppSidebar, SidebarCollapseProvider } from "./AppSidebar";
-import { AssistantSidebar } from "@/modules/crm/components/AssistantSidebar";
+import { AssistantSidebar } from "@/shared/components/AssistantSidebar";
 import { DashboardSidebar } from "./DashboardSidebar";
 import { useAuth } from "@/shared/hooks/useAuth";
 import { signOut } from "@/shared/lib/auth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/shared/components/ui/avatar";
 import { LogOut } from "lucide-react";
 import { format } from "date-fns";
-import { NotificationBell } from "@/modules/crm/components/NotificationBell";
+import { NotificationBell } from "@/shared/components/NotificationBell";
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
