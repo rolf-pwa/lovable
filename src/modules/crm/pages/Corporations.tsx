@@ -1,12 +1,12 @@
 import { useEffect, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/shared/integrations/supabase/client";
-import { AppLayout } from "@/components/AppLayout";
+import { AppLayout } from "@/shared/components/AppLayout";
 import { Card, CardContent } from "@/shared/components/ui/card";
 import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
-import { PageBreadcrumbs } from "@/components/PageBreadcrumbs";
+import { PageBreadcrumbs } from "@/shared/components/PageBreadcrumbs";
 import {
   Dialog,
   DialogContent,

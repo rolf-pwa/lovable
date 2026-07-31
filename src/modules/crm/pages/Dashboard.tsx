@@ -1,6 +1,6 @@
-import { AppLayout } from "@/components/AppLayout";
-import { CommandCenter } from "@/components/CommandCenter";
-import { TodayActivities } from "@/components/TodayActivities";
+import { AppLayout } from "@/shared/components/AppLayout";
+import { CommandCenter } from "@/modules/crm/components/CommandCenter";
+import { TodayActivities } from "@/modules/crm/components/TodayActivities";
 
 const Dashboard = () => {
   return (

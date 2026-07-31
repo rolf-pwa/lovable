@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { supabase } from "@/shared/integrations/supabase/client";
-import { AppLayout } from "@/components/AppLayout";
+import { AppLayout } from "@/shared/components/AppLayout";
 import { Card, CardContent } from "@/shared/components/ui/card";
 import { Button } from "@/shared/components/ui/button";
 import { Badge } from "@/shared/components/ui/badge";
@@ -13,15 +13,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/shared/components/ui/select";
-import { CrmTabs } from "@/components/CrmTabs";
-import { ContactCsvImport } from "@/components/ContactCsvImport";
+import { CrmTabs } from "@/modules/crm/components/CrmTabs";
+import { ContactCsvImport } from "@/modules/crm/components/ContactCsvImport";
 import { dialViaQuo } from "@/shared/lib/quo-dial";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/shared/components/ui/tooltip";
-import { PageBreadcrumbs } from "@/components/PageBreadcrumbs";
+import { PageBreadcrumbs } from "@/shared/components/PageBreadcrumbs";
 import {
   Plus,
   Search,

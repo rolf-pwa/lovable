@@ -1,4 +1,4 @@
-import { AppLayout } from "@/components/AppLayout";
+import { AppLayout } from "@/shared/components/AppLayout";
 import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";

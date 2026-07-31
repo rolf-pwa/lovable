@@ -7,7 +7,7 @@ import { Badge } from "@/shared/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/shared/components/ui/collapsible";
 import { toast } from "sonner";
 import { Loader2, Send, Phone, MessageSquare, RefreshCw, ChevronDown } from "lucide-react";
-import LinkQuoToContactButton from "@/components/LinkQuoToContactButton";
+import LinkQuoToContactButton from "@/modules/crm/components/LinkQuoToContactButton";
 
 interface QuoCommunicationsProps {
   contactId: string;

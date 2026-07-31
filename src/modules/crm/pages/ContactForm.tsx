@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { useAuth } from "@/shared/hooks/useAuth";
-import { AppLayout } from "@/components/AppLayout";
+import { AppLayout } from "@/shared/components/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
@@ -18,8 +18,8 @@ import {
 } from "@/shared/components/ui/select";
 import { toast } from "sonner";
 import { ArrowLeft, X, Plus, Search, Bell, BellOff, Trash2 } from "lucide-react";
-import { PageBreadcrumbs } from "@/components/PageBreadcrumbs";
-import { StatementUpload } from "@/components/StatementUpload";
+import { PageBreadcrumbs } from "@/shared/components/PageBreadcrumbs";
+import { StatementUpload } from "@/modules/crm/components/StatementUpload";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader,

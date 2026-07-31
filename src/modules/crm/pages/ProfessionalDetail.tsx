@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/shared/integrations/supabase/client";
-import { AppLayout } from "@/components/AppLayout";
+import { AppLayout } from "@/shared/components/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
@@ -35,8 +35,8 @@ import {
 import { toast } from "sonner";
 import { useAuth } from "@/shared/hooks/useAuth";
 import { format } from "date-fns";
-import EngagementThreadButton from "@/components/EngagementThreadButton";
-import { PageBreadcrumbs } from "@/components/PageBreadcrumbs";
+import EngagementThreadButton from "@/modules/crm/components/EngagementThreadButton";
+import { PageBreadcrumbs } from "@/shared/components/PageBreadcrumbs";
 
 const PILLARS = [
   { value: "tax", label: "Tax" },

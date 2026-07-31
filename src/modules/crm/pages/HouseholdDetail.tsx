@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/shared/integrations/supabase/client";
-import { AppLayout } from "@/components/AppLayout";
+import { AppLayout } from "@/shared/components/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
@@ -23,15 +23,15 @@ import {
   DropdownMenuItem,
 } from "@/shared/components/ui/dropdown-menu";
 import { toast } from "sonner";
-import { PageBreadcrumbs } from "@/components/PageBreadcrumbs";
+import { PageBreadcrumbs } from "@/shared/components/PageBreadcrumbs";
 import { Progress } from "@/shared/components/ui/progress";
-import { HouseholdTaskRollup } from "@/components/HouseholdTaskRollup";
-import { HoldingTank } from "@/components/HoldingTank";
-import { VaultView } from "@/pages/Vault";
+import { HouseholdTaskRollup } from "@/modules/crm/components/HouseholdTaskRollup";
+import { HoldingTank } from "@/modules/crm/components/HoldingTank";
+import { VaultView } from "@/modules/crm/pages/Vault";
 import { CharterRatificationTile } from "@/modules/audit/components/CharterRatificationTile";
-import EngagementsPanel from "@/components/EngagementsPanel";
-import { ProsPanel } from "@/components/ProsPanel";
-import { AddCompanyDialog } from "@/components/AddCompanyDialog";
+import EngagementsPanel from "@/modules/crm/components/EngagementsPanel";
+import { ProsPanel } from "@/modules/crm/components/ProsPanel";
+import { AddCompanyDialog } from "@/modules/crm/components/AddCompanyDialog";
 import {
   Home,
   User,
@@ -57,7 +57,7 @@ import {
   Anchor,
   Briefcase,
 } from "lucide-react";
-import { ContactAnalytics } from "@/components/ContactAnalytics";
+import { ContactAnalytics } from "@/modules/crm/components/ContactAnalytics";
 
 const ROLE_ICONS: Record<string, typeof Crown> = {
   head_of_family: Crown,

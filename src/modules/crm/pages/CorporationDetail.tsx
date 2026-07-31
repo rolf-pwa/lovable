@@ -1,15 +1,15 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/shared/integrations/supabase/client";
-import { AppLayout } from "@/components/AppLayout";
+import { AppLayout } from "@/shared/components/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Textarea } from "@/shared/components/ui/textarea";
-import { PageBreadcrumbs } from "@/components/PageBreadcrumbs";
-import { InlineEdit } from "@/components/InlineEdit";
-import { InsurancePanel } from "@/components/InsurancePanel";
+import { PageBreadcrumbs } from "@/shared/components/PageBreadcrumbs";
+import { InlineEdit } from "@/shared/components/InlineEdit";
+import { InsurancePanel } from "@/modules/crm/components/InsurancePanel";
 import {
   Dialog,
   DialogContent,

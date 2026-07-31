@@ -20,7 +20,7 @@ import { parseLocalDate } from "@/shared/lib/date-utils";
 import { toast } from "sonner";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { cn } from "@/shared/lib/utils";
-import { AssigneePicker } from "@/components/AssigneePicker";
+import { AssigneePicker } from "@/modules/crm/components/AssigneePicker";
 import {
   useGoogleStatus,
   useConnectGoogle,
@@ -275,7 +275,7 @@ function Linkify({ children }: { children: string }) {
   );
 }
 
-// AssigneePicker is now imported from @/components/AssigneePicker
+// AssigneePicker is now imported from @/modules/crm/components/AssigneePicker
 
 interface AsanaTask {
   gid: string;

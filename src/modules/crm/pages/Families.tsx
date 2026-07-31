@@ -1,13 +1,13 @@
 import { useEffect, useState, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/shared/integrations/supabase/client";
-import { AppLayout } from "@/components/AppLayout";
+import { AppLayout } from "@/shared/components/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
-import { PageBreadcrumbs } from "@/components/PageBreadcrumbs";
-import { CrmTabs } from "@/components/CrmTabs";
+import { PageBreadcrumbs } from "@/shared/components/PageBreadcrumbs";
+import { CrmTabs } from "@/modules/crm/components/CrmTabs";
 import {
   Collapsible,
   CollapsibleContent,
@@ -59,9 +59,9 @@ import {
 } from "@/shared/components/ui/select";
 import { toast } from "sonner";
 import { useAuth } from "@/shared/hooks/useAuth";
-import { DecouplerWizard } from "@/components/DecouplerWizard";
-import { FamilyRollup } from "@/components/FamilyRollup";
-import { InlineEdit } from "@/components/InlineEdit";
+import { DecouplerWizard } from "@/modules/crm/components/DecouplerWizard";
+import { FamilyRollup } from "@/modules/crm/components/FamilyRollup";
+import { InlineEdit } from "@/shared/components/InlineEdit";
 
 interface Individual {
   id: string;

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { AppLayout } from "@/components/AppLayout";
+import { AppLayout } from "@/shared/components/AppLayout";
 import { Card, CardContent } from "@/shared/components/ui/card";
 import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
@@ -25,8 +25,8 @@ import {
 import { Loader2, UserPlus, ArrowRight, Check, TreesIcon, FileText, Info, X } from "lucide-react";
 import { format } from "date-fns";
 import { supabase } from "@/shared/integrations/supabase/client";
-import { PageBreadcrumbs } from "@/components/PageBreadcrumbs";
-import { CrmTabs } from "@/components/CrmTabs";
+import { PageBreadcrumbs } from "@/shared/components/PageBreadcrumbs";
+import { CrmTabs } from "@/modules/crm/components/CrmTabs";
 import { toast } from "sonner";
 import { useAuth } from "@/shared/hooks/useAuth";
 

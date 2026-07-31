@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/shared/integrations/supabase/client";
-import { AppLayout } from "@/components/AppLayout";
+import { AppLayout } from "@/shared/components/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
@@ -24,7 +24,7 @@ import {
 import { Briefcase, Plus, Search } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/shared/hooks/useAuth";
-import { CrmTabs } from "@/components/CrmTabs";
+import { CrmTabs } from "@/modules/crm/components/CrmTabs";
 
 type Pro = {
   id: string;

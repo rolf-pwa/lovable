@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/shared/integrations/supabase/client";
-import { AppLayout } from "@/components/AppLayout";
+import { AppLayout } from "@/shared/components/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
 import { Anchor, ArrowRight, Loader2, Users } from "lucide-react";
-import { PageBreadcrumbs } from "@/components/PageBreadcrumbs";
+import { PageBreadcrumbs } from "@/shared/components/PageBreadcrumbs";
 
 interface HoldingTankAccount {
   id: string;

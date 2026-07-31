@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/shared/integrations/supabase/client";
-import { AppLayout } from "@/components/AppLayout";
+import { AppLayout } from "@/shared/components/AppLayout";
 import { Button } from "@/shared/components/ui/button";
 import { Badge } from "@/shared/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
@@ -17,15 +17,15 @@ import {
   Folder, FolderOpen, CheckSquare, ShieldCheck, Landmark, ChevronDown, ListChecks,
   Mail, Phone, MapPin, Home, Calendar, Pencil, Eye, Merge, Link2, BarChart3, Anchor
 } from "lucide-react";
-import { ContactAnalytics } from "@/components/ContactAnalytics";
+import { ContactAnalytics } from "@/modules/crm/components/ContactAnalytics";
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator
 } from "@/shared/components/ui/dropdown-menu";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/shared/components/ui/collapsible";
 import { toast } from "sonner";
 import { format, differenceInDays, addDays } from "date-fns";
-import { PageBreadcrumbs } from "@/components/PageBreadcrumbs";
-import { ContactMerge } from "@/components/ContactMerge";
+import { PageBreadcrumbs } from "@/shared/components/PageBreadcrumbs";
+import { ContactMerge } from "@/modules/crm/components/ContactMerge";
 import { getOrCreateToken } from "@/modules/portal/components/PortalMagicLinkButton";
 
 async function resolvePortalBase(contactId: string): Promise<"portal" | "vfo"> {
@@ -42,25 +42,25 @@ async function resolvePortalBase(contactId: string): Promise<"portal" | "vfo"> {
   return vfoEnabled ? "vfo" : "portal";
 }
 import { useAuth } from "@/shared/hooks/useAuth";
-import { ContactTaskList } from "@/components/ContactTaskList";
-import { ContactRequests } from "@/components/ContactRequests";
-import { ContactCalendar } from "@/components/ContactCalendar";
-import { ContactEmails } from "@/components/ContactEmails";
-import QuoCommunications from "@/components/QuoCommunications";
-import ManualActivityLog from "@/components/ManualActivityLog";
-import { SovereigntyAssistant } from "@/components/SovereigntyAssistant";
+import { ContactTaskList } from "@/modules/crm/components/ContactTaskList";
+import { ContactRequests } from "@/modules/crm/components/ContactRequests";
+import { ContactCalendar } from "@/modules/crm/components/ContactCalendar";
+import { ContactEmails } from "@/modules/crm/components/ContactEmails";
+import QuoCommunications from "@/modules/crm/components/QuoCommunications";
+import ManualActivityLog from "@/modules/crm/components/ManualActivityLog";
+import { SovereigntyAssistant } from "@/modules/crm/components/SovereigntyAssistant";
 import { AuditTrail } from "@/modules/audit/components/AuditTrail";
-import { StatementUpload } from "@/components/StatementUpload";
-import { HoldingTank } from "@/components/HoldingTank";
-import { AssetContainer, type MoveTarget } from "@/components/AssetContainer";
-import { InsurancePanel } from "@/components/InsurancePanel";
-import { ProfessionalLinker } from "@/components/ProfessionalLinker";
-import EngagementsPanel from "@/components/EngagementsPanel";
+import { StatementUpload } from "@/modules/crm/components/StatementUpload";
+import { HoldingTank } from "@/modules/crm/components/HoldingTank";
+import { AssetContainer, type MoveTarget } from "@/modules/crm/components/AssetContainer";
+import { InsurancePanel } from "@/modules/crm/components/InsurancePanel";
+import { ProfessionalLinker } from "@/modules/crm/components/ProfessionalLinker";
+import EngagementsPanel from "@/modules/crm/components/EngagementsPanel";
 import { StabilizationMapButton } from "@/modules/audit/components/StabilizationMapButton";
 import { QuarterlySystemReviewButton } from "@/modules/audit/components/QuarterlySystemReviewButton";
 import { SovereigntyCharterButton } from "@/modules/audit/components/SovereigntyCharterButton";
 import { GenerateCharterDraftButton } from "@/modules/audit/components/GenerateCharterDraftButton";
-import { VaultView } from "@/pages/Vault";
+import { VaultView } from "@/modules/crm/pages/Vault";
 import { dialViaQuo } from "@/shared/lib/quo-dial";
 import { 
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 

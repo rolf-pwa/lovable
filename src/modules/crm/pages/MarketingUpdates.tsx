@@ -1,5 +1,5 @@
-import { AppLayout } from "@/components/AppLayout";
-import { MarketingUpdateWidget } from "@/components/MarketingUpdateWidget";
+import { AppLayout } from "@/shared/components/AppLayout";
+import { MarketingUpdateWidget } from "@/modules/crm/components/MarketingUpdateWidget";
 
 const MarketingUpdates = () => {
   return (

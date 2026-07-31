@@ -4,8 +4,8 @@ import Papa from "papaparse";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip as RTooltip, ResponsiveContainer, CartesianGrid,
 } from "recharts";
-import { AppLayout } from "@/components/AppLayout";
-import { PageBreadcrumbs } from "@/components/PageBreadcrumbs";
+import { AppLayout } from "@/shared/components/AppLayout";
+import { PageBreadcrumbs } from "@/shared/components/PageBreadcrumbs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";

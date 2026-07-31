@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/shared/integrations/supabase/client";
-import { AppLayout } from "@/components/AppLayout";
-import { PageBreadcrumbs } from "@/components/PageBreadcrumbs";
+import { AppLayout } from "@/shared/components/AppLayout";
+import { PageBreadcrumbs } from "@/shared/components/PageBreadcrumbs";
 import { CashflowAnalyst } from "@/modules/audit/components/workbench/CashflowAnalyst";
 
 import { Card, CardContent } from "@/shared/components/ui/card";

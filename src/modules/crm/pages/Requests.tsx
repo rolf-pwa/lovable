@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import { AppLayout } from "@/components/AppLayout";
-import { LinkifyText } from "@/components/LinkifyText";
+import { AppLayout } from "@/shared/components/AppLayout";
+import { LinkifyText } from "@/shared/components/LinkifyText";
 import { Card, CardContent } from "@/shared/components/ui/card";
 import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";

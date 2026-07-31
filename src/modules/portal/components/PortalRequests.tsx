@@ -6,7 +6,7 @@ import { Textarea } from "@/shared/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/shared/components/ui/dialog";
 import { ClipboardList, Send, Loader2, MessageCircle, Clock } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
-import { LinkifyText } from "@/components/LinkifyText";
+import { LinkifyText } from "@/shared/components/LinkifyText";
 
 const FUNCTIONS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
 

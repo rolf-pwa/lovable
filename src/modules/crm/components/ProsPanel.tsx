@@ -4,8 +4,8 @@ import { supabase } from "@/shared/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Badge } from "@/shared/components/ui/badge";
 import { Briefcase, ExternalLink, Home, User, TreesIcon } from "lucide-react";
-import EngagementThreadButton from "@/components/EngagementThreadButton";
-import LinkProDialog from "@/components/LinkProDialog";
+import EngagementThreadButton from "@/modules/crm/components/EngagementThreadButton";
+import LinkProDialog from "@/modules/crm/components/LinkProDialog";
 import { format } from "date-fns";
 
 interface Props {

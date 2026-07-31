@@ -1,11 +1,11 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/shared/integrations/supabase/client";
-import { AppLayout } from "@/components/AppLayout";
+import { AppLayout } from "@/shared/components/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
-import { PageBreadcrumbs } from "@/components/PageBreadcrumbs";
+import { PageBreadcrumbs } from "@/shared/components/PageBreadcrumbs";
 import {
   Collapsible,
   CollapsibleContent,
@@ -28,9 +28,9 @@ import {
   Anchor,
   ExternalLink,
 } from "lucide-react";
-import { FamilyRollup } from "@/components/FamilyRollup";
-import { ProsPanel } from "@/components/ProsPanel";
-import { AddCompanyDialog } from "@/components/AddCompanyDialog";
+import { FamilyRollup } from "@/modules/crm/components/FamilyRollup";
+import { ProsPanel } from "@/modules/crm/components/ProsPanel";
+import { AddCompanyDialog } from "@/modules/crm/components/AddCompanyDialog";
 
 const ROLE_ICONS: Record<string, typeof Crown> = {
   head_of_family: Crown,

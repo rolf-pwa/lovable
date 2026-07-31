@@ -1,12 +1,12 @@
 import { useEffect, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/shared/integrations/supabase/client";
-import { AppLayout } from "@/components/AppLayout";
+import { AppLayout } from "@/shared/components/AppLayout";
 import { Card, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Badge } from "@/shared/components/ui/badge";
 import { Input } from "@/shared/components/ui/input";
-import { PageBreadcrumbs } from "@/components/PageBreadcrumbs";
-import { CrmTabs } from "@/components/CrmTabs";
+import { PageBreadcrumbs } from "@/shared/components/PageBreadcrumbs";
+import { CrmTabs } from "@/modules/crm/components/CrmTabs";
 import { CharterRatificationTile } from "@/modules/audit/components/CharterRatificationTile";
 import { IntakeBackfillTile } from "@/modules/intake/components/IntakeBackfillTile";
 
