@@ -8,7 +8,7 @@ import { Input } from "@/shared/components/ui/input";
 import { PageBreadcrumbs } from "@/components/PageBreadcrumbs";
 import { CrmTabs } from "@/components/CrmTabs";
 import { CharterRatificationTile } from "@/components/CharterRatificationTile";
-import { IntakeBackfillTile } from "@/components/IntakeBackfillTile";
+import { IntakeBackfillTile } from "@/modules/intake/components/IntakeBackfillTile";
 
 import {
   Select,

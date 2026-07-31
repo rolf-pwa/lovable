@@ -1,4 +1,4 @@
-import { Georgia2App } from "@/components/georgia2/Georgia2App";
+import { Georgia2App } from "@/modules/intake/components/georgia2/Georgia2App";
 import { useEffect } from "react";
 
 const DiscoveryV2Embed = () => {
