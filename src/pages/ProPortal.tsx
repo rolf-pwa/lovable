@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent } from "@/shared/components/ui/card";
 import { Crown, ArrowRight, Users } from "lucide-react";
 import { toast } from "sonner";
 import ProPortalShell, { FN, proFetch } from "@/components/pro/ProPortalShell";

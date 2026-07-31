@@ -1,16 +1,16 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/shared/integrations/supabase/client";
 import { AppLayout } from "@/components/AppLayout";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Progress } from "@/components/ui/progress";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
+import { Button } from "@/shared/components/ui/button";
+import { Badge } from "@/shared/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
+import { Input } from "@/shared/components/ui/input";
+import { Textarea } from "@/shared/components/ui/textarea";
+import { Progress } from "@/shared/components/ui/progress";
+import { Switch } from "@/shared/components/ui/switch";
+import { Label } from "@/shared/components/ui/label";
 import {
   ArrowLeft, Bell, BellOff, Trash2, Clock, AlertCircle, Shield,
   ExternalLink, Bot, Grape, FileUp, Loader2, Building2, Users, Plus, X,
@@ -20,8 +20,8 @@ import {
 import { ContactAnalytics } from "@/components/ContactAnalytics";
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator
-} from "@/components/ui/dropdown-menu";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+} from "@/shared/components/ui/dropdown-menu";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/shared/components/ui/collapsible";
 import { toast } from "sonner";
 import { format, differenceInDays, addDays } from "date-fns";
 import { PageBreadcrumbs } from "@/components/PageBreadcrumbs";
@@ -41,7 +41,7 @@ async function resolvePortalBase(contactId: string): Promise<"portal" | "vfo"> {
     false;
   return vfoEnabled ? "vfo" : "portal";
 }
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/shared/hooks/useAuth";
 import { ContactTaskList } from "@/components/ContactTaskList";
 import { ContactRequests } from "@/components/ContactRequests";
 import { ContactCalendar } from "@/components/ContactCalendar";
@@ -61,12 +61,12 @@ import { QuarterlySystemReviewButton } from "@/components/QuarterlySystemReviewB
 import { SovereigntyCharterButton } from "@/components/SovereigntyCharterButton";
 import { GenerateCharterDraftButton } from "@/components/GenerateCharterDraftButton";
 import { VaultView } from "@/pages/Vault";
-import { dialViaQuo } from "@/lib/quo-dial";
+import { dialViaQuo } from "@/shared/lib/quo-dial";
 import { 
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, 
   AlertDialogTitle, AlertDialogTrigger 
-} from "@/components/ui/alert-dialog";
+} from "@/shared/components/ui/alert-dialog";
 
 const STOREHOUSE_NAMES = ["Liquidity Reserve", "Strategic Reserve", "Philanthropic Trust", "Legacy Trust"];
 

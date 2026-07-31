@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Bell } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { cn } from "@/lib/utils";
+import { supabase } from "@/shared/integrations/supabase/client";
+import { cn } from "@/shared/lib/utils";
 import { format } from "date-fns";
 
 interface PortalRequest {

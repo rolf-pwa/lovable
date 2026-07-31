@@ -1,11 +1,11 @@
 import { useGeorgia2 } from "./state";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Button } from "@/shared/components/ui/button";
+import { Input } from "@/shared/components/ui/input";
+import { Label } from "@/shared/components/ui/label";
 import { ArrowLeft, Lock, Loader2 } from "lucide-react";
 import { z } from "zod";
 import { useState } from "react";
-import { trackGeorgia2 } from "@/lib/georgia2/session-tracker";
+import { trackGeorgia2 } from "@/shared/lib/georgia2/session-tracker";
 
 const ContactSchema = z.object({
   first_name: z.string().trim().min(1, "First name required").max(80),

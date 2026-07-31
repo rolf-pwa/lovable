@@ -1,14 +1,14 @@
 import { useState } from "react";
-import { signInWithGoogle } from "@/lib/auth";
-import { useAuth } from "@/hooks/useAuth";
+import { signInWithGoogle } from "@/shared/lib/auth";
+import { useAuth } from "@/shared/hooks/useAuth";
 import { Navigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+import { supabase } from "@/shared/integrations/supabase/client";
+import { Button } from "@/shared/components/ui/button";
+import { Input } from "@/shared/components/ui/input";
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/shared/components/ui/input-otp";
 import { Mail, Loader2 } from "lucide-react";
 import prosperwiseLogo from "@/assets/prosperwise-logo.png";
-import { isAllowedDomain } from "@/lib/auth";
+import { isAllowedDomain } from "@/shared/lib/auth";
 
 const GoogleIcon = () => (
   <svg className="mr-2 h-5 w-5" viewBox="0 0 24 24">

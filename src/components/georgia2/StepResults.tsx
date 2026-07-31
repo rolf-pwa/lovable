@@ -1,8 +1,8 @@
 import { useGeorgia2 } from "./state";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/shared/components/ui/button";
 import { ArrowLeft, Calendar, BookOpen, Wrench, GraduationCap } from "lucide-react";
-import { deriveResult, formatCAD, CATALYST_LABELS, type Pathway } from "@/lib/georgia2/derive";
-import { trackGeorgia2 } from "@/lib/georgia2/session-tracker";
+import { deriveResult, formatCAD, CATALYST_LABELS, type Pathway } from "@/shared/lib/georgia2/derive";
+import { trackGeorgia2 } from "@/shared/lib/georgia2/session-tracker";
 
 export function StepResults() {
   const { state, dispatch } = useGeorgia2();

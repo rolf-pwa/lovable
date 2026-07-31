@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
+import { Button } from "@/shared/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
+import { Badge } from "@/shared/components/ui/badge";
+import { ScrollArea } from "@/shared/components/ui/scroll-area";
+import { Separator } from "@/shared/components/ui/separator";
 import {
   Bot,
   Send,
@@ -14,7 +14,7 @@ import {
   MessageSquare,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
-import { askAssistant, type Message, type FunctionCall, type AssistantResponse } from "@/lib/vertex-ai";
+import { askAssistant, type Message, type FunctionCall, type AssistantResponse } from "@/shared/lib/vertex-ai";
 import { ProposedUpdateCard } from "./ProposedUpdateCard";
 import { toast } from "sonner";
 

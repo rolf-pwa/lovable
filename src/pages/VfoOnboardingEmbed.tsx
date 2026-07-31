@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/shared/components/ui/scroll-area";
+import { Checkbox } from "@/shared/components/ui/checkbox";
 import { Send, Loader2, ShieldCheck, Lock, ArrowUpRight } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";

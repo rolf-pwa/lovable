@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/shared/components/ui/card";
+import { Button } from "@/shared/components/ui/button";
+import { Badge } from "@/shared/components/ui/badge";
 import {
   CheckCircle2,
   Database,
@@ -18,10 +18,10 @@ import {
   MapPin,
   Clock,
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { logAuditAction, type FunctionCall } from "@/lib/vertex-ai";
-import { createGmailDraft } from "@/lib/google-api";
-import { createCalendarEvent } from "@/lib/google-api";
+import { supabase } from "@/shared/integrations/supabase/client";
+import { logAuditAction, type FunctionCall } from "@/shared/lib/vertex-ai";
+import { createGmailDraft } from "@/shared/lib/google-api";
+import { createCalendarEvent } from "@/shared/lib/google-api";
 import { toast } from "sonner";
 
 interface ProposedUpdateCardProps {

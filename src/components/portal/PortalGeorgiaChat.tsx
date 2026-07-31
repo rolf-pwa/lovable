@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/shared/components/ui/dialog";
+import { Button } from "@/shared/components/ui/button";
+import { Input } from "@/shared/components/ui/input";
 import { Send, Loader2, MessageCircle } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { PortalAdminRequestForm } from "./PortalAdminRequestForm";

@@ -4,15 +4,15 @@ import { ArrowLeft, Bot, CheckCircle2, ExternalLink, FileText, FolderSync, Loade
 import { format } from "date-fns";
 import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { useAuth } from "@/hooks/useAuth";
-import { useGoogleStatus, useSyncCharterDriveSources } from "@/hooks/useGoogle";
-import { useAutoSave, AutoSaveIndicator } from "@/hooks/useAutoSave";
-import { draftSovereigntyCharter, isValidSourceUrl, sanitizeSourceText, sanitizeSourceTitle, sanitizeSourceUrl, uploadCharterSourceFile, type CharterDraftStatus, type CharterSourceInputMode, type CharterSourceKind, type CharterSourceRecord } from "@/lib/charter";
+import { supabase } from "@/shared/integrations/supabase/client";
+import { Button } from "@/shared/components/ui/button";
+import { Input } from "@/shared/components/ui/input";
+import { Label } from "@/shared/components/ui/label";
+import { Textarea } from "@/shared/components/ui/textarea";
+import { useAuth } from "@/shared/hooks/useAuth";
+import { useGoogleStatus, useSyncCharterDriveSources } from "@/shared/hooks/useGoogle";
+import { useAutoSave, AutoSaveIndicator } from "@/shared/hooks/useAutoSave";
+import { draftSovereigntyCharter, isValidSourceUrl, sanitizeSourceText, sanitizeSourceTitle, sanitizeSourceUrl, uploadCharterSourceFile, type CharterDraftStatus, type CharterSourceInputMode, type CharterSourceKind, type CharterSourceRecord } from "@/shared/lib/charter";
 import pwLogoWhite from "@/assets/prosperwise-logo-white.png";
 
 type ContactRecord = {

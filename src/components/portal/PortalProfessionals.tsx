@@ -1,5 +1,5 @@
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/shared/components/ui/card";
+import { Badge } from "@/shared/components/ui/badge";
 import { Scale, Calculator, Shield, ScrollText, HeartHandshake, Briefcase, Users } from "lucide-react";
 
 const TYPE_META: Record<string, { label: string; Icon: any }> = {

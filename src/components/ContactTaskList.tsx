@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
-import { parseLocalDate } from "@/lib/date-utils";
-import { supabase } from "@/integrations/supabase/client";
-import { Checkbox } from "@/components/ui/checkbox";
+import { parseLocalDate } from "@/shared/lib/date-utils";
+import { supabase } from "@/shared/integrations/supabase/client";
+import { Checkbox } from "@/shared/components/ui/checkbox";
 import {
   CheckSquare,
   Loader2,
@@ -23,17 +23,17 @@ import {
   Eye,
   EyeOff,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/shared/components/ui/badge";
+import { Button } from "@/shared/components/ui/button";
+import { Input } from "@/shared/components/ui/input";
+import { Textarea } from "@/shared/components/ui/textarea";
+import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import { Separator } from "@/components/ui/separator";
+} from "@/shared/components/ui/collapsible";
+import { Separator } from "@/shared/components/ui/separator";
 import { toast } from "sonner";
 import { AssigneePicker } from "@/components/AssigneePicker";
 

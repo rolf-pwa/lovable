@@ -1,9 +1,9 @@
 import { AppSidebar, SidebarCollapseProvider } from "./AppSidebar";
 import { AssistantSidebar } from "./AssistantSidebar";
 import { DashboardSidebar } from "./DashboardSidebar";
-import { useAuth } from "@/hooks/useAuth";
-import { signOut } from "@/lib/auth";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useAuth } from "@/shared/hooks/useAuth";
+import { signOut } from "@/shared/lib/auth";
+import { Avatar, AvatarFallback, AvatarImage } from "@/shared/components/ui/avatar";
 import { LogOut } from "lucide-react";
 import { format } from "date-fns";
 import { NotificationBell } from "./NotificationBell";

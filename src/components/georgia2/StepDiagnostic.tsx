@@ -1,6 +1,6 @@
 import { useGeorgia2 } from "./state";
-import { Button } from "@/components/ui/button";
-import { Slider } from "@/components/ui/slider";
+import { Button } from "@/shared/components/ui/button";
+import { Slider } from "@/shared/components/ui/slider";
 import { ArrowLeft, ArrowRight, Info } from "lucide-react";
 import {
   CATALYST_QUESTIONS,
@@ -10,9 +10,9 @@ import {
   SCALE_STEP,
   VELVET_ROPE,
   deriveResult,
-} from "@/lib/georgia2/derive";
-import { cn } from "@/lib/utils";
-import { trackGeorgia2 } from "@/lib/georgia2/session-tracker";
+} from "@/shared/lib/georgia2/derive";
+import { cn } from "@/shared/lib/utils";
+import { trackGeorgia2 } from "@/shared/lib/georgia2/session-tracker";
 
 export function StepDiagnostic() {
   const { state, dispatch } = useGeorgia2();

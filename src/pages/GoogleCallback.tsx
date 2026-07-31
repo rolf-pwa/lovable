@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { useExchangeGoogleCode } from "@/hooks/useGoogle";
+import { useExchangeGoogleCode } from "@/shared/hooks/useGoogle";
 import { toast } from "sonner";
 
 const GoogleCallback = () => {

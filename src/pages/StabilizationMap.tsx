@@ -1,15 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
+import { supabase } from "@/shared/integrations/supabase/client";
+import { Button } from "@/shared/components/ui/button";
 import { Loader2, Printer, RefreshCw, ArrowLeft, Save } from "lucide-react";
 import { toast } from "sonner";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/shared/components/ui/input";
+import { Textarea } from "@/shared/components/ui/textarea";
+import { Label } from "@/shared/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
 import { format } from "date-fns";
-import { useAutoSave, AutoSaveIndicator } from "@/hooks/useAutoSave";
+import { useAutoSave, AutoSaveIndicator } from "@/shared/hooks/useAutoSave";
 import pwLogoWhite from "@/assets/prosperwise-logo-white.png";
 
 type StatusKind = "red" | "amber" | "green";

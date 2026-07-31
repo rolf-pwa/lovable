@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { cn } from "@/lib/utils";
+import { cn } from "@/shared/lib/utils";
 
 const TABS = [
   { label: "Individuals", to: "/contacts" },

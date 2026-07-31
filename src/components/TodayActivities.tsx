@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { CheckSquare, Calendar, Pin, Loader2, Pencil, Check, X } from "lucide-react";
 import { format, parseISO, isToday, differenceInCalendarDays } from "date-fns";
-import { parseLocalDate } from "@/lib/date-utils";
-import { supabase } from "@/integrations/supabase/client";
-import { useCalendarEvents, useGoogleStatus } from "@/hooks/useGoogle";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { parseLocalDate } from "@/shared/lib/date-utils";
+import { supabase } from "@/shared/integrations/supabase/client";
+import { useCalendarEvents, useGoogleStatus } from "@/shared/hooks/useGoogle";
+import { Input } from "@/shared/components/ui/input";
+import { Button } from "@/shared/components/ui/button";
 
 const DEFAULT_PINNED_PROJECT_GID = "1214066166978534";
 const PINNED_PROJECT_LABEL = "Pinned Project";

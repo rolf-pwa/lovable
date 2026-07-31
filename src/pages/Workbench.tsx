@@ -1,23 +1,23 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/shared/integrations/supabase/client";
 import { AppLayout } from "@/components/AppLayout";
 import { PageBreadcrumbs } from "@/components/PageBreadcrumbs";
 import { CashflowAnalyst } from "@/components/workbench/CashflowAnalyst";
 
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/shared/components/ui/card";
+import { Badge } from "@/shared/components/ui/badge";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
+} from "@/shared/components/ui/select";
+import { Label } from "@/shared/components/ui/label";
 import { BarChart3, Loader2, Cpu, FileSpreadsheet } from "lucide-react";
 import { Link } from "react-router-dom";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/shared/components/ui/button";
 
 const Workbench = () => {
   const [searchParams] = useSearchParams();

@@ -1,8 +1,8 @@
 import { useState, useCallback, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { supabase } from "@/shared/integrations/supabase/client";
+import { useAuth } from "@/shared/hooks/useAuth";
+import { Input } from "@/shared/components/ui/input";
+import { Button } from "@/shared/components/ui/button";
 import { Plus, Search, X } from "lucide-react";
 import { toast } from "sonner";
 

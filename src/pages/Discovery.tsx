@@ -1,15 +1,15 @@
 import { useState, useRef, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/shared/components/ui/button";
+import { ScrollArea } from "@/shared/components/ui/scroll-area";
+import { Input } from "@/shared/components/ui/input";
+import { Checkbox } from "@/shared/components/ui/checkbox";
+import { Card, CardContent } from "@/shared/components/ui/card";
 import { Send, Loader2, ShieldCheck, Lock, ArrowUpRight } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
-import { supabase } from "@/integrations/supabase/client";
-import { attachExitBeacon, bindGeorgiaSession, trackSessionUpdate } from "@/lib/georgia-session-tracker";
+import { supabase } from "@/shared/integrations/supabase/client";
+import { attachExitBeacon, bindGeorgiaSession, trackSessionUpdate } from "@/shared/lib/georgia-session-tracker";
 
 const FUNCTIONS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
 const SESSION_START_KEY = "georgia_discovery_started_v1";

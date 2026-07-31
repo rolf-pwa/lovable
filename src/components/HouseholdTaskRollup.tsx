@@ -1,15 +1,15 @@
 import { useState, useEffect } from "react";
-import { parseLocalDate } from "@/lib/date-utils";
-import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { parseLocalDate } from "@/shared/lib/date-utils";
+import { supabase } from "@/shared/integrations/supabase/client";
+import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
+import { Badge } from "@/shared/components/ui/badge";
 import { CheckSquare, Clock, Loader2, AlertCircle, ChevronRight, ChevronDown, Users } from "lucide-react";
 import {
   Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle,
-} from "@/components/ui/sheet";
+} from "@/shared/components/ui/sheet";
 import { Link } from "react-router-dom";
 
 interface AsanaTask {

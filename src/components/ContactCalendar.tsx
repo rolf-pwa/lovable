@@ -1,8 +1,8 @@
 import { useMemo } from "react";
-import { useCalendarEvents } from "@/hooks/useGoogle";
-import { useGoogleStatus } from "@/hooks/useGoogle";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { useCalendarEvents } from "@/shared/hooks/useGoogle";
+import { useGoogleStatus } from "@/shared/hooks/useGoogle";
+import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
+import { Button } from "@/shared/components/ui/button";
 import { Calendar, MapPin, Video } from "lucide-react";
 import { format } from "date-fns";
 

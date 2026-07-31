@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
+import { Badge } from "@/shared/components/ui/badge";
 import { Users, ShieldCheck, FileText, Mail, Phone } from "lucide-react";
 import ProPortalShell, { FN, proFetch } from "@/components/pro/ProPortalShell";
 import ProTasksPanel from "@/components/pro/ProTasksPanel";

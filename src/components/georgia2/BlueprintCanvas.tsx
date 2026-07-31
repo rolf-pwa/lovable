@@ -7,8 +7,8 @@ import {
   deriveResult,
   formatCAD,
   georgiaInsights,
-} from "@/lib/georgia2/derive";
-import { cn } from "@/lib/utils";
+} from "@/shared/lib/georgia2/derive";
+import { cn } from "@/shared/lib/utils";
 
 export function BlueprintCanvas() {
   const { state } = useGeorgia2();

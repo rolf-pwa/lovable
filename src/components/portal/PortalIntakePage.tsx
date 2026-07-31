@@ -1,8 +1,8 @@
 import { useRef, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
+import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
+import { Button } from "@/shared/components/ui/button";
+import { Badge } from "@/shared/components/ui/badge";
+import { Progress } from "@/shared/components/ui/progress";
 import {
   Upload,
   Loader2,
@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { useIntakeManifest, type IntakeChecklistItem } from "@/hooks/useIntakeManifest";
+import { useIntakeManifest, type IntakeChecklistItem } from "@/shared/hooks/useIntakeManifest";
 
 interface Props {
   portalToken: string;

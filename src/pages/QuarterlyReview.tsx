@@ -6,23 +6,23 @@ import {
 } from "recharts";
 import { AppLayout } from "@/components/AppLayout";
 import { PageBreadcrumbs } from "@/components/PageBreadcrumbs";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
+import { Button } from "@/shared/components/ui/button";
+import { Input } from "@/shared/components/ui/input";
+import { Label } from "@/shared/components/ui/label";
+import { Badge } from "@/shared/components/ui/badge";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
+} from "@/shared/components/ui/select";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from "@/components/ui/table";
+} from "@/shared/components/ui/table";
 import {
   Upload, Loader2, FileSpreadsheet, CheckCircle2, AlertTriangle, ArrowLeft,
   TrendingUp, Save, X,
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/shared/integrations/supabase/client";
+import { toast } from "@/shared/hooks/use-toast";
 
 type TargetField =
   | "__skip__" | "account_number" | "client_name" | "first_name" | "last_name"

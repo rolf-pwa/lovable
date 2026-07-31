@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/shared/integrations/supabase/client";
 import {
   ExternalLink, FolderOpen, Landmark, ShieldCheck, FileBarChart, ScrollText,
   ChevronDown, ChevronRight,

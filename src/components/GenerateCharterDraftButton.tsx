@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Sparkles, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { supabase } from "@/integrations/supabase/client";
-import { draftSovereigntyCharter, type DraftCharterPayload } from "@/lib/charter";
+import { Button } from "@/shared/components/ui/button";
+import { supabase } from "@/shared/integrations/supabase/client";
+import { draftSovereigntyCharter, type DraftCharterPayload } from "@/shared/lib/charter";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -14,7 +14,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+} from "@/shared/components/ui/alert-dialog";
 
 interface Props {
   contactId: string;

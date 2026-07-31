@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { useGmailMessages } from "@/hooks/useGoogle";
-import { useGoogleStatus } from "@/hooks/useGoogle";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { useGmailMessages } from "@/shared/hooks/useGoogle";
+import { useGoogleStatus } from "@/shared/hooks/useGoogle";
+import { Card } from "@/shared/components/ui/card";
+import { Button } from "@/shared/components/ui/button";
+import { Badge } from "@/shared/components/ui/badge";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/shared/components/ui/collapsible";
 import { Mail, Send, ChevronDown } from "lucide-react";
 import { format } from "date-fns";
 

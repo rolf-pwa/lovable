@@ -1,25 +1,25 @@
 import { useMemo, useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
-import { Separator } from "@/components/ui/separator";
+import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
+import { Button } from "@/shared/components/ui/button";
+import { Badge } from "@/shared/components/ui/badge";
+import { Textarea } from "@/shared/components/ui/textarea";
+import { Separator } from "@/shared/components/ui/separator";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover";
+} from "@/shared/components/ui/popover";
 import {
   Calendar, Mail, Plus, Send, Loader2, Link2Off, Inbox, ExternalLink, ChevronRight,
   MessageSquare, CheckSquare, FileText, X, UserCircle,
 } from "lucide-react";
 import { format, parseISO, formatDistanceToNow } from "date-fns";
-import { parseLocalDate } from "@/lib/date-utils";
+import { parseLocalDate } from "@/shared/lib/date-utils";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
-import { cn } from "@/lib/utils";
+import { supabase } from "@/shared/integrations/supabase/client";
+import { cn } from "@/shared/lib/utils";
 import { AssigneePicker } from "@/components/AssigneePicker";
 import {
   useGoogleStatus,
@@ -27,7 +27,7 @@ import {
   useDisconnectGoogle,
   useCalendarEvents,
   useGmailMessages,
-} from "@/hooks/useGoogle";
+} from "@/shared/hooks/useGoogle";
 
 
 export function CommandCenter() {

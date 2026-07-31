@@ -1,4 +1,4 @@
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent } from "@/shared/components/ui/card";
 import { Users, Scale, Calculator, Shield, ScrollText, HeartHandshake, Briefcase } from "lucide-react";
 
 const TYPE_META: Record<string, { label: string; Icon: any }> = {

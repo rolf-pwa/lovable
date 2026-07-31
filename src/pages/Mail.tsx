@@ -2,13 +2,13 @@ import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { AppLayout } from "@/components/AppLayout";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
+import { Card } from "@/shared/components/ui/card";
+import { Button } from "@/shared/components/ui/button";
+import { Input } from "@/shared/components/ui/input";
+import { Textarea } from "@/shared/components/ui/textarea";
+import { Badge } from "@/shared/components/ui/badge";
+import { ScrollArea } from "@/shared/components/ui/scroll-area";
+import { Separator } from "@/shared/components/ui/separator";
 import {
   Inbox as InboxIcon, Send, Star, Archive, Trash2, RefreshCw, Search,
   Mail as MailIcon, FileText, AlertCircle, Reply, Forward, PenSquare,
@@ -19,8 +19,8 @@ import { format } from "date-fns";
 import {
   listGmailThreads, getGmailThread, modifyGmail, trashGmail,
   sendGmailMessage, getGmailProfile,
-} from "@/lib/google-api";
-import { useGoogleStatus } from "@/hooks/useGoogle";
+} from "@/shared/lib/google-api";
+import { useGoogleStatus } from "@/shared/hooks/useGoogle";
 
 const SYSTEM_LABELS = [
   { id: "INBOX", label: "Inbox", icon: InboxIcon },

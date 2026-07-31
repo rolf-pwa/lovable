@@ -1,8 +1,8 @@
 import { Link } from "react-router-dom";
-import { Progress } from "@/components/ui/progress";
-import { Button } from "@/components/ui/button";
+import { Progress } from "@/shared/components/ui/progress";
+import { Button } from "@/shared/components/ui/button";
 import { Inbox, ArrowRight } from "lucide-react";
-import { useIntakeManifest } from "@/hooks/useIntakeManifest";
+import { useIntakeManifest } from "@/shared/hooks/useIntakeManifest";
 
 interface Props {
   portalToken: string;

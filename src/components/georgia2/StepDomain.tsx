@@ -1,7 +1,7 @@
 import { useGeorgia2 } from "./state";
 import { Building2, User } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { trackGeorgia2 } from "@/lib/georgia2/session-tracker";
+import { cn } from "@/shared/lib/utils";
+import { trackGeorgia2 } from "@/shared/lib/georgia2/session-tracker";
 
 export function StepDomain() {
   const { state, dispatch } = useGeorgia2();

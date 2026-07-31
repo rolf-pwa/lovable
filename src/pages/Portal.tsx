@@ -1,9 +1,9 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/shared/integrations/supabase/client";
 import { toast } from "sonner";
-import { signInWithGoogle } from "@/lib/auth";
+import { signInWithGoogle } from "@/shared/lib/auth";
 import { PortalTerritory } from "@/components/portal/PortalTerritory";
 import { PortalHoldingTank } from "@/components/portal/PortalHoldingTank";
 import { PortalRequests } from "@/components/portal/PortalRequests";
@@ -18,14 +18,14 @@ import { PortalMessages } from "@/components/portal/PortalMessages";
 import { PortalVault } from "@/components/portal/PortalVault";
 import { PortalIntakeBanner } from "@/components/portal/PortalIntakeBanner";
 import { PortalIntakePage } from "@/components/portal/PortalIntakePage";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
+import { Input } from "@/shared/components/ui/input";
+import { Button } from "@/shared/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/shared/components/ui/input-otp";
 import { Grape, ScrollText, Clock, Calendar, FolderOpen, CheckSquare, ShieldCheck, ExternalLink, FileBarChart, Mail, MailX, Loader2, Home, Users, ChevronLeft, ChevronDown, ChevronRight, ArrowRight, Landmark, MessageCircle, Video, MapPin, ClipboardList, LogOut, Megaphone, Building2, FolderLock } from "lucide-react";
 import prosperwiseLogo from "@/assets/prosperwise-logo.png";
-import { insuranceCashForStorehouses, sumValues, isAumStorehouse } from "@/lib/portalAum";
+import { insuranceCashForStorehouses, sumValues, isAumStorehouse } from "@/shared/lib/portalAum";
 
 interface PortalData {
   portal_token?: string;

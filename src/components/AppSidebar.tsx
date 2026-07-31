@@ -1,6 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import prosperwiseLogoColor from "@/assets/prosperwise-logo-color.png";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/shared/hooks/useAuth";
 import {
   LayoutDashboard,
   Users,
@@ -27,12 +27,12 @@ import {
   Briefcase,
   Upload,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { Separator } from "@/components/ui/separator";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { cn } from "@/shared/lib/utils";
+import { Separator } from "@/shared/components/ui/separator";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/shared/components/ui/collapsible";
 import { useEffect, useState, createContext, useContext } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
+import { supabase } from "@/shared/integrations/supabase/client";
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/shared/components/ui/tooltip";
 
 // Context for sidebar collapsed state
 const SidebarCollapseContext = createContext<{ collapsed: boolean; toggle: () => void }>({

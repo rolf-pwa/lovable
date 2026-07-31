@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
-import { isAllowedDomain } from "@/lib/auth";
+import { supabase } from "@/shared/integrations/supabase/client";
+import { isAllowedDomain } from "@/shared/lib/auth";
 
 /**
  * Handles the OAuth callback at the root URL.

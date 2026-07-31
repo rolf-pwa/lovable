@@ -1,5 +1,5 @@
 import { createContext, useContext, useMemo, useReducer, useRef, type ReactNode } from "react";
-import type { Answer, Answers, Catalyst, Domain, Pathway } from "@/lib/georgia2/derive";
+import type { Answer, Answers, Catalyst, Domain, Pathway } from "@/shared/lib/georgia2/derive";
 
 export type Step = 1 | 2 | 3 | 4 | 5 | 6; // 6 = success
 

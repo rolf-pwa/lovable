@@ -5,7 +5,7 @@ import {
   bcContextNotes,
   georgiaInsights,
   VELVET_ROPE,
-} from "@/lib/georgia2/derive";
+} from "@/shared/lib/georgia2/derive";
 
 describe("georgia2 derive", () => {
   it("routes >=1M to VFO", () => {

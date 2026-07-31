@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/shared/components/ui/button";
 import { Bot, X } from "lucide-react";
 import { SovereigntyAssistant } from "./SovereigntyAssistant";
 

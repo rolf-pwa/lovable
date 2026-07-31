@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
+import { supabase } from "@/shared/integrations/supabase/client";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
+import { Card, CardContent } from "@/shared/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/shared/components/ui/dialog";
+import { Badge } from "@/shared/components/ui/badge";
 
-import { Button } from "@/components/ui/button";
+import { Button } from "@/shared/components/ui/button";
 import {
   Loader2, Crown, ShieldCheck, Calendar, CheckSquare, Landmark, FolderLock,
   ClipboardList, MessageCircle, ScrollText, Megaphone, Home, Users, ChevronLeft,
@@ -23,7 +23,7 @@ import { PortalUpdates } from "@/components/portal/PortalUpdates";
 import { PortalGeorgiaChat } from "@/components/portal/PortalGeorgiaChat";
 import { PortalYourTeam } from "@/components/portal/PortalYourTeam";
 import { PortalProfessionals } from "@/components/portal/PortalProfessionals";
-import { insuranceCashForStorehouses, sumValues, isAumStorehouse } from "@/lib/portalAum";
+import { insuranceCashForStorehouses, sumValues, isAumStorehouse } from "@/shared/lib/portalAum";
 import { PortalDynamicLinks } from "@/components/portal/PortalDynamicLinks";
 import prosperwiseLogo from "@/assets/prosperwise-logo.png";
 

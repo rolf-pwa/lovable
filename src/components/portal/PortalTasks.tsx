@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
-import { parseLocalDate } from "@/lib/date-utils";
-import { supabase } from "@/integrations/supabase/client";
+import { parseLocalDate } from "@/shared/lib/date-utils";
+import { supabase } from "@/shared/integrations/supabase/client";
 import { CheckSquare, Clock, AlertCircle, ChevronRight, Loader2, Sparkles, RotateCw, X } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@/shared/components/ui/badge";
 import { PortalTaskConversation } from "./PortalTaskConversation";
-import { cn } from "@/lib/utils";
+import { cn } from "@/shared/lib/utils";
 
 interface AsanaTask {
   gid: string;
