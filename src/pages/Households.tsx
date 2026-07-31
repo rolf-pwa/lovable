@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { PageBreadcrumbs } from "@/components/PageBreadcrumbs";
 import { CrmTabs } from "@/components/CrmTabs";
 import { CharterRatificationTile } from "@/components/CharterRatificationTile";
+import { IntakeBackfillTile } from "@/components/IntakeBackfillTile";
 
 import {
   Select,
@@ -301,6 +302,7 @@ const Households = () => {
             )}
           </div>
           <aside className="space-y-4">
+            <IntakeBackfillTile />
             <CharterRatificationTile />
           </aside>
         </div>
