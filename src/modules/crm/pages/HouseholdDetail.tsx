@@ -808,9 +808,6 @@ const HouseholdDetail = () => {
                   )}
                   Push to Intake Agent
                 </Button>
-                <Button asChild size="sm" variant="ghost">
-                  <Link to="/intake-test">Test Push &amp; Verify</Link>
-                </Button>
                 {household.vault_root_folder_id ? (
                   <Button
                     size="sm"

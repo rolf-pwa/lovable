@@ -52,7 +52,7 @@ const HoldingTankPage = lazy(() => import("@/modules/crm/pages/HoldingTankPage")
 const Onboarding = lazy(() => import("@/modules/intake/pages/Onboarding"));
 const BulkOnboarding = lazy(() => import("@/modules/intake/pages/BulkOnboarding"));
 const BulkImporters = lazy(() => import("@/modules/intake/pages/BulkImporters"));
-const IntakeTest = lazy(() => import("@/modules/intake/pages/IntakeTest"));
+
 const Analytics = lazy(() => import("@/modules/crm/pages/Analytics"));
 const StabilizationMap = lazy(() => import("@/modules/audit/pages/StabilizationMap"));
 const StabilizationMapResolver = lazy(() => import("@/modules/audit/pages/StabilizationMapResolver"));
@@ -113,7 +113,6 @@ const App = () => (
               <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
               <Route path="/onboarding/bulk" element={<ProtectedRoute><BulkOnboarding /></ProtectedRoute>} />
               <Route path="/importers" element={<ProtectedRoute><BulkImporters /></ProtectedRoute>} />
-              <Route path="/intake-test" element={<ProtectedRoute><IntakeTest /></ProtectedRoute>} />
 
               <Route path="/families" element={<ProtectedRoute><Families /></ProtectedRoute>} />
               <Route path="/families/:id" element={<ProtectedRoute><FamilyDetail /></ProtectedRoute>} />
