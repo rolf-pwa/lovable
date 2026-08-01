@@ -13,11 +13,13 @@ import type {
   ILibrarianProvider,
 } from "./types";
 import { edgeIntakeAgent } from "./intake/edgeIntakeAgent";
+import { inHouseIntakeAgent } from "./intake/inHouseIntakeAgent";
 import { derivedAuditAgent } from "./audit/derivedAuditAgent";
 import { vaultLibrarian } from "./librarian/vaultLibrarian";
 
 const intakeProviders: Record<string, IIntakeAgentProvider> = {
   edge: edgeIntakeAgent,
+  inhouse: inHouseIntakeAgent,
 };
 
 const auditProviders: Record<string, IAuditAgentProvider> = {
