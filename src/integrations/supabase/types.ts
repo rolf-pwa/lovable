@@ -1653,6 +1653,105 @@ export type Database = {
           },
         ]
       }
+      intake_checklist_templates: {
+        Row: {
+          category: string | null
+          created_at: string
+          household_type: string | null
+          id: string
+          is_active: boolean
+          name: string
+          requirement: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          household_type?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          requirement?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          household_type?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          requirement?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      intake_classifications: {
+        Row: {
+          confidence: number | null
+          created_at: string
+          drive_file_id: string | null
+          file_name: string
+          household_id: string
+          id: string
+          matched_checklist_template_id: string | null
+          mime_type: string | null
+          predicted_category: string | null
+          review_required: boolean
+          size_bytes: number | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          confidence?: number | null
+          created_at?: string
+          drive_file_id?: string | null
+          file_name: string
+          household_id: string
+          id?: string
+          matched_checklist_template_id?: string | null
+          mime_type?: string | null
+          predicted_category?: string | null
+          review_required?: boolean
+          size_bytes?: number | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          confidence?: number | null
+          created_at?: string
+          drive_file_id?: string | null
+          file_name?: string
+          household_id?: string
+          id?: string
+          matched_checklist_template_id?: string | null
+          mime_type?: string | null
+          predicted_category?: string | null
+          review_required?: boolean
+          size_bytes?: number | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_intake_classifications_template"
+            columns: ["matched_checklist_template_id"]
+            isOneToOne: false
+            referencedRelation: "intake_checklist_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "intake_classifications_household_id_fkey"
+            columns: ["household_id"]
+            isOneToOne: false
+            referencedRelation: "households"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       knowledge_base: {
         Row: {
           category: string
