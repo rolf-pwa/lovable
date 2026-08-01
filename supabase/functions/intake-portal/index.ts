@@ -564,24 +564,13 @@ async function handleInhouseManifest(
   cors: Record<string, string>,
   resolved: Resolved,
 ): Promise<Response> {
-  const [{ data: hh }, { data: family }] = await Promise.all([
-    admin.from("households").select("id, label, family_id").eq("id", resolved.householdId).maybeSingle(),
-    admin.from("families").select("id, name").in(
-      "id",
-      (await admin.from("households").select("family_id").eq("id", resolved.householdId).maybeSingle())?.data?.family_id
-        ? [(await admin.from("households").select("family_id").eq("id", resolved.householdId).maybeSingle())?.data?.family_id]
-        : [],
-    ),
-  ]);
-
-  // Better family lookup
-  const household = await admin
+  const { data: household } = await admin
     .from("households")
     .select("id, label, family_id, families(name)")
     .eq("id", resolved.householdId)
     .maybeSingle();
-  const familyName = (household.data as any)?.families?.name ?? "Family";
-  const householdName = (household.data)?.label ?? "Household";
+  const familyName = (household as any)?.families?.name ?? "Family";
+  const householdName = household?.label ?? "Household";
 
   const [{ data: templates }, { data: classifications }] = await Promise.all([
     admin
