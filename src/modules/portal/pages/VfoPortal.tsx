@@ -26,6 +26,7 @@ import { PortalProfessionals } from "@/modules/portal/components/PortalProfessio
 import { insuranceCashForStorehouses, sumValues, isAumStorehouse } from "@/modules/portal/lib/portalAum";
 import { PortalDynamicLinks } from "@/modules/portal/components/PortalDynamicLinks";
 import prosperwiseLogo from "@/assets/prosperwise-logo.png";
+import prosperwiseIconPaper from "@/assets/prosperwise-icon-paper.png";
 
 const CORP_TYPE_LABELS: Record<string, string> = { opco: "Operating Co", holdco: "Holding Co", trust: "Trust", partnership: "Partnership", other: "Entity" };
 
@@ -724,7 +725,7 @@ const VfoPortal = () => {
         <div className="max-w-7xl mx-auto px-6 py-8">
           <div className="flex items-start justify-between gap-6 flex-wrap">
             <div className="flex items-center gap-4 min-w-0">
-              <img src={prosperwiseLogo} alt="" className="h-10 w-10 opacity-90" />
+              <img src={prosperwiseIconPaper} alt="" className="h-10 w-10 opacity-90" />
               <div className="min-w-0">
                 <h1 className="font-serif text-3xl md:text-4xl text-primary-foreground leading-tight truncate">
                   {familyName} Family Office
