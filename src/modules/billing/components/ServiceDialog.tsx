@@ -16,6 +16,7 @@ export interface ServiceRecord {
   category: string | null;
   price: number;
   currency: string;
+  tax_rate?: number | null;
   duration_minutes: number | null;
   is_active: boolean;
   square_catalog_object_id: string | null;
@@ -36,6 +37,7 @@ export function ServiceDialog({ open, onOpenChange, service, onSaved }: Props) {
   const [category, setCategory] = useState(service?.category ?? "");
   const [price, setPrice] = useState(service ? String(service.price) : "");
   const [duration, setDuration] = useState(service?.duration_minutes ? String(service.duration_minutes) : "");
+  const [taxRate, setTaxRate] = useState(service ? String(service.tax_rate ?? 0) : "5");
   const [isActive, setIsActive] = useState(service?.is_active ?? true);
   const [saving, setSaving] = useState(false);
 
@@ -51,6 +53,7 @@ export function ServiceDialog({ open, onOpenChange, service, onSaved }: Props) {
       category: category.trim() || null,
       price: Number(price || 0),
       duration_minutes: duration ? Number(duration) : null,
+      tax_rate: Number(taxRate || 0),
       is_active: isActive,
     };
 
@@ -105,6 +108,22 @@ export function ServiceDialog({ open, onOpenChange, service, onSaved }: Props) {
                 onChange={(e) => setPrice(e.target.value)}
               />
             </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="svc-tax">Sales tax rate (%)</Label>
+            <Input
+              id="svc-tax"
+              type="number"
+              min="0"
+              max="100"
+              step="0.01"
+              value={taxRate}
+              onChange={(e) => setTaxRate(e.target.value)}
+              placeholder="5"
+            />
+            <p className="text-xs text-muted-foreground">
+              Use 5 for GST. Applied automatically to invoice lines using this service.
+            </p>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">

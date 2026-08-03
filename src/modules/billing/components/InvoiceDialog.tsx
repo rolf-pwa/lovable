@@ -4,6 +4,7 @@ import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
 import { Textarea } from "@/shared/components/ui/textarea";
+import { Switch } from "@/shared/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/shared/components/ui/dialog";
 import { Loader2, Plus, Trash2 } from "lucide-react";
@@ -29,12 +30,13 @@ const emptyLine = (): LineDraft => ({ service_id: null, description: "", quantit
 
 export function InvoiceDialog({ open, onOpenChange, invoiceId, onSaved }: Props) {
   const [contacts, setContacts] = useState<{ id: string; full_name: string; email: string | null }[]>([]);
-  const [services, setServices] = useState<{ id: string; name: string; price: number }[]>([]);
+  const [services, setServices] = useState<{ id: string; name: string; price: number; tax_rate?: number | null }[]>([]);
   const [contactId, setContactId] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [notes, setNotes] = useState("");
   const [discount, setDiscount] = useState("0");
   const [tax, setTax] = useState("0");
+  const [autoTax, setAutoTax] = useState(true);
   const [lines, setLines] = useState<LineDraft[]>([emptyLine()]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -46,7 +48,7 @@ export function InvoiceDialog({ open, onOpenChange, invoiceId, onSaved }: Props)
       setLoading(true);
       const [{ data: contactData }, { data: serviceData }] = await Promise.all([
         supabase.from("contacts").select("id, full_name, email").order("full_name"),
-        supabase.from("services" as any).select("id, name, price").eq("is_active", true).order("name"),
+        supabase.from("services" as any).select("id, name, price, tax_rate").eq("is_active", true).order("name"),
       ]);
       setContacts((contactData as any) || []);
       setServices((serviceData as any) || []);
@@ -62,6 +64,7 @@ export function InvoiceDialog({ open, onOpenChange, invoiceId, onSaved }: Props)
         setNotes(invoice?.notes || "");
         setDiscount(String(invoice?.discount_amount ?? 0));
         setTax(String(invoice?.tax_amount ?? 0));
+        setAutoTax(false);
         setReadOnly(Boolean(invoice && invoice.status !== "draft"));
         setLines(
           ((lineData as any[]) || []).map((l) => ({
@@ -79,6 +82,7 @@ export function InvoiceDialog({ open, onOpenChange, invoiceId, onSaved }: Props)
         setNotes("");
         setDiscount("0");
         setTax("0");
+        setAutoTax(true);
         setReadOnly(false);
         setLines([emptyLine()]);
       }
@@ -86,14 +90,30 @@ export function InvoiceDialog({ open, onOpenChange, invoiceId, onSaved }: Props)
     })();
   }, [open, invoiceId]);
 
+  const computedTax = useMemo(
+    () =>
+      round2(
+        lines.reduce((acc, l) => {
+          const rate = Number(services.find((s) => s.id === l.service_id)?.tax_rate ?? 0);
+          if (!rate) return acc;
+          return acc + Number(l.quantity || 0) * Number(l.unit_amount || 0) * (rate / 100);
+        }, 0),
+      ),
+    [lines, services],
+  );
+
+  useEffect(() => {
+    if (autoTax && !readOnly) setTax(String(computedTax));
+  }, [autoTax, computedTax, readOnly]);
+
   const totals = useMemo(() => {
     const subtotal = round2(
       lines.reduce((acc, l) => acc + Number(l.quantity || 0) * Number(l.unit_amount || 0), 0),
     );
     const d = Number(discount || 0);
-    const t = Number(tax || 0);
+    const t = autoTax ? computedTax : Number(tax || 0);
     return { subtotal, discount: d, tax: t, total: round2(subtotal - d + t) };
-  }, [lines, discount, tax]);
+  }, [lines, discount, tax, autoTax, computedTax]);
 
   const applyService = (index: number, serviceId: string) => {
     const svc = services.find((s) => s.id === serviceId);
@@ -315,21 +335,33 @@ export function InvoiceDialog({ open, onOpenChange, invoiceId, onSaved }: Props)
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="inv-tax">Tax (CAD)</Label>
+                <Label htmlFor="inv-tax">Tax / GST (CAD)</Label>
                 <Input
                   id="inv-tax"
                   type="number"
                   min="0"
                   step="0.01"
-                  value={tax}
+                  value={autoTax ? String(computedTax) : tax}
                   onChange={(e) => setTax(e.target.value)}
-                  disabled={readOnly}
+                  disabled={readOnly || autoTax}
                 />
+                {!readOnly && (
+                  <div className="flex items-center gap-2">
+                    <Switch id="inv-auto-tax" checked={autoTax} onCheckedChange={setAutoTax} />
+                    <Label htmlFor="inv-auto-tax" className="text-xs text-muted-foreground">
+                      Auto-calculate from service tax rates
+                    </Label>
+                  </div>
+                )}
               </div>
               <div className="rounded-md border border-border p-3 text-sm">
                 <div className="flex justify-between text-muted-foreground">
                   <span>Subtotal</span>
                   <span>{formatMoney(totals.subtotal)}</span>
+                </div>
+                <div className="mt-1 flex justify-between text-muted-foreground">
+                  <span>Tax</span>
+                  <span>{formatMoney(totals.tax)}</span>
                 </div>
                 <div className="mt-1 flex justify-between font-semibold">
                   <span>Total</span>
