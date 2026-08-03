@@ -79,12 +79,29 @@ Staff side
 | Staff push to agent | `src/modules/crm/pages/HouseholdDetail.tsx` |
 | Agent callback | `supabase/functions/crm-intake-callback/index.ts` |
 
+## Change to make first: autonomous vault provisioning
+
+Today the vault push is staff-triggered only. `crm-intake-push/index.ts` authenticates with `supabaseUser.auth.getUser()` and returns 401 without a staff session, and the only caller is the "Push to Audit Agent" button in `HouseholdDetail.tsx`. So a new paid client sits with an unprovisioned vault until someone in the office clicks it.
+
+Fix: make enrollment provision the vault itself.
+
+1. **Extract the push into a shared helper** — move the payload-building and signed POST body of `crm-intake-push` into `supabase/functions/_shared/intake-push.ts`, exporting `pushHouseholdToIntakeAgent(admin, householdId, pushedBy | null)`. It keeps writing the `crm_intake_pushes` log row and returns `{ ok, itemsSent, members, error }`.
+2. **Thin out the edge function** — `crm-intake-push/index.ts` keeps its staff auth check and just calls the helper, so the manual button behaves exactly as it does now.
+3. **Call it from enrollment** — at the end of `enrollPaidBooking`, once the contact/household exist and the household has no `intake_share_token` yet, call the helper. Do it in a try/catch so a provisioning failure never blocks the payment or the contact creation.
+4. **Notify staff on outcome, not on the to-do** — replace the current "provision the vault to start the Audit" wording in the `staff_notifications` insert with either "vault provisioning started automatically" or, on failure, "automatic vault provisioning failed — push manually" so the office knows when to intervene.
+5. **Idempotency** — skip the push when `intake_share_token` is already set, and skip when a `crm_intake_pushes` row for that household is already in `sent`/`accepted` within the last few minutes, so the Square webhook and the `/book/confirm` polling fallback can't double-push.
+6. **Keep the manual button** — it stays as the retry path and for households created outside the payment flow (bulk onboarding, manual CRM entry).
+
 ## Proposed review checklist
+
 
 1. **End-to-end smoke test**
    - Visit `/pay/<service-slug>` as an anonymous user.
    - Complete a Square sandbox payment.
    - Confirm `/book/confirm` shows "Payment received" and scheduling link.
+   - Verify a new Contact, Family, and Household were created with `governance_status = stabilization`.
+   - Verify the vault push fired automatically: a `crm_intake_pushes` row exists and the household gets `intake_share_token` once the agent calls back.
+   - Verify staff notification reflects the provisioning outcome.
    - Verify a new Contact, Family, and Household were created with `governance_status = stabilization`.
    - Verify staff notification was created.
 
