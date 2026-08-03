@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { LogOut } from "lucide-react";
-import prosperwiseLogo from "@/assets/prosperwise-logo.png";
+import prosperwiseLogo from "@/assets/prosperwise-icon-paper.png";
 import { useCallback, useEffect, useRef } from "react";
 import { toast } from "sonner";
 
