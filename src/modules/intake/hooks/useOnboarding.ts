@@ -110,11 +110,13 @@ export function useOnboarding(portalToken?: string) {
     confirmAuditBooked: () => mutate({ action: "onboarding_audit_booked" }),
     saveProfile: (input: {
       householdName: string;
+      primaryName?: string;
       address: string;
       phone?: string;
       email?: string;
       members: OnboardingMemberInput[];
     }) => mutate({ action: "onboarding_profile", ...input }),
+
     saveWealthEvent: (wealthEventType: WealthEventType, notes: string) =>
       mutate({ action: "onboarding_wealth_event", wealthEventType, notes }),
     markDocumentsComplete: () => mutate({ action: "onboarding_documents_complete" }),

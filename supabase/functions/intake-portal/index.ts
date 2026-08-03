@@ -839,6 +839,7 @@ async function handleOnboardingAction(
     const householdName = str(payload?.householdName, 120);
     const address = str(payload?.address, 400);
     const phone = str(payload?.phone, 40);
+    const primaryName = str(payload?.primaryName, 120);
     const email = str(payload?.email, 200).toLowerCase();
     const rawMembers = Array.isArray(payload?.members) ? payload.members.slice(0, 20) : [];
 
@@ -850,7 +851,7 @@ async function handleOnboardingAction(
 
     const { data: primary } = await admin
       .from("contacts")
-      .select("id, family_id, created_by, email")
+      .select("id, family_id, created_by, email, full_name")
       .eq("id", resolved.contactId)
       .maybeSingle();
     if (!primary) return json({ error: "Contact not found" }, 404);
@@ -862,16 +863,41 @@ async function handleOnboardingAction(
       .eq("id", resolved.householdId);
     if (hhErr) return json({ error: hhErr.message }, 500);
 
-    // 2. Head-of-family contact
+    // 2. Head-of-family contact (their own name wins over any checkout guess)
+    let namePatch: Record<string, unknown> = {};
+    if (primaryName) {
+      const parts = primaryName.split(/\s+/).filter(Boolean);
+      namePatch = {
+        full_name: primaryName,
+        first_name: parts[0],
+        last_name: parts.slice(1).join(" ") || parts[0],
+      };
+    }
     const { error: cErr } = await admin
       .from("contacts")
       .update({
         address,
+        ...namePatch,
         ...(phone ? { phone } : {}),
         ...(email ? { email } : {}),
       })
       .eq("id", resolved.contactId);
     if (cErr) return json({ error: cErr.message }, 500);
+
+    // 2b. Placeholder family names created at checkout get corrected too.
+    if (primaryName && primary.family_id) {
+      const { data: family } = await admin
+        .from("families")
+        .select("id, name")
+        .eq("id", primary.family_id)
+        .maybeSingle();
+      const surname =
+        primaryName.split(/\s+/).filter(Boolean).slice(1).join(" ") || primaryName;
+      if (family && /^(client|new client)\b/i.test(String(family.name ?? ""))) {
+        await admin.from("families").update({ name: `${surname} Family` }).eq("id", family.id);
+      }
+    }
+
 
     // 3. Household members → contacts (skip anything already on file by email/name)
     const { data: existing } = await admin
