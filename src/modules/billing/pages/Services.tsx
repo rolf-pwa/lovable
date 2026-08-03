@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui
 import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table";
-import { Loader2, Plus, Pencil, RefreshCw, CloudUpload, AlertTriangle } from "lucide-react";
+import { Loader2, Plus, Pencil, RefreshCw, CloudUpload, AlertTriangle, Link as LinkIcon } from "lucide-react";
 import { toast } from "sonner";
 import { ServiceDialog, type ServiceRecord } from "../components/ServiceDialog";
 import { BookingsPanel } from "../components/BookingsPanel";
