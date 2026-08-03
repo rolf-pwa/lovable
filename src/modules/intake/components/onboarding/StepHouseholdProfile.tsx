@@ -219,7 +219,8 @@ export const StepHouseholdProfile = ({ state, saving, onSave }: Props) => {
           onClick={() =>
             onSave({
               householdName: householdName.trim(),
-              address: address.trim(),
+              primaryName: primaryName.trim(),
+
               phone: phone.trim(),
               email: email.trim(),
               members: members.filter((m) => m.fullName.trim().length > 0),
