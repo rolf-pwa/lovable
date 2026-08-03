@@ -52,6 +52,9 @@ const HoldingTankPage = lazy(() => import("@/modules/crm/pages/HoldingTankPage")
 const Onboarding = lazy(() => import("@/modules/intake/pages/Onboarding"));
 const BulkOnboarding = lazy(() => import("@/modules/intake/pages/BulkOnboarding"));
 const BulkImporters = lazy(() => import("@/modules/intake/pages/BulkImporters"));
+const BillingServices = lazy(() => import("@/modules/billing/pages/Services"));
+const BillingInvoices = lazy(() => import("@/modules/billing/pages/Invoices"));
+const BookService = lazy(() => import("@/modules/billing/pages/BookService"));
 
 const Analytics = lazy(() => import("@/modules/crm/pages/Analytics"));
 const StabilizationMap = lazy(() => import("@/modules/audit/pages/StabilizationMap"));
