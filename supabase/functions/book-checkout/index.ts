@@ -45,12 +45,53 @@ Deno.serve(async (req) => {
       if (!bookingId) return json({ ok: false, error: "bookingId is required" }, 400);
       const { data: bk } = await client
         .from("service_bookings")
-        .select("id, status, payment_status, total, currency, scheduling_url, service_id, paid_at")
+        .select(
+          "id, status, payment_status, total, currency, scheduling_url, service_id, paid_at, square_order_id, requester_name, requester_email",
+        )
         .eq("id", bookingId)
         .maybeSingle();
       if (!bk) return json({ ok: false, error: "Booking not found" }, 404);
-      return json({ ok: true, booking: bk });
+
+      // Fall back to Square if the webhook hasn't landed yet.
+      if (
+        bk.payment_status !== "paid" &&
+        bk.square_order_id &&
+        Deno.env.get("SQUARE_ACCESS_TOKEN")
+      ) {
+        const orderRes = await square(`/orders/${bk.square_order_id}`);
+        const order = orderRes.data?.order;
+        const paid =
+          orderRes.ok &&
+          (String(order?.state || "").toUpperCase() === "COMPLETED" ||
+            Number(order?.net_amount_due_money?.amount ?? 1) === 0);
+        if (paid) {
+          const paidAt = bk.paid_at || new Date().toISOString();
+          await client
+            .from("service_bookings")
+            .update({ payment_status: "paid", status: "confirmed", paid_at: paidAt })
+            .eq("id", bk.id);
+          bk.payment_status = "paid";
+          bk.status = "confirmed";
+          bk.paid_at = paidAt;
+        }
+      }
+
+      return json({
+        ok: true,
+        booking: {
+          id: bk.id,
+          status: bk.status,
+          payment_status: bk.payment_status,
+          total: bk.total,
+          currency: bk.currency,
+          scheduling_url: bk.scheduling_url,
+          requester_name: bk.requester_name,
+          requester_email: bk.requester_email,
+          paid_at: bk.paid_at,
+        },
+      });
     }
+
 
     if (action !== "createCheckout") return json({ ok: false, error: `Unknown action: ${action}` }, 400);
 
