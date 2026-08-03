@@ -178,6 +178,12 @@ Deno.serve(async (req) => {
     }
 
     if (!requiresPayment) {
+      if (quick) {
+        return json({
+          ok: false,
+          error: "This service doesn't take online payment — please use the booking form.",
+        }, 400);
+      }
       return json({
         ok: true,
         bookingId: booking.id,
@@ -185,6 +191,7 @@ Deno.serve(async (req) => {
         schedulingUrl: svc.booking_url || null,
       });
     }
+
 
     if (!Deno.env.get("SQUARE_ACCESS_TOKEN") || !Deno.env.get("SQUARE_LOCATION_ID")) {
       return json({ ok: false, error: "Online payment is not available right now." }, 400);
