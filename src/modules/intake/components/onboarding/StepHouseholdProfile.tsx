@@ -220,6 +220,8 @@ export const StepHouseholdProfile = ({ state, saving, onSave }: Props) => {
             onSave({
               householdName: householdName.trim(),
               primaryName: primaryName.trim(),
+              address: address.trim(),
+
 
               phone: phone.trim(),
               email: email.trim(),
