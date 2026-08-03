@@ -85,7 +85,7 @@ export function PortalIntakePage({ portalToken, onBack, onAskForHelp }: Props) {
           <ArrowLeft className="h-3.5 w-3.5" />
           Back to portal
         </button>
-        <h1 className="font-serif text-2xl text-foreground">Document Intake</h1>
+        <h1 className="font-serif text-2xl text-foreground">Sovereignty Audit</h1>
         <p className="text-sm text-muted-foreground">
           {manifest?.householdName
             ? `${manifest.householdName} · secure Canadian infrastructure`

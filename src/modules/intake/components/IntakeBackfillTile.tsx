@@ -85,7 +85,7 @@ export const IntakeBackfillTile = () => {
       <CardHeader className="pb-3">
         <CardTitle className="text-sm flex items-center gap-2">
           <ShieldCheck className="h-4 w-4 text-sanctuary-bronze" />
-          Intake Agent Tokens
+          Audit Agent Tokens
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -99,7 +99,7 @@ export const IntakeBackfillTile = () => {
             </div>
             <p className="text-xs text-muted-foreground">
               Households without a portal share token can&apos;t show the client intake page.
-              Re-push them to the Intake Agent to populate it.
+              Re-push them to the Audit Agent to populate it.
             </p>
             <Button
               size="sm"
