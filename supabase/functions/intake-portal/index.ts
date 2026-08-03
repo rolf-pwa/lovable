@@ -704,6 +704,260 @@ async function handleInhouseManifest(
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
+//  GUIDED ONBOARDING — steps 1-3 (step 4 is the document manifest above)
+// ═════════════════════════════════════════════════════════════════════════════
+
+const WEALTH_EVENTS = [
+  "inheritance",
+  "divorce",
+  "retirement",
+  "business_exit",
+  "business_growth",
+  "other_sudden_wealth",
+] as const;
+
+const MEMBER_ROLES: Record<string, string> = {
+  spouse: "spouse",
+  child: "beneficiary",
+  dependant: "beneficiary",
+  other: "beneficiary",
+};
+
+const str = (v: unknown, max = 300) => String(v ?? "").trim().slice(0, max);
+
+async function loadOnboarding(resolved: Resolved) {
+  const [{ data: household }, { data: contact }, { data: members }, { data: booking }] =
+    await Promise.all([
+      admin
+        .from("households")
+        .select(
+          "id, label, address, onboarding_step, onboarding_completed_at, audit_booked_at, profile_completed_at, wealth_event_type, wealth_event_notes, wealth_event_completed_at, intake_share_token, vault_root_folder_id",
+        )
+        .eq("id", resolved.householdId)
+        .maybeSingle(),
+      admin
+        .from("contacts")
+        .select("id, first_name, last_name, full_name, email, phone, address, family_role")
+        .eq("id", resolved.contactId)
+        .maybeSingle(),
+      admin
+        .from("contacts")
+        .select("id, full_name, first_name, last_name, email, family_role, is_minor")
+        .eq("household_id", resolved.householdId)
+        .order("created_at", { ascending: true }),
+      admin
+        .from("service_bookings")
+        .select("id, scheduling_url, starts_at, payment_status, paid_at, services(name)")
+        .eq("contact_id", resolved.contactId)
+        .eq("payment_status", "paid")
+        .order("paid_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+    ]);
+
+  const vaultReady = !!(household?.intake_share_token || household?.vault_root_folder_id);
+
+  return {
+    ok: true,
+    household: {
+      id: household?.id,
+      label: household?.label ?? "",
+      address: household?.address ?? "",
+      step: household?.onboarding_step ?? 1,
+      auditBookedAt: household?.audit_booked_at ?? null,
+      profileCompletedAt: household?.profile_completed_at ?? null,
+      wealthEventType: household?.wealth_event_type ?? null,
+      wealthEventNotes: household?.wealth_event_notes ?? "",
+      wealthEventCompletedAt: household?.wealth_event_completed_at ?? null,
+      onboardingCompletedAt: household?.onboarding_completed_at ?? null,
+      vaultReady,
+    },
+    contact: {
+      id: contact?.id,
+      firstName: contact?.first_name ?? "",
+      lastName: contact?.last_name ?? "",
+      fullName: contact?.full_name ?? "",
+      email: contact?.email ?? "",
+      phone: contact?.phone ?? "",
+    },
+    members: (members ?? [])
+      .filter((m: any) => m.id !== resolved.contactId)
+      .map((m: any) => ({
+        id: m.id,
+        fullName: m.full_name,
+        email: m.email,
+        role: m.family_role,
+      })),
+    booking: booking
+      ? {
+        id: booking.id,
+        schedulingUrl: booking.scheduling_url,
+        serviceName: (booking as any).services?.name ?? null,
+      }
+      : null,
+    wealthEventOptions: WEALTH_EVENTS,
+  };
+}
+
+/** Bump the stored step forward only (never backwards). */
+async function advanceStep(householdId: string, step: number, patch: Record<string, unknown> = {}) {
+  const { data: hh } = await admin
+    .from("households")
+    .select("onboarding_step")
+    .eq("id", householdId)
+    .maybeSingle();
+  const current = hh?.onboarding_step ?? 1;
+  const { error } = await admin
+    .from("households")
+    .update({ ...patch, onboarding_step: Math.max(current, step) })
+    .eq("id", householdId);
+  if (error) throw new Error(error.message);
+}
+
+async function handleOnboardingAction(
+  action: string,
+  payload: any,
+  cors: Record<string, string>,
+  resolved: Resolved,
+): Promise<Response> {
+  const json = (body: unknown, status = 200) =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { ...cors, "Content-Type": "application/json" },
+    });
+
+  if (action === "onboarding") {
+    return json(await loadOnboarding(resolved));
+  }
+
+  if (action === "onboarding_audit_booked") {
+    await advanceStep(resolved.householdId, 2, { audit_booked_at: new Date().toISOString() });
+    return json(await loadOnboarding(resolved));
+  }
+
+  if (action === "onboarding_profile") {
+    const householdName = str(payload?.householdName, 120);
+    const address = str(payload?.address, 400);
+    const phone = str(payload?.phone, 40);
+    const email = str(payload?.email, 200).toLowerCase();
+    const rawMembers = Array.isArray(payload?.members) ? payload.members.slice(0, 20) : [];
+
+    if (!householdName) return json({ error: "Household name is required" }, 400);
+    if (!address) return json({ error: "Address is required" }, 400);
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return json({ error: "That email address doesn't look right" }, 400);
+    }
+
+    const { data: primary } = await admin
+      .from("contacts")
+      .select("id, family_id, created_by, email")
+      .eq("id", resolved.contactId)
+      .maybeSingle();
+    if (!primary) return json({ error: "Contact not found" }, 404);
+
+    // 1. Household record
+    const { error: hhErr } = await admin
+      .from("households")
+      .update({ label: householdName, address })
+      .eq("id", resolved.householdId);
+    if (hhErr) return json({ error: hhErr.message }, 500);
+
+    // 2. Head-of-family contact
+    const { error: cErr } = await admin
+      .from("contacts")
+      .update({
+        address,
+        ...(phone ? { phone } : {}),
+        ...(email ? { email } : {}),
+      })
+      .eq("id", resolved.contactId);
+    if (cErr) return json({ error: cErr.message }, 500);
+
+    // 3. Household members → contacts (skip anything already on file by email/name)
+    const { data: existing } = await admin
+      .from("contacts")
+      .select("id, full_name, email")
+      .eq("household_id", resolved.householdId);
+    const seenEmails = new Set(
+      (existing ?? []).map((c: any) => String(c.email ?? "").toLowerCase()).filter(Boolean),
+    );
+    const seenNames = new Set(
+      (existing ?? []).map((c: any) => String(c.full_name ?? "").trim().toLowerCase()).filter(Boolean),
+    );
+
+    let createdMembers = 0;
+    for (const raw of rawMembers) {
+      const fullName = str(raw?.fullName, 120);
+      if (!fullName) continue;
+      const memberEmail = str(raw?.email, 200).toLowerCase();
+      const relationship = str(raw?.relationship, 30).toLowerCase();
+      if (memberEmail && seenEmails.has(memberEmail)) continue;
+      if (seenNames.has(fullName.toLowerCase())) continue;
+
+      const parts = fullName.split(/\s+/);
+      const first = parts[0];
+      const last = parts.slice(1).join(" ") || parts[0];
+      const { error: insErr } = await admin.from("contacts").insert({
+        full_name: fullName,
+        first_name: first,
+        last_name: last,
+        email: memberEmail || null,
+        address,
+        family_id: primary.family_id,
+        household_id: resolved.householdId,
+        family_role: MEMBER_ROLES[relationship] ?? "beneficiary",
+        is_minor: relationship === "child" || relationship === "dependant"
+          ? !!raw?.isMinor
+          : false,
+        created_by: primary.created_by,
+      });
+      if (insErr) {
+        console.error("[IntakePortal] member insert failed:", insErr.message);
+        continue;
+      }
+      createdMembers += 1;
+      if (memberEmail) seenEmails.add(memberEmail);
+      seenNames.add(fullName.toLowerCase());
+    }
+
+    await advanceStep(resolved.householdId, 3, { profile_completed_at: new Date().toISOString() });
+    const state = await loadOnboarding(resolved);
+    return json({ ...state, createdMembers });
+  }
+
+  if (action === "onboarding_wealth_event") {
+    const type = str(payload?.wealthEventType, 40).toLowerCase();
+    const notes = str(payload?.notes, 4000);
+    if (!WEALTH_EVENTS.includes(type as (typeof WEALTH_EVENTS)[number])) {
+      return json({ error: "Please choose a wealth event" }, 400);
+    }
+    await advanceStep(resolved.householdId, 4, {
+      wealth_event_type: type,
+      wealth_event_notes: notes || null,
+      wealth_event_completed_at: new Date().toISOString(),
+    });
+    return json(await loadOnboarding(resolved));
+  }
+
+  if (action === "onboarding_documents_complete") {
+    await advanceStep(resolved.householdId, 4, {
+      onboarding_completed_at: new Date().toISOString(),
+    });
+    return json(await loadOnboarding(resolved));
+  }
+
+  return json({ error: "Unknown action" }, 400);
+}
+
+const ONBOARDING_ACTIONS = new Set([
+  "onboarding",
+  "onboarding_audit_booked",
+  "onboarding_profile",
+  "onboarding_wealth_event",
+  "onboarding_documents_complete",
+]);
+
+// ═════════════════════════════════════════════════════════════════════════════
 //  ENTRYPOINT
 // ═════════════════════════════════════════════════════════════════════════════
 
@@ -721,6 +975,20 @@ serve(async (req) => {
     const resolved = await resolveHousehold(req);
     if (!resolved) return json({ error: "Unauthorized" }, 401);
 
+    const contentType = req.headers.get("content-type") ?? "";
+    const isUpload = contentType.includes("multipart/form-data");
+
+    // Onboarding actions are mode-independent: they live entirely in the CRM.
+    let payload: any = {};
+    if (!isUpload) {
+      payload = await req.json().catch(() => ({}));
+      const action = String(payload?.action ?? "manifest");
+      if (ONBOARDING_ACTIONS.has(action)) {
+        return await handleOnboardingAction(action, payload, cors, resolved);
+      }
+      if (action !== "manifest") return json({ error: "Unknown action" }, 400);
+    }
+
     // If the household is still linked to an external agent, keep using the
     // proxy even when the global mode is in-house. Staff can clear the
     // intake_share_token/intake_manifest_url to switch a household over.
@@ -737,17 +1005,11 @@ serve(async (req) => {
     }
 
     // In-house mode
-    const contentType = req.headers.get("content-type") ?? "";
-    if (contentType.includes("multipart/form-data")) {
-      return await handleInhouseUpload(req, cors, resolved);
-    }
-
-    const payload = await req.json().catch(() => ({}));
-    const action = (payload as { action?: string })?.action ?? "manifest";
-    if (action !== "manifest") return json({ error: "Unknown action" }, 400);
+    if (isUpload) return await handleInhouseUpload(req, cors, resolved);
     return await handleInhouseManifest(req, cors, resolved);
   } catch (e) {
     console.error("[IntakePortal] error:", e);
     return json({ error: e instanceof Error ? e.message : "Unexpected error" }, 500);
   }
 });
+

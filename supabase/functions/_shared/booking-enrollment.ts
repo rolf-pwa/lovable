@@ -10,6 +10,7 @@
 // page fallback — it no-ops once the booking already has a contact_id.
 
 import { square } from "./square.ts";
+import { alreadyPushed, pushHouseholdToIntakeAgent } from "./intake-push.ts";
 
 function splitName(fullName: string): { first: string; last: string } {
   const parts = String(fullName || "").trim().split(/\s+/).filter(Boolean);
@@ -115,6 +116,7 @@ export interface EnrollmentResult {
   contactId: string | null;
   householdId: string | null;
   created: boolean;
+  vaultProvisioning?: "started" | "failed" | "skipped";
 }
 
 export async function enrollPaidBooking(
@@ -224,7 +226,7 @@ export async function enrollPaidBooking(
     created = true;
   }
 
-  // ---- 3. Link the booking + tell staff ---------------------------------
+  // ---- 3. Link the booking ----------------------------------------------
   await client.from("service_bookings").update({ contact_id: contactId }).eq("id", bookingId);
 
   const { data: svc } = await client
@@ -233,15 +235,43 @@ export async function enrollPaidBooking(
     .eq("id", booking.service_id)
     .maybeSingle();
 
+  // ---- 4. Provision the vault autonomously ------------------------------
+  // The client should never wait on the office: push the household to the
+  // Audit Agent right away. Failures never block enrollment — staff still get
+  // the manual "Push to Audit Agent" retry on the household page.
+  let vaultProvisioning: EnrollmentResult["vaultProvisioning"] = "skipped";
+  if (householdId) {
+    try {
+      if (await alreadyPushed(client, householdId)) {
+        vaultProvisioning = "skipped";
+      } else {
+        const push = await pushHouseholdToIntakeAgent(client, householdId, null);
+        vaultProvisioning = push.ok ? "started" : "failed";
+        if (!push.ok) console.error("[enrollPaidBooking] autonomous vault push failed:", push.error);
+      }
+    } catch (e) {
+      vaultProvisioning = "failed";
+      console.error("[enrollPaidBooking] autonomous vault push threw:", e);
+    }
+  }
+
+  // ---- 5. Tell staff ----------------------------------------------------
+  const vaultNote =
+    vaultProvisioning === "started"
+      ? "Vault provisioning started automatically — the Audit checklist opens in their portal as soon as the agent replies."
+      : vaultProvisioning === "failed"
+        ? "Automatic vault provisioning FAILED — open the household and push to the Audit Agent manually."
+        : "Vault was already provisioned.";
+
   await client.from("staff_notifications").insert({
     title: created ? "New Audit client (paid online)" : "Audit booked by existing client",
     body: `${fullName}${email ? ` <${email}>` : ""} paid for ${svc?.name || "a service"}. ${
-      created ? "Contact, family and household created — provision the vault to start the Audit." : "Booking linked to their existing record."
-    }`,
+      created ? "Contact, family and household created." : "Booking linked to their existing record."
+    } ${vaultNote}`,
     link: householdId ? `/households/${householdId}` : `/contacts/${contactId}`,
     contact_id: contactId,
     source_type: "booking_paid",
   });
 
-  return { contactId, householdId, created };
+  return { contactId, householdId, created, vaultProvisioning };
 }

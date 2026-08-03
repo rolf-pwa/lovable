@@ -82,8 +82,30 @@ Deno.serve(async (req) => {
         }
       }
 
+      // Once the payment is verified we can safely hand the buyer a portal
+      // session so they land straight in their guided onboarding — no OTP on
+      // this first hop. Later visits use the normal email OTP login.
+      let portalToken: string | null = null;
+      if (bk.payment_status === "paid") {
+        const { data: linked } = await client
+          .from("service_bookings")
+          .select("contact_id")
+          .eq("id", bk.id)
+          .maybeSingle();
+        if (linked?.contact_id) {
+          const { data: minted, error: mintErr } = await client
+            .from("portal_tokens")
+            .insert({ contact_id: linked.contact_id, created_by: linked.contact_id })
+            .select("token")
+            .maybeSingle();
+          if (mintErr) console.error("book-checkout portal token mint failed:", mintErr.message);
+          portalToken = minted?.token ?? null;
+        }
+      }
+
       return json({
         ok: true,
+        portal_token: portalToken,
         booking: {
           id: bk.id,
           status: bk.status,
