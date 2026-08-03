@@ -85,7 +85,7 @@ export function PortalIntakePage({ portalToken, onBack, onAskForHelp }: Props) {
           <ArrowLeft className="h-3.5 w-3.5" />
           Back to portal
         </button>
-        <h1 className="font-serif text-2xl text-foreground">Document Intake</h1>
+        <h1 className="font-serif text-2xl text-foreground">Sovereignty Audit</h1>
         <p className="text-sm text-muted-foreground">
           {manifest?.householdName
             ? `${manifest.householdName} · secure Canadian infrastructure`
@@ -118,7 +118,7 @@ export function PortalIntakePage({ portalToken, onBack, onAskForHelp }: Props) {
           <CardContent className="p-10 text-center">
             <Inbox className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
             <p className="text-sm text-muted-foreground">
-              Your vault is still being prepared. We'll let you know as soon as document intake is
+              Your vault is still being prepared. We'll let you know as soon as your Sovereignty Audit is
               open.
             </p>
           </CardContent>

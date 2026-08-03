@@ -221,7 +221,7 @@ const HouseholdDetail = () => {
         return;
       }
       toast.success(
-        `Pushed to Intake Agent — ${data?.members ?? 0} members, ${data?.itemsSent ?? 0} known items`,
+        `Pushed to Audit Agent — ${data?.members ?? 0} members, ${data?.itemsSent ?? 0} known items`,
       );
       fetchData();
     } finally {
@@ -806,7 +806,7 @@ const HouseholdDetail = () => {
                   ) : (
                     <ShieldCheck className="h-3.5 w-3.5 mr-1.5" />
                   )}
-                  Push to Intake Agent
+                  Push to Audit Agent
                 </Button>
                 {household.vault_root_folder_id ? (
                   <Button

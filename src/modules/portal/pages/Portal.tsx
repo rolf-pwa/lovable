@@ -1066,7 +1066,7 @@ const Portal = ({ intakeRoute = false }: { intakeRoute?: boolean }) => {
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Main Content: Tabbed Interface */}
         <div className="space-y-4 lg:col-span-2">
-          {/* Document Intake — auto-hides once intake is complete */}
+          {/* Sovereignty Audit — auto-hides once the audit is complete */}
           {isSelf && (
             <PortalIntakeBanner
               portalToken={portalToken}
