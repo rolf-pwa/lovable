@@ -120,7 +120,17 @@ export default function BookingConfirmation() {
                   </div>
                 )}
 
-                {paid && booking.scheduling_url && (
+                {paid && portalToken && (
+                  <div className="space-y-2">
+                    <p className="text-sm">
+                      Taking you to your Sanctuary to book your Audit and finish onboarding…
+                    </p>
+                    <Button asChild className="w-full">
+                      <a href={`/portal/${portalToken}/intake`}>Continue to your onboarding</a>
+                    </Button>
+                  </div>
+                )}
+                {paid && !portalToken && booking.scheduling_url && (
                   <div className="space-y-2">
                     <p className="text-sm">Last step — choose the time that works for you.</p>
                     <Button asChild className="w-full">
@@ -130,7 +140,7 @@ export default function BookingConfirmation() {
                     </Button>
                   </div>
                 )}
-                {paid && !booking.scheduling_url && (
+                {paid && !portalToken && !booking.scheduling_url && (
                   <p className="text-sm text-muted-foreground">
                     Our team will email you shortly to schedule your appointment.
                   </p>
