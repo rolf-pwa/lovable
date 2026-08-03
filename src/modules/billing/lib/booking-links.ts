@@ -1,6 +1,7 @@
-// Public-facing booking links live on the marketing site, not the secure app.
-// The marketing page at PUBLIC_BOOKING_BASE embeds the app booking page.
-export const PUBLIC_BOOKING_BASE = "https://www.prosperwise.ca/book";
+// Booking links are served directly from the secure app, which exposes a
+// public, login-free booking page at /book. The marketing site can link here
+// or embed the app booking page in an iframe.
+export const PUBLIC_BOOKING_BASE = "https://app.prosperwise.ca/book";
 
 export const publicBookingUrl = (handle: string) =>
   `${PUBLIC_BOOKING_BASE}/${handle}`.replace(/([^:]\/)\/+/g, "$1");

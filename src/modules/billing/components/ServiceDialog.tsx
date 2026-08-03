@@ -201,7 +201,7 @@ export function ServiceDialog({ open, onOpenChange, service, onSaved }: Props) {
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">
-              Public link for this service: {publicBookingUrl(slugify(slug || name) || "handle")}
+              Direct booking link: {publicBookingUrl(slugify(slug || name) || "handle")}
             </p>
             <Button
               type="button"
@@ -212,10 +212,10 @@ export function ServiceDialog({ open, onOpenChange, service, onSaved }: Props) {
                 const handle = slugify(slug || name);
                 if (!handle) return;
                 navigator.clipboard.writeText(bookingEmbedSnippet(handle, window.location.origin));
-                toast.success("Embed code copied — paste into the public site page");
+                toast.success("Embed code copied — paste into your marketing site");
               }}
             >
-              Copy embed code for www.prosperwise.ca
+              Copy embed code for marketing site
             </Button>
 
           </div>

@@ -168,11 +168,11 @@ export default function Services() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              title="Copy public booking link"
+                              title="Copy booking link"
                               onClick={() => {
                                 const handle = s.slug || s.id;
                                 navigator.clipboard.writeText(publicBookingUrl(handle));
-                                toast.success("Public booking link copied");
+                                toast.success("Booking link copied");
                               }}
                             >
 
