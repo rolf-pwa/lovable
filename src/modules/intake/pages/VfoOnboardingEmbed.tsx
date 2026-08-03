@@ -23,11 +23,11 @@ function saveState(messages: Message[], phase: Phase, vfoData: Record<string, an
   try { sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ messages, phase, vfoData })); } catch {}
 }
 
-// Sanctuary palette
+// ProsperWise brand palette (embed is rendered outside the app theme, so hex is required)
 const C = {
-  bg: "#F8F6F2", surface: "#EFECE6", border: "rgba(169,140,90,0.35)",
-  borderSubtle: "rgba(169,140,90,0.18)", vellum: "#F8F6F2",
-  charcoal: "#3B3F3F", muted: "#8A8A80", green: "#2A4034", bronze: "#A98C5A",
+  bg: "#FAFAFA", surface: "#F1EEE8", border: "rgba(164,123,87,0.35)",
+  borderSubtle: "rgba(164,123,87,0.18)", vellum: "#FAFAFA",
+  charcoal: "#334155", muted: "#64748B", green: "#1D2939", bronze: "#A47B57",
 };
 
 const WELCOME: Message = {
@@ -213,7 +213,7 @@ export default function VfoOnboardingEmbed() {
                     value={leadForm[key as keyof typeof leadForm]}
                     onChange={(e) => setLeadForm((f) => ({ ...f, [key]: e.target.value }))}
                     placeholder={placeholder} maxLength={max}
-                    className="w-full h-8 rounded-lg px-3 text-xs focus-visible:outline-none placeholder:text-[#8A8A80]"
+                    className="w-full h-8 rounded-lg px-3 text-xs focus-visible:outline-none placeholder:text-[#64748B]"
                     style={{ backgroundColor: "#FFFFFF", border: `1px solid ${C.border}`, color: C.charcoal }} />
                 ))}
                 <div className="flex items-start gap-2 rounded-lg p-2"
@@ -267,7 +267,7 @@ export default function VfoOnboardingEmbed() {
               onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
               placeholder="Share what's on your mind..." rows={1} disabled={isLoading}
               className="flex-1 resize-none rounded-xl px-3 py-2.5 sm:px-4 sm:py-3 text-base sm:text-sm focus-visible:outline-none"
-              style={{ backgroundColor: "#FFFFFF", border: `1px solid ${C.border}`, color: C.charcoal, fontFamily: "'DM Sans', sans-serif", boxShadow: "0 1px 4px rgba(59,63,63,0.05)" }} />
+              style={{ backgroundColor: "#FFFFFF", border: `1px solid ${C.border}`, color: C.charcoal, fontFamily: "Inter, sans-serif", boxShadow: "0 1px 4px rgba(29,41,57,0.06)" }} />
             <button onClick={sendMessage} disabled={isLoading || !input.trim()}
               className="flex h-10 w-10 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-xl disabled:opacity-40 transition-opacity"
               style={{ backgroundColor: C.green }}>
