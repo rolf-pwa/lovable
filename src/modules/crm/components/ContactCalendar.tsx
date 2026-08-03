@@ -3,7 +3,7 @@ import { useCalendarEvents } from "@/shared/hooks/useGoogle";
 import { useGoogleStatus } from "@/shared/hooks/useGoogle";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Button } from "@/shared/components/ui/button";
-import { Calendar, MapPin, Video } from "lucide-react";
+import { Calendar, MapPin, Building2 } from "lucide-react";
 import { format } from "date-fns";
 
 interface ContactCalendarProps {
