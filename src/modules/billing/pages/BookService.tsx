@@ -98,9 +98,29 @@ export default function BookService({ embed = false }: { embed?: boolean }) {
     }
 
     if (result.requiresPayment && result.checkoutUrl) {
+      // Square's hosted checkout refuses to render inside an iframe, so always
+      // send the buyer to a top-level page when we're embedded.
+      if (embed) {
+        let escaped = false;
+        try {
+          if (window.top && window.top !== window.self) {
+            window.top.location.href = result.checkoutUrl;
+            escaped = true;
+          }
+        } catch {
+          escaped = false;
+        }
+        if (!escaped) {
+          const opened = window.open(result.checkoutUrl, "_blank", "noopener");
+          if (!opened) window.location.href = result.checkoutUrl;
+        }
+        setSubmitting(false);
+        return;
+      }
       window.location.href = result.checkoutUrl;
       return;
     }
+
 
     setSubmitting(false);
     setDone({ schedulingUrl: result.schedulingUrl || selected?.booking_url || null });
