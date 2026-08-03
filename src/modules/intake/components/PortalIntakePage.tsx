@@ -118,7 +118,7 @@ export function PortalIntakePage({ portalToken, onBack, onAskForHelp }: Props) {
           <CardContent className="p-10 text-center">
             <Inbox className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
             <p className="text-sm text-muted-foreground">
-              Your vault is still being prepared. We'll let you know as soon as document intake is
+              Your vault is still being prepared. We'll let you know as soon as your Sovereignty Audit is
               open.
             </p>
           </CardContent>
