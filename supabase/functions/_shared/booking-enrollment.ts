@@ -145,8 +145,22 @@ export async function enrollPaidBooking(
   }
 
   const email = String(booking.requester_email || "").trim().toLowerCase();
-  const { first, last } = splitName(booking.requester_name || "");
+
+  // Never fall back to a nameless placeholder when we know their email: derive
+  // something human from the local part instead of "New Client".
+  let nameSource = String(booking.requester_name || "").trim();
+  if (!nameSource && email) {
+    nameSource = email
+      .split("@")[0]
+      .replace(/[._+-]+/g, " ")
+      .replace(/\d+/g, " ")
+      .replace(/\s+/g, " ")
+      .replace(/\b\w/g, (c) => c.toUpperCase())
+      .trim();
+  }
+  const { first, last } = splitName(nameSource);
   const fullName = `${first} ${last}`.trim();
+
 
 
   // ---- 1. Existing contact by email -------------------------------------
