@@ -1384,7 +1384,7 @@ const Portal = ({ intakeRoute = false }: { intakeRoute?: boolean }) => {
   const renderContent = () => {
     if (intakeRoute) {
       return (
-        <PortalIntakePage
+        <OnboardingShell
           portalToken={portalToken}
           onBack={() => navigate(token ? `/portal/${token}` : "/portal")}
           onAskForHelp={() => setGeorgiaOpen(true)}

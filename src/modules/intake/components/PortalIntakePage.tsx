@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Button } from "@/shared/components/ui/button";
 import { Badge } from "@/shared/components/ui/badge";
@@ -23,6 +23,8 @@ interface Props {
   portalToken: string;
   onBack: () => void;
   onAskForHelp?: () => void;
+  /** Fired once when the document checklist first reports completion. */
+  onComplete?: () => void;
 }
 
 const STATUS_META: Record<string, { label: string; icon: typeof Clock }> = {
@@ -44,7 +46,7 @@ function prettyCategory(raw?: string | null) {
   return raw.replace(/^\d+[_\-\s]*/, "").replace(/[_&]+/g, " ").replace(/\s+/g, " ").trim();
 }
 
-export function PortalIntakePage({ portalToken, onBack, onAskForHelp }: Props) {
+export function PortalIntakePage({ portalToken, onBack, onAskForHelp, onComplete }: Props) {
   const {
     manifest,
     loading,
@@ -59,6 +61,14 @@ export function PortalIntakePage({ portalToken, onBack, onAskForHelp }: Props) {
 
   const [dragging, setDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const completedRef = useRef(false);
+
+  // Tell the onboarding shell the moment the checklist is satisfied.
+  useEffect(() => {
+    if (!isComplete || completedRef.current || !onComplete) return;
+    completedRef.current = true;
+    onComplete();
+  }, [isComplete, onComplete]);
 
   const handleFiles = async (files: FileList | File[] | null) => {
     if (!files) return;

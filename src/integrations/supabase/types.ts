@@ -1487,6 +1487,7 @@ export type Database = {
       households: {
         Row: {
           address: string | null
+          audit_booked_at: string | null
           created_at: string
           family_id: string
           fiduciary_entity: Database["public"]["Enums"]["fiduciary_entity"]
@@ -1497,13 +1498,20 @@ export type Database = {
           intake_share_token: string | null
           intake_upload_url: string | null
           label: string
+          onboarding_completed_at: string | null
+          onboarding_step: number
+          profile_completed_at: string | null
           quiet_period_start_date: string | null
           updated_at: string
           vault_root_folder_id: string | null
           vault_shoebox_folder_id: string | null
+          wealth_event_completed_at: string | null
+          wealth_event_notes: string | null
+          wealth_event_type: string | null
         }
         Insert: {
           address?: string | null
+          audit_booked_at?: string | null
           created_at?: string
           family_id: string
           fiduciary_entity?: Database["public"]["Enums"]["fiduciary_entity"]
@@ -1514,13 +1522,20 @@ export type Database = {
           intake_share_token?: string | null
           intake_upload_url?: string | null
           label?: string
+          onboarding_completed_at?: string | null
+          onboarding_step?: number
+          profile_completed_at?: string | null
           quiet_period_start_date?: string | null
           updated_at?: string
           vault_root_folder_id?: string | null
           vault_shoebox_folder_id?: string | null
+          wealth_event_completed_at?: string | null
+          wealth_event_notes?: string | null
+          wealth_event_type?: string | null
         }
         Update: {
           address?: string | null
+          audit_booked_at?: string | null
           created_at?: string
           family_id?: string
           fiduciary_entity?: Database["public"]["Enums"]["fiduciary_entity"]
@@ -1531,10 +1546,16 @@ export type Database = {
           intake_share_token?: string | null
           intake_upload_url?: string | null
           label?: string
+          onboarding_completed_at?: string | null
+          onboarding_step?: number
+          profile_completed_at?: string | null
           quiet_period_start_date?: string | null
           updated_at?: string
           vault_root_folder_id?: string | null
           vault_shoebox_folder_id?: string | null
+          wealth_event_completed_at?: string | null
+          wealth_event_notes?: string | null
+          wealth_event_type?: string | null
         }
         Relationships: [
           {
