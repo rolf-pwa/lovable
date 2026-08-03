@@ -14,6 +14,8 @@ interface Props {
   bookedAt: string | null;
   saving: boolean;
   onConfirm: () => void;
+  /** Polls the CRM, which checks staff Google Calendars for this client's session. */
+  onCheckBooking?: () => Promise<boolean>;
 }
 
 /** Step 1 — book the Sovereignty Audit session. */
@@ -25,6 +27,7 @@ export const StepBookAudit = ({
   bookedAt,
   saving,
   onConfirm,
+  onCheckBooking,
 }: Props) => {
   const qs = `?${new URLSearchParams({
     ...(fullName ? { name: fullName } : {}),
@@ -34,25 +37,36 @@ export const StepBookAudit = ({
   const isCorporate = (serviceName || "").toLowerCase().includes("corporate");
   const primaryUrl = schedulingUrl || (isCorporate ? CORPORATE_AUDIT_URL : PERSONAL_AUDIT_URL);
 
-  // Auto-advance: once the client opens the scheduling tab, we move them
-  // forward as soon as they come back to the portal — no manual click needed.
-  const [opened, setOpened] = useState(false);
-  const advanced = useRef(false);
+  // Calendar-verified auto-advance: we poll the CRM, which looks for this
+  // client's session on the staff Google Calendars. No manual click needed.
+  const [checking, setChecking] = useState(false);
+  const checkRef = useRef(onCheckBooking);
+  checkRef.current = onCheckBooking;
+  const canCheck = Boolean(onCheckBooking);
 
   useEffect(() => {
-    if (!opened || bookedAt) return;
-    const advance = () => {
-      if (advanced.current || document.visibilityState !== "visible") return;
-      advanced.current = true;
-      onConfirm();
+    if (!canCheck || bookedAt) return;
+    let cancelled = false;
+    let timer: number | undefined;
+
+    const poll = async () => {
+      if (cancelled || document.visibilityState !== "visible") return;
+      setChecking(true);
+      const found = await checkRef.current?.();
+      if (cancelled) return;
+      setChecking(false);
+      if (!found) timer = window.setTimeout(poll, 15000);
     };
-    window.addEventListener("focus", advance);
-    document.addEventListener("visibilitychange", advance);
+
+    void poll();
+    const onFocus = () => void poll();
+    window.addEventListener("focus", onFocus);
     return () => {
-      window.removeEventListener("focus", advance);
-      document.removeEventListener("visibilitychange", advance);
+      cancelled = true;
+      if (timer) window.clearTimeout(timer);
+      window.removeEventListener("focus", onFocus);
     };
-  }, [opened, bookedAt, onConfirm]);
+  }, [canCheck, bookedAt]);
 
   return (
     <Card>
@@ -67,7 +81,7 @@ export const StepBookAudit = ({
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <Button asChild onClick={() => setOpened(true)}>
+          <Button asChild>
             <a href={`${primaryUrl}${qs}`} target="_blank" rel="noopener noreferrer">
               {isCorporate ? (
                 <Building2 className="h-4 w-4" />
@@ -79,7 +93,7 @@ export const StepBookAudit = ({
             </a>
           </Button>
           {!schedulingUrl && (
-            <Button asChild variant="outline" onClick={() => setOpened(true)}>
+            <Button asChild variant="outline">
               <a
                 href={`${isCorporate ? PERSONAL_AUDIT_URL : CORPORATE_AUDIT_URL}${qs}`}
                 target="_blank"
@@ -98,16 +112,16 @@ export const StepBookAudit = ({
               <CalendarCheck className="h-4 w-4 text-primary" />
               Thank you — we have your session on the calendar.
             </p>
-          ) : opened ? (
-            <p className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Waiting for you to finish scheduling — we'll continue automatically when you come
-              back to this tab.
-            </p>
           ) : (
             <div className="space-y-3">
-              <p className="text-sm text-muted-foreground">
-                Pick your time above and we'll take you straight to the next step.
+              <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                {checking ? (
+                  <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
+                ) : (
+                  <CalendarCheck className="h-4 w-4 shrink-0" />
+                )}
+                Pick your time above — we watch our calendar and move you to the next step
+                automatically as soon as your session appears. No extra click needed.
               </p>
               <button
                 type="button"
@@ -115,7 +129,7 @@ export const StepBookAudit = ({
                 disabled={saving}
                 className="text-sm text-muted-foreground underline underline-offset-4 transition-colors hover:text-foreground disabled:opacity-50"
               >
-                Already booked? Skip ahead
+                Booked somewhere else? Continue anyway
               </button>
             </div>
           )}

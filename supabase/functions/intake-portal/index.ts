@@ -311,6 +311,95 @@ async function getValidGoogleToken(): Promise<string | null> {
   return data.access_token;
 }
 
+/** Refresh + return a usable access token for one staff google_tokens row. */
+async function accessTokenForRow(row: any): Promise<string | null> {
+  if (!row) return null;
+  if (new Date(row.token_expiry) > new Date(Date.now() + 60_000)) return row.access_token;
+  try {
+    const res = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        client_id: Deno.env.get("GOOGLE_CLIENT_ID")!,
+        client_secret: Deno.env.get("GOOGLE_CLIENT_SECRET")!,
+        refresh_token: row.refresh_token,
+        grant_type: "refresh_token",
+      }),
+    });
+    const tokens = await res.json();
+    if (tokens.error) return null;
+    await admin
+      .from("google_tokens")
+      .update({
+        access_token: tokens.access_token,
+        token_expiry: new Date(Date.now() + tokens.expires_in * 1000).toISOString(),
+      })
+      .eq("user_id", row.user_id);
+    return tokens.access_token;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Look across every connected staff calendar for an upcoming event that has the
+ * client's email on it — this is how we verify the Audit was actually booked
+ * instead of trusting a manual "I booked it" click.
+ */
+async function findAuditEvent(email: string): Promise<
+  { summary: string; start: string; htmlLink: string | null } | null
+> {
+  if (!email) return null;
+  const { data: rows } = await admin
+    .from("google_tokens")
+    .select("access_token, token_expiry, refresh_token, user_id")
+    .order("updated_at", { ascending: false });
+
+  const timeMin = new Date(Date.now() - 2 * 3600_000).toISOString();
+  const timeMax = new Date(Date.now() + 120 * 86400_000).toISOString();
+  const target = email.toLowerCase();
+
+  for (const row of rows ?? []) {
+    const token = await accessTokenForRow(row);
+    if (!token) continue;
+    try {
+      const res = await fetch(
+        "https://www.googleapis.com/calendar/v3/calendars/primary/events?" +
+          new URLSearchParams({
+            timeMin,
+            timeMax,
+            maxResults: "50",
+            singleEvents: "true",
+            orderBy: "startTime",
+            q: email,
+          }),
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+      if (!res.ok) continue;
+      const data = await res.json();
+      const match = (data.items || []).find(
+        (ev: any) =>
+          ev.status !== "cancelled" &&
+          (ev.attendees?.some((a: any) => a.email?.toLowerCase() === target) ||
+            ev.organizer?.email?.toLowerCase() === target ||
+            ev.creator?.email?.toLowerCase() === target),
+      );
+      if (match) {
+        return {
+          summary: match.summary ?? "Sovereignty Audit",
+          start: match.start?.dateTime ?? match.start?.date ?? new Date().toISOString(),
+          htmlLink: match.htmlLink ?? null,
+        };
+      }
+    } catch {
+      // try the next calendar
+    }
+  }
+  return null;
+}
+
+
+
 async function callVaultService(
   action: string,
   body: Record<string, unknown>,
@@ -835,6 +924,20 @@ async function handleOnboardingAction(
     return json(await loadOnboarding(resolved));
   }
 
+  // Calendar-verified booking check — advances the client automatically once the
+  // Audit session actually appears on a staff calendar.
+  if (action === "onboarding_check_booking") {
+    const state = await loadOnboarding(resolved);
+    if (state.household.auditBookedAt) {
+      return json({ ...state, auditEvent: null, verified: true });
+    }
+    const event = await findAuditEvent(state.contact.email);
+    if (!event) return json({ ...state, auditEvent: null, verified: false });
+    await advanceStep(resolved.householdId, 2, { audit_booked_at: event.start });
+    return json({ ...(await loadOnboarding(resolved)), auditEvent: event, verified: true });
+  }
+
+
   if (action === "onboarding_profile") {
     const householdName = str(payload?.householdName, 120);
     const address = str(payload?.address, 400);
@@ -978,6 +1081,7 @@ async function handleOnboardingAction(
 const ONBOARDING_ACTIONS = new Set([
   "onboarding",
   "onboarding_audit_booked",
+  "onboarding_check_booking",
   "onboarding_profile",
   "onboarding_wealth_event",
   "onboarding_documents_complete",
