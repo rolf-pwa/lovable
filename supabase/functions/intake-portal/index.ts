@@ -924,6 +924,20 @@ async function handleOnboardingAction(
     return json(await loadOnboarding(resolved));
   }
 
+  // Calendar-verified booking check — advances the client automatically once the
+  // Audit session actually appears on a staff calendar.
+  if (action === "onboarding_check_booking") {
+    const state = await loadOnboarding(resolved);
+    if (state.household.auditBookedAt) {
+      return json({ ...state, auditEvent: null, verified: true });
+    }
+    const event = await findAuditEvent(state.contact.email);
+    if (!event) return json({ ...state, auditEvent: null, verified: false });
+    await advanceStep(resolved.householdId, 2, { audit_booked_at: event.start });
+    return json({ ...(await loadOnboarding(resolved)), auditEvent: event, verified: true });
+  }
+
+
   if (action === "onboarding_profile") {
     const householdName = str(payload?.householdName, 120);
     const address = str(payload?.address, 400);
