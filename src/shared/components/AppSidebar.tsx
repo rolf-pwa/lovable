@@ -180,12 +180,12 @@ export function AppSidebar() {
         key={to}
         to={to}
         className={cn(
-          "flex items-center gap-4 rounded-lg transition-colors",
-          isCollapsed ? "justify-center px-3 py-3" : nested ? "px-5 py-2.5" : "px-5 py-4",
+          "flex items-center gap-4 rounded-md transition-colors",
+          isCollapsed ? "justify-center px-3 py-3" : nested ? "px-5 py-2.5" : "px-5 py-3.5",
           nested ? "text-sm font-medium" : "text-[15px] font-medium",
           active
-            ? "bg-primary text-primary-foreground"
-            : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            ? "bg-sidebar-primary/15 text-sidebar-primary border-l-2 border-sidebar-primary"
+            : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
         )}
       >
         <Icon className={cn("shrink-0", nested ? "h-4 w-4" : "h-5 w-5")} />
@@ -193,10 +193,10 @@ export function AppSidebar() {
         {!isCollapsed && badge !== null && (
           <span
             className={cn(
-              "ml-auto flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold",
+              "ml-auto flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 font-mono text-[10px] font-semibold",
               active
-                ? "bg-primary-foreground/20 text-primary-foreground"
-                : "bg-accent/25 text-accent border border-accent/30"
+                ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                : "bg-sidebar-primary/20 text-sidebar-primary"
             )}
           >
             {badge > 99 ? "99+" : badge}
@@ -204,6 +204,7 @@ export function AppSidebar() {
         )}
       </Link>
     );
+
 
     if (isCollapsed) {
       return (
