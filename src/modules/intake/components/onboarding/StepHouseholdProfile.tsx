@@ -26,6 +26,7 @@ interface Props {
   saving: boolean;
   onSave: (input: {
     householdName: string;
+    primaryName: string;
     address: string;
     phone?: string;
     email?: string;
@@ -33,12 +34,19 @@ interface Props {
   }) => void;
 }
 
+const PLACEHOLDER_NAMES = ["new client", "client", ""];
+
 /** Step 2 — household details and members (each becomes a contact record). */
 export const StepHouseholdProfile = ({ state, saving, onSave }: Props) => {
+  const knownName = PLACEHOLDER_NAMES.includes(state.contact.fullName.trim().toLowerCase())
+    ? ""
+    : state.contact.fullName;
+
   const derivedName =
     state.household.label ||
-    (state.contact.lastName ? `${state.contact.lastName} Household` : state.contact.fullName);
+    (state.contact.lastName ? `${state.contact.lastName} Household` : knownName);
 
+  const [primaryName, setPrimaryName] = useState(knownName);
   const [householdName, setHouseholdName] = useState(derivedName);
   const [address, setAddress] = useState(state.household.address);
   const [phone, setPhone] = useState(state.contact.phone);
@@ -48,7 +56,12 @@ export const StepHouseholdProfile = ({ state, saving, onSave }: Props) => {
   const updateMember = (index: number, patch: Partial<OnboardingMemberInput>) =>
     setMembers((prev) => prev.map((m, i) => (i === index ? { ...m, ...patch } : m)));
 
-  const canSubmit = householdName.trim().length > 0 && address.trim().length > 0 && !saving;
+  const canSubmit =
+    primaryName.trim().length > 1 &&
+    householdName.trim().length > 0 &&
+    address.trim().length > 0 &&
+    !saving;
+
 
   return (
     <Card>
