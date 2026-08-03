@@ -18,6 +18,8 @@ import {
   Megaphone,
   Cpu,
   TrendingUp,
+  Receipt,
+  ConciergeBell,
   BookOpen,
   Anchor,
   PackagePlus,
