@@ -159,7 +159,8 @@ export async function enrollPaidBooking(
       .trim();
   }
   const { first, last } = splitName(nameSource);
-  const fullName = `${first} ${last}`.trim();
+  const fullName = (first === last ? first : `${first} ${last}`).trim();
+
 
 
 
