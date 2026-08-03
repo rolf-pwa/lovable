@@ -93,7 +93,7 @@ export default function BookingConfirmation() {
               <div className="space-y-5">
                 <div className="flex items-start gap-3">
                   {paid ? (
-                    <CheckCircle2 className="mt-0.5 h-5 w-5 text-amber-500" />
+                    <CheckCircle2 className="mt-0.5 h-5 w-5 text-accent" />
                   ) : (
                     <Loader2 className="mt-0.5 h-5 w-5 animate-spin text-muted-foreground" />
                   )}

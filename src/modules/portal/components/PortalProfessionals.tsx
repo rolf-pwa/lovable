@@ -20,7 +20,7 @@ const PILLAR_LABEL: Record<string, string> = {
 
 const STATUS_TONE: Record<string, string> = {
   active: "bg-emerald-500/10 text-emerald-600 border-emerald-500/30",
-  invited: "bg-amber-500/10 text-amber-600 border-amber-500/30",
+  invited: "bg-accent/10 text-accent border-accent/30",
   completed: "bg-muted text-muted-foreground border-border",
   archived: "bg-muted/50 text-muted-foreground border-border",
 };
@@ -43,9 +43,9 @@ export function PortalProfessionals({
 }) {
   if (!professionals?.length) {
     return (
-      <Card className="border-amber-500/15">
+      <Card className="border-accent/15">
         <CardContent className="p-8 text-center space-y-2">
-          <Users className="h-6 w-6 text-amber-500/60 mx-auto" />
+          <Users className="h-6 w-6 text-accent/60 mx-auto" />
           <p className="font-serif text-foreground">Your team is being assembled.</p>
           <p className="text-xs text-muted-foreground">
             Your advisor will introduce you to the professionals coordinating your tax, legal, insurance, and estate work as engagements begin.
@@ -61,11 +61,11 @@ export function PortalProfessionals({
         const meta = TYPE_META[p.professional_type] || TYPE_META.other;
         const engs = engagements.filter((e) => e.professional_id === p.id);
         return (
-          <Card key={p.id} className="border-amber-500/15">
+          <Card key={p.id} className="border-accent/15">
             <CardContent className="p-5 space-y-4">
               <div className="flex items-start gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-500/10 shrink-0">
-                  <meta.Icon className="h-5 w-5 text-amber-500" />
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent/10 shrink-0">
+                  <meta.Icon className="h-5 w-5 text-accent" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <h3 className="font-serif text-base text-foreground">
@@ -79,7 +79,7 @@ export function PortalProfessionals({
               </div>
 
               {engs.length > 0 ? (
-                <ul className="space-y-2 border-t border-amber-500/10 pt-3">
+                <ul className="space-y-2 border-t border-accent/10 pt-3">
                   {engs.map((e) => (
                     <li key={e.id} className="flex items-start justify-between gap-3 text-sm">
                       <div className="min-w-0">
@@ -97,7 +97,7 @@ export function PortalProfessionals({
                   ))}
                 </ul>
               ) : (
-                <p className="text-xs text-muted-foreground border-t border-amber-500/10 pt-3">
+                <p className="text-xs text-muted-foreground border-t border-accent/10 pt-3">
                   No active engagements with this professional.
                 </p>
               )}

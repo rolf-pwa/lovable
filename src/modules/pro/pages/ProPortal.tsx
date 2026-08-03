@@ -63,9 +63,9 @@ export default function ProPortal() {
       {loading ? (
         <div className="p-16 text-center text-muted-foreground">Loading your families…</div>
       ) : families.length === 0 ? (
-        <Card className="border-amber-500/15">
+        <Card className="border-accent/15">
           <CardContent className="p-12 text-center space-y-2">
-            <Crown className="h-8 w-8 text-amber-500 mx-auto" />
+            <Crown className="h-8 w-8 text-accent mx-auto" />
             <p className="text-foreground font-serif">No active engagements</p>
             <p className="text-sm text-muted-foreground">
               Your ProsperWise contact will let you know when work is shared.
@@ -90,20 +90,20 @@ export default function ProPortal() {
                     onClick={() => navigate(`/pro-portal/family/${fam.id}`)}
                     className="text-left group"
                   >
-                    <Card className="border-amber-500/20 hover:border-amber-500/40 transition-colors overflow-hidden h-full">
+                    <Card className="border-accent/20 hover:border-accent/40 transition-colors overflow-hidden h-full">
                       <div className="px-5 py-4 flex items-center gap-3 border-b border-border/60">
-                        <div className="h-11 w-11 rounded-lg bg-amber-500/10 flex items-center justify-center shrink-0">
-                          <Crown className="h-5 w-5 text-amber-500" />
+                        <div className="h-11 w-11 rounded-lg bg-accent/10 flex items-center justify-center shrink-0">
+                          <Crown className="h-5 w-5 text-accent" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="font-serif text-lg text-foreground truncate group-hover:text-amber-500 transition-colors">
+                          <div className="font-serif text-lg text-foreground truncate group-hover:text-accent transition-colors">
                             {fam.name}
                           </div>
                           <div className="text-[11px] uppercase tracking-wider text-muted-foreground mt-0.5">
                             Enter workspace
                           </div>
                         </div>
-                        <ArrowRight className="h-4 w-4 text-amber-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <ArrowRight className="h-4 w-4 text-accent opacity-0 group-hover:opacity-100 transition-opacity" />
                       </div>
                       <CardContent className="p-0">
                         <div className="grid grid-cols-2 divide-x divide-border/60 border-b border-border/60">

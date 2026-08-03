@@ -142,7 +142,7 @@ export default function BookService({ embed = false }: { embed?: boolean }) {
         {done ? (
           <Card>
             <CardContent className="flex items-start gap-3 py-8">
-              <CheckCircle2 className="mt-0.5 h-5 w-5 text-amber-500" />
+              <CheckCircle2 className="mt-0.5 h-5 w-5 text-accent" />
               <div className="space-y-3">
                 <div>
                   <p className="font-medium">Request received</p>

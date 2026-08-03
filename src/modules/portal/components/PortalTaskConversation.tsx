@@ -200,7 +200,7 @@ export function PortalTaskConversation({ taskGid, portalToken, clientName, readO
                 </div>
                 <div className={`rounded-lg px-4 py-3 text-sm leading-relaxed max-w-[90%] whitespace-pre-wrap break-words ${
                   isClient
-                    ? 'bg-[hsl(38_40%_92%)] border border-[hsl(38_30%_78%)] text-foreground ml-auto'
+                    ? 'bg-accent/10 border border-accent/30 text-foreground ml-auto'
                     : 'bg-muted border border-border text-foreground'
                 }`}>
                   {displayText.split(/(https?:\/\/[^\s]+)/g).map((part, i) =>

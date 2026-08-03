@@ -55,10 +55,10 @@ export default function ProPortalHousehold() {
       ) : (
         <div className="grid lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-5">
-            <Card className="border-amber-500/20">
+            <Card className="border-accent/20">
               <CardHeader>
                 <CardTitle className="font-serif text-foreground flex items-center gap-2">
-                  <Users className="h-4 w-4 text-amber-500" /> Household Members
+                  <Users className="h-4 w-4 text-accent" /> Household Members
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-0">
@@ -70,7 +70,7 @@ export default function ProPortalHousehold() {
                       <li key={m.id}>
                         <button
                           onClick={() => navigate(`/pro-portal/contact/${m.id}`)}
-                          className="w-full text-left px-4 py-3 hover:bg-amber-500/[0.03] transition"
+                          className="w-full text-left px-4 py-3 hover:bg-accent/[0.03] transition"
                         >
                           <div className="flex items-center justify-between gap-3 flex-wrap">
                             <div className="min-w-0">
@@ -96,10 +96,10 @@ export default function ProPortalHousehold() {
           </div>
 
           <aside className="space-y-5">
-            <Card className="border-amber-500/15">
+            <Card className="border-accent/15">
               <CardHeader>
                 <CardTitle className="text-base font-serif flex items-center gap-2">
-                  <ShieldCheck className="h-4 w-4 text-amber-500" /> Sovereignty Charter
+                  <ShieldCheck className="h-4 w-4 text-accent" /> Sovereignty Charter
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
@@ -127,10 +127,10 @@ export default function ProPortalHousehold() {
               </CardContent>
             </Card>
 
-            <Card className="border-amber-500/15">
+            <Card className="border-accent/15">
               <CardHeader>
                 <CardTitle className="text-base font-serif flex items-center gap-2">
-                  <FileText className="h-4 w-4 text-amber-500" /> Shared Documents
+                  <FileText className="h-4 w-4 text-accent" /> Shared Documents
                 </CardTitle>
               </CardHeader>
               <CardContent>

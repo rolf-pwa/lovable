@@ -58,7 +58,7 @@ export default function QuickPay() {
           </>
         ) : (
           <>
-            <Loader2 className="mx-auto mb-3 h-6 w-6 animate-spin text-amber-500" />
+            <Loader2 className="mx-auto mb-3 h-6 w-6 animate-spin text-accent" />
             <p className="font-medium">Opening secure checkout…</p>
             <p className="mt-1 text-sm text-muted-foreground">
               You'll enter your details once on Square's payment page, then pick your time.

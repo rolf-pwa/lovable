@@ -42,10 +42,10 @@ export function PortalYourTeam({
   const byPro = (id: string) => engagements.filter((e) => e.professional_id === id);
 
   return (
-    <Card className="border-amber-500/15">
+    <Card className="border-accent/15">
       <CardContent className="p-5 space-y-3">
         <div className="flex items-center gap-2">
-          <Users className="h-4 w-4 text-amber-500" />
+          <Users className="h-4 w-4 text-accent" />
           <h3 className="font-serif text-sm text-foreground">Your Team</h3>
         </div>
         <ul className="space-y-2.5">
@@ -55,10 +55,10 @@ export function PortalYourTeam({
             return (
               <li
                 key={p.id}
-                className="flex items-start gap-3 rounded-md border border-amber-500/10 bg-amber-500/[0.02] p-2.5"
+                className="flex items-start gap-3 rounded-md border border-accent/10 bg-accent/[0.02] p-2.5"
               >
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-500/10 shrink-0">
-                  <meta.Icon className="h-4 w-4 text-amber-500" />
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-accent/10 shrink-0">
+                  <meta.Icon className="h-4 w-4 text-accent" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm text-foreground truncate">
@@ -69,7 +69,7 @@ export function PortalYourTeam({
                     {meta.label}{p.firm ? ` · ${p.firm}` : ""}
                   </p>
                   {open > 0 && (
-                    <p className="text-[10px] text-amber-600 mt-0.5">
+                    <p className="text-[10px] text-accent mt-0.5">
                       {open} active engagement{open === 1 ? "" : "s"}
                     </p>
                   )}
@@ -81,7 +81,7 @@ export function PortalYourTeam({
         {onSelect && (
           <button
             onClick={onSelect}
-            className="w-full text-[11px] uppercase tracking-wider text-muted-foreground hover:text-amber-500 transition-colors pt-1"
+            className="w-full text-[11px] uppercase tracking-wider text-muted-foreground hover:text-accent transition-colors pt-1"
           >
             View all professionals →
           </button>

@@ -176,9 +176,9 @@ export default function Invoices() {
         </div>
 
         {squareReady === false && (
-          <Card className="border-amber-500/40">
+          <Card className="border-accent/40">
             <CardContent className="flex items-start gap-3 py-4 text-sm">
-              <AlertTriangle className="mt-0.5 h-4 w-4 text-amber-500" />
+              <AlertTriangle className="mt-0.5 h-4 w-4 text-accent" />
               <span>
                 Square isn't connected yet. Drafting works now; sending activates once the Square access token and
                 location are saved.
@@ -211,7 +211,7 @@ export default function Invoices() {
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base">
-              <Bot className="h-4 w-4 text-amber-500" /> Draft with the invoicing assistant
+              <Bot className="h-4 w-4 text-accent" /> Draft with the invoicing assistant
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
