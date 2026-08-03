@@ -3364,6 +3364,7 @@ export type Database = {
           name: string
           price: number
           requires_prepayment: boolean
+          slug: string | null
           square_catalog_object_id: string | null
           square_sync_error: string | null
           square_sync_status: string
@@ -3385,6 +3386,7 @@ export type Database = {
           name: string
           price?: number
           requires_prepayment?: boolean
+          slug?: string | null
           square_catalog_object_id?: string | null
           square_sync_error?: string | null
           square_sync_status?: string
@@ -3406,6 +3408,7 @@ export type Database = {
           name?: string
           price?: number
           requires_prepayment?: boolean
+          slug?: string | null
           square_catalog_object_id?: string | null
           square_sync_error?: string | null
           square_sync_status?: string
