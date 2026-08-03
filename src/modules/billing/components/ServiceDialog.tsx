@@ -22,6 +22,8 @@ export interface ServiceRecord {
   square_catalog_object_id: string | null;
   square_sync_status: string;
   square_sync_error: string | null;
+  requires_prepayment?: boolean | null;
+  booking_url?: string | null;
 }
 
 interface Props {
@@ -39,6 +41,8 @@ export function ServiceDialog({ open, onOpenChange, service, onSaved }: Props) {
   const [duration, setDuration] = useState(service?.duration_minutes ? String(service.duration_minutes) : "");
   const [taxRate, setTaxRate] = useState(service ? String(service.tax_rate ?? 0) : "5");
   const [isActive, setIsActive] = useState(service?.is_active ?? true);
+  const [requiresPrepayment, setRequiresPrepayment] = useState(service?.requires_prepayment ?? true);
+  const [bookingUrl, setBookingUrl] = useState(service?.booking_url ?? "");
   const [saving, setSaving] = useState(false);
 
   const save = async () => {
@@ -55,6 +59,8 @@ export function ServiceDialog({ open, onOpenChange, service, onSaved }: Props) {
       duration_minutes: duration ? Number(duration) : null,
       tax_rate: Number(taxRate || 0),
       is_active: isActive,
+      requires_prepayment: requiresPrepayment,
+      booking_url: bookingUrl.trim() || null,
     };
 
     const { error } = service
@@ -142,6 +148,22 @@ export function ServiceDialog({ open, onOpenChange, service, onSaved }: Props) {
               <Switch id="svc-active" checked={isActive} onCheckedChange={setIsActive} />
               <Label htmlFor="svc-active">Bookable</Label>
             </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <Switch id="svc-prepay" checked={requiresPrepayment} onCheckedChange={setRequiresPrepayment} />
+            <Label htmlFor="svc-prepay">Require payment before booking</Label>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="svc-booking-url">Scheduling link</Label>
+            <Input
+              id="svc-booking-url"
+              value={bookingUrl}
+              onChange={(e) => setBookingUrl(e.target.value)}
+              placeholder="https://calendar.app.google/..."
+            />
+            <p className="text-xs text-muted-foreground">
+              Where clients pick their time after paying. Leave blank to schedule manually.
+            </p>
           </div>
         </div>
         <DialogFooter>
