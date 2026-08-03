@@ -1081,6 +1081,7 @@ async function handleOnboardingAction(
 const ONBOARDING_ACTIONS = new Set([
   "onboarding",
   "onboarding_audit_booked",
+  "onboarding_check_booking",
   "onboarding_profile",
   "onboarding_wealth_event",
   "onboarding_documents_complete",
