@@ -56,6 +56,7 @@ const BillingServices = lazy(() => import("@/modules/billing/pages/Services"));
 const BillingInvoices = lazy(() => import("@/modules/billing/pages/Invoices"));
 const BookService = lazy(() => import("@/modules/billing/pages/BookService"));
 const BookingConfirmation = lazy(() => import("@/modules/billing/pages/BookingConfirmation"));
+const QuickPay = lazy(() => import("@/modules/billing/pages/QuickPay"));
 
 const Analytics = lazy(() => import("@/modules/crm/pages/Analytics"));
 const StabilizationMap = lazy(() => import("@/modules/audit/pages/StabilizationMap"));
