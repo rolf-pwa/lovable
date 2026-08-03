@@ -55,7 +55,7 @@ export function BookingsPanel() {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="flex items-center gap-2 text-base">
-          <CalendarClock className="h-4 w-4 text-amber-500" /> Booking requests
+          <CalendarClock className="h-4 w-4 text-accent" /> Booking requests
         </CardTitle>
         <Badge variant="secondary">{bookings.filter((b) => b.status === "requested").length} new</Badge>
       </CardHeader>

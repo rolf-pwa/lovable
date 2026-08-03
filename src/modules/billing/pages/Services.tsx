@@ -83,9 +83,9 @@ export default function Services() {
         </div>
 
         {squareReady === false && (
-          <Card className="border-amber-500/40">
+          <Card className="border-accent/40">
             <CardContent className="flex items-start gap-3 py-4 text-sm">
-              <AlertTriangle className="mt-0.5 h-4 w-4 text-amber-500" />
+              <AlertTriangle className="mt-0.5 h-4 w-4 text-accent" />
               <span>
                 Square isn't connected yet. You can build the catalog now — syncing and invoice sending activate once
                 the Square access token and location are saved.

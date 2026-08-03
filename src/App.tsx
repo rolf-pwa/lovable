@@ -75,7 +75,7 @@ const queryClient = new QueryClient();
 
 const RouteFallback = () => (
   <div className="flex min-h-screen items-center justify-center bg-background">
-    <Loader2 className="h-5 w-5 animate-spin text-amber-500" />
+    <Loader2 className="h-5 w-5 animate-spin text-accent" />
   </div>
 );
 
