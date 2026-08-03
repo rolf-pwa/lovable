@@ -24,8 +24,9 @@ interface PublicService {
   slug: string | null;
 }
 
-export default function BookService() {
+export default function BookService({ embed = false }: { embed?: boolean }) {
   const { slug } = useParams<{ slug?: string }>();
+
   const [searchParams] = useSearchParams();
   const [services, setServices] = useState<PublicService[]>([]);
   const [serviceId, setServiceId] = useState("");
@@ -106,12 +107,17 @@ export default function BookService() {
   };
 
   return (
-    <main className="min-h-screen bg-background px-4 py-12">
+    <main className={embed ? "bg-background px-3 py-4" : "min-h-screen bg-background px-4 py-12"}>
       <div className="mx-auto max-w-xl">
-        <h1 className="mb-2 font-serif text-3xl">Book a service</h1>
-        <p className="mb-6 text-sm text-muted-foreground">
-          Choose the engagement you'd like, pay securely, then pick your time.
-        </p>
+        {!embed && (
+          <>
+            <h1 className="mb-2 font-serif text-3xl">Book a service</h1>
+            <p className="mb-6 text-sm text-muted-foreground">
+              Choose the engagement you'd like, pay securely, then pick your time.
+            </p>
+          </>
+        )}
+
 
         {done ? (
           <Card>

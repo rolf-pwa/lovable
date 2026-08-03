@@ -133,8 +133,11 @@ const App = () => (
               <Route path="/services" element={<ProtectedRoute><BillingServices /></ProtectedRoute>} />
               <Route path="/invoices" element={<ProtectedRoute><BillingInvoices /></ProtectedRoute>} />
               <Route path="/book" element={<BookService />} />
+              <Route path="/book/embed" element={<BookService embed />} />
               <Route path="/book/confirm" element={<BookingConfirmation />} />
               <Route path="/book/:slug" element={<BookService />} />
+              <Route path="/book/:slug/embed" element={<BookService embed />} />
+
               <Route path="/contacts" element={<ProtectedRoute><Contacts /></ProtectedRoute>} />
               <Route path="/professionals" element={<ProtectedRoute><Professionals /></ProtectedRoute>} />
               <Route path="/professionals/:id" element={<ProtectedRoute><ProfessionalDetail /></ProtectedRoute>} />

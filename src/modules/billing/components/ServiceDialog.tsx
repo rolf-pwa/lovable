@@ -8,6 +8,8 @@ import { Switch } from "@/shared/components/ui/switch";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/shared/components/ui/dialog";
 import { Copy, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { publicBookingUrl, bookingEmbedSnippet } from "../lib/booking-links";
+
 
 export interface ServiceRecord {
   id: string;
@@ -187,20 +189,35 @@ export function ServiceDialog({ open, onOpenChange, service, onSaved }: Props) {
                 type="button"
                 variant="outline"
                 size="icon"
-                title="Copy booking link"
+                title="Copy public booking link"
                 onClick={() => {
                   const handle = slugify(slug || name);
                   if (!handle) return;
-                  navigator.clipboard.writeText(`${window.location.origin}/book/${handle}`);
-                  toast.success("Booking link copied");
+                  navigator.clipboard.writeText(publicBookingUrl(handle));
+                  toast.success("Public booking link copied");
                 }}
               >
                 <Copy className="h-4 w-4" />
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">
-              Unique link for this service: {window.location.origin}/book/{slugify(slug || name) || "handle"}
+              Public link for this service: {publicBookingUrl(slugify(slug || name) || "handle")}
             </p>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={() => {
+                const handle = slugify(slug || name);
+                if (!handle) return;
+                navigator.clipboard.writeText(bookingEmbedSnippet(handle, window.location.origin));
+                toast.success("Embed code copied — paste into the public site page");
+              }}
+            >
+              Copy embed code for www.prosperwise.ca
+            </Button>
+
           </div>
         </div>
         <DialogFooter>
