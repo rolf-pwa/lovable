@@ -55,6 +55,7 @@ const BulkImporters = lazy(() => import("@/modules/intake/pages/BulkImporters"))
 const BillingServices = lazy(() => import("@/modules/billing/pages/Services"));
 const BillingInvoices = lazy(() => import("@/modules/billing/pages/Invoices"));
 const BookService = lazy(() => import("@/modules/billing/pages/BookService"));
+const BookingConfirmation = lazy(() => import("@/modules/billing/pages/BookingConfirmation"));
 
 const Analytics = lazy(() => import("@/modules/crm/pages/Analytics"));
 const StabilizationMap = lazy(() => import("@/modules/audit/pages/StabilizationMap"));
@@ -132,6 +133,7 @@ const App = () => (
               <Route path="/services" element={<ProtectedRoute><BillingServices /></ProtectedRoute>} />
               <Route path="/invoices" element={<ProtectedRoute><BillingInvoices /></ProtectedRoute>} />
               <Route path="/book" element={<BookService />} />
+              <Route path="/book/confirm" element={<BookingConfirmation />} />
               <Route path="/contacts" element={<ProtectedRoute><Contacts /></ProtectedRoute>} />
               <Route path="/professionals" element={<ProtectedRoute><Professionals /></ProtectedRoute>} />
               <Route path="/professionals/:id" element={<ProtectedRoute><ProfessionalDetail /></ProtectedRoute>} />

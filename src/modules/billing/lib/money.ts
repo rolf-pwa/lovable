@@ -28,6 +28,7 @@ export const INVOICE_STATUS_COLORS: Record<string, string> = {
 
 export const BOOKING_STATUS_LABELS: Record<string, string> = {
   requested: "Requested",
+  awaiting_payment: "Awaiting payment",
   confirmed: "Confirmed",
   completed: "Completed",
   canceled: "Canceled",
