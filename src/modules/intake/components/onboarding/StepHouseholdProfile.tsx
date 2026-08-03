@@ -76,6 +76,16 @@ export const StepHouseholdProfile = ({ state, saving, onSave }: Props) => {
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5 sm:col-span-2">
+            <Label htmlFor="ob-primary-name">Your full name</Label>
+            <Input
+              id="ob-primary-name"
+              value={primaryName}
+              onChange={(e) => setPrimaryName(e.target.value)}
+              placeholder="e.g. Jane Smith"
+              maxLength={120}
+            />
+          </div>
+          <div className="space-y-1.5 sm:col-span-2">
             <Label htmlFor="ob-household">Household name</Label>
             <Input
               id="ob-household"
@@ -85,6 +95,7 @@ export const StepHouseholdProfile = ({ state, saving, onSave }: Props) => {
               maxLength={120}
             />
           </div>
+
           <div className="space-y-1.5 sm:col-span-2">
             <Label htmlFor="ob-address">Home address</Label>
             <Textarea
