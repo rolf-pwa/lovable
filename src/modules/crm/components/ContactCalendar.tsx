@@ -84,17 +84,17 @@ export function ContactCalendar({ contactEmail, contactName }: ContactCalendarPr
           >
             <Button variant="ghost" size="sm" className="gap-1">
               <MapPin className="h-3 w-3" />
-              In Person
+              Audit — Personal
             </Button>
           </a>
           <a
-            href={`https://calendar.app.google/Fwsmx2LC8BjWf3Zh9${qs}`}
+            href={`https://calendar.app.google/raxnRa2RFQGL7KnD9${qs}`}
             target="_blank"
             rel="noopener noreferrer"
           >
             <Button variant="ghost" size="sm" className="gap-1">
-              <Video className="h-3 w-3" />
-              Video
+              <Building2 className="h-3 w-3" />
+              Audit — Corporate
             </Button>
           </a>
         </div>
