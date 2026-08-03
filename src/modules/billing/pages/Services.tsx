@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import { ServiceDialog, type ServiceRecord } from "../components/ServiceDialog";
 import { BookingsPanel } from "../components/BookingsPanel";
 import { formatMoney } from "../lib/money";
-import { publicBookingUrl } from "../lib/booking-links";
+import { publicPayUrl } from "../lib/booking-links";
 
 
 const SYNC_LABELS: Record<string, string> = {
@@ -168,11 +168,11 @@ export default function Services() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              title="Copy booking link"
+                              title="Copy direct payment link"
                               onClick={() => {
                                 const handle = s.slug || s.id;
-                                navigator.clipboard.writeText(publicBookingUrl(handle));
-                                toast.success("Booking link copied");
+                                navigator.clipboard.writeText(publicPayUrl(handle));
+                                toast.success("Direct payment link copied");
                               }}
                             >
 

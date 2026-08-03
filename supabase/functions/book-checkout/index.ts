@@ -101,7 +101,11 @@ Deno.serve(async (req) => {
 
     if (action !== "createCheckout") return json({ ok: false, error: `Unknown action: ${action}` }, 400);
 
+    // `quick: true` skips the in-app form: the buyer types their name/email/phone
+    // once, on Square's hosted checkout page. We backfill the booking afterwards.
+    const quick = Boolean(body.quick);
     const serviceId = clean(body.serviceId, 60);
+    const serviceSlug = clean(body.serviceSlug, 120).toLowerCase();
     const requesterName = clean(body.name, 120);
     const requesterEmail = clean(body.email, 200).toLowerCase();
     const requesterPhone = clean(body.phone, 40);
@@ -119,16 +123,20 @@ Deno.serve(async (req) => {
     const startsAtRaw = clean(body.startsAt, 60);
     const returnUrl = clean(body.returnUrl, 500);
 
-    if (!serviceId) return json({ ok: false, error: "Please choose a service." }, 400);
-    if (requesterName.length < 2) return json({ ok: false, error: "Please enter your full name." }, 400);
-    if (!EMAIL_RE.test(requesterEmail)) return json({ ok: false, error: "Please enter a valid email." }, 400);
+    if (!serviceId && !serviceSlug) return json({ ok: false, error: "Please choose a service." }, 400);
+    if (!quick) {
+      if (requesterName.length < 2) return json({ ok: false, error: "Please enter your full name." }, 400);
+      if (!EMAIL_RE.test(requesterEmail)) return json({ ok: false, error: "Please enter a valid email." }, 400);
+    }
 
-    const { data: svc } = await client
+    const svcQuery = client
       .from("services")
-      .select("id, name, description, price, currency, duration_minutes, tax_rate, is_active, requires_prepayment, booking_url")
-      .eq("id", serviceId)
-      .maybeSingle();
+      .select("id, name, description, price, currency, duration_minutes, tax_rate, is_active, requires_prepayment, booking_url");
+    const { data: svc } = serviceId
+      ? await svcQuery.eq("id", serviceId).maybeSingle()
+      : await svcQuery.eq("slug", serviceSlug).maybeSingle();
     if (!svc || !svc.is_active) return json({ ok: false, error: "That service is not available." }, 400);
+
 
     const price = Number(svc.price || 0);
     const taxRate = Number(svc.tax_rate || 0);
@@ -170,6 +178,12 @@ Deno.serve(async (req) => {
     }
 
     if (!requiresPayment) {
+      if (quick) {
+        return json({
+          ok: false,
+          error: "This service doesn't take online payment — please use the booking form.",
+        }, 400);
+      }
       return json({
         ok: true,
         bookingId: booking.id,
@@ -177,6 +191,7 @@ Deno.serve(async (req) => {
         schedulingUrl: svc.booking_url || null,
       });
     }
+
 
     if (!Deno.env.get("SQUARE_ACCESS_TOKEN") || !Deno.env.get("SQUARE_LOCATION_ID")) {
       return json({ ok: false, error: "Online payment is not available right now." }, 400);
@@ -220,16 +235,24 @@ Deno.serve(async (req) => {
         allow_tipping: false,
         ask_for_shipping_address: false,
         redirect_url: redirectUrl,
+        // In quick mode Square is the only place the buyer types anything, so ask
+        // for their name there (email + phone are always collected by Square).
+        custom_fields: quick ? [{ title: "Full name" }] : undefined,
       },
     });
 
     let res = await square("/online-checkout/payment-links", {
       method: "POST",
-      body: buildBody({
-        buyer_email: requesterEmail || undefined,
-        buyer_phone_number: squarePhone,
-      }),
+      body: buildBody(
+        quick
+          ? undefined
+          : {
+              buyer_email: requesterEmail || undefined,
+              buyer_phone_number: squarePhone,
+            },
+      ),
     });
+
 
     // Square rejects some buyer contact values (test domains, odd phone formats).
     // Those are conveniences only, so retry once without them rather than failing the booking.

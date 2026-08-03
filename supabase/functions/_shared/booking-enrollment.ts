@@ -9,11 +9,96 @@
 // Idempotent: safe to call from both the Square webhook and the confirmation
 // page fallback — it no-ops once the booking already has a contact_id.
 
+import { square } from "./square.ts";
+
 function splitName(fullName: string): { first: string; last: string } {
   const parts = String(fullName || "").trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) return { first: "New", last: "Client" };
   if (parts.length === 1) return { first: parts[0], last: parts[0] };
   return { first: parts[0], last: parts.slice(1).join(" ") };
+}
+
+/** Deep-scan a Square payload for the buyer's answer to a custom field. */
+function findCustomFieldAnswer(node: unknown, titleMatch: RegExp): string | null {
+  if (!node || typeof node !== "object") return null;
+  if (Array.isArray(node)) {
+    for (const item of node) {
+      const hit = findCustomFieldAnswer(item, titleMatch);
+      if (hit) return hit;
+    }
+    return null;
+  }
+  const obj = node as Record<string, any>;
+  const answer = obj.answer ?? obj.value ?? obj.text;
+  if (typeof obj.title === "string" && titleMatch.test(obj.title) && typeof answer === "string" && answer.trim()) {
+    return answer.trim();
+  }
+  for (const value of Object.values(obj)) {
+    const hit = findCustomFieldAnswer(value, titleMatch);
+    if (hit) return hit;
+  }
+  return null;
+}
+
+/**
+ * Quick-pay links (/pay/:slug) let the buyer type their details once, on Square.
+ * Pull those details back onto the booking so enrollment has a name + email.
+ */
+async function backfillBuyerFromSquare(client: any, booking: any): Promise<void> {
+  if (!Deno.env.get("SQUARE_ACCESS_TOKEN")) return;
+
+  let name = String(booking.requester_name || "").trim();
+  let email = String(booking.requester_email || "").trim();
+  let phone = String(booking.requester_phone || "").trim();
+
+  if (booking.square_payment_id) {
+    const res = await square(`/payments/${booking.square_payment_id}`);
+    const p = res.data?.payment;
+    if (res.ok && p) {
+      email = email || String(p.buyer_email_address || "").trim();
+      const ship = p.shipping_address || p.billing_address;
+      const shipName = [ship?.first_name, ship?.last_name].filter(Boolean).join(" ").trim();
+      name = name || shipName;
+    }
+  }
+
+  if (booking.square_order_id) {
+    const res = await square(`/orders/${booking.square_order_id}`);
+    const order = res.data?.order;
+    if (res.ok && order) {
+      const recipient =
+        order.fulfillments?.[0]?.shipment_details?.recipient ||
+        order.fulfillments?.[0]?.pickup_details?.recipient ||
+        order.fulfillments?.[0]?.delivery_details?.recipient;
+      email = email || String(recipient?.email_address || "").trim();
+      phone = phone || String(recipient?.phone_number || "").trim();
+      name = name || String(recipient?.display_name || "").trim();
+      name = name || findCustomFieldAnswer(order, /name/i) || "";
+    }
+  }
+
+  if (booking.square_payment_link_id && !name) {
+    const res = await square(`/online-checkout/payment-links/${booking.square_payment_link_id}`);
+    if (res.ok) name = findCustomFieldAnswer(res.data?.payment_link, /name/i) || "";
+  }
+
+  // Last resort: derive something human from the email local part.
+  if (!name && email) {
+    name = email
+      .split("@")[0]
+      .replace(/[._-]+/g, " ")
+      .replace(/\b\w/g, (c) => c.toUpperCase())
+      .trim();
+  }
+
+  const patch: Record<string, unknown> = {};
+  if (name && name !== booking.requester_name) patch.requester_name = name.slice(0, 120);
+  if (email && email !== booking.requester_email) patch.requester_email = email.toLowerCase().slice(0, 200);
+  if (phone && phone !== booking.requester_phone) patch.requester_phone = phone.slice(0, 40);
+  if (Object.keys(patch).length) {
+    await client.from("service_bookings").update(patch).eq("id", booking.id);
+    Object.assign(booking, patch);
+  }
 }
 
 async function staffUserId(client: any): Promise<string | null> {
@@ -38,7 +123,9 @@ export async function enrollPaidBooking(
 ): Promise<EnrollmentResult> {
   const { data: booking } = await client
     .from("service_bookings")
-    .select("id, contact_id, requester_name, requester_email, requester_phone, service_id, payment_status")
+    .select(
+      "id, contact_id, requester_name, requester_email, requester_phone, service_id, payment_status, square_order_id, square_payment_id, square_payment_link_id",
+    )
     .eq("id", bookingId)
     .maybeSingle();
 
@@ -47,9 +134,18 @@ export async function enrollPaidBooking(
     return { contactId: booking.contact_id, householdId: null, created: false };
   }
 
+  if (!booking.requester_email || !booking.requester_name) {
+    try {
+      await backfillBuyerFromSquare(client, booking);
+    } catch (e) {
+      console.error("[enrollPaidBooking] Square buyer backfill failed:", e);
+    }
+  }
+
   const email = String(booking.requester_email || "").trim().toLowerCase();
   const { first, last } = splitName(booking.requester_name || "");
   const fullName = `${first} ${last}`.trim();
+
 
   // ---- 1. Existing contact by email -------------------------------------
   let contactId: string | null = null;

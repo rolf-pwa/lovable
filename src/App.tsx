@@ -56,6 +56,7 @@ const BillingServices = lazy(() => import("@/modules/billing/pages/Services"));
 const BillingInvoices = lazy(() => import("@/modules/billing/pages/Invoices"));
 const BookService = lazy(() => import("@/modules/billing/pages/BookService"));
 const BookingConfirmation = lazy(() => import("@/modules/billing/pages/BookingConfirmation"));
+const QuickPay = lazy(() => import("@/modules/billing/pages/QuickPay"));
 
 const Analytics = lazy(() => import("@/modules/crm/pages/Analytics"));
 const StabilizationMap = lazy(() => import("@/modules/audit/pages/StabilizationMap"));
@@ -137,6 +138,9 @@ const App = () => (
               <Route path="/book/confirm" element={<BookingConfirmation />} />
               <Route path="/book/:slug" element={<BookService />} />
               <Route path="/book/:slug/embed" element={<BookService embed />} />
+              <Route path="/pay" element={<QuickPay />} />
+              <Route path="/pay/:slug" element={<QuickPay />} />
+
 
               <Route path="/contacts" element={<ProtectedRoute><Contacts /></ProtectedRoute>} />
               <Route path="/professionals" element={<ProtectedRoute><Professionals /></ProtectedRoute>} />

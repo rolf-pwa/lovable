@@ -8,7 +8,7 @@ import { Switch } from "@/shared/components/ui/switch";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/shared/components/ui/dialog";
 import { Copy, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { publicBookingUrl, bookingEmbedSnippet } from "../lib/booking-links";
+import { publicPayUrl, bookingEmbedSnippet } from "../lib/booking-links";
 
 
 export interface ServiceRecord {
@@ -189,19 +189,19 @@ export function ServiceDialog({ open, onOpenChange, service, onSaved }: Props) {
                 type="button"
                 variant="outline"
                 size="icon"
-                title="Copy public booking link"
+                title="Copy direct payment link"
                 onClick={() => {
                   const handle = slugify(slug || name);
                   if (!handle) return;
-                  navigator.clipboard.writeText(publicBookingUrl(handle));
-                  toast.success("Public booking link copied");
+                  navigator.clipboard.writeText(publicPayUrl(handle));
+                  toast.success("Direct payment link copied");
                 }}
               >
                 <Copy className="h-4 w-4" />
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">
-              Direct booking link: {publicBookingUrl(slugify(slug || name) || "handle")}
+              Direct payment link: {publicPayUrl(slugify(slug || name) || "handle")} — goes straight to Square checkout.
             </p>
             <Button
               type="button"
@@ -212,10 +212,10 @@ export function ServiceDialog({ open, onOpenChange, service, onSaved }: Props) {
                 const handle = slugify(slug || name);
                 if (!handle) return;
                 navigator.clipboard.writeText(bookingEmbedSnippet(handle, window.location.origin));
-                toast.success("Embed code copied — paste into your marketing site");
+                toast.success("Button code copied — paste into your marketing site");
               }}
             >
-              Copy embed code for marketing site
+              Copy button code for marketing site
             </Button>
 
           </div>
