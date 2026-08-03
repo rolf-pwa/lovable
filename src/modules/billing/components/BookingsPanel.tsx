@@ -6,7 +6,7 @@ import { Button } from "@/shared/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
 import { CalendarClock, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { BOOKING_STATUS_LABELS } from "../lib/money";
+import { BOOKING_STATUS_LABELS, formatMoney } from "../lib/money";
 
 interface Booking {
   id: string;
@@ -16,6 +16,9 @@ interface Booking {
   status: string;
   notes: string | null;
   created_at: string;
+  payment_status?: string | null;
+  total?: number | null;
+  currency?: string | null;
   service?: { name: string } | null;
 }
 
@@ -76,6 +79,20 @@ export function BookingsPanel() {
                   {b.starts_at && (
                     <p className="text-xs text-muted-foreground">
                       Requested for {new Date(b.starts_at).toLocaleString("en-CA")}
+                    </p>
+                  )}
+                  {b.total != null && (
+                    <p className="mt-1 flex items-center gap-2 text-xs">
+                      <Badge variant={b.payment_status === "paid" ? "default" : "secondary"}>
+                        {b.payment_status === "paid"
+                          ? "Paid"
+                          : b.payment_status === "not_required"
+                            ? "No prepayment"
+                            : "Unpaid"}
+                      </Badge>
+                      <span className="text-muted-foreground">
+                        {formatMoney(Number(b.total), b.currency || "CAD")}
+                      </span>
                     </p>
                   )}
                   {b.notes && <p className="mt-1 text-xs text-muted-foreground">{b.notes}</p>}

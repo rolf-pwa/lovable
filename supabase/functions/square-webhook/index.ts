@@ -134,6 +134,27 @@ Deno.serve(async (req) => {
       const payment = event?.data?.object?.payment;
       if (!payment?.id || !payment?.order_id) return new Response("ok");
 
+      const completed = String(payment?.status || "").toUpperCase() === "COMPLETED";
+
+      // Public book-and-pay checkout for a service booking.
+      const { data: booking } = await client
+        .from("service_bookings")
+        .select("id, paid_at")
+        .eq("square_order_id", payment.order_id)
+        .maybeSingle();
+      if (booking) {
+        await client
+          .from("service_bookings")
+          .update({
+            square_payment_id: payment.id,
+            payment_status: completed ? "paid" : String(payment?.status || "pending").toLowerCase(),
+            status: completed ? "confirmed" : "awaiting_payment",
+            paid_at: completed ? booking.paid_at || payment?.created_at || new Date().toISOString() : booking.paid_at,
+          })
+          .eq("id", booking.id);
+        return new Response("ok");
+      }
+
       const { data: inv } = await client
         .from("invoices")
         .select("id")
@@ -154,6 +175,7 @@ Deno.serve(async (req) => {
         { onConflict: "square_payment_id" },
       );
     }
+
   } catch (e) {
     console.error("square-webhook processing error:", e);
     return new Response("Processing error", { status: 500 });

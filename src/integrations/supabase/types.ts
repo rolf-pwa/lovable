@@ -3249,48 +3249,81 @@ export type Database = {
       }
       service_bookings: {
         Row: {
+          amount: number | null
+          checkout_url: string | null
           contact_id: string | null
           created_at: string
+          currency: string | null
           duration_minutes: number | null
           id: string
           invoice_id: string | null
           notes: string | null
+          paid_at: string | null
+          payment_status: string
           requester_email: string | null
           requester_name: string | null
           requester_phone: string | null
+          scheduling_url: string | null
           service_id: string | null
+          square_order_id: string | null
+          square_payment_id: string | null
+          square_payment_link_id: string | null
           starts_at: string | null
           status: string
+          tax_amount: number | null
+          total: number | null
           updated_at: string
         }
         Insert: {
+          amount?: number | null
+          checkout_url?: string | null
           contact_id?: string | null
           created_at?: string
+          currency?: string | null
           duration_minutes?: number | null
           id?: string
           invoice_id?: string | null
           notes?: string | null
+          paid_at?: string | null
+          payment_status?: string
           requester_email?: string | null
           requester_name?: string | null
           requester_phone?: string | null
+          scheduling_url?: string | null
           service_id?: string | null
+          square_order_id?: string | null
+          square_payment_id?: string | null
+          square_payment_link_id?: string | null
           starts_at?: string | null
           status?: string
+          tax_amount?: number | null
+          total?: number | null
           updated_at?: string
         }
         Update: {
+          amount?: number | null
+          checkout_url?: string | null
           contact_id?: string | null
           created_at?: string
+          currency?: string | null
           duration_minutes?: number | null
           id?: string
           invoice_id?: string | null
           notes?: string | null
+          paid_at?: string | null
+          payment_status?: string
           requester_email?: string | null
           requester_name?: string | null
           requester_phone?: string | null
+          scheduling_url?: string | null
           service_id?: string | null
+          square_order_id?: string | null
+          square_payment_id?: string | null
+          square_payment_link_id?: string | null
           starts_at?: string | null
           status?: string
+          tax_amount?: number | null
+          total?: number | null
           updated_at?: string
         }
         Relationships: [
@@ -3319,6 +3352,7 @@ export type Database = {
       }
       services: {
         Row: {
+          booking_url: string | null
           category: string | null
           created_at: string
           created_by: string | null
@@ -3329,6 +3363,7 @@ export type Database = {
           is_active: boolean
           name: string
           price: number
+          requires_prepayment: boolean
           square_catalog_object_id: string | null
           square_sync_error: string | null
           square_sync_status: string
@@ -3338,6 +3373,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          booking_url?: string | null
           category?: string | null
           created_at?: string
           created_by?: string | null
@@ -3348,6 +3384,7 @@ export type Database = {
           is_active?: boolean
           name: string
           price?: number
+          requires_prepayment?: boolean
           square_catalog_object_id?: string | null
           square_sync_error?: string | null
           square_sync_status?: string
@@ -3357,6 +3394,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          booking_url?: string | null
           category?: string | null
           created_at?: string
           created_by?: string | null
@@ -3367,6 +3405,7 @@ export type Database = {
           is_active?: boolean
           name?: string
           price?: number
+          requires_prepayment?: boolean
           square_catalog_object_id?: string | null
           square_sync_error?: string | null
           square_sync_status?: string
