@@ -3,6 +3,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { fromMinor } from "../_shared/square.ts";
+import { enrollPaidBooking } from "../_shared/booking-enrollment.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -152,6 +153,13 @@ Deno.serve(async (req) => {
             paid_at: completed ? booking.paid_at || payment?.created_at || new Date().toISOString() : booking.paid_at,
           })
           .eq("id", booking.id);
+        if (completed) {
+          try {
+            await enrollPaidBooking(client, booking.id);
+          } catch (e) {
+            console.error("square-webhook enrollment failed:", e);
+          }
+        }
         return new Response("ok");
       }
 

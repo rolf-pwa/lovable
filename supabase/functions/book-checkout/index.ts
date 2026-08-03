@@ -3,6 +3,7 @@
 // a Square hosted checkout link for services that require prepayment.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { enrollPaidBooking } from "../_shared/booking-enrollment.ts";
 import { square, squareErrorMessage, squareLocationId, idempotencyKey, toMinor } from "../_shared/square.ts";
 
 const corsHeaders = {
@@ -73,6 +74,11 @@ Deno.serve(async (req) => {
           bk.payment_status = "paid";
           bk.status = "confirmed";
           bk.paid_at = paidAt;
+          try {
+            await enrollPaidBooking(client, bk.id);
+          } catch (e) {
+            console.error("book-checkout enrollment failed:", e);
+          }
         }
       }
 
