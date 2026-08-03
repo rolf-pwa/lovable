@@ -1138,7 +1138,7 @@ const Portal = ({ intakeRoute = false }: { intakeRoute?: boolean }) => {
               {isSelf && (
                 <div className="flex items-center justify-end gap-2">
                   <a
-                    href="https://calendar.app.google/EwH29qfci75yedju8"
+                    href="https://calendar.app.google/Fwsmx2LC8BjWf3Zh9"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1.5 rounded-md bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/20 transition-colors border border-primary/20"
@@ -1147,7 +1147,7 @@ const Portal = ({ intakeRoute = false }: { intakeRoute?: boolean }) => {
                     In Person
                   </a>
                   <a
-                    href="https://calendar.app.google/HgYuTusrWbomsfsC8"
+                    href="https://calendar.app.google/Fwsmx2LC8BjWf3Zh9"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1.5 rounded-md bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/20 transition-colors border border-primary/20"
