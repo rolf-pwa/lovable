@@ -18,6 +18,8 @@ import {
   Megaphone,
   Cpu,
   TrendingUp,
+  Receipt,
+  ConciergeBell,
   BookOpen,
   Anchor,
   PackagePlus,
@@ -79,6 +81,11 @@ const marketingItems = [
 const growthItems = [
   { to: "/pipeline", label: "Pipeline", icon: TrendingUp },
   { to: "/holding-tank", label: "Holding Tank", icon: Anchor },
+];
+
+const billingItems = [
+  { to: "/invoices", label: "Invoices", icon: Receipt },
+  { to: "/services", label: "Services", icon: ConciergeBell },
 ];
 
 const adminItems = [
@@ -260,6 +267,30 @@ export function AppSidebar() {
               </CollapsibleContent>
             </Collapsible>
           )}
+
+          {/* Billing group: Invoices, Services */}
+          {collapsed ? (
+            billingItems.map(({ to, label, icon: Icon }) => {
+              const active = location.pathname === to || location.pathname.startsWith(to + "/");
+              return renderNavLink(to, label, Icon, null, active, collapsed);
+            })
+          ) : (
+            <Collapsible defaultOpen={billingItems.some(({ to }) => location.pathname === to || location.pathname.startsWith(to + "/"))}>
+              <CollapsibleTrigger className="flex w-full items-center gap-4 rounded-lg px-5 py-3 text-[15px] font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
+                <Receipt className="h-5 w-5 shrink-0" />
+                <span className="flex-1 text-left">Billing</span>
+                <ChevronDown className="h-4 w-4 transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
+              </CollapsibleTrigger>
+              <CollapsibleContent className="space-y-0.5 pl-4">
+                {billingItems.map(({ to, label, icon: Icon }) => {
+                  const active = location.pathname === to || location.pathname.startsWith(to + "/");
+                  return renderNavLink(to, label, Icon, null, active, false, true);
+                })}
+              </CollapsibleContent>
+            </Collapsible>
+          )}
+
+
 
           {/* Admin group: Onboarding, Review Queue, Knowledge Base, Workbench */}
           {collapsed ? (

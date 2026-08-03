@@ -119,3 +119,25 @@ export interface ILibrarianProvider {
   listFolder(ctx: AgentContext, folderId?: string): Promise<LibrarianEntry[]>;
   getDownloadUrl(ctx: AgentContext, fileId: string): Promise<string | null>;
 }
+
+/** Result of an AI invoice draft. Nothing is sent until an advisor approves. */
+export interface InvoiceDraftResult {
+  ok: boolean;
+  invoiceId: string;
+  contact?: { id: string; full_name: string } | null;
+  total?: number;
+  lineCount?: number;
+  needsContact?: boolean;
+}
+
+export interface IInvoiceAgentProvider {
+  readonly id: string;
+  /** Drafts an invoice from a plain-language prompt (status stays `draft`). */
+  draftInvoice(prompt: string): Promise<InvoiceDraftResult>;
+  /** Advisor-approved send: pushes to Square and emails the client. */
+  sendInvoice(invoiceId: string): Promise<{ ok: boolean; publicUrl?: string; status?: string }>;
+  refreshInvoice(invoiceId: string): Promise<{ ok: boolean; status?: string }>;
+  cancelInvoice(invoiceId: string): Promise<{ ok: boolean }>;
+  syncService(serviceId: string): Promise<{ ok: boolean; squareId?: string }>;
+  getStatus(): Promise<{ configured: boolean; environment: string }>;
+}

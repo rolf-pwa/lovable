@@ -1752,6 +1752,216 @@ export type Database = {
           },
         ]
       }
+      invoice_line_items: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          invoice_id: string
+          line_total: number
+          quantity: number
+          service_id: string | null
+          sort_order: number
+          unit_amount: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          id?: string
+          invoice_id: string
+          line_total?: number
+          quantity?: number
+          service_id?: string | null
+          sort_order?: number
+          unit_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          invoice_id?: string
+          line_total?: number
+          quantity?: number
+          service_id?: string | null
+          sort_order?: number
+          unit_amount?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_line_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_line_items_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoice_payments: {
+        Row: {
+          amount: number
+          created_at: string
+          currency: string
+          id: string
+          invoice_id: string
+          paid_at: string
+          raw_payload: Json | null
+          square_payment_id: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          invoice_id: string
+          paid_at?: string
+          raw_payload?: Json | null
+          square_payment_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          invoice_id?: string
+          paid_at?: string
+          raw_payload?: Json | null
+          square_payment_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_payments_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoices: {
+        Row: {
+          ai_prompt: string | null
+          contact_id: string | null
+          created_at: string
+          created_by: string | null
+          currency: string
+          discount_amount: number
+          due_date: string | null
+          id: string
+          invoice_number: string | null
+          is_ai_draft: boolean
+          issue_date: string
+          last_error: string | null
+          notes: string | null
+          paid_at: string | null
+          pipeline_id: string | null
+          public_payment_url: string | null
+          review_queue_id: string | null
+          sent_at: string | null
+          square_invoice_id: string | null
+          square_order_id: string | null
+          square_version: number | null
+          status: string
+          subtotal: number
+          tax_amount: number
+          total: number
+          updated_at: string
+        }
+        Insert: {
+          ai_prompt?: string | null
+          contact_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          discount_amount?: number
+          due_date?: string | null
+          id?: string
+          invoice_number?: string | null
+          is_ai_draft?: boolean
+          issue_date?: string
+          last_error?: string | null
+          notes?: string | null
+          paid_at?: string | null
+          pipeline_id?: string | null
+          public_payment_url?: string | null
+          review_queue_id?: string | null
+          sent_at?: string | null
+          square_invoice_id?: string | null
+          square_order_id?: string | null
+          square_version?: number | null
+          status?: string
+          subtotal?: number
+          tax_amount?: number
+          total?: number
+          updated_at?: string
+        }
+        Update: {
+          ai_prompt?: string | null
+          contact_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          discount_amount?: number
+          due_date?: string | null
+          id?: string
+          invoice_number?: string | null
+          is_ai_draft?: boolean
+          issue_date?: string
+          last_error?: string | null
+          notes?: string | null
+          paid_at?: string | null
+          pipeline_id?: string | null
+          public_payment_url?: string | null
+          review_queue_id?: string | null
+          sent_at?: string | null
+          square_invoice_id?: string | null
+          square_order_id?: string | null
+          square_version?: number | null
+          status?: string
+          subtotal?: number
+          tax_amount?: number
+          total?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_pipeline_id_fkey"
+            columns: ["pipeline_id"]
+            isOneToOne: false
+            referencedRelation: "business_pipeline"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_review_queue_id_fkey"
+            columns: ["review_queue_id"]
+            isOneToOne: false
+            referencedRelation: "review_queue"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       knowledge_base: {
         Row: {
           category: string
@@ -3034,6 +3244,133 @@ export type Database = {
           run_id?: string
           status?: string
           test_name?: string
+        }
+        Relationships: []
+      }
+      service_bookings: {
+        Row: {
+          contact_id: string | null
+          created_at: string
+          duration_minutes: number | null
+          id: string
+          invoice_id: string | null
+          notes: string | null
+          requester_email: string | null
+          requester_name: string | null
+          requester_phone: string | null
+          service_id: string | null
+          starts_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          contact_id?: string | null
+          created_at?: string
+          duration_minutes?: number | null
+          id?: string
+          invoice_id?: string | null
+          notes?: string | null
+          requester_email?: string | null
+          requester_name?: string | null
+          requester_phone?: string | null
+          service_id?: string | null
+          starts_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          contact_id?: string | null
+          created_at?: string
+          duration_minutes?: number | null
+          id?: string
+          invoice_id?: string | null
+          notes?: string | null
+          requester_email?: string | null
+          requester_name?: string | null
+          requester_phone?: string | null
+          service_id?: string | null
+          starts_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_bookings_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_bookings_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_bookings_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      services: {
+        Row: {
+          category: string | null
+          created_at: string
+          created_by: string | null
+          currency: string
+          description: string | null
+          duration_minutes: number | null
+          id: string
+          is_active: boolean
+          name: string
+          price: number
+          square_catalog_object_id: string | null
+          square_sync_error: string | null
+          square_sync_status: string
+          square_synced_at: string | null
+          square_variation_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          description?: string | null
+          duration_minutes?: number | null
+          id?: string
+          is_active?: boolean
+          name: string
+          price?: number
+          square_catalog_object_id?: string | null
+          square_sync_error?: string | null
+          square_sync_status?: string
+          square_synced_at?: string | null
+          square_variation_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          description?: string | null
+          duration_minutes?: number | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          price?: number
+          square_catalog_object_id?: string | null
+          square_sync_error?: string | null
+          square_sync_status?: string
+          square_synced_at?: string | null
+          square_variation_id?: string | null
+          updated_at?: string
         }
         Relationships: []
       }

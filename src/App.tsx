@@ -52,6 +52,9 @@ const HoldingTankPage = lazy(() => import("@/modules/crm/pages/HoldingTankPage")
 const Onboarding = lazy(() => import("@/modules/intake/pages/Onboarding"));
 const BulkOnboarding = lazy(() => import("@/modules/intake/pages/BulkOnboarding"));
 const BulkImporters = lazy(() => import("@/modules/intake/pages/BulkImporters"));
+const BillingServices = lazy(() => import("@/modules/billing/pages/Services"));
+const BillingInvoices = lazy(() => import("@/modules/billing/pages/Invoices"));
+const BookService = lazy(() => import("@/modules/billing/pages/BookService"));
 
 const Analytics = lazy(() => import("@/modules/crm/pages/Analytics"));
 const StabilizationMap = lazy(() => import("@/modules/audit/pages/StabilizationMap"));
@@ -126,6 +129,9 @@ const App = () => (
               <Route path="/marketing-updates" element={<ProtectedRoute><MarketingUpdates /></ProtectedRoute>} />
               <Route path="/workbench" element={<ProtectedRoute><Workbench /></ProtectedRoute>} />
               <Route path="/pipeline" element={<ProtectedRoute><Pipeline /></ProtectedRoute>} />
+              <Route path="/services" element={<ProtectedRoute><BillingServices /></ProtectedRoute>} />
+              <Route path="/invoices" element={<ProtectedRoute><BillingInvoices /></ProtectedRoute>} />
+              <Route path="/book" element={<BookService />} />
               <Route path="/contacts" element={<ProtectedRoute><Contacts /></ProtectedRoute>} />
               <Route path="/professionals" element={<ProtectedRoute><Professionals /></ProtectedRoute>} />
               <Route path="/professionals/:id" element={<ProtectedRoute><ProfessionalDetail /></ProtectedRoute>} />

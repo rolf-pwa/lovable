@@ -10,12 +10,14 @@
 import type {
   IAuditAgentProvider,
   IIntakeAgentProvider,
+  IInvoiceAgentProvider,
   ILibrarianProvider,
 } from "./types";
 import { edgeIntakeAgent } from "./intake/edgeIntakeAgent";
 import { inHouseIntakeAgent } from "./intake/inHouseIntakeAgent";
 import { derivedAuditAgent } from "./audit/derivedAuditAgent";
 import { vaultLibrarian } from "./librarian/vaultLibrarian";
+import { edgeInvoiceAgent } from "./invoice/edgeInvoiceAgent";
 
 const intakeProviders: Record<string, IIntakeAgentProvider> = {
   edge: edgeIntakeAgent,
@@ -28,6 +30,10 @@ const auditProviders: Record<string, IAuditAgentProvider> = {
 
 const librarianProviders: Record<string, ILibrarianProvider> = {
   vault: vaultLibrarian,
+};
+
+const invoiceProviders: Record<string, IInvoiceAgentProvider> = {
+  edge: edgeInvoiceAgent,
 };
 
 function pick<T>(map: Record<string, T>, flag: string | undefined, fallback: string): T {
@@ -44,6 +50,10 @@ export function getAuditAgent(): IAuditAgentProvider {
 
 export function getLibrarian(): ILibrarianProvider {
   return pick(librarianProviders, import.meta.env.VITE_LIBRARIAN_PROVIDER, "vault");
+}
+
+export function getInvoiceAgent(): IInvoiceAgentProvider {
+  return pick(invoiceProviders, import.meta.env.VITE_INVOICE_AGENT_PROVIDER, "edge");
 }
 
 export * from "./types";
