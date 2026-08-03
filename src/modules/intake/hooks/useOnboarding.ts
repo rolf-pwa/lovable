@@ -101,12 +101,24 @@ export function useOnboarding(portalToken?: string) {
     [portalToken],
   );
 
+  const checkAuditBooking = useCallback(async (): Promise<boolean> => {
+    if (!portalToken) return false;
+    try {
+      const data = await call(portalToken, { action: "onboarding_check_booking" });
+      setState(data as OnboardingState);
+      return Boolean((data as { verified?: boolean })?.verified);
+    } catch {
+      return false;
+    }
+  }, [portalToken]);
+
   return {
     state,
     loading,
     saving,
     error,
     refresh,
+    checkAuditBooking,
     confirmAuditBooked: () => mutate({ action: "onboarding_audit_booked" }),
     saveProfile: (input: {
       householdName: string;
