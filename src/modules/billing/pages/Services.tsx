@@ -166,6 +166,18 @@ export default function Services() {
                             <Button
                               variant="ghost"
                               size="icon"
+                              title="Copy booking link"
+                              onClick={() => {
+                                const handle = s.slug || s.id;
+                                navigator.clipboard.writeText(`${window.location.origin}/book/${handle}`);
+                                toast.success("Booking link copied");
+                              }}
+                            >
+                              <LinkIcon className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
                               disabled={syncingId === s.id}
                               onClick={() => sync(s)}
                               title="Sync to Square"

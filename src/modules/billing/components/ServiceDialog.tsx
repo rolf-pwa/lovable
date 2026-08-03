@@ -6,7 +6,7 @@ import { Label } from "@/shared/components/ui/label";
 import { Textarea } from "@/shared/components/ui/textarea";
 import { Switch } from "@/shared/components/ui/switch";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/shared/components/ui/dialog";
-import { Loader2 } from "lucide-react";
+import { Copy, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 export interface ServiceRecord {
@@ -24,6 +24,7 @@ export interface ServiceRecord {
   square_sync_error: string | null;
   requires_prepayment?: boolean | null;
   booking_url?: string | null;
+  slug?: string | null;
 }
 
 interface Props {
@@ -32,6 +33,12 @@ interface Props {
   service: ServiceRecord | null;
   onSaved: () => void;
 }
+
+const slugify = (value: string) =>
+  value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
 
 export function ServiceDialog({ open, onOpenChange, service, onSaved }: Props) {
   const [name, setName] = useState(service?.name ?? "");
@@ -43,6 +50,7 @@ export function ServiceDialog({ open, onOpenChange, service, onSaved }: Props) {
   const [isActive, setIsActive] = useState(service?.is_active ?? true);
   const [requiresPrepayment, setRequiresPrepayment] = useState(service?.requires_prepayment ?? true);
   const [bookingUrl, setBookingUrl] = useState(service?.booking_url ?? "");
+  const [slug, setSlug] = useState(service?.slug ?? "");
   const [saving, setSaving] = useState(false);
 
   const save = async () => {
@@ -61,6 +69,7 @@ export function ServiceDialog({ open, onOpenChange, service, onSaved }: Props) {
       is_active: isActive,
       requires_prepayment: requiresPrepayment,
       booking_url: bookingUrl.trim() || null,
+      slug: slugify(slug || name) || null,
     };
 
     const { error } = service
@@ -163,6 +172,34 @@ export function ServiceDialog({ open, onOpenChange, service, onSaved }: Props) {
             />
             <p className="text-xs text-muted-foreground">
               Where clients pick their time after paying. Leave blank to schedule manually.
+            </p>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="svc-slug">Booking link handle</Label>
+            <div className="flex gap-2">
+              <Input
+                id="svc-slug"
+                value={slug}
+                onChange={(e) => setSlug(e.target.value)}
+                placeholder={slugify(name) || "sovereignty-audit-personal"}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                title="Copy booking link"
+                onClick={() => {
+                  const handle = slugify(slug || name);
+                  if (!handle) return;
+                  navigator.clipboard.writeText(`${window.location.origin}/book/${handle}`);
+                  toast.success("Booking link copied");
+                }}
+              >
+                <Copy className="h-4 w-4" />
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Unique link for this service: {window.location.origin}/book/{slugify(slug || name) || "handle"}
             </p>
           </div>
         </div>

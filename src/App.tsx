@@ -134,6 +134,7 @@ const App = () => (
               <Route path="/invoices" element={<ProtectedRoute><BillingInvoices /></ProtectedRoute>} />
               <Route path="/book" element={<BookService />} />
               <Route path="/book/confirm" element={<BookingConfirmation />} />
+              <Route path="/book/:slug" element={<BookService />} />
               <Route path="/contacts" element={<ProtectedRoute><Contacts /></ProtectedRoute>} />
               <Route path="/professionals" element={<ProtectedRoute><Professionals /></ProtectedRoute>} />
               <Route path="/professionals/:id" element={<ProtectedRoute><ProfessionalDetail /></ProtectedRoute>} />
