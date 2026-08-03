@@ -13,7 +13,24 @@ export default {
       },
     },
     extend: {
+      fontFamily: {
+        sans: ["Inter", "ui-sans-serif", "system-ui", "sans-serif"],
+        display: ["'Playfair Display'", "Georgia", "serif"],
+        serif: ["'Playfair Display'", "Georgia", "serif"],
+        mono: ["'JetBrains Mono'", "ui-monospace", "SFMono-Regular", "monospace"],
+      },
       colors: {
+        pw: {
+          navy: "hsl(var(--pw-navy))",
+          amber: "hsl(var(--pw-amber))",
+          sand: "hsl(var(--pw-sand))",
+          paper: "hsl(var(--pw-paper))",
+          slate: "hsl(var(--pw-slate))",
+          ash: "hsl(var(--pw-ash))",
+          mist: "hsl(var(--pw-mist))",
+          cloud: "hsl(var(--pw-cloud))",
+        },
+
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
