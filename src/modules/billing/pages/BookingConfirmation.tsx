@@ -20,6 +20,7 @@ export default function BookingConfirmation() {
   const [params] = useSearchParams();
   const bookingId = params.get("booking") || "";
   const [booking, setBooking] = useState<BookingStatus | null>(null);
+  const [portalToken, setPortalToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const attempts = useRef(0);
 
@@ -38,9 +39,13 @@ export default function BookingConfirmation() {
       const result: any = data;
       if (stop) return;
       if (result?.ok) setBooking(result.booking);
+      if (result?.portal_token) setPortalToken(result.portal_token);
       setLoading(false);
       attempts.current += 1;
-      if (result?.booking?.payment_status !== "paid" && attempts.current < 6) {
+      // Keep polling until the payment clears AND enrollment has minted the
+      // portal session (the webhook usually lands a beat after the redirect).
+      const settled = result?.booking?.payment_status === "paid" && result?.portal_token;
+      if (!settled && attempts.current < 8) {
         setTimeout(poll, 2500);
       }
     };
@@ -50,7 +55,17 @@ export default function BookingConfirmation() {
     };
   }, [bookingId]);
 
+  // Hand the client straight into their guided onboarding — no OTP on this hop.
+  useEffect(() => {
+    if (!portalToken || booking?.payment_status !== "paid") return;
+    const t = setTimeout(() => {
+      window.location.replace(`/portal/${portalToken}/intake`);
+    }, 1200);
+    return () => clearTimeout(t);
+  }, [portalToken, booking?.payment_status]);
+
   const paid = booking?.payment_status === "paid";
+
 
   return (
     <main className="min-h-screen bg-background px-4 py-16">
