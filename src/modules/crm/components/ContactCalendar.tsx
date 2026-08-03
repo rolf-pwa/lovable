@@ -78,7 +78,7 @@ export function ContactCalendar({ contactEmail, contactName }: ContactCalendarPr
         </CardTitle>
         <div className="flex items-center gap-1">
           <a
-            href={`https://calendar.app.google/Xq8tAmJBkmGExrRD8${qs}`}
+            href={`https://calendar.app.google/Fwsmx2LC8BjWf3Zh9${qs}`}
             target="_blank"
             rel="noopener noreferrer"
           >
@@ -88,7 +88,7 @@ export function ContactCalendar({ contactEmail, contactName }: ContactCalendarPr
             </Button>
           </a>
           <a
-            href={`https://calendar.app.google/uKiwTrDfYH2pJV4V7${qs}`}
+            href={`https://calendar.app.google/Fwsmx2LC8BjWf3Zh9${qs}`}
             target="_blank"
             rel="noopener noreferrer"
           >
