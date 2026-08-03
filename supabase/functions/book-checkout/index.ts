@@ -235,16 +235,24 @@ Deno.serve(async (req) => {
         allow_tipping: false,
         ask_for_shipping_address: false,
         redirect_url: redirectUrl,
+        // In quick mode Square is the only place the buyer types anything, so ask
+        // for their name there (email + phone are always collected by Square).
+        custom_fields: quick ? [{ title: "Full name" }] : undefined,
       },
     });
 
     let res = await square("/online-checkout/payment-links", {
       method: "POST",
-      body: buildBody({
-        buyer_email: requesterEmail || undefined,
-        buyer_phone_number: squarePhone,
-      }),
+      body: buildBody(
+        quick
+          ? undefined
+          : {
+              buyer_email: requesterEmail || undefined,
+              buyer_phone_number: squarePhone,
+            },
+      ),
     });
+
 
     // Square rejects some buyer contact values (test domains, odd phone formats).
     // Those are conveniences only, so retry once without them rather than failing the booking.
