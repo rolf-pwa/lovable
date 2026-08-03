@@ -153,7 +153,7 @@ export function DashboardSidebar() {
       {stats.holdingTankCount > 0 && (
         <button
           onClick={() => navigate("/holding-tank")}
-          className="flex items-center gap-2 text-amber-600 hover:text-amber-500 transition-colors"
+          className="flex items-center gap-2 text-accent hover:text-accent/80 transition-colors"
         >
           <Anchor className="h-3.5 w-3.5" />
           <span>Holding Tank</span>

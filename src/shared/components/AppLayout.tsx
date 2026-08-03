@@ -18,18 +18,21 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         <AppSidebar />
         <div className="flex flex-1 flex-col overflow-hidden">
           {/* Header */}
-          <header className="flex items-center justify-between gap-4 border-b border-border px-6 py-3">
+          <header className="flex items-center justify-between gap-4 border-b border-border bg-card px-6 py-3">
             <div className="flex items-center gap-6 min-w-0 flex-1">
-              <span className="text-sm text-muted-foreground shrink-0">{today}</span>
+              <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground shrink-0">
+                {today}
+              </span>
               <div className="min-w-0 flex-1">
                 <DashboardSidebar />
               </div>
             </div>
             <div className="flex items-center gap-3 shrink-0">
               <NotificationBell />
-              <Avatar className="h-8 w-8">
+              <div className="h-6 w-px bg-border" />
+              <Avatar className="h-8 w-8 border border-border">
                 <AvatarImage src={user?.user_metadata?.avatar_url} />
-                <AvatarFallback className="bg-muted text-xs text-foreground">
+                <AvatarFallback className="bg-primary text-xs text-primary-foreground">
                   {user?.email?.charAt(0).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
@@ -40,12 +43,13 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               </div>
               <button
                 onClick={() => signOut()}
-                className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
               >
                 <LogOut className="h-4 w-4" />
               </button>
             </div>
           </header>
+
 
           <main className="flex-1 overflow-y-auto">
             <div className="mx-auto max-w-6xl px-6 py-8">{children}</div>

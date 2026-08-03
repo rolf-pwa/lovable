@@ -1,5 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
-import prosperwiseLogoColor from "@/assets/prosperwise-logo-color.png";
+import prosperwiseLogoWhite from "@/assets/prosperwise-logo-white.png";
+
 import { useAuth } from "@/shared/hooks/useAuth";
 import {
   LayoutDashboard,
@@ -179,12 +180,12 @@ export function AppSidebar() {
         key={to}
         to={to}
         className={cn(
-          "flex items-center gap-4 rounded-lg transition-colors",
-          isCollapsed ? "justify-center px-3 py-3" : nested ? "px-5 py-2.5" : "px-5 py-4",
+          "flex items-center gap-4 rounded-md transition-colors",
+          isCollapsed ? "justify-center px-3 py-3" : nested ? "px-5 py-2.5" : "px-5 py-3.5",
           nested ? "text-sm font-medium" : "text-[15px] font-medium",
           active
-            ? "bg-primary text-primary-foreground"
-            : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            ? "bg-sidebar-primary/15 text-sidebar-primary border-l-2 border-sidebar-primary"
+            : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
         )}
       >
         <Icon className={cn("shrink-0", nested ? "h-4 w-4" : "h-5 w-5")} />
@@ -192,10 +193,10 @@ export function AppSidebar() {
         {!isCollapsed && badge !== null && (
           <span
             className={cn(
-              "ml-auto flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold",
+              "ml-auto flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 font-mono text-[10px] font-semibold",
               active
-                ? "bg-primary-foreground/20 text-primary-foreground"
-                : "bg-accent/25 text-accent border border-accent/30"
+                ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                : "bg-sidebar-primary/20 text-sidebar-primary"
             )}
           >
             {badge > 99 ? "99+" : badge}
@@ -203,6 +204,7 @@ export function AppSidebar() {
         )}
       </Link>
     );
+
 
     if (isCollapsed) {
       return (
@@ -223,20 +225,21 @@ export function AppSidebar() {
     <TooltipProvider delayDuration={0}>
       <aside
         className={cn(
-          "flex h-full flex-col bg-background transition-all duration-200",
+          "flex h-full flex-col bg-sidebar text-sidebar-foreground border-r border-sidebar-border transition-all duration-200",
           collapsed ? "w-[68px]" : "w-72"
         )}
       >
         {/* Logo + Toggle */}
-        <div className={cn("flex items-center justify-between pt-6 pb-2", collapsed ? "px-3" : "px-6")}>
-          {!collapsed && <img src={prosperwiseLogoColor} alt="ProsperWise" className="h-10" />}
+        <div className={cn("flex items-center justify-between pt-6 pb-4 border-b border-sidebar-border", collapsed ? "px-3" : "px-6")}>
+          {!collapsed && <img src={prosperwiseLogoWhite} alt="ProsperWise" className="h-9" />}
           <button
             onClick={toggle}
-            className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+            className="rounded-md p-1.5 text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
           >
             {collapsed ? <PanelLeft className="h-5 w-5" /> : <PanelLeftClose className="h-5 w-5" />}
           </button>
         </div>
+
 
         {/* Nav */}
         <nav className="flex-1 space-y-1 px-2 pt-8 overflow-y-auto">
@@ -254,7 +257,7 @@ export function AppSidebar() {
             })
           ) : (
             <Collapsible defaultOpen={growthItems.some(({ to }) => location.pathname === to || location.pathname.startsWith(to + "/"))}>
-              <CollapsibleTrigger className="flex w-full items-center gap-4 rounded-lg px-5 py-3 text-[15px] font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
+              <CollapsibleTrigger className="flex w-full items-center gap-4 rounded-md px-5 py-3 text-[15px] font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors">
                 <TrendingUp className="h-5 w-5 shrink-0" />
                 <span className="flex-1 text-left">Growth</span>
                 <ChevronDown className="h-4 w-4 transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
@@ -276,7 +279,7 @@ export function AppSidebar() {
             })
           ) : (
             <Collapsible defaultOpen={billingItems.some(({ to }) => location.pathname === to || location.pathname.startsWith(to + "/"))}>
-              <CollapsibleTrigger className="flex w-full items-center gap-4 rounded-lg px-5 py-3 text-[15px] font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
+              <CollapsibleTrigger className="flex w-full items-center gap-4 rounded-md px-5 py-3 text-[15px] font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors">
                 <Receipt className="h-5 w-5 shrink-0" />
                 <span className="flex-1 text-left">Billing</span>
                 <ChevronDown className="h-4 w-4 transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
@@ -301,7 +304,7 @@ export function AppSidebar() {
             })
           ) : (
             <Collapsible defaultOpen={adminItems.some(({ to }) => location.pathname === to || location.pathname.startsWith(to + "/"))}>
-              <CollapsibleTrigger className="flex w-full items-center gap-4 rounded-lg px-5 py-3 text-[15px] font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
+              <CollapsibleTrigger className="flex w-full items-center gap-4 rounded-md px-5 py-3 text-[15px] font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors">
                 <ShieldCheck className="h-5 w-5 shrink-0" />
                 <span className="flex-1 text-left">Admin</span>
                 <ChevronDown className="h-4 w-4 transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
@@ -324,7 +327,7 @@ export function AppSidebar() {
             })
           ) : (
             <Collapsible defaultOpen={marketingItems.some(({ to }) => location.pathname === to || location.pathname.startsWith(to + "/"))}>
-              <CollapsibleTrigger className="flex w-full items-center gap-4 rounded-lg px-5 py-3 text-[15px] font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
+              <CollapsibleTrigger className="flex w-full items-center gap-4 rounded-md px-5 py-3 text-[15px] font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors">
                 <Megaphone className="h-5 w-5 shrink-0" />
                 <span className="flex-1 text-left">Marketing</span>
                 <ChevronDown className="h-4 w-4 transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
@@ -338,7 +341,7 @@ export function AppSidebar() {
             </Collapsible>
           )}
 
-          <Separator className="my-4 bg-border" />
+          <Separator className="my-4 bg-sidebar-border" />
 
           {collapsed ? (
             <div className="space-y-0.5">
@@ -349,7 +352,7 @@ export function AppSidebar() {
                       href={href}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center justify-center rounded-lg px-3 py-2.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                      className="flex items-center justify-center rounded-md px-3 py-2.5 text-sidebar-foreground/60 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                     >
                       <Icon className="h-4 w-4" />
                     </a>
@@ -360,7 +363,7 @@ export function AppSidebar() {
             </div>
           ) : (
             <Collapsible>
-              <CollapsibleTrigger className="flex w-full items-center gap-2 px-5 py-2 text-[10px] font-medium uppercase tracking-[0.2em] text-muted-foreground/50 hover:text-muted-foreground transition-colors">
+              <CollapsibleTrigger className="flex w-full items-center gap-2 px-5 py-2 font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-sidebar-foreground/45 hover:text-sidebar-foreground transition-colors">
                 <ChevronDown className="h-3 w-3 transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
                 Integrations
               </CollapsibleTrigger>
@@ -371,7 +374,7 @@ export function AppSidebar() {
                     href={href}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-4 rounded-lg px-5 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                    className="flex items-center gap-4 rounded-md px-5 py-2.5 text-sm font-medium text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                   >
                     <Icon className="h-4 w-4" />
                     {label}
