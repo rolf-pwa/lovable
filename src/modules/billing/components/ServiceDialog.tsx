@@ -8,6 +8,8 @@ import { Switch } from "@/shared/components/ui/switch";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/shared/components/ui/dialog";
 import { Copy, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { publicBookingUrl, bookingEmbedSnippet } from "../lib/booking-links";
+
 
 export interface ServiceRecord {
   id: string;
