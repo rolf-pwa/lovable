@@ -100,6 +100,9 @@ Fix: make enrollment provision the vault itself.
    - Complete a Square sandbox payment.
    - Confirm `/book/confirm` shows "Payment received" and scheduling link.
    - Verify a new Contact, Family, and Household were created with `governance_status = stabilization`.
+   - Verify the vault push fired automatically: a `crm_intake_pushes` row exists and the household gets `intake_share_token` once the agent calls back.
+   - Verify staff notification reflects the provisioning outcome.
+   - Verify a new Contact, Family, and Household were created with `governance_status = stabilization`.
    - Verify staff notification was created.
 
 2. **Webhook resilience**
