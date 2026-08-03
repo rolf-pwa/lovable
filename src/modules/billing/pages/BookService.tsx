@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Button } from "@/shared/components/ui/button";
@@ -20,9 +21,12 @@ interface PublicService {
   tax_rate: number | null;
   requires_prepayment: boolean | null;
   booking_url: string | null;
+  slug: string | null;
 }
 
 export default function BookService() {
+  const { slug } = useParams<{ slug?: string }>();
+  const [searchParams] = useSearchParams();
   const [services, setServices] = useState<PublicService[]>([]);
   const [serviceId, setServiceId] = useState("");
   const [name, setName] = useState("");
@@ -38,12 +42,20 @@ export default function BookService() {
     (async () => {
       const { data } = await supabase
         .from("services" as any)
-        .select("id, name, description, price, currency, duration_minutes, tax_rate, requires_prepayment, booking_url")
+        .select(
+          "id, name, description, price, currency, duration_minutes, tax_rate, requires_prepayment, booking_url, slug",
+        )
         .eq("is_active", true)
         .order("name");
-      setServices((data as any) || []);
+      const rows: PublicService[] = (data as any) || [];
+      setServices(rows);
+      const wanted = slug || searchParams.get("service");
+      if (wanted) {
+        const match = rows.find((s) => s.slug === wanted || s.id === wanted);
+        if (match) setServiceId(match.id);
+      }
     })();
-  }, []);
+  }, [slug, searchParams]);
 
   const selected = services.find((s) => s.id === serviceId);
 
@@ -53,6 +65,8 @@ export default function BookService() {
     const tax = round2(price * (Number(selected.tax_rate || 0) / 100));
     return { price, tax, total: round2(price + tax), rate: Number(selected.tax_rate || 0) };
   }, [selected]);
+
+  const locked = Boolean(slug || searchParams.get("service"));
 
   const willPay = Boolean(selected && selected.requires_prepayment !== false && Number(selected.price || 0) > 0);
 
@@ -126,6 +140,18 @@ export default function BookService() {
               <CardTitle className="text-base">Booking details</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              {locked && selected ? (
+                <div className="rounded-md border border-border bg-muted/30 p-3">
+                  <p className="font-medium">{selected.name}</p>
+                  {selected.description && (
+                    <p className="mt-1 text-xs text-muted-foreground">{selected.description}</p>
+                  )}
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {formatMoney(selected.price, selected.currency)}
+                    {selected.duration_minutes ? ` · ${selected.duration_minutes} min` : ""}
+                  </p>
+                </div>
+              ) : (
               <div className="space-y-2">
                 <Label>Service</Label>
                 <Select value={serviceId} onValueChange={setServiceId}>
@@ -142,6 +168,7 @@ export default function BookService() {
                 </Select>
                 {selected?.description && <p className="text-xs text-muted-foreground">{selected.description}</p>}
               </div>
+              )}
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="bk-name">Full name</Label>
