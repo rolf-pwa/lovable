@@ -24,8 +24,9 @@ interface PublicService {
   slug: string | null;
 }
 
-export default function BookService() {
+export default function BookService({ embed = false }: { embed?: boolean }) {
   const { slug } = useParams<{ slug?: string }>();
+
   const [searchParams] = useSearchParams();
   const [services, setServices] = useState<PublicService[]>([]);
   const [serviceId, setServiceId] = useState("");
