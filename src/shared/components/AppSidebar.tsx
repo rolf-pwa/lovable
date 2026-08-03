@@ -225,20 +225,21 @@ export function AppSidebar() {
     <TooltipProvider delayDuration={0}>
       <aside
         className={cn(
-          "flex h-full flex-col bg-background transition-all duration-200",
+          "flex h-full flex-col bg-sidebar text-sidebar-foreground border-r border-sidebar-border transition-all duration-200",
           collapsed ? "w-[68px]" : "w-72"
         )}
       >
         {/* Logo + Toggle */}
-        <div className={cn("flex items-center justify-between pt-6 pb-2", collapsed ? "px-3" : "px-6")}>
-          {!collapsed && <img src={prosperwiseLogoColor} alt="ProsperWise" className="h-10" />}
+        <div className={cn("flex items-center justify-between pt-6 pb-4 border-b border-sidebar-border", collapsed ? "px-3" : "px-6")}>
+          {!collapsed && <img src={prosperwiseLogoWhite} alt="ProsperWise" className="h-9" />}
           <button
             onClick={toggle}
-            className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+            className="rounded-md p-1.5 text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
           >
             {collapsed ? <PanelLeft className="h-5 w-5" /> : <PanelLeftClose className="h-5 w-5" />}
           </button>
         </div>
+
 
         {/* Nav */}
         <nav className="flex-1 space-y-1 px-2 pt-8 overflow-y-auto">
