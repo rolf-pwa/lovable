@@ -175,16 +175,16 @@ function FolderNode({
   return (
     <div style={{ paddingLeft: depth === 0 ? 0 : 16 }}>
       <div className="flex items-center gap-2 py-1.5">
-        <button onClick={() => setOpen((v) => !v)} className="flex items-center gap-2 text-left hover:text-amber-500 flex-1">
+        <button onClick={() => setOpen((v) => !v)} className="flex items-center gap-2 text-left hover:text-accent flex-1">
           {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-          <Folder className="h-4 w-4 text-amber-500" />
+          <Folder className="h-4 w-4 text-accent" />
           <span className="font-serif">{name}</span>
           {loading && <Loader2 className="h-3 w-3 animate-spin ml-1" />}
         </button>
         {canUpload && open && (
           <label className="cursor-pointer">
             <input type="file" multiple className="hidden" onChange={(e) => handleUpload(e.target.files)} />
-            <span className="inline-flex items-center gap-1 text-xs text-amber-500 hover:underline">
+            <span className="inline-flex items-center gap-1 text-xs text-accent hover:underline">
               <Upload className="h-3 w-3" /> Upload
             </span>
           </label>
@@ -382,7 +382,7 @@ export default function VaultGuest() {
           <Card className="w-full max-w-md">
             <CardHeader>
               <div className="flex items-center gap-2">
-                <Shield className="h-5 w-5 text-amber-500" />
+                <Shield className="h-5 w-5 text-accent" />
                 <CardTitle className="font-serif">Secure Document Access</CardTitle>
               </div>
             </CardHeader>
@@ -410,7 +410,7 @@ export default function VaultGuest() {
                     type="button"
                     onClick={requestOtp}
                     disabled={requestingOtp}
-                    className="text-xs text-amber-500 hover:underline disabled:opacity-50"
+                    className="text-xs text-accent hover:underline disabled:opacity-50"
                   >
                     {requestingOtp ? "Sending…" : "Forgot your code? Email me a new one"}
                   </button>

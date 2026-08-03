@@ -52,10 +52,10 @@ export default function ProPortalContact() {
       ) : (
         <div className="grid lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-5">
-            <Card className="border-amber-500/20">
+            <Card className="border-accent/20">
               <CardHeader>
                 <CardTitle className="font-serif text-foreground flex items-center gap-2">
-                  <User className="h-4 w-4 text-amber-500" /> Profile
+                  <User className="h-4 w-4 text-accent" /> Profile
                 </CardTitle>
               </CardHeader>
               <CardContent className="grid sm:grid-cols-2 gap-4 text-sm">
@@ -87,10 +87,10 @@ export default function ProPortalContact() {
           </div>
 
           <aside className="space-y-5">
-            <Card className="border-amber-500/15">
+            <Card className="border-accent/15">
               <CardHeader>
                 <CardTitle className="text-base font-serif flex items-center gap-2">
-                  <ShieldCheck className="h-4 w-4 text-amber-500" /> Charter Status
+                  <ShieldCheck className="h-4 w-4 text-accent" /> Charter Status
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -107,10 +107,10 @@ export default function ProPortalContact() {
               </CardContent>
             </Card>
 
-            <Card className="border-amber-500/15">
+            <Card className="border-accent/15">
               <CardHeader>
                 <CardTitle className="text-base font-serif flex items-center gap-2">
-                  <FileText className="h-4 w-4 text-amber-500" /> Shared Documents
+                  <FileText className="h-4 w-4 text-accent" /> Shared Documents
                 </CardTitle>
               </CardHeader>
               <CardContent>

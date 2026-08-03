@@ -146,10 +146,10 @@ export default function ProPortalLogin() {
     <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
       <Card className="w-full max-w-md border-slate-200">
         <CardHeader className="text-center space-y-2">
-          <div className="mx-auto h-12 w-12 rounded-full bg-slate-900 text-white flex items-center justify-center">
+          <div className="mx-auto h-12 w-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
             <Briefcase className="h-6 w-6" />
           </div>
-          <CardTitle className="text-2xl font-serif text-slate-900">Pro Portal</CardTitle>
+          <CardTitle className="text-2xl font-serif text-primary">Pro Portal</CardTitle>
           <CardDescription className="text-slate-600">
             Secure collaboration workspace for ProsperWise professional partners.
           </CardDescription>

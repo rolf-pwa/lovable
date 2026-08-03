@@ -68,10 +68,10 @@ export default function ProPortalFamily() {
       ) : (
         <div className="grid lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-5">
-            <Card className="border-amber-500/20">
+            <Card className="border-accent/20">
               <CardHeader>
                 <CardTitle className="font-serif text-foreground flex items-center gap-2">
-                  <Crown className="h-4 w-4 text-amber-500" /> The {family.name} Directory
+                  <Crown className="h-4 w-4 text-accent" /> The {family.name} Directory
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2 p-0">
@@ -88,9 +88,9 @@ export default function ProPortalFamily() {
                             onClick={() => navigate(`/pro-portal/household/${hh.id}`)}
                             className="flex-1 text-left flex items-center gap-2 group"
                           >
-                            <Home className="h-4 w-4 text-amber-500" />
+                            <Home className="h-4 w-4 text-accent" />
                             <div className="min-w-0">
-                              <div className="font-medium text-foreground truncate group-hover:text-amber-500 transition-colors">{hh.label}</div>
+                              <div className="font-medium text-foreground truncate group-hover:text-accent transition-colors">{hh.label}</div>
                               <div className="text-[11px] text-muted-foreground">
                                 {hh.contacts.length} member{hh.contacts.length !== 1 ? "s" : ""}
                               </div>
@@ -103,9 +103,9 @@ export default function ProPortalFamily() {
                               <li key={c.id}>
                                 <button
                                   onClick={() => navigate(`/pro-portal/contact/${c.id}`)}
-                                  className="w-full text-left px-3 py-1.5 rounded hover:bg-amber-500/[0.04] transition text-sm flex items-center justify-between group"
+                                  className="w-full text-left px-3 py-1.5 rounded hover:bg-accent/[0.04] transition text-sm flex items-center justify-between group"
                                 >
-                                  <span className="truncate text-foreground group-hover:text-amber-500 transition-colors">{c.name}</span>
+                                  <span className="truncate text-foreground group-hover:text-accent transition-colors">{c.name}</span>
                                   {c.family_role && (
                                     <Badge variant="outline" className="text-[10px]">{c.family_role.replace(/_/g, " ")}</Badge>
                                   )}
@@ -121,7 +121,7 @@ export default function ProPortalFamily() {
                     <li key={c.id}>
                       <button
                         onClick={() => navigate(`/pro-portal/contact/${c.id}`)}
-                        className="w-full text-left px-4 py-3 flex items-center gap-2 hover:bg-amber-500/[0.03] transition"
+                        className="w-full text-left px-4 py-3 flex items-center gap-2 hover:bg-accent/[0.03] transition"
                       >
                         <Users className="h-4 w-4 text-muted-foreground" />
                         <span className="text-foreground">{c.name}</span>
@@ -137,10 +137,10 @@ export default function ProPortalFamily() {
           <aside className="space-y-5">
             <ProTasksPanel scopeType="family" scopeId={family.id} />
 
-            <Card className="border-amber-500/15">
+            <Card className="border-accent/15">
               <CardHeader>
                 <CardTitle className="text-base font-serif flex items-center gap-2">
-                  <Users className="h-4 w-4 text-amber-500" /> Collaborators
+                  <Users className="h-4 w-4 text-accent" /> Collaborators
                 </CardTitle>
               </CardHeader>
               <CardContent>

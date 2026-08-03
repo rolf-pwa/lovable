@@ -37,14 +37,14 @@ export function PortalHoldingTank({ accounts, defaultCollapsed = false }: Portal
   const totalValue = accounts.reduce((sum, a) => sum + (a.current_value || 0), 0);
 
   return (
-    <Card className="border-amber-500/20">
+    <Card className="border-accent/20">
       <CardHeader
         className="pb-2 cursor-pointer select-none"
         onClick={() => setOpen((o) => !o)}
       >
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-500/10">
-            <Anchor className="h-5 w-5 text-amber-600" />
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent/10">
+            <Anchor className="h-5 w-5 text-accent" />
           </div>
           <div>
             <CardTitle className="text-lg font-serif">The Holding Tank</CardTitle>
@@ -52,7 +52,7 @@ export function PortalHoldingTank({ accounts, defaultCollapsed = false }: Portal
           </div>
           <div className="ml-auto flex items-center gap-3">
             <div className="text-right">
-              <p className="text-xl font-bold text-amber-600">{formatCurrency(totalValue)}</p>
+              <p className="text-xl font-bold text-accent">{formatCurrency(totalValue)}</p>
               <Badge variant="secondary" className="text-[10px]">
                 {accounts.length} account{accounts.length !== 1 ? "s" : ""}
               </Badge>
