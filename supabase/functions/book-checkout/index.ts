@@ -99,6 +99,16 @@ Deno.serve(async (req) => {
     const requesterName = clean(body.name, 120);
     const requesterEmail = clean(body.email, 200).toLowerCase();
     const requesterPhone = clean(body.phone, 40);
+    // Square requires E.164 for pre-populated phone; omit anything we can't normalize.
+    const toE164 = (raw: string): string | undefined => {
+      if (!raw) return undefined;
+      const digits = raw.replace(/[^0-9]/g, "");
+      if (raw.trim().startsWith("+") && digits.length >= 8 && digits.length <= 15) return `+${digits}`;
+      if (digits.length === 10) return `+1${digits}`;
+      if (digits.length === 11 && digits.startsWith("1")) return `+${digits}`;
+      return undefined;
+    };
+    const squarePhone = toE164(requesterPhone);
     const notes = clean(body.notes, 1000);
     const startsAtRaw = clean(body.startsAt, 60);
     const returnUrl = clean(body.returnUrl, 500);
@@ -179,39 +189,53 @@ Deno.serve(async (req) => {
       lineItem.applied_taxes = [{ tax_uid: "gst" }];
     }
 
-    const res = await square("/online-checkout/payment-links", {
-      method: "POST",
-      body: {
-        idempotency_key: idempotencyKey(),
-        description: `Booking ${booking.id}`,
-        order: {
-          location_id: squareLocationId(),
-          reference_id: booking.id,
-          line_items: [lineItem],
-          taxes:
-            taxRate > 0
-              ? [
-                  {
-                    uid: "gst",
-                    name: `Tax (${taxRate}%)`,
-                    percentage: String(taxRate),
-                    scope: "LINE_ITEM",
-                    type: "ADDITIVE",
-                  },
-                ]
-              : undefined,
-        },
-        pre_populated_data: {
-          buyer_email: requesterEmail,
-          buyer_phone_number: requesterPhone || undefined,
-        },
-        checkout_options: {
-          allow_tipping: false,
-          ask_for_shipping_address: false,
-          redirect_url: redirectUrl,
-        },
+    const buildBody = (prePopulated: Record<string, unknown> | undefined) => ({
+      idempotency_key: idempotencyKey(),
+      description: `Booking ${booking.id}`,
+      order: {
+        location_id: squareLocationId(),
+        reference_id: booking.id,
+        line_items: [lineItem],
+        taxes:
+          taxRate > 0
+            ? [
+                {
+                  uid: "gst",
+                  name: `Tax (${taxRate}%)`,
+                  percentage: String(taxRate),
+                  scope: "LINE_ITEM",
+                  type: "ADDITIVE",
+                },
+              ]
+            : undefined,
+      },
+      pre_populated_data: prePopulated,
+      checkout_options: {
+        allow_tipping: false,
+        ask_for_shipping_address: false,
+        redirect_url: redirectUrl,
       },
     });
+
+    let res = await square("/online-checkout/payment-links", {
+      method: "POST",
+      body: buildBody({
+        buyer_email: requesterEmail || undefined,
+        buyer_phone_number: squarePhone,
+      }),
+    });
+
+    // Square rejects some buyer contact values (test domains, odd phone formats).
+    // Those are conveniences only, so retry once without them rather than failing the booking.
+    if (!res.ok && res.status === 400) {
+      console.warn(
+        `book-checkout retrying without pre-populated buyer data: ${squareErrorMessage(res.data)}`,
+      );
+      res = await square("/online-checkout/payment-links", {
+        method: "POST",
+        body: buildBody(undefined),
+      });
+    }
 
     if (!res.ok) {
       const message = squareErrorMessage(res.data);
