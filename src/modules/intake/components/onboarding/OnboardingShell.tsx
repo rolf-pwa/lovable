@@ -27,6 +27,7 @@ export const OnboardingShell = ({ portalToken, onBack, onAskForHelp }: Props) =>
     saving,
     error,
     confirmAuditBooked,
+    checkAuditBooking,
     saveProfile,
     saveWealthEvent,
     markDocumentsComplete,
@@ -105,6 +106,11 @@ export const OnboardingShell = ({ portalToken, onBack, onAskForHelp }: Props) =>
           serviceName={state.booking?.serviceName ?? null}
           schedulingUrl={state.booking?.schedulingUrl ?? null}
           bookedAt={state.household.auditBookedAt}
+          onCheckBooking={async () => {
+            const found = await checkAuditBooking();
+            if (found) setCurrent(2);
+            return found;
+          }}
           saving={saving}
           onConfirm={async () => {
             const ok = await confirmAuditBooked();
