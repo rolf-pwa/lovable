@@ -24,7 +24,7 @@ import { Button } from "@/shared/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/shared/components/ui/input-otp";
 import { Grape, ScrollText, Clock, Calendar, FolderOpen, CheckSquare, ShieldCheck, ExternalLink, FileBarChart, Mail, MailX, Loader2, Home, Users, ChevronLeft, ChevronDown, ChevronRight, ArrowRight, Landmark, MessageCircle, Video, MapPin, ClipboardList, LogOut, Megaphone, Building2, FolderLock } from "lucide-react";
-import prosperwiseLogo from "@/assets/prosperwise-logo.png";
+import prosperwiseLogo from "@/assets/prosperwise-icon-paper.png";
 import { insuranceCashForStorehouses, sumValues, isAumStorehouse } from "@/modules/portal/lib/portalAum";
 
 interface PortalData {
@@ -1414,16 +1414,16 @@ const Portal = ({ intakeRoute = false }: { intakeRoute?: boolean }) => {
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* Header */}
-      <header className="border-b border-primary-foreground/10 bg-primary sticky top-0 z-10">
+      <header className="border-b border-accent/40 bg-primary sticky top-0 z-10">
         <div className="mx-auto max-w-6xl px-4 py-4 sm:px-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <img src={prosperwiseLogo} alt="ProsperWise" className="h-9 w-9" />
+              <img src={prosperwiseLogo} alt="ProsperWise" className="h-9 w-9 rounded-full" />
               <div>
                 <h1 className="text-lg font-semibold text-primary-foreground font-serif">
                   {contact.first_name} {contact.last_name || ""}
                 </h1>
-                <p className="text-xs text-primary-foreground/70">
+                <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-primary-foreground/60">
                   {getHeaderSubtitle()}
                 </p>
               </div>
