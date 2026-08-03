@@ -3334,6 +3334,7 @@ export type Database = {
           square_sync_status: string
           square_synced_at: string | null
           square_variation_id: string | null
+          tax_rate: number
           updated_at: string
         }
         Insert: {
@@ -3352,6 +3353,7 @@ export type Database = {
           square_sync_status?: string
           square_synced_at?: string | null
           square_variation_id?: string | null
+          tax_rate?: number
           updated_at?: string
         }
         Update: {
@@ -3370,6 +3372,7 @@ export type Database = {
           square_sync_status?: string
           square_synced_at?: string | null
           square_variation_id?: string | null
+          tax_rate?: number
           updated_at?: string
         }
         Relationships: []

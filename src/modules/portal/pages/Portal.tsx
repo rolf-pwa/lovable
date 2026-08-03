@@ -1144,16 +1144,16 @@ const Portal = ({ intakeRoute = false }: { intakeRoute?: boolean }) => {
                     className="inline-flex items-center gap-1.5 rounded-md bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/20 transition-colors border border-primary/20"
                   >
                     <MapPin className="h-3.5 w-3.5" />
-                    In Person
+                    Audit — Personal
                   </a>
                   <a
-                    href="https://calendar.app.google/Fwsmx2LC8BjWf3Zh9"
+                    href="https://calendar.app.google/raxnRa2RFQGL7KnD9"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1.5 rounded-md bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/20 transition-colors border border-primary/20"
                   >
-                    <Video className="h-3.5 w-3.5" />
-                    Video
+                    <Building2 className="h-3.5 w-3.5" />
+                    Audit — Corporate
                   </a>
                 </div>
               )}

@@ -3,7 +3,7 @@ import { useCalendarEvents } from "@/shared/hooks/useGoogle";
 import { useGoogleStatus } from "@/shared/hooks/useGoogle";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Button } from "@/shared/components/ui/button";
-import { Calendar, MapPin, Video } from "lucide-react";
+import { Calendar, MapPin, Building2 } from "lucide-react";
 import { format } from "date-fns";
 
 interface ContactCalendarProps {
@@ -84,17 +84,17 @@ export function ContactCalendar({ contactEmail, contactName }: ContactCalendarPr
           >
             <Button variant="ghost" size="sm" className="gap-1">
               <MapPin className="h-3 w-3" />
-              In Person
+              Audit — Personal
             </Button>
           </a>
           <a
-            href={`https://calendar.app.google/Fwsmx2LC8BjWf3Zh9${qs}`}
+            href={`https://calendar.app.google/raxnRa2RFQGL7KnD9${qs}`}
             target="_blank"
             rel="noopener noreferrer"
           >
             <Button variant="ghost" size="sm" className="gap-1">
-              <Video className="h-3 w-3" />
-              Video
+              <Building2 className="h-3 w-3" />
+              Audit — Corporate
             </Button>
           </a>
         </div>
