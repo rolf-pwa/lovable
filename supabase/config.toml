@@ -97,3 +97,6 @@ verify_jwt = false
 
 [functions.crm-intake-callback]
 verify_jwt = false
+
+[functions.square-webhook]
+verify_jwt = false
