@@ -1,134 +1,68 @@
-# Public website → CRM workflow review
+# Guided client onboarding in the portal
 
-## Current flow (as implemented)
+Turn `/portal/intake` from a document checklist into a 4-step onboarding experience hosted by Georgia, entered automatically right after payment, with the vault provisioned by the agent without staff involvement.
+
+## Target flow
 
 ```text
-Public site
+Public site → /pay/<slug> → Square checkout → payment
     │
-    ├─ /pay/<slug>  ──►  QuickPay page  ──►  book-checkout edge fn
-    │                       (public, no login)
-    │
-    └─ /book/<slug> ──►  BookService form ──►  book-checkout edge fn
-                            (public, fallback form)
+    └─ /book/confirm verifies payment
+         ├─ mints a portal session from the paid booking (no OTP needed on first entry)
+         └─ redirects to /portal/intake
 
-book-checkout
+/portal/intake  ("Your Sovereignty Audit" — Georgia guides all 4 steps)
     │
-    ├─ Looks up active service by slug (with fuzzy fallback for typos)
-    ├─ Inserts a service_bookings row (awaiting_payment / unpaid)
-    ├─ Creates a Square hosted payment link
-    │   • quick mode: Square collects name/email/phone once
-    │   • non-quick: pre-populates email/phone from the form
-    └─ Returns checkoutUrl
+    ├─ Step 1 · Book the Audit        → Google appointment page (Personal / Corporate)
+    ├─ Step 2 · Household information → creates contacts + household record
+    ├─ Step 3 · Your wealth event     → event type + notes
+    └─ Step 4 · Upload your documents → existing checklist + Shoebox upload
 
-Square hosted checkout
-    │
-    ├─ Buyer pays
-    ├─ Square redirects to /book/confirm?booking=<id>
-    └─ Square webhook fires payment.* event
-
-Payment confirmation
-    │
-    ├─ /book/confirm polls book-checkout status action
-    ├─ If webhook hasn't landed, status action checks Square Order directly
-    └─ On paid: updates booking, then calls enrollPaidBooking
-
-enrollPaidBooking (shared helper, also called by square-webhook)
-    │
-    ├─ Backfills buyer name/email/phone from Square Payment / Order APIs if missing
-    ├─ Matches existing contact by email
-    │   └─ If found: links booking to existing contact/household
-    │
-    └─ If no contact found:
-        ├─ Creates a Family  (e.g. "Last Family")
-        ├─ Creates a Household with governance_status = stabilization
-        ├─ Creates a Contact with family_role = head_of_family
-        └─ Creates a staff_notification: "New Audit client (paid online)"
-
-Client portal
-    │
-    ├─ New household is in stabilization → client logs in via OTP
-    ├─ Until intake is complete, portal redirects to /portal/intake
-    ├─ /portal/intake fetches manifest via intake-portal edge fn
-    │   • proxy mode: uses shareToken/manifestUrl/uploadUrl from the agent callback
-    │   • in-house mode: builds checklist locally, classifies uploads with Vertex AI
-    └─ Client uploads documents into the household vault Shoebox
-
-Staff side
-    │
-    ├─ HouseholdDetail has a "Push to Audit Agent" action (crm-intake-push)
-    ├─ Agent provisions Drive vault and calls crm-intake-callback
-    │   with shareToken + manifestUrl + uploadUrl
-    └─ Staff can toggle HoF visibility, governance status, fiduciary entity, etc.
+    Steps unlock in order; each is resumable and shows Not started / In progress / Done.
+    When all four are done the onboarding view retires and the normal portal appears.
 ```
 
-## Key files
+## Step behaviour
 
-| Step | File |
-|------|------|
-| Public quick-pay entry | `src/modules/billing/pages/QuickPay.tsx` |
-| Public form entry | `src/modules/billing/pages/BookService.tsx` |
-| Link helpers | `src/modules/billing/lib/booking-links.ts` |
-| Checkout & status API | `supabase/functions/book-checkout/index.ts` |
-| Square REST helper | `supabase/functions/_shared/square.ts` |
-| Post-payment enrollment | `supabase/functions/_shared/booking-enrollment.ts` |
-| Payment confirmation UI | `src/modules/billing/pages/BookingConfirmation.tsx` |
-| Square webhooks | `supabase/functions/square-webhook/index.ts` |
-| Client intake UI | `src/modules/intake/components/PortalIntakePage.tsx` |
-| Intake manifest hook | `src/shared/hooks/useIntakeManifest.ts` |
-| Intake portal edge fn | `supabase/functions/intake-portal/index.ts` |
-| Staff push to agent | `src/modules/crm/pages/HouseholdDetail.tsx` |
-| Agent callback | `supabase/functions/crm-intake-callback/index.ts` |
+**Step 1 — Book the Audit.** Shows which audit they paid for (Personal or Corporate) and its Google appointment link, prefilled with their name and email. A "I've booked my time" confirmation marks the step done and stamps the booking row. No calendar polling.
 
-## Change to make first: autonomous vault provisioning
+**Step 2 — Household information.** One form: household name, address, phone, email, plus a repeatable member list (full name, relationship — spouse / child / dependant / other, email, date of birth optional). On submit it updates the head-of-family contact created at payment and creates a contact per additional member, linked to the same family and household. Editable until the step is confirmed; after that it becomes a read-only summary with a "request a change" link into the existing portal request flow.
 
-Today the vault push is staff-triggered only. `crm-intake-push/index.ts` authenticates with `supabaseUser.auth.getUser()` and returns 401 without a staff session, and the only caller is the "Push to Audit Agent" button in `HouseholdDetail.tsx`. So a new paid client sits with an unprovisioned vault until someone in the office clicks it.
+**Step 3 — Your wealth event.** Dropdown: Inheritance, Divorce, Retirement, Business exit, Business growth stage, Other sudden wealth. Plus a free-text notes field ("what's on your mind about it?"). Saved on the household so it shows on the staff side and feeds the Audit context.
 
-Fix: make enrollment provision the vault itself.
+**Step 4 — Upload your documents.** The current `PortalIntakePage` checklist, dropzone, and activity list, unchanged apart from being framed as the last step. Completion still comes from the intake manifest.
 
-1. **Extract the push into a shared helper** — move the payload-building and signed POST body of `crm-intake-push` into `supabase/functions/_shared/intake-push.ts`, exporting `pushHouseholdToIntakeAgent(admin, householdId, pushedBy | null)`. It keeps writing the `crm_intake_pushes` log row and returns `{ ok, itemsSent, members, error }`.
-2. **Thin out the edge function** — `crm-intake-push/index.ts` keeps its staff auth check and just calls the helper, so the manual button behaves exactly as it does now.
-3. **Call it from enrollment** — at the end of `enrollPaidBooking`, once the contact/household exist and the household has no `intake_share_token` yet, call the helper. Do it in a try/catch so a provisioning failure never blocks the payment or the contact creation.
-4. **Notify staff on outcome, not on the to-do** — replace the current "provision the vault to start the Audit" wording in the `staff_notifications` insert with either "vault provisioning started automatically" or, on failure, "automatic vault provisioning failed — push manually" so the office knows when to intervene.
-5. **Idempotency** — skip the push when `intake_share_token` is already set, and skip when a `crm_intake_pushes` row for that household is already in `sent`/`accepted` within the last few minutes, so the Square webhook and the `/book/confirm` polling fallback can't double-push.
-6. **Keep the manual button** — it stays as the retry path and for households created outside the payment flow (bulk onboarding, manual CRM entry).
+**Georgia's role.** Each step carries a short Georgia intro line and a persistent "Ask Georgia" affordance using the existing portal assistant, scoped so it explains the step and never gives advice.
 
-## Proposed review checklist
+## Autonomous vault provisioning
 
+Today the vault push is staff-triggered: `crm-intake-push` requires a staff session and its only caller is the "Push to Audit Agent" button in `HouseholdDetail.tsx`, so a new paid client waits on the office. Change:
 
-1. **End-to-end smoke test**
-   - Visit `/pay/<service-slug>` as an anonymous user.
-   - Complete a Square sandbox payment.
-   - Confirm `/book/confirm` shows "Payment received" and scheduling link.
-   - Verify a new Contact, Family, and Household were created with `governance_status = stabilization`.
-   - Verify the vault push fired automatically: a `crm_intake_pushes` row exists and the household gets `intake_share_token` once the agent calls back.
-   - Verify staff notification reflects the provisioning outcome.
-   - Verify a new Contact, Family, and Household were created with `governance_status = stabilization`.
-   - Verify staff notification was created.
+1. Extract the payload building and signed POST out of `crm-intake-push/index.ts` into `supabase/functions/_shared/intake-push.ts` as `pushHouseholdToIntakeAgent(admin, householdId, pushedBy | null)`, still writing the `crm_intake_pushes` log row.
+2. `crm-intake-push` keeps its staff auth check and just calls the helper, so the manual button is unchanged and stays as the retry path.
+3. `enrollPaidBooking` calls the helper after the contact/household exist, in a try/catch so provisioning failure never blocks payment or record creation.
+4. Skip the push when `intake_share_token` is already set or a recent `crm_intake_pushes` row is already `sent`/`accepted`, so the webhook and the `/book/confirm` polling fallback can't double-push.
+5. The staff notification reports the outcome — "vault provisioning started automatically" or "automatic provisioning failed, push manually" — instead of asking staff to do it.
 
-2. **Webhook resilience**
-   - Confirm `SQUARE_WEBHOOK_SIGNATURE_KEY` and `SQUARE_WEBHOOK_URL` are set.
-   - Test that deleting the webhook and relying only on `/book/confirm` polling still enrolls the client.
+## Portal entry without OTP
 
-3. **Quick-pay buyer backfill**
-   - Pay without using the `/book` form.
-   - Confirm `requester_name`, `requester_email`, and `requester_phone` are backfilled from Square into the booking and contact.
+`/book/confirm` already verifies the payment server-side. Once verified, `book-checkout` returns a short-lived portal token bound to that booking's contact (same `portal_tokens` mechanism the OTP flow uses, short TTL, single household scope). The confirmation page stores it and navigates to `/portal/intake`. Every later visit uses the normal email OTP login. The token is only ever issued for a booking that Square confirms as paid.
 
-4. **Duplicate contact handling**
-   - Pay with an email that already exists in `contacts`.
-   - Confirm the booking links to the existing contact/household and does **not** create a duplicate family.
+## Technical notes
 
-5. **Intake portal handoff**
-   - After enrollment, send the client their portal OTP link.
-   - Confirm `/portal/intake` loads the checklist.
-   - Confirm document upload lands in the correct household Shoebox folder.
+- **Schema**: add onboarding progress + step data to `households` — `onboarding_step`, `onboarding_completed_at`, `audit_booked_at`, `wealth_event_type`, `wealth_event_notes`. Contacts created in step 2 reuse the existing `family_role` values, so no new enum work.
+- **New files**: `src/modules/intake/components/onboarding/` with `OnboardingShell.tsx` (stepper + Georgia frame) and one component per step; a `useOnboardingProgress` hook reading/writing the household row through the portal edge function.
+- **Reused**: `PortalIntakePage` becomes step 4's body; `useIntakeManifest` unchanged; the audit calendar links already live in the billing/CRM link helpers.
+- **Edge functions**: `intake-portal` gains actions to read progress, save the household form, save the wealth event, and mark steps complete — all authorised by the portal token and scoped to that household. `book-checkout` gains the portal-token issuance on verified payment.
+- **Gating**: the existing "redirect to intake until complete" rule now keys off `onboarding_completed_at`, which is set when all four steps are done (step 4 driven by the manifest's `completion.status`).
 
-6. **Edge cases**
-   - Service with `requires_prepayment = false` (free booking) flows through `/book`, not `/pay`.
-   - Fuzzy slug fallback resolves a misspelled URL.
-   - Failed Square checkout retries without pre-populated buyer data.
+## Review checklist
 
-## Open questions
-
-- Should the `/book/confirm` page automatically redirect the client to `/portal/intake` after payment, or keep the current "choose your appointment time" step?
-- Should paid bookings create a `business_pipeline` row (revenue) in addition to the contact/household?
-- Do you want a staff alert or Slack/email notification when a new paid enrollment succeeds or fails?
+1. Pay through `/pay/<slug>` in sandbox → land directly on `/portal/intake` with step 1 active and no login prompt.
+2. Confirm the vault push fired automatically: a `crm_intake_pushes` row exists and `intake_share_token` lands after the agent callback.
+3. Complete step 2 → verify the head-of-family contact is updated and one contact per member is created under the same family and household.
+4. Complete step 3 → verify the event type and notes appear on the staff household page.
+5. Upload documents → verify files land in the correct household Shoebox and step 4 completes from the manifest.
+6. All four done → portal shows the normal dashboard and the intake redirect stops.
+7. Reload mid-flow and re-login by OTP → progress is preserved, no duplicate contacts.
+8. Pay with an email that already exists → links to the existing contact/household, no duplicate family, onboarding resumes at the right step.
