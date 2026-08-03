@@ -92,7 +92,7 @@ const VfoPortal = () => {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="h-6 w-6 animate-spin text-amber-500" />
+        <Loader2 className="h-6 w-6 animate-spin text-accent" />
       </div>
     );
   }
@@ -100,9 +100,9 @@ const VfoPortal = () => {
   if (error || !data) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-6">
-        <Card className="max-w-md w-full border-amber-500/20 bg-card">
+        <Card className="max-w-md w-full border-accent/20 bg-card">
           <CardContent className="p-8 text-center space-y-3">
-            <Crown className="h-8 w-8 text-amber-500 mx-auto" />
+            <Crown className="h-8 w-8 text-accent mx-auto" />
             <h1 className="font-serif text-xl text-foreground">Family Office unavailable</h1>
             <p className="text-sm text-muted-foreground">{error || "Please contact your advisor."}</p>
             {token && (
@@ -127,9 +127,9 @@ const VfoPortal = () => {
   if (!family?.vfo_enabled) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-6">
-        <Card className="max-w-md w-full border-amber-500/20 bg-card">
+        <Card className="max-w-md w-full border-accent/20 bg-card">
           <CardContent className="p-8 text-center space-y-3">
-            <Crown className="h-8 w-8 text-amber-500 mx-auto" />
+            <Crown className="h-8 w-8 text-accent mx-auto" />
             <h1 className="font-serif text-xl text-foreground">Not yet enrolled</h1>
             <p className="text-sm text-muted-foreground">
               The Virtual Family Office is reserved for select families. Your advisor can enable it for your household.
@@ -254,13 +254,13 @@ const VfoPortal = () => {
           const last = i === crumbs.length - 1;
           return (
             <div key={i} className="flex items-center gap-2">
-              {i > 0 && <ChevronRight className="h-3 w-3 text-amber-500/40" />}
+              {i > 0 && <ChevronRight className="h-3 w-3 text-accent/40" />}
               {last || !c.onClick ? (
                 <span className="text-foreground font-medium tracking-wide">{c.label}</span>
               ) : (
                 <button
                   onClick={c.onClick}
-                  className="text-muted-foreground hover:text-amber-500 transition-colors uppercase tracking-wider"
+                  className="text-muted-foreground hover:text-accent transition-colors uppercase tracking-wider"
                 >
                   {c.label}
                 </button>
@@ -280,11 +280,11 @@ const VfoPortal = () => {
     return (
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-5">
-          <Card className="border-amber-500/20 bg-gradient-to-br from-amber-500/[0.04] to-transparent">
+          <Card className="border-accent/20 bg-gradient-to-br from-accent/[0.04] to-transparent">
             <CardContent className="p-5">
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-500/10">
-                  <Crown className="h-5 w-5 text-amber-500" />
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent/10">
+                  <Crown className="h-5 w-5 text-accent" />
                 </div>
                 <div className="flex-1">
                   <h2 className="font-serif text-lg text-foreground">{familyName}</h2>
@@ -313,14 +313,14 @@ const VfoPortal = () => {
                 <button
                   key={hh.id}
                   onClick={() => setDrilldown({ level: "household", householdId: hh.id })}
-                  className="text-left rounded-lg border border-amber-500/15 bg-card p-5 hover:border-amber-500/40 hover:bg-amber-500/[0.03] transition-colors group"
+                  className="text-left rounded-lg border border-accent/15 bg-card p-5 hover:border-accent/40 hover:bg-accent/[0.03] transition-colors group"
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-2">
-                      <Home className="h-4 w-4 text-amber-500" />
+                      <Home className="h-4 w-4 text-accent" />
                       <h3 className="font-serif text-foreground">{hh.label} Household</h3>
                     </div>
-                    <ArrowRight className="h-4 w-4 text-amber-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <ArrowRight className="h-4 w-4 text-accent opacity-0 group-hover:opacity-100 transition-opacity" />
                   </div>
                   {hh.address && <p className="text-xs text-muted-foreground mb-3">{hh.address}</p>}
                   <div className="flex items-center justify-between">
@@ -335,7 +335,7 @@ const VfoPortal = () => {
 
                   <div className="mt-3 flex flex-wrap gap-1">
                     {(hh.members || []).slice(0, 5).map((m: any) => (
-                      <span key={m.id} className="rounded-full bg-amber-500/5 border border-amber-500/15 px-2 py-0.5 text-[10px] text-muted-foreground">
+                      <span key={m.id} className="rounded-full bg-accent/5 border border-accent/15 px-2 py-0.5 text-[10px] text-muted-foreground">
                         {m.first_name}
                       </span>
                     ))}
@@ -361,14 +361,14 @@ const VfoPortal = () => {
               + sumValues(family_holding_tank)
               + insuranceCashForStorehouses(insurance_policies || [], allS);
             return (
-              <Card className="border-amber-500/20 bg-gradient-to-b from-amber-500/5 to-transparent">
+              <Card className="border-accent/20 bg-gradient-to-b from-accent/5 to-transparent">
                 <CardContent className="p-5 space-y-2">
                   <div className="flex items-center gap-2">
-                    <Crown className="h-4 w-4 text-amber-500" />
+                    <Crown className="h-4 w-4 text-accent" />
                     <h3 className="text-[10px] uppercase tracking-wider text-muted-foreground">Family AUM</h3>
                   </div>
-                  <p className="font-serif text-2xl text-amber-500">{fmt(familyAUM)}</p>
-                  <p className="text-[11px] text-muted-foreground leading-relaxed pt-2 border-t border-amber-500/10">
+                  <p className="font-serif text-2xl text-accent">{fmt(familyAUM)}</p>
+                  <p className="text-[11px] text-muted-foreground leading-relaxed pt-2 border-t border-accent/10">
                     Aggregate across {households.length} household{households.length !== 1 ? "s" : ""}. Individual account details remain private to each household.
                   </p>
                 </CardContent>
@@ -404,10 +404,10 @@ const VfoPortal = () => {
     return (
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-5">
-          <Card className="border-amber-500/20 bg-gradient-to-br from-amber-500/[0.04] to-transparent">
+          <Card className="border-accent/20 bg-gradient-to-br from-accent/[0.04] to-transparent">
             <CardContent className="p-5 flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-500/10">
-                <Home className="h-5 w-5 text-amber-500" />
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent/10">
+                <Home className="h-5 w-5 text-accent" />
               </div>
               <div>
                 <h2 className="font-serif text-lg text-foreground">{hhLabel} Household</h2>
@@ -438,13 +438,13 @@ const VfoPortal = () => {
                   onClick={() => setDrilldown({ level: "individual", householdId: drilldown.householdId, memberId: isSelf ? undefined : m.id })}
                   className={`text-left rounded-lg p-4 transition-colors group ${
                     isSelf
-                      ? "border border-amber-500/40 bg-amber-500/[0.06] hover:bg-amber-500/[0.1]"
-                      : "border border-amber-500/15 bg-card hover:border-amber-500/40 hover:bg-amber-500/[0.03]"
+                      ? "border border-accent/40 bg-accent/[0.06] hover:bg-accent/[0.1]"
+                      : "border border-accent/15 bg-card hover:border-accent/40 hover:bg-accent/[0.03]"
                   }`}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className={`flex h-8 w-8 items-center justify-center rounded-full ${isSelf ? "bg-amber-500/20" : "bg-muted"}`}>
+                      <div className={`flex h-8 w-8 items-center justify-center rounded-full ${isSelf ? "bg-accent/20" : "bg-muted"}`}>
                         {isSelf ? <img src={prosperwiseLogo} alt="" className="h-4 w-4" /> : <Users className="h-4 w-4 text-muted-foreground" />}
                       </div>
                       <div>
@@ -456,7 +456,7 @@ const VfoPortal = () => {
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="font-serif text-foreground">{fmt(mTotal)}</span>
-                      <ArrowRight className="h-4 w-4 text-amber-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <ArrowRight className="h-4 w-4 text-accent opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
                   </div>
                 </button>
@@ -467,7 +467,7 @@ const VfoPortal = () => {
           {corporations.length > 0 && (
             <div className="space-y-3 pt-2">
               <div className="flex items-center gap-2">
-                <Building2 className="h-4 w-4 text-amber-500/70" />
+                <Building2 className="h-4 w-4 text-accent/70" />
                 <h3 className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Corporate Entities</h3>
               </div>
               {corporations.map((corp: any) => {
@@ -476,12 +476,12 @@ const VfoPortal = () => {
                   <button
                     key={corp.id}
                     onClick={() => setExpandedCorps(prev => { const n = new Set(prev); n.has(corp.id) ? n.delete(corp.id) : n.add(corp.id); return n; })}
-                    className="w-full text-left rounded-lg border border-amber-500/15 bg-card p-4 space-y-2 hover:border-amber-500/40 transition-colors"
+                    className="w-full text-left rounded-lg border border-accent/15 bg-card p-4 space-y-2 hover:border-accent/40 transition-colors"
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-500/10">
-                          <Building2 className="h-4 w-4 text-amber-500" />
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-accent/10">
+                          <Building2 className="h-4 w-4 text-accent" />
                         </div>
                         <div>
                           <p className="text-sm font-medium text-foreground">{corp.name}</p>
@@ -497,7 +497,7 @@ const VfoPortal = () => {
                       </div>
                     </div>
                     {isExpanded && (corp.vineyard_accounts || []).length > 0 && (
-                      <div className="pl-11 space-y-1 border-t border-amber-500/10 pt-2">
+                      <div className="pl-11 space-y-1 border-t border-accent/10 pt-2">
                         {corp.vineyard_accounts.map((acc: any) => (
                           <div key={acc.id} className="flex items-center justify-between text-xs">
                             <span className="text-foreground/80">{acc.account_name}</span>
@@ -562,29 +562,29 @@ const VfoPortal = () => {
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-4">
           <Tabs value={tab} onValueChange={setTab}>
-            <TabsList className="w-full bg-muted/30 border border-amber-500/15 flex-wrap h-auto">
-              <TabsTrigger value="tasks" className="flex-1 gap-1.5 data-[state=active]:bg-amber-500/10 data-[state=active]:text-amber-500">
+            <TabsList className="w-full bg-muted/30 border border-accent/15 flex-wrap h-auto">
+              <TabsTrigger value="tasks" className="flex-1 gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent">
                 <CheckSquare className="h-4 w-4" />Action Items
               </TabsTrigger>
-              <TabsTrigger value="meetings" className="flex-1 gap-1.5 data-[state=active]:bg-amber-500/10 data-[state=active]:text-amber-500">
+              <TabsTrigger value="meetings" className="flex-1 gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent">
                 <Calendar className="h-4 w-4" />Meetings
               </TabsTrigger>
               {hasFinancials && (
-                <TabsTrigger value="financials" className="flex-1 gap-1.5 data-[state=active]:bg-amber-500/10 data-[state=active]:text-amber-500">
+                <TabsTrigger value="financials" className="flex-1 gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent">
                   <Landmark className="h-4 w-4" />Financials
                 </TabsTrigger>
               )}
               {isSelf && (
-                <TabsTrigger value="vault" className="flex-1 gap-1.5 data-[state=active]:bg-amber-500/10 data-[state=active]:text-amber-500">
+                <TabsTrigger value="vault" className="flex-1 gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent">
                   <FolderLock className="h-4 w-4" />Documents
                 </TabsTrigger>
               )}
               {professionals.length > 0 && (
-                <TabsTrigger value="team" className="flex-1 gap-1.5 data-[state=active]:bg-amber-500/10 data-[state=active]:text-amber-500">
+                <TabsTrigger value="team" className="flex-1 gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent">
                   <Briefcase className="h-4 w-4" />Professionals
                 </TabsTrigger>
               )}
-              <TabsTrigger value="updates" className="flex-1 gap-1.5 data-[state=active]:bg-amber-500/10 data-[state=active]:text-amber-500">
+              <TabsTrigger value="updates" className="flex-1 gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent">
                 <Megaphone className="h-4 w-4" />Updates
               </TabsTrigger>
             </TabsList>
@@ -593,7 +593,7 @@ const VfoPortal = () => {
               {isSelf ? (
                 <PortalTasks portalToken={portalToken} clientName={ind.name} contactId={contact.id} />
               ) : (
-                <div className="rounded-lg border border-amber-500/15 bg-muted/20 p-8 text-center text-sm text-muted-foreground">
+                <div className="rounded-lg border border-accent/15 bg-muted/20 p-8 text-center text-sm text-muted-foreground">
                   Task view is only available on your own profile.
                 </div>
               )}
@@ -651,17 +651,17 @@ const VfoPortal = () => {
         </div>
 
         <aside className="space-y-4">
-          <Card className="border-amber-500/20 bg-gradient-to-b from-amber-500/5 to-transparent">
+          <Card className="border-accent/20 bg-gradient-to-b from-accent/5 to-transparent">
             <CardContent className="p-5 space-y-3">
               <div className="flex items-center gap-2">
-                <ShieldCheck className="h-4 w-4 text-amber-500" />
+                <ShieldCheck className="h-4 w-4 text-accent" />
                 <h3 className="font-serif text-sm text-foreground">Your Concierge</h3>
               </div>
               <p className="text-xs text-muted-foreground leading-relaxed">
                 Chat with Georgia for instant help, or open a private request for your advisory team.
               </p>
               <Button
-                className="w-full bg-amber-500 text-amber-950 hover:bg-amber-400"
+                className="w-full bg-accent text-accent-foreground hover:bg-accent/90"
                 onClick={() => setGeorgiaOpen(true)}
               >
                 <MessageCircle className="h-4 w-4 mr-2" />
@@ -669,7 +669,7 @@ const VfoPortal = () => {
               </Button>
               <Button
                 variant="outline"
-                className="w-full border-amber-500/30 text-amber-600 hover:bg-amber-500/10 justify-between"
+                className="w-full border-accent/30 text-accent hover:bg-accent/10 justify-between"
                 onClick={() => setRequestsOpen(true)}
               >
                 <span className="flex items-center">
@@ -679,7 +679,7 @@ const VfoPortal = () => {
                 {(() => {
                   const openCount = (portal_requests || []).filter((r: any) => r.status !== "resolved").length;
                   return openCount > 0 ? (
-                    <Badge variant="secondary" className="bg-amber-500/15 text-amber-600 border-amber-500/30">{openCount} open</Badge>
+                    <Badge variant="secondary" className="bg-accent/15 text-accent border-accent/30">{openCount} open</Badge>
                   ) : null;
                 })()}
               </Button>
@@ -758,7 +758,7 @@ const VfoPortal = () => {
           {canUp && (
             <button
               onClick={upLevel}
-              className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-amber-500 transition-colors mb-5"
+              className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-accent transition-colors mb-5"
             >
               <ChevronLeft className="h-3.5 w-3.5" />
               Back
@@ -785,7 +785,7 @@ const VfoPortal = () => {
         <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="font-serif flex items-center gap-2">
-              <ClipboardList className="h-5 w-5 text-amber-500" />
+              <ClipboardList className="h-5 w-5 text-accent" />
               Your Requests
             </DialogTitle>
           </DialogHeader>

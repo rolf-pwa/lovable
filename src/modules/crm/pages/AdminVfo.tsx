@@ -72,14 +72,14 @@ const AdminVfo = () => {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="font-serif text-2xl text-foreground flex items-center gap-2">
-              <Crown className="h-5 w-5 text-amber-500" />
+              <Crown className="h-5 w-5 text-accent" />
               Virtual Family Office Roster
             </h1>
             <p className="text-sm text-muted-foreground mt-1">
               Designate families that receive the premium VFO experience.
             </p>
           </div>
-          <Badge variant="outline" className="border-amber-500/40 text-amber-600">
+          <Badge variant="outline" className="border-accent/40 text-accent">
             {enrolledCount} enrolled
           </Badge>
         </div>
@@ -114,7 +114,7 @@ const AdminVfo = () => {
                           {row.name}
                         </Link>
                         {row.vfo_enabled && (
-                          <Badge className="bg-amber-500/15 text-amber-600 border-amber-500/30 text-[10px]">
+                          <Badge className="bg-accent/15 text-accent border-accent/30 text-[10px]">
                             VFO
                           </Badge>
                         )}
@@ -141,7 +141,7 @@ const AdminVfo = () => {
           </CardContent>
         </Card>
 
-        <Card className="border-amber-500/20 bg-amber-500/5">
+        <Card className="border-accent/20 bg-accent/5">
           <CardContent className="p-4 text-xs text-muted-foreground space-y-2">
             <p className="font-medium text-foreground">How clients reach the VFO view</p>
             <p>
