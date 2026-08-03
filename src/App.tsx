@@ -129,6 +129,9 @@ const App = () => (
               <Route path="/marketing-updates" element={<ProtectedRoute><MarketingUpdates /></ProtectedRoute>} />
               <Route path="/workbench" element={<ProtectedRoute><Workbench /></ProtectedRoute>} />
               <Route path="/pipeline" element={<ProtectedRoute><Pipeline /></ProtectedRoute>} />
+              <Route path="/services" element={<ProtectedRoute><BillingServices /></ProtectedRoute>} />
+              <Route path="/invoices" element={<ProtectedRoute><BillingInvoices /></ProtectedRoute>} />
+              <Route path="/book" element={<BookService />} />
               <Route path="/contacts" element={<ProtectedRoute><Contacts /></ProtectedRoute>} />
               <Route path="/professionals" element={<ProtectedRoute><Professionals /></ProtectedRoute>} />
               <Route path="/professionals/:id" element={<ProtectedRoute><ProfessionalDetail /></ProtectedRoute>} />
