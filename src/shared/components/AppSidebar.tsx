@@ -257,7 +257,7 @@ export function AppSidebar() {
             })
           ) : (
             <Collapsible defaultOpen={growthItems.some(({ to }) => location.pathname === to || location.pathname.startsWith(to + "/"))}>
-              <CollapsibleTrigger className="flex w-full items-center gap-4 rounded-lg px-5 py-3 text-[15px] font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
+              <CollapsibleTrigger className="flex w-full items-center gap-4 rounded-md px-5 py-3 text-[15px] font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors">
                 <TrendingUp className="h-5 w-5 shrink-0" />
                 <span className="flex-1 text-left">Growth</span>
                 <ChevronDown className="h-4 w-4 transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
@@ -279,7 +279,7 @@ export function AppSidebar() {
             })
           ) : (
             <Collapsible defaultOpen={billingItems.some(({ to }) => location.pathname === to || location.pathname.startsWith(to + "/"))}>
-              <CollapsibleTrigger className="flex w-full items-center gap-4 rounded-lg px-5 py-3 text-[15px] font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
+              <CollapsibleTrigger className="flex w-full items-center gap-4 rounded-md px-5 py-3 text-[15px] font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors">
                 <Receipt className="h-5 w-5 shrink-0" />
                 <span className="flex-1 text-left">Billing</span>
                 <ChevronDown className="h-4 w-4 transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
@@ -304,7 +304,7 @@ export function AppSidebar() {
             })
           ) : (
             <Collapsible defaultOpen={adminItems.some(({ to }) => location.pathname === to || location.pathname.startsWith(to + "/"))}>
-              <CollapsibleTrigger className="flex w-full items-center gap-4 rounded-lg px-5 py-3 text-[15px] font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
+              <CollapsibleTrigger className="flex w-full items-center gap-4 rounded-md px-5 py-3 text-[15px] font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors">
                 <ShieldCheck className="h-5 w-5 shrink-0" />
                 <span className="flex-1 text-left">Admin</span>
                 <ChevronDown className="h-4 w-4 transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
@@ -327,7 +327,7 @@ export function AppSidebar() {
             })
           ) : (
             <Collapsible defaultOpen={marketingItems.some(({ to }) => location.pathname === to || location.pathname.startsWith(to + "/"))}>
-              <CollapsibleTrigger className="flex w-full items-center gap-4 rounded-lg px-5 py-3 text-[15px] font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
+              <CollapsibleTrigger className="flex w-full items-center gap-4 rounded-md px-5 py-3 text-[15px] font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors">
                 <Megaphone className="h-5 w-5 shrink-0" />
                 <span className="flex-1 text-left">Marketing</span>
                 <ChevronDown className="h-4 w-4 transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
@@ -341,7 +341,7 @@ export function AppSidebar() {
             </Collapsible>
           )}
 
-          <Separator className="my-4 bg-border" />
+          <Separator className="my-4 bg-sidebar-border" />
 
           {collapsed ? (
             <div className="space-y-0.5">
@@ -352,7 +352,7 @@ export function AppSidebar() {
                       href={href}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center justify-center rounded-lg px-3 py-2.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                      className="flex items-center justify-center rounded-md px-3 py-2.5 text-sidebar-foreground/60 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                     >
                       <Icon className="h-4 w-4" />
                     </a>
@@ -363,7 +363,7 @@ export function AppSidebar() {
             </div>
           ) : (
             <Collapsible>
-              <CollapsibleTrigger className="flex w-full items-center gap-2 px-5 py-2 text-[10px] font-medium uppercase tracking-[0.2em] text-muted-foreground/50 hover:text-muted-foreground transition-colors">
+              <CollapsibleTrigger className="flex w-full items-center gap-2 px-5 py-2 font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-sidebar-foreground/45 hover:text-sidebar-foreground transition-colors">
                 <ChevronDown className="h-3 w-3 transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
                 Integrations
               </CollapsibleTrigger>
@@ -374,7 +374,7 @@ export function AppSidebar() {
                     href={href}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-4 rounded-lg px-5 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                    className="flex items-center gap-4 rounded-md px-5 py-2.5 text-sm font-medium text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                   >
                     <Icon className="h-4 w-4" />
                     {label}
