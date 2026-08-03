@@ -99,6 +99,16 @@ Deno.serve(async (req) => {
     const requesterName = clean(body.name, 120);
     const requesterEmail = clean(body.email, 200).toLowerCase();
     const requesterPhone = clean(body.phone, 40);
+    // Square requires E.164 for pre-populated phone; omit anything we can't normalize.
+    const toE164 = (raw: string): string | undefined => {
+      if (!raw) return undefined;
+      const digits = raw.replace(/[^0-9]/g, "");
+      if (raw.trim().startsWith("+") && digits.length >= 8 && digits.length <= 15) return `+${digits}`;
+      if (digits.length === 10) return `+1${digits}`;
+      if (digits.length === 11 && digits.startsWith("1")) return `+${digits}`;
+      return undefined;
+    };
+    const squarePhone = toE164(requesterPhone);
     const notes = clean(body.notes, 1000);
     const startsAtRaw = clean(body.startsAt, 60);
     const returnUrl = clean(body.returnUrl, 500);
@@ -203,7 +213,7 @@ Deno.serve(async (req) => {
         },
         pre_populated_data: {
           buyer_email: requesterEmail,
-          buyer_phone_number: requesterPhone || undefined,
+          buyer_phone_number: squarePhone,
         },
         checkout_options: {
           allow_tipping: false,
