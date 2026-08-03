@@ -1,5 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
-import prosperwiseLogoColor from "@/assets/prosperwise-logo-color.png";
+import prosperwiseLogoWhite from "@/assets/prosperwise-logo-white.png";
+
 import { useAuth } from "@/shared/hooks/useAuth";
 import {
   LayoutDashboard,
