@@ -81,6 +81,11 @@ const growthItems = [
   { to: "/holding-tank", label: "Holding Tank", icon: Anchor },
 ];
 
+const billingItems = [
+  { to: "/invoices", label: "Invoices", icon: Receipt },
+  { to: "/services", label: "Services", icon: ConciergeBell },
+];
+
 const adminItems = [
   { to: "/onboarding", label: "Onboarding", icon: PackagePlus },
   { to: "/importers", label: "Bulk Importers", icon: Upload },
