@@ -52,4 +52,8 @@ export function getLibrarian(): ILibrarianProvider {
   return pick(librarianProviders, import.meta.env.VITE_LIBRARIAN_PROVIDER, "vault");
 }
 
+export function getInvoiceAgent(): IInvoiceAgentProvider {
+  return pick(invoiceProviders, import.meta.env.VITE_INVOICE_AGENT_PROVIDER, "edge");
+}
+
 export * from "./types";
