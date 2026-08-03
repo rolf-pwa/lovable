@@ -11,6 +11,8 @@ import { toast } from "sonner";
 import { ServiceDialog, type ServiceRecord } from "../components/ServiceDialog";
 import { BookingsPanel } from "../components/BookingsPanel";
 import { formatMoney } from "../lib/money";
+import { publicBookingUrl } from "../lib/booking-links";
+
 
 const SYNC_LABELS: Record<string, string> = {
   not_synced: "Not on Square",
