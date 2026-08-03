@@ -26,6 +26,7 @@ import { PortalProfessionals } from "@/modules/portal/components/PortalProfessio
 import { insuranceCashForStorehouses, sumValues, isAumStorehouse } from "@/modules/portal/lib/portalAum";
 import { PortalDynamicLinks } from "@/modules/portal/components/PortalDynamicLinks";
 import prosperwiseLogo from "@/assets/prosperwise-logo.png";
+import prosperwiseIconPaper from "@/assets/prosperwise-icon-paper.png";
 
 const CORP_TYPE_LABELS: Record<string, string> = { opco: "Operating Co", holdco: "Holding Co", trust: "Trust", partnership: "Partnership", other: "Entity" };
 
