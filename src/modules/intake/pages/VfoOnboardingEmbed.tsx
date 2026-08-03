@@ -23,11 +23,11 @@ function saveState(messages: Message[], phase: Phase, vfoData: Record<string, an
   try { sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ messages, phase, vfoData })); } catch {}
 }
 
-// Sanctuary palette
+// ProsperWise brand palette (embed is rendered outside the app theme, so hex is required)
 const C = {
-  bg: "#F8F6F2", surface: "#EFECE6", border: "rgba(169,140,90,0.35)",
-  borderSubtle: "rgba(169,140,90,0.18)", vellum: "#F8F6F2",
-  charcoal: "#3B3F3F", muted: "#8A8A80", green: "#2A4034", bronze: "#A98C5A",
+  bg: "#FAFAFA", surface: "#F1EEE8", border: "rgba(164,123,87,0.35)",
+  borderSubtle: "rgba(164,123,87,0.18)", vellum: "#FAFAFA",
+  charcoal: "#334155", muted: "#64748B", green: "#1D2939", bronze: "#A47B57",
 };
 
 const WELCOME: Message = {
