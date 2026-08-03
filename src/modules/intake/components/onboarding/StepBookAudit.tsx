@@ -40,16 +40,19 @@ export const StepBookAudit = ({
   // Calendar-verified auto-advance: we poll the CRM, which looks for this
   // client's session on the staff Google Calendars. No manual click needed.
   const [checking, setChecking] = useState(false);
+  const checkRef = useRef(onCheckBooking);
+  checkRef.current = onCheckBooking;
+  const canCheck = Boolean(onCheckBooking);
 
   useEffect(() => {
-    if (!onCheckBooking || bookedAt) return;
+    if (!canCheck || bookedAt) return;
     let cancelled = false;
     let timer: number | undefined;
 
     const poll = async () => {
       if (cancelled || document.visibilityState !== "visible") return;
       setChecking(true);
-      const found = await onCheckBooking();
+      const found = await checkRef.current?.();
       if (cancelled) return;
       setChecking(false);
       if (!found) timer = window.setTimeout(poll, 15000);
@@ -63,7 +66,7 @@ export const StepBookAudit = ({
       if (timer) window.clearTimeout(timer);
       window.removeEventListener("focus", onFocus);
     };
-  }, [onCheckBooking, bookedAt]);
+  }, [canCheck, bookedAt]);
 
   return (
     <Card>
