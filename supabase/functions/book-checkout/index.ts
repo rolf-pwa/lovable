@@ -101,7 +101,11 @@ Deno.serve(async (req) => {
 
     if (action !== "createCheckout") return json({ ok: false, error: `Unknown action: ${action}` }, 400);
 
+    // `quick: true` skips the in-app form: the buyer types their name/email/phone
+    // once, on Square's hosted checkout page. We backfill the booking afterwards.
+    const quick = Boolean(body.quick);
     const serviceId = clean(body.serviceId, 60);
+    const serviceSlug = clean(body.serviceSlug, 120).toLowerCase();
     const requesterName = clean(body.name, 120);
     const requesterEmail = clean(body.email, 200).toLowerCase();
     const requesterPhone = clean(body.phone, 40);
@@ -119,16 +123,20 @@ Deno.serve(async (req) => {
     const startsAtRaw = clean(body.startsAt, 60);
     const returnUrl = clean(body.returnUrl, 500);
 
-    if (!serviceId) return json({ ok: false, error: "Please choose a service." }, 400);
-    if (requesterName.length < 2) return json({ ok: false, error: "Please enter your full name." }, 400);
-    if (!EMAIL_RE.test(requesterEmail)) return json({ ok: false, error: "Please enter a valid email." }, 400);
+    if (!serviceId && !serviceSlug) return json({ ok: false, error: "Please choose a service." }, 400);
+    if (!quick) {
+      if (requesterName.length < 2) return json({ ok: false, error: "Please enter your full name." }, 400);
+      if (!EMAIL_RE.test(requesterEmail)) return json({ ok: false, error: "Please enter a valid email." }, 400);
+    }
 
-    const { data: svc } = await client
+    const svcQuery = client
       .from("services")
-      .select("id, name, description, price, currency, duration_minutes, tax_rate, is_active, requires_prepayment, booking_url")
-      .eq("id", serviceId)
-      .maybeSingle();
+      .select("id, name, description, price, currency, duration_minutes, tax_rate, is_active, requires_prepayment, booking_url");
+    const { data: svc } = serviceId
+      ? await svcQuery.eq("id", serviceId).maybeSingle()
+      : await svcQuery.eq("slug", serviceSlug).maybeSingle();
     if (!svc || !svc.is_active) return json({ ok: false, error: "That service is not available." }, 400);
+
 
     const price = Number(svc.price || 0);
     const taxRate = Number(svc.tax_rate || 0);
