@@ -129,13 +129,52 @@ Deno.serve(async (req) => {
       if (!EMAIL_RE.test(requesterEmail)) return json({ ok: false, error: "Please enter a valid email." }, 400);
     }
 
-    const svcQuery = client
-      .from("services")
-      .select("id, name, description, price, currency, duration_minutes, tax_rate, is_active, requires_prepayment, booking_url");
-    const { data: svc } = serviceId
-      ? await svcQuery.eq("id", serviceId).maybeSingle()
-      : await svcQuery.eq("slug", serviceSlug).maybeSingle();
+    const SVC_COLS =
+      "id, name, slug, description, price, currency, duration_minutes, tax_rate, is_active, requires_prepayment, booking_url";
+    let svc: any = null;
+    if (serviceId) {
+      const { data } = await client.from("services").select(SVC_COLS).eq("id", serviceId).maybeSingle();
+      svc = data;
+    } else {
+      const { data } = await client.from("services").select(SVC_COLS).eq("slug", serviceSlug).maybeSingle();
+      svc = data;
+      // Tolerate mistyped/legacy handles (e.g. "sovereigny-audit-corporate")
+      // by falling back to the closest active slug.
+      if (!svc) {
+        const { data: all } = await client.from("services").select(SVC_COLS).eq("is_active", true);
+        const target = serviceSlug.replace(/[^a-z0-9]/g, "");
+        const lev = (a: string, b: string) => {
+          const dp = Array.from({ length: b.length + 1 }, (_, i) => i);
+          for (let i = 1; i <= a.length; i++) {
+            let prev = dp[0];
+            dp[0] = i;
+            for (let j = 1; j <= b.length; j++) {
+              const tmp = dp[j];
+              dp[j] = Math.min(dp[j] + 1, dp[j - 1] + 1, prev + (a[i - 1] === b[j - 1] ? 0 : 1));
+              prev = tmp;
+            }
+          }
+          return dp[b.length];
+        };
+        let best: any = null;
+        let bestScore = Infinity;
+        for (const s of all || []) {
+          const cand = String(s.slug || "").replace(/[^a-z0-9]/g, "");
+          if (!cand) continue;
+          const score = lev(target, cand);
+          if (score < bestScore) {
+            bestScore = score;
+            best = s;
+          }
+        }
+        if (best && bestScore <= Math.max(2, Math.round(target.length * 0.2))) {
+          console.warn(`book-checkout slug fallback: "${serviceSlug}" -> "${best.slug}"`);
+          svc = best;
+        }
+      }
+    }
     if (!svc || !svc.is_active) return json({ ok: false, error: "That service is not available." }, 400);
+
 
 
     const price = Number(svc.price || 0);
