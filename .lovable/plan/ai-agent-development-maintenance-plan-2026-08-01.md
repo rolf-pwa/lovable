@@ -11,27 +11,27 @@ External teams or services integrate with our agents through our edge functions 
 1. **One codebase, one deploy.** Agents are first-class modules or shared services in this app. They share auth, RLS, logging, and the Sovereignty/PII rules already enforced here.
 2. **Agent Adapter Pattern is the boundary.** Every agent exposes a provider interface in `src/shared/lib/agents`. UI code never calls an agent endpoint directly. Swapping an implementation (edge function, Cloud Run, local derivation) is an env-flag change, not a refactor.
 3. **Agent compute lives in edge functions.** Model calls, system prompts, tools, secrets, and long-running orchestration run in `supabase/functions/`. The browser only sends input and renders output.
-4. **Domain modules own the UI.** Intake UI lives in `src/modules/intake`. Audit UI lives in `src/modules/audit`. Shared primitives live in `src/shared`.
+4. **Domain modules own the UI.** Intake/onboarding UI lives in `src/modules/intake`. Audit UI lives in `src/modules/audit`. Shared primitives live in `src/shared`.
 5. **HITL review queue for all agent actions.** Any agent that proposes database mutations or client-visible actions writes to the sovereignty audit trail / review queue for advisor approval.
 
-## Reference Agent: Intake Agent (Phase 1)
+## Reference Agent: Onboarding Agent (Phase 1)
 
-The Intake Agent is already partially integrated. Phase 1 hardens it into the reference pattern.
+The Onboarding Agent (previously called the Intake Agent) is already partially integrated. Phase 1 hardens it into the reference pattern.
 
 ### Goals
-- Replace the current external-agent dependency with an in-house agent that owns document classification, vault provisioning, and intake completion.
-- Keep the existing `IIntakeAgentProvider` contract so `PortalIntakePage.tsx` and `useIntakeManifest.ts` do not change.
+- Replace the current external-agent dependency with an in-house agent that owns document classification, vault provisioning, and onboarding completion.
+- Keep the existing `IOnboardingAgentProvider` contract so `PortalIntakePage.tsx` and `useOnboardingManifest.ts` do not change.
 - Make the agent self-hostable via the `intake-portal` edge function.
 
 ### Work
 
-1. **Consolidate intake runtime into `supabase/functions/intake-portal/`**
+1. **Consolidate onboarding runtime into `supabase/functions/intake-portal/`**
    - Absorb the manifest generation, upload handling, and classification sweep logic currently owned by the external agent.
    - Use Vertex AI (`gemini-2.5-flash`, Montreal region) for document classification and checklist matching.
    - Store classification results and audit state in a new `intake_classifications` table (RLS-scoped to household).
 
-2. **Add an in-house provider in `src/shared/lib/agents/intake/`**
-   - Create `inHouseIntakeAgent.ts` implementing `IIntakeAgentProvider`.
+2. **Add an in-house provider in `src/shared/lib/agents/onboarding/`**
+   - Create `inHouseOnboardingAgent.ts` implementing `IOnboardingAgentProvider`.
    - It calls the same `intake-portal` edge function but treats it as the agent runtime, not a proxy.
    - Default provider remains `edge` (the existing proxy) until in-house is verified.
 
@@ -45,15 +45,17 @@ The Intake Agent is already partially integrated. Phase 1 hardens it into the re
    - Drive `completion.status` from the in-house agent's audit state, not just upload counts.
 
 5. **Verification**
-   - Re-push a test household through the full intake flow.
+   - Re-push a test household through the full onboarding flow.
    - Confirm documents classify, vault folders provision, and the portal panel updates without external callbacks.
 
 ## Phase 2: Audit Agent
 
-Once Intake is the reference, build the real Audit Agent behind `IAuditAgentProvider`.
+Once Onboarding is the reference, build the real Audit Agent behind `IAuditAgentProvider`.
+
+The Audit Agent is a future development. It will ingest all onboarding data (completed manifest, classifications, household profile, wealth event, and vault contents) and produce the Sovereignty Audit.
 
 1. **New edge function: `supabase/functions/audit-agent/`**
-   - Consumes the completed intake manifest and household data.
+   - Consumes the completed onboarding manifest and household data.
    - Produces a `sovereignty_audit` draft with gaps, risks, and recommendations.
    - Writes proposed actions to `review_queue` for advisor HITL approval.
 
@@ -64,7 +66,7 @@ Once Intake is the reference, build the real Audit Agent behind `IAuditAgentProv
 
 3. **Portal `/portal/audit` panel**
    - Render the audit state and any pending advisor actions.
-   - Gated until intake is complete.
+   - Gated until onboarding is complete.
 
 ## Phase 3: Additional Agents
 
@@ -79,8 +81,8 @@ Bring the remaining agent-like capabilities under the same adapter layer.
 
 ## Maintenance Model
 
-- **Agent owners per module.** `intake` module owns intake agent. `audit` module owns audit agent. `shared` owns cross-cutting adapters and contracts.
-- **Env flags control runtime selection.** `VITE_INTAKE_AGENT_PROVIDER`, `VITE_AUDIT_AGENT_PROVIDER`, etc. New providers can be added without UI changes.
+- **Agent owners per module.** `intake` module owns onboarding agent. `audit` module owns audit agent. `shared` owns cross-cutting adapters and contracts.
+- **Env flags control runtime selection.** `VITE_ONBOARDING_AGENT_PROVIDER`, `VITE_AUDIT_AGENT_PROVIDER`, etc. New providers can be added without UI changes.
 - **All agent changes require edge function redeploy and adapter verification.** The manifest extractor pattern used for MCP does not apply here; instead, run `supabase--test_edge_functions` and browser smoke tests after each agent change.
 - **Versioned prompts.** Store system prompts in `src/shared/lib/agents/<agent>/prompts.ts` or edge function constants, versioned by git. Never hardcode prompts in UI files.
 
@@ -88,11 +90,11 @@ Bring the remaining agent-like capabilities under the same adapter layer.
 
 | Risk | Mitigation |
 |------|------------|
-| External Intake Agent team still needs callbacks | Keep the `crm-intake-callback` endpoint but make it write into our tables; the external agent becomes a data source, not the owner |
+| External agent team still needs callbacks | Keep the `crm-intake-callback` endpoint but make it write into our tables; the external agent becomes a data source, not the owner |
 | Large PDFs hit edge function limits | Reuse the existing loop-based base64 and streaming patterns from `large-file-handling` memory |
 | Model latency in portal | Show optimistic UI and poll classification status; never block the upload response on Vertex |
 | PII in prompts | Enforce Project Glass Box: only opaque IDs and pre-sanitized metadata go to the model; fetch display names from CRM |
 
 ## First Deliverable
 
-Harden the Intake Agent into the in-house reference pattern. Scope: `supabase/functions/intake-portal/`, `src/shared/lib/agents/intake/inHouseIntakeAgent.ts`, new `intake_classifications` table, and verification against one test household.
+Harden the Onboarding Agent into the in-house reference pattern. Scope: `supabase/functions/intake-portal/`, `src/shared/lib/agents/onboarding/inHouseOnboardingAgent.ts`, new `intake_classifications` table, and verification against one test household.

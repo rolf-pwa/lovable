@@ -1,4 +1,4 @@
-// Intake Portal — client-facing bridge for the Sovereignty Intake Agent.
+// Intake Portal — client-facing bridge for the Onboarding Agent.
 //
 // Two runtime modes:
 //   INTAKE_AGENT_MODE=proxy  (default)  → forwards manifest/upload to the external agent.
