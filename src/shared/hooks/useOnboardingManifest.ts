@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { getIntakeAgent } from "@/shared/lib/agents";
+import { getOnboardingAgent } from "@/shared/lib/agents";
 import type {
   IntakeAuditSummary,
   IntakeChecklistItem,
@@ -23,9 +23,9 @@ interface Options {
   active?: boolean;
 }
 
-export function useIntakeManifest(portalToken: string, options: Options = {}) {
+export function useOnboardingManifest(portalToken: string, options: Options = {}) {
   const { active = false } = options;
-  const agent = getIntakeAgent();
+  const agent = getOnboardingAgent();
   const [manifest, setManifest] = useState<IntakeManifest | null>(null);
   const [loading, setLoading] = useState(true);
   const [tasks, setTasks] = useState<UploadTask[]>([]);
@@ -47,7 +47,7 @@ export function useIntakeManifest(portalToken: string, options: Options = {}) {
   }, [load]);
 
   // Poll while documents are still being classified/swept, or continuously on
-  // the intake page. The agent sweeps on a ~5 minute debounce, so 60s is enough.
+  // the onboarding page. The agent sweeps on a ~5 minute debounce, so 60s is enough.
   useEffect(() => {
     const pending =
       (manifest?.completion?.classification?.pending ?? 0) +
@@ -152,4 +152,9 @@ export function useIntakeManifest(portalToken: string, options: Options = {}) {
     audit,
     processing: audit?.processing ?? 0,
   };
+}
+
+/** @deprecated Use useOnboardingManifest. Kept for backward compatibility. */
+export function useIntakeManifest(portalToken: string, options?: Options) {
+  return useOnboardingManifest(portalToken, options);
 }

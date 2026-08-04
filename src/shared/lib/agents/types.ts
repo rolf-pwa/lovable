@@ -80,14 +80,17 @@ export interface UploadResult {
   error?: string;
 }
 
-export interface IIntakeAgentProvider {
+export interface IOnboardingAgentProvider {
   /** Stable id for logging/diagnostics. */
   readonly id: string;
   getManifest(ctx: AgentContext): Promise<IntakeManifest>;
   uploadDocument(ctx: AgentContext, file: File, handlers?: UploadHandlers): Promise<UploadResult>;
 }
 
-/** Stage of the staged Intake -> Audit -> VFO flow. */
+/** @deprecated Use IOnboardingAgentProvider. Kept for backward compatibility. */
+export type IIntakeAgentProvider = IOnboardingAgentProvider;
+
+/** Stage of the staged Onboarding -> Audit -> VFO flow. */
 export type AuditStage = "intake" | "audit" | "vfo";
 
 export interface AuditState {

@@ -1,24 +1,27 @@
 import type {
   AgentContext,
-  IIntakeAgentProvider,
+  IOnboardingAgentProvider,
   IntakeManifest,
   UploadHandlers,
   UploadResult,
 } from "../types";
 
 const FUNCTIONS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
-const INTAKE_URL = `${FUNCTIONS_URL}/intake-portal`;
+const ONBOARDING_URL = `${FUNCTIONS_URL}/intake-portal`;
 
 /**
- * Current production intake agent: the external agent, reached through the
- * `intake-portal` edge proxy (keeps PII and tokens off the client).
+ * External Onboarding Agent proxy.
+ *
+ * Reaches the `intake-portal` edge function in proxy mode, which keeps PII
+ * and tokens off the client while forwarding manifest/upload requests to the
+ * external agent.
  */
-export const edgeIntakeAgent: IIntakeAgentProvider = {
-  id: "intake-portal-proxy",
+export const edgeOnboardingAgent: IOnboardingAgentProvider = {
+  id: "onboarding-portal-proxy",
 
   async getManifest({ portalToken }: AgentContext): Promise<IntakeManifest> {
     if (!portalToken) return { enabled: false };
-    const res = await fetch(INTAKE_URL, {
+    const res = await fetch(ONBOARDING_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-portal-token": portalToken },
       body: JSON.stringify({ action: "manifest" }),
@@ -33,7 +36,7 @@ export const edgeIntakeAgent: IIntakeAgentProvider = {
       const form = new FormData();
       form.append("file", file);
       const xhr = new XMLHttpRequest();
-      xhr.open("POST", INTAKE_URL);
+      xhr.open("POST", ONBOARDING_URL);
       xhr.setRequestHeader("x-portal-token", portalToken);
       xhr.upload.onprogress = (e) => {
         if (!e.lengthComputable) return;
