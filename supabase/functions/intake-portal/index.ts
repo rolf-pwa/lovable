@@ -129,7 +129,7 @@ async function handleProxyManifest(
       });
     }
     if (!uploadUrl) {
-      return new Response(JSON.stringify({ error: "Intake agent not configured" }), {
+      return new Response(JSON.stringify({ error: "Onboarding agent not configured" }), {
         status: 503,
         headers: { ...cors, "Content-Type": "application/json" },
       });
@@ -144,7 +144,7 @@ async function handleProxyManifest(
     try {
       body = JSON.parse(text);
     } catch {
-      body = { error: "Unexpected response from intake agent" };
+      body = { error: "Unexpected response from onboarding agent" };
     }
     return new Response(JSON.stringify(body), {
       status: res.ok ? 200 : res.status,
@@ -162,7 +162,7 @@ async function handleProxyManifest(
     });
   }
   if (!manifestUrl) {
-    return new Response(JSON.stringify({ error: "Intake agent not configured" }), {
+    return new Response(JSON.stringify({ error: "Onboarding agent not configured" }), {
       status: 503,
       headers: { ...cors, "Content-Type": "application/json" },
     });
@@ -176,7 +176,7 @@ async function handleProxyManifest(
     manifest = JSON.parse(text);
   } catch {
     console.error("[IntakePortal] non-JSON manifest:", text.slice(0, 300));
-    return new Response(JSON.stringify({ error: "Unexpected response from intake agent" }), {
+    return new Response(JSON.stringify({ error: "Unexpected response from onboarding agent" }), {
       status: 502,
       headers: { ...cors, "Content-Type": "application/json" },
     });

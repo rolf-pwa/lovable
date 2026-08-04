@@ -387,7 +387,7 @@ async function getShoeboxFolderId(
         f.mimeType === "application/vnd.google-apps.folder" &&
         (f.name === shoeboxName || /shoebox/i.test(f.name)),
     );
-    // Externally-provisioned vaults (AI Intake Agent) don't create a Shoebox —
+    // Externally-provisioned vaults (AI Onboarding Agent) don't create a Shoebox —
     // create it under the household root so client uploads always have a target.
     if (!match) {
       match = await driveCreateFolder(shoeboxName, vaultRootId, accessToken);
