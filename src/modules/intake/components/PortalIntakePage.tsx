@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { useIntakeManifest, type IntakeChecklistItem } from "@/shared/hooks/useIntakeManifest";
+import { useOnboardingManifest, type IntakeChecklistItem } from "@/shared/hooks/useOnboardingManifest";
 
 interface Props {
   portalToken: string;
@@ -57,7 +57,7 @@ export function PortalIntakePage({ portalToken, onBack, onAskForHelp, onComplete
     percent,
     audit,
     processing,
-  } = useIntakeManifest(portalToken, { active: true });
+  } = useOnboardingManifest(portalToken, { active: true });
 
   const [dragging, setDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);

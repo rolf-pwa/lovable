@@ -90,7 +90,7 @@ export async function pushHouseholdToIntakeAgent(
   const secret = Deno.env.get("CRM_INTAKE_WEBHOOK_SECRET");
   const agentUrl = Deno.env.get("CRM_INTAKE_AGENT_URL");
   if (!secret || !agentUrl) {
-    return { ok: false, status: 500, error: "Intake agent is not configured (missing secret or URL)." };
+    return { ok: false, status: 500, error: "Onboarding agent is not configured (missing secret or URL)." };
   }
 
   const { data: household, error: hhErr } = await admin
@@ -289,8 +289,8 @@ export async function pushHouseholdToIntakeAgent(
     const reason = fetchErr instanceof Error ? fetchErr.name : "";
     const message =
       reason === "TimeoutError" || reason === "AbortError"
-        ? `Intake agent did not respond within 25s (${target})`
-        : `Could not reach intake agent at ${target}: ${
+        ? `Onboarding agent did not respond within 25s (${target})`
+        : `Could not reach onboarding agent at ${target}: ${
           fetchErr instanceof Error ? fetchErr.message : String(fetchErr)
         }`;
     return await fail(message, 504);
@@ -300,7 +300,7 @@ export async function pushHouseholdToIntakeAgent(
   if (res.status >= 300 && res.status < 400) {
     const loc = res.headers.get("location") || "(no location)";
     return await fail(
-      `Intake agent URL redirected (${res.status} -> ${loc}). CRM_INTAKE_AGENT_URL must point at the agent's deployed API host, not a preview/site URL.`,
+      `Onboarding agent URL redirected (${res.status} -> ${loc}). CRM_INTAKE_AGENT_URL must point at the agent's deployed API host, not a preview/site URL.`,
       502,
     );
   }
@@ -317,14 +317,14 @@ export async function pushHouseholdToIntakeAgent(
   } catch { /* keep truncated raw text */ }
 
   if (!res.ok) {
-    return await fail(`HTTP ${res.status} from intake agent`, res.status, {
+    return await fail(`HTTP ${res.status} from onboarding agent`, res.status, {
       response_body: { raw: parsed },
     });
   }
 
   if (!isJson) {
     return await fail(
-      `Intake agent returned ${contentType || "non-JSON"} instead of a JSON acknowledgement — the configured URL is serving a web page, not the intake API.`,
+      `Onboarding agent returned ${contentType || "non-JSON"} instead of a JSON acknowledgement — the configured URL is serving a web page, not the onboarding API.`,
       502,
       { response_body: { raw: parsed } },
     );

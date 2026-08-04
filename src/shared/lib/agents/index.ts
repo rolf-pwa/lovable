@@ -1,27 +1,27 @@
 /**
- * Agent factory. UI code calls `getIntakeAgent()` / `getAuditAgent()` /
+ * Agent factory. UI code calls `getOnboardingAgent()` / `getAuditAgent()` /
  * `getLibrarian()` and never imports a concrete provider, so swapping an
  * implementation (e.g. moving to Cloud Run) is an env-flag change.
  *
- *   VITE_INTAKE_AGENT_PROVIDER   default "edge"
- *   VITE_AUDIT_AGENT_PROVIDER    default "derived"
- *   VITE_LIBRARIAN_PROVIDER      default "vault"
+ *   VITE_ONBOARDING_AGENT_PROVIDER   default "edge"
+ *   VITE_AUDIT_AGENT_PROVIDER        default "derived"
+ *   VITE_LIBRARIAN_PROVIDER          default "vault"
  */
 import type {
   IAuditAgentProvider,
-  IIntakeAgentProvider,
   IInvoiceAgentProvider,
+  IOnboardingAgentProvider,
   ILibrarianProvider,
 } from "./types";
-import { edgeIntakeAgent } from "./intake/edgeIntakeAgent";
-import { inHouseIntakeAgent } from "./intake/inHouseIntakeAgent";
+import { edgeOnboardingAgent } from "./onboarding/edgeOnboardingAgent";
+import { inHouseOnboardingAgent } from "./onboarding/inHouseOnboardingAgent";
 import { derivedAuditAgent } from "./audit/derivedAuditAgent";
 import { vaultLibrarian } from "./librarian/vaultLibrarian";
 import { edgeInvoiceAgent } from "./invoice/edgeInvoiceAgent";
 
-const intakeProviders: Record<string, IIntakeAgentProvider> = {
-  edge: edgeIntakeAgent,
-  inhouse: inHouseIntakeAgent,
+const onboardingProviders: Record<string, IOnboardingAgentProvider> = {
+  edge: edgeOnboardingAgent,
+  inhouse: inHouseOnboardingAgent,
 };
 
 const auditProviders: Record<string, IAuditAgentProvider> = {
@@ -40,8 +40,18 @@ function pick<T>(map: Record<string, T>, flag: string | undefined, fallback: str
   return map[flag ?? fallback] ?? map[fallback];
 }
 
-export function getIntakeAgent(): IIntakeAgentProvider {
-  return pick(intakeProviders, import.meta.env.VITE_INTAKE_AGENT_PROVIDER, "edge");
+export function getOnboardingAgent(): IOnboardingAgentProvider {
+  return pick(
+    onboardingProviders,
+    import.meta.env.VITE_ONBOARDING_AGENT_PROVIDER ??
+      import.meta.env.VITE_INTAKE_AGENT_PROVIDER,
+    "edge",
+  );
+}
+
+/** @deprecated Use getOnboardingAgent(). Kept for backward compatibility. */
+export function getIntakeAgent(): IOnboardingAgentProvider {
+  return getOnboardingAgent();
 }
 
 export function getAuditAgent(): IAuditAgentProvider {

@@ -1,18 +1,18 @@
 import type { AgentContext, AuditState, IAuditAgentProvider } from "../types";
-import { edgeIntakeAgent } from "../intake/edgeIntakeAgent";
+import { edgeOnboardingAgent } from "../onboarding/edgeOnboardingAgent";
 
 /**
  * Interim audit agent. The real audit agent (Cloud Run) is not live yet, so we
- * derive the stage from the intake agent's audit summary. When the real agent
- * ships, add a sibling provider and flip `VITE_AUDIT_AGENT_PROVIDER`.
+ * derive the stage from the onboarding agent's audit summary. When the real
+ * agent ships, add a sibling provider and flip `VITE_AUDIT_AGENT_PROVIDER`.
  */
 export const derivedAuditAgent: IAuditAgentProvider = {
-  id: "derived-from-intake",
+  id: "derived-from-onboarding",
 
   async getState(ctx: AgentContext): Promise<AuditState> {
     let manifest;
     try {
-      manifest = await edgeIntakeAgent.getManifest(ctx);
+      manifest = await edgeOnboardingAgent.getManifest(ctx);
     } catch {
       return { stage: "intake", ready: false, percent: 0 };
     }

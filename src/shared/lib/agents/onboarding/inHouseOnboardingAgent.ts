@@ -1,28 +1,28 @@
 import type {
   AgentContext,
-  IIntakeAgentProvider,
+  IOnboardingAgentProvider,
   IntakeManifest,
   UploadHandlers,
   UploadResult,
 } from "../types";
 
 const FUNCTIONS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
-const INTAKE_URL = `${FUNCTIONS_URL}/intake-portal`;
+const ONBOARDING_URL = `${FUNCTIONS_URL}/intake-portal`;
 
 /**
- * In-house Intake Agent provider.
+ * In-house Onboarding Agent provider.
  *
  * Calls the same `intake-portal` edge function, but the function is expected to
  * run in `INTAKE_AGENT_MODE=inhouse`, building the manifest from local tables
  * and classifying uploads with Vertex AI instead of proxying to an external
  * service.
  */
-export const inHouseIntakeAgent: IIntakeAgentProvider = {
-  id: "intake-portal-inhouse",
+export const inHouseOnboardingAgent: IOnboardingAgentProvider = {
+  id: "onboarding-portal-inhouse",
 
   async getManifest({ portalToken }: AgentContext): Promise<IntakeManifest> {
     if (!portalToken) return { enabled: false };
-    const res = await fetch(INTAKE_URL, {
+    const res = await fetch(ONBOARDING_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-portal-token": portalToken },
       body: JSON.stringify({ action: "manifest" }),
@@ -37,7 +37,7 @@ export const inHouseIntakeAgent: IIntakeAgentProvider = {
       const form = new FormData();
       form.append("file", file);
       const xhr = new XMLHttpRequest();
-      xhr.open("POST", INTAKE_URL);
+      xhr.open("POST", ONBOARDING_URL);
       xhr.setRequestHeader("x-portal-token", portalToken);
       xhr.upload.onprogress = (e) => {
         if (!e.lengthComputable) return;

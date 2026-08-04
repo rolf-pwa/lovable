@@ -13,7 +13,7 @@ interface Row {
 }
 
 /**
- * Intake Agent token backfill.
+ * Onboarding Agent token backfill.
  * Households provisioned before the agent's callback contract included
  * `shareToken` have no `intake_share_token`, so their client portal intake
  * page stays hidden. Re-pushing them repopulates the token.

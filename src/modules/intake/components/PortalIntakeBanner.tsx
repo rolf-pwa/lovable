@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { Progress } from "@/shared/components/ui/progress";
 import { Button } from "@/shared/components/ui/button";
 import { Inbox, ArrowRight } from "lucide-react";
-import { useIntakeManifest } from "@/shared/hooks/useIntakeManifest";
+import { useOnboardingManifest } from "@/shared/hooks/useOnboardingManifest";
 
 interface Props {
   portalToken: string;
@@ -12,10 +12,10 @@ interface Props {
 
 /**
  * Slim dashboard entry point for document intake. Renders nothing once the
- * intake agent reports the household's vault as complete.
+ * onboarding agent reports the household's vault as complete.
  */
 export function PortalIntakeBanner({ portalToken, to = "/portal/intake" }: Props) {
-  const { manifest, loading, visible, percent, audit } = useIntakeManifest(portalToken);
+  const { manifest, loading, visible, percent, audit } = useOnboardingManifest(portalToken);
 
   if (loading || !visible) return null;
 
