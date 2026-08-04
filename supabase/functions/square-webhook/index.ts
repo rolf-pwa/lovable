@@ -12,12 +12,7 @@ function db() {
   return createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } });
 }
 
-async function verifySignature(req: Request, rawBody: string): Promise<boolean> {
-  const key = Deno.env.get("SQUARE_WEBHOOK_SIGNATURE_KEY");
-  const notificationUrl = Deno.env.get("SQUARE_WEBHOOK_URL");
-  const provided = req.headers.get("x-square-hmacsha256-signature");
-  if (!key || !notificationUrl || !provided) return false;
-
+async function hmacBase64(key: string, message: string): Promise<string> {
   const cryptoKey = await crypto.subtle.importKey(
     "raw",
     new TextEncoder().encode(key),
@@ -25,14 +20,52 @@ async function verifySignature(req: Request, rawBody: string): Promise<boolean> 
     false,
     ["sign"],
   );
-  const sig = await crypto.subtle.sign(
-    "HMAC",
-    cryptoKey,
-    new TextEncoder().encode(notificationUrl + rawBody),
-  );
-  const expected = btoa(String.fromCharCode(...new Uint8Array(sig)));
-  return expected === provided;
+  const sig = await crypto.subtle.sign("HMAC", cryptoKey, new TextEncoder().encode(message));
+  const bytes = new Uint8Array(sig);
+  let bin = "";
+  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+  return btoa(bin);
 }
+
+/**
+ * Square signs `notificationUrl + rawBody`. The notification URL must match the
+ * one registered in Square exactly, so try the configured value plus the URL
+ * this request actually arrived on (with/without trailing slash).
+ */
+async function verifySignature(req: Request, rawBody: string): Promise<boolean> {
+  const key = Deno.env.get("SQUARE_WEBHOOK_SIGNATURE_KEY");
+  const provided = req.headers.get("x-square-hmacsha256-signature");
+  if (!key || !provided) {
+    console.error("square-webhook: missing signature key or signature header");
+    return false;
+  }
+
+  const configured = Deno.env.get("SQUARE_WEBHOOK_URL") || "";
+  const forwardedHost = req.headers.get("x-forwarded-host");
+  const incoming = new URL(req.url);
+  const candidates = new Set<string>();
+  for (const base of [configured, incoming.toString(), forwardedHost ? `https://${forwardedHost}${incoming.pathname}` : ""]) {
+    const u = base.trim();
+    if (!u) continue;
+    candidates.add(u);
+    candidates.add(u.endsWith("/") ? u.slice(0, -1) : `${u}/`);
+  }
+
+  for (const url of candidates) {
+    if ((await hmacBase64(key, url + rawBody)) === provided) {
+      if (url !== configured) {
+        console.warn(`square-webhook: signature matched non-configured URL "${url}" — update SQUARE_WEBHOOK_URL`);
+      }
+      return true;
+    }
+  }
+
+  console.error(
+    `square-webhook: signature verification failed. Tried URLs: ${[...candidates].join(", ")}`,
+  );
+  return false;
+}
+
 
 function mapSquareStatus(status?: string): string {
   switch ((status || "").toUpperCase()) {
