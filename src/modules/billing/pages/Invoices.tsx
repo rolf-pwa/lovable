@@ -344,15 +344,27 @@ export default function Invoices() {
                           )}
                           {["sent", "partially_paid"].includes(inv.status) && (
                             <>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                title="Refresh status"
-                                disabled={busyId === inv.id}
-                                onClick={() => refresh(inv)}
-                              >
-                                <RefreshCw className="h-4 w-4" />
-                              </Button>
+                              {inv.payment_method === "e_transfer" ? (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  title="Mark paid (e-Transfer received)"
+                                  disabled={busyId === inv.id}
+                                  onClick={() => markPaid(inv)}
+                                >
+                                  <CheckCircle2 className="h-4 w-4 text-accent" />
+                                </Button>
+                              ) : (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  title="Refresh status"
+                                  disabled={busyId === inv.id}
+                                  onClick={() => refresh(inv)}
+                                >
+                                  <RefreshCw className="h-4 w-4" />
+                                </Button>
+                              )}
                               <Button
                                 variant="ghost"
                                 size="icon"
@@ -364,6 +376,7 @@ export default function Invoices() {
                               </Button>
                             </>
                           )}
+
                           {inv.public_payment_url && (
                             <Button variant="ghost" size="icon" title="Open payment page" asChild>
                               <a href={inv.public_payment_url} target="_blank" rel="noopener noreferrer">
