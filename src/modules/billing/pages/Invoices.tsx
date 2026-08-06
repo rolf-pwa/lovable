@@ -346,7 +346,7 @@ export default function Invoices() {
                           )}
                           {["sent", "partially_paid"].includes(inv.status) && (
                             <>
-                              {inv.payment_method === "e_transfer" ? (
+                              {inv.payment_method !== "card" && (
                                 <Button
                                   variant="ghost"
                                   size="icon"
@@ -356,7 +356,8 @@ export default function Invoices() {
                                 >
                                   <CheckCircle2 className="h-4 w-4 text-accent" />
                                 </Button>
-                              ) : (
+                              )}
+                              {inv.payment_method !== "e_transfer" && (
                                 <Button
                                   variant="ghost"
                                   size="icon"
