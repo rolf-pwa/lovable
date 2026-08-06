@@ -81,6 +81,15 @@ export const edgeInvoiceAgent: IInvoiceAgentProvider = {
   },
 
 
+  async deleteInvoice(invoiceId: string) {
+    const data = await invoke<{ ok: boolean; error?: string }>("square-service", {
+      action: "deleteInvoice",
+      invoiceId,
+    });
+    if (!data?.ok) throw new Error(data?.error || "Could not delete this invoice.");
+    return data;
+  },
+
   async syncService(serviceId: string) {
     const data = await invoke<{ ok: boolean; error?: string; squareId?: string }>("square-service", {
       action: "syncService",
@@ -89,6 +98,16 @@ export const edgeInvoiceAgent: IInvoiceAgentProvider = {
     if (!data?.ok) throw new Error(data?.error || "Could not sync this service to Square.");
     return data;
   },
+
+  async deleteService(serviceId: string) {
+    const data = await invoke<{ ok: boolean; error?: string }>("square-service", {
+      action: "deleteService",
+      serviceId,
+    });
+    if (!data?.ok) throw new Error(data?.error || "Could not delete this service.");
+    return data;
+  },
+
 
   async getStatus() {
     const data = await invoke<{ ok: boolean; configured?: boolean; environment?: string }>("square-service", {
