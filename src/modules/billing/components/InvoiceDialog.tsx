@@ -255,21 +255,24 @@ export function InvoiceDialog({ open, onOpenChange, invoiceId, onSaved }: Props)
                 <Label>Payment method</Label>
                 <Select
                   value={paymentMethod}
-                  onValueChange={(v) => setPaymentMethod(v as "card" | "e_transfer")}
+                  onValueChange={(v) => setPaymentMethod(v as "card" | "e_transfer" | "either")}
                   disabled={readOnly}
                 >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="either">Client's choice — card or e-Transfer</SelectItem>
                     <SelectItem value="card">Credit card (Square)</SelectItem>
-                    <SelectItem value="e_transfer">Interac e-Transfer</SelectItem>
+                    <SelectItem value="e_transfer">Interac e-Transfer only</SelectItem>
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground">
                   {paymentMethod === "card"
                     ? "Sends through Square with a hosted card payment page."
-                    : "No Square charge — put your e-Transfer address in the notes, then mark the invoice paid when the funds land."}
+                    : paymentMethod === "e_transfer"
+                      ? "No Square charge — put your e-Transfer address in the notes, then mark the invoice paid when the funds land."
+                      : "Sends through Square with a card payment page and e-Transfer instructions on the invoice. If they e-Transfer instead, mark it paid here."}
                 </p>
               </div>
             </div>
