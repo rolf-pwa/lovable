@@ -36,6 +36,8 @@ interface InvoiceRow {
   is_ai_draft: boolean;
   last_error: string | null;
   paid_at: string | null;
+  payment_method?: string | null;
+
   contact?: { id: string; full_name: string } | null;
 }
 
