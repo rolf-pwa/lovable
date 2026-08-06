@@ -244,6 +244,12 @@ export async function enrollPaidBooking(
   // ---- 3. Link the booking ----------------------------------------------
   await client.from("service_bookings").update({ contact_id: contactId }).eq("id", bookingId);
 
+  // Anyone who pays for an Audit is a new client and gets the guided
+  // onboarding flow. Legacy households stay opted out.
+  if (householdId) {
+    await client.from("households").update({ onboarding_enabled: true }).eq("id", householdId);
+  }
+
   const { data: svc } = await client
     .from("services")
     .select("name")

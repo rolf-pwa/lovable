@@ -799,7 +799,35 @@ const HouseholdDetail = () => {
                 <ShieldCheck className="h-4 w-4 text-accent" />
                 Household document vault — manage visibility and share with collaborators.
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
+                {/* New clients get the guided Audit onboarding; legacy clients don't. */}
+                <div className="flex items-center gap-2 rounded-md border border-border px-2.5 py-1.5">
+                  <Switch
+                    id="onboarding-enabled"
+                    checked={household.onboarding_enabled !== false}
+                    onCheckedChange={async (checked) => {
+                      setHousehold((prev: any) => ({ ...prev, onboarding_enabled: checked }));
+                      const { error } = await supabase
+                        .from("households")
+                        .update({ onboarding_enabled: checked })
+                        .eq("id", id);
+                      if (error) {
+                        setHousehold((prev: any) => ({ ...prev, onboarding_enabled: !checked }));
+                        toast.error("Couldn't update the Audit onboarding setting");
+                      } else {
+                        toast.success(
+                          checked
+                            ? "Audit onboarding enabled for this household"
+                            : "Audit onboarding hidden from this household's portal",
+                        );
+                      }
+                    }}
+                  />
+                  <Label htmlFor="onboarding-enabled" className="text-xs whitespace-nowrap">
+                    Audit onboarding
+                  </Label>
+                </div>
+
                 <Button size="sm" variant="outline" onClick={pushToIntakeAgent} disabled={pushingIntake}>
                   {pushingIntake ? (
                     <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />

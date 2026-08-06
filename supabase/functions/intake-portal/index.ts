@@ -51,6 +51,8 @@ interface Resolved {
   shareToken: string | null;
   manifestUrl: string | null;
   uploadUrl: string | null;
+  /** Legacy households are opted out of the guided Audit onboarding. */
+  onboardingEnabled: boolean;
 }
 
 async function resolveHousehold(req: Request): Promise<Resolved | null> {
@@ -72,7 +74,7 @@ async function resolveHousehold(req: Request): Promise<Resolved | null> {
 
   const { data: hh } = await admin
     .from("households")
-    .select("id, intake_share_token, intake_manifest_url, intake_upload_url")
+    .select("id, intake_share_token, intake_manifest_url, intake_upload_url, onboarding_enabled")
     .eq("id", contact.household_id)
     .maybeSingle();
   if (!hh) return null;
@@ -82,6 +84,7 @@ async function resolveHousehold(req: Request): Promise<Resolved | null> {
     shareToken: hh.intake_share_token ?? null,
     manifestUrl: hh.intake_manifest_url ?? null,
     uploadUrl: hh.intake_upload_url ?? null,
+    onboardingEnabled: hh.onboarding_enabled !== false,
   };
 }
 
@@ -1107,6 +1110,18 @@ serve(async (req) => {
 
     const contentType = req.headers.get("content-type") ?? "";
     const isUpload = contentType.includes("multipart/form-data");
+
+    // Legacy clients never went through the paid Sovereignty Audit flow, so the
+    // guided onboarding and its checklist stay hidden for them entirely.
+    if (!resolved.onboardingEnabled) {
+      if (isUpload) return json({ error: "Onboarding is not enabled for this household" }, 403);
+      const body = await req.json().catch(() => ({}));
+      const act = String(body?.action ?? "manifest");
+      if (ONBOARDING_ACTIONS.has(act)) {
+        return json({ ok: false, disabled: true, reason: "legacy_client" });
+      }
+      return json({ enabled: false, reason: "legacy_client" });
+    }
 
     // Onboarding actions are mode-independent: they live entirely in the CRM.
     let payload: any = {};

@@ -1499,6 +1499,7 @@ export type Database = {
           intake_upload_url: string | null
           label: string
           onboarding_completed_at: string | null
+          onboarding_enabled: boolean
           onboarding_step: number
           profile_completed_at: string | null
           quiet_period_start_date: string | null
@@ -1523,6 +1524,7 @@ export type Database = {
           intake_upload_url?: string | null
           label?: string
           onboarding_completed_at?: string | null
+          onboarding_enabled?: boolean
           onboarding_step?: number
           profile_completed_at?: string | null
           quiet_period_start_date?: string | null
@@ -1547,6 +1549,7 @@ export type Database = {
           intake_upload_url?: string | null
           label?: string
           onboarding_completed_at?: string | null
+          onboarding_enabled?: boolean
           onboarding_step?: number
           profile_completed_at?: string | null
           quiet_period_start_date?: string | null
