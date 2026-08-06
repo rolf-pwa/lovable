@@ -57,6 +57,25 @@ export default function Services() {
     }
   };
 
+  const remove = async (service: ServiceRecord) => {
+    if (
+      !window.confirm(
+        `Delete "${service.name}" permanently? It will also be removed from your Square catalog. This can't be undone.`,
+      )
+    )
+      return;
+    setSyncingId(service.id);
+    try {
+      await getInvoiceAgent().deleteService(service.id);
+      toast.success(`${service.name} deleted`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Delete failed");
+    } finally {
+      setSyncingId(null);
+      load();
+    }
+  };
+
   return (
     <AppLayout>
       <div className="space-y-6 p-6">
