@@ -514,6 +514,13 @@ Deno.serve(async (req) => {
     if (action === "markSentManually") {
       return json(await markSentManually(String(body.invoiceId)));
     }
+    // Deletes work with or without Square — the Square cleanup is best-effort.
+    if (action === "deleteInvoice") {
+      return json(await deleteInvoice(String(body.invoiceId)));
+    }
+    if (action === "deleteService") {
+      return json(await deleteService(String(body.serviceId)));
+    }
 
     if (!squareConfigured()) {
       return json(
