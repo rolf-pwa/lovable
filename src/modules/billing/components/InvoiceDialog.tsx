@@ -120,6 +120,7 @@ export function InvoiceDialog({ open, onOpenChange, invoiceId, onSaved }: Props)
 
   const applyService = (index: number, serviceId: string) => {
     const svc = services.find((s) => s.id === serviceId);
+    if (svc && Number(svc.tax_rate ?? 0) > 0) setTaxRate(String(svc.tax_rate));
     setLines((prev) =>
       prev.map((l, i) =>
         i === index
@@ -133,6 +134,7 @@ export function InvoiceDialog({ open, onOpenChange, invoiceId, onSaved }: Props)
       ),
     );
   };
+
 
   const save = async () => {
     if (!contactId) {
