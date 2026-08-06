@@ -431,12 +431,27 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Manual (e-Transfer) actions work with or without Square configured.
+    if (action === "markPaidManually") {
+      return json(
+        await markPaidManually(
+          String(body.invoiceId),
+          body.reference ? String(body.reference).slice(0, 200) : undefined,
+          body.amount === undefined ? undefined : Number(body.amount),
+        ),
+      );
+    }
+    if (action === "markSentManually") {
+      return json(await markSentManually(String(body.invoiceId)));
+    }
+
     if (!squareConfigured()) {
       return json(
         { ok: false, error: "Square is not connected yet. Add SQUARE_ACCESS_TOKEN and SQUARE_LOCATION_ID." },
         400,
       );
     }
+
 
     switch (action) {
       case "syncService":
