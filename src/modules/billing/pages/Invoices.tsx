@@ -113,9 +113,14 @@ export default function Invoices() {
     }
     setBusyId(invoice.id);
     try {
-      const result = await getInvoiceAgent().sendInvoice(invoice.id);
-      toast.success("Invoice sent through Square");
-      if (result.publicUrl) window.open(result.publicUrl, "_blank", "noopener");
+      if (invoice.payment_method === "e_transfer") {
+        await getInvoiceAgent().markSentManually(invoice.id);
+        toast.success("Invoice issued — send your e-Transfer request to the client.");
+      } else {
+        const result = await getInvoiceAgent().sendInvoice(invoice.id);
+        toast.success("Invoice sent through Square");
+        if (result.publicUrl) window.open(result.publicUrl, "_blank", "noopener");
+      }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Send failed");
     } finally {
@@ -123,6 +128,21 @@ export default function Invoices() {
       load();
     }
   };
+
+  const markPaid = async (invoice: InvoiceRow) => {
+    const reference = window.prompt("e-Transfer reference or note (optional)") ?? undefined;
+    setBusyId(invoice.id);
+    try {
+      await getInvoiceAgent().markPaidManually(invoice.id, reference?.trim() || undefined);
+      toast.success("Invoice marked paid");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not mark paid");
+    } finally {
+      setBusyId(null);
+      load();
+    }
+  };
+
 
   const refresh = async (invoice: InvoiceRow) => {
     setBusyId(invoice.id);
