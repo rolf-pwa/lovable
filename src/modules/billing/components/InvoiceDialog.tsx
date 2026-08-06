@@ -36,7 +36,9 @@ export function InvoiceDialog({ open, onOpenChange, invoiceId, onSaved }: Props)
   const [notes, setNotes] = useState("");
   const [discount, setDiscount] = useState("0");
   const [tax, setTax] = useState("0");
+  const [taxRate, setTaxRate] = useState("5");
   const [autoTax, setAutoTax] = useState(true);
+  const [paymentMethod, setPaymentMethod] = useState<"card" | "e_transfer">("card");
   const [lines, setLines] = useState<LineDraft[]>([emptyLine()]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -64,7 +66,9 @@ export function InvoiceDialog({ open, onOpenChange, invoiceId, onSaved }: Props)
         setNotes(invoice?.notes || "");
         setDiscount(String(invoice?.discount_amount ?? 0));
         setTax(String(invoice?.tax_amount ?? 0));
-        setAutoTax(false);
+        setTaxRate(String(invoice?.tax_rate ?? 0));
+        setPaymentMethod(invoice?.payment_method === "e_transfer" ? "e_transfer" : "card");
+        setAutoTax(Number(invoice?.tax_rate ?? 0) > 0);
         setReadOnly(Boolean(invoice && invoice.status !== "draft"));
         setLines(
           ((lineData as any[]) || []).map((l) => ({
@@ -82,6 +86,8 @@ export function InvoiceDialog({ open, onOpenChange, invoiceId, onSaved }: Props)
         setNotes("");
         setDiscount("0");
         setTax("0");
+        setTaxRate("5");
+        setPaymentMethod("card");
         setAutoTax(true);
         setReadOnly(false);
         setLines([emptyLine()]);
@@ -90,17 +96,13 @@ export function InvoiceDialog({ open, onOpenChange, invoiceId, onSaved }: Props)
     })();
   }, [open, invoiceId]);
 
-  const computedTax = useMemo(
-    () =>
-      round2(
-        lines.reduce((acc, l) => {
-          const rate = Number(services.find((s) => s.id === l.service_id)?.tax_rate ?? 0);
-          if (!rate) return acc;
-          return acc + Number(l.quantity || 0) * Number(l.unit_amount || 0) * (rate / 100);
-        }, 0),
-      ),
-    [lines, services],
-  );
+  /** Tax is charged on the invoice total (subtotal less discount), so custom
+   *  items like a Virtual Family Office Fee are taxed the same as catalog items. */
+  const computedTax = useMemo(() => {
+    const subtotal = lines.reduce((acc, l) => acc + Number(l.quantity || 0) * Number(l.unit_amount || 0), 0);
+    const taxable = Math.max(subtotal - Number(discount || 0), 0);
+    return round2(taxable * (Number(taxRate || 0) / 100));
+  }, [lines, discount, taxRate]);
 
   useEffect(() => {
     if (autoTax && !readOnly) setTax(String(computedTax));
@@ -114,6 +116,7 @@ export function InvoiceDialog({ open, onOpenChange, invoiceId, onSaved }: Props)
     const t = autoTax ? computedTax : Number(tax || 0);
     return { subtotal, discount: d, tax: t, total: round2(subtotal - d + t) };
   }, [lines, discount, tax, autoTax, computedTax]);
+
 
   const applyService = (index: number, serviceId: string) => {
     const svc = services.find((s) => s.id === serviceId);
