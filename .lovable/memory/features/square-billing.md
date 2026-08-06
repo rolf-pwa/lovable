@@ -13,7 +13,7 @@ Wix replacement for services + invoicing, built in-house on Square.
 
 **Edge functions**:
 - `invoice-agent` — Vertex `gemini-2.5-flash` (Montreal) drafts line items from a prompt. Glass Box: model sees only the advisor's prompt + non-PII service catalog; contact resolution is done in code by token-matching against `contacts`. Always writes a `review_queue` row ("Draft for CFO Review") and an invoice with `status = 'draft'`. Never calls Square.
-- `square-service` — staff-only (`auth.getUser()`); actions `status`, `syncService`, `sendInvoice`, `refreshInvoice`, `cancelInvoice`. Send flow: ensure Square customer by email → create order → create invoice → publish.
+- `square-service` — staff-only (`auth.getUser()`); actions `status`, `syncService`, `sendInvoice`, `refreshInvoice`, `cancelInvoice`, `markSentManually`, `markPaidManually`. Send flow: ensure Square customer by email → create order → create invoice → publish.
 - `square-webhook` (`verify_jwt = false`) — HMAC-SHA256 of `SQUARE_WEBHOOK_URL + rawBody`; syncs invoice status + `invoice_payments`.
 
 **Pipeline sync**: a paid invoice upserts a `business_pipeline` row (`category = pws_consulting`, `status = completed`), stored back on `invoices.pipeline_id`.
@@ -22,4 +22,7 @@ Wix replacement for services + invoicing, built in-house on Square.
 
 Rule: nothing reaches a client until an advisor presses send. AI never sends.
 
-**Custom items, tax, and payment methods**: invoices carry `payment_method` (`card` | `e_transfer`), `tax_rate` (%), and `payment_reference`. Tax is charged on subtotal less discount, so custom line items (e.g. Virtual Family Office Fee) are taxed like catalog items. e-Transfer invoices never touch Square: `markSentManually` issues them and `markPaidManually` records an `invoice_payments` row, sets `paid`, and syncs the revenue pipeline.
+**Custom items, tax, and payment methods**: invoices carry `payment_method` (`card` | `e_transfer` | `either`, default `either`), `tax_rate` (%), and `payment_reference`. Tax is charged on subtotal less discount, so custom line items (e.g. Virtual Family Office Fee) are taxed like catalog items.
+- `card` — Square hosted card page only; status refreshed from Square/webhook.
+- `e_transfer` — never touches Square: `markSentManually` issues it, `markPaidManually` records an `invoice_payments` row, sets `paid`, and syncs the revenue pipeline.
+- `either` — sent through Square (card page) with an e-Transfer note appended to the Square invoice description; the advisor can either refresh Square status or mark it paid manually if the client e-Transfers.
