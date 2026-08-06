@@ -19,6 +19,7 @@ import {
   Sparkles,
   Ban,
   CheckCircle2,
+  Trash2,
 
   Pencil,
 } from "lucide-react";
