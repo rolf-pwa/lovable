@@ -334,6 +334,71 @@ async function cancelInvoice(invoiceId: string) {
 }
 
 /**
+ * Permanently remove an invoice. Paid invoices are never deleted (they are
+ * revenue records). Square drafts are deleted, published invoices are canceled
+ * first so nothing keeps chasing the client for payment.
+ */
+async function deleteInvoice(invoiceId: string) {
+  const db = admin();
+  const { data: inv } = await db.from("invoices").select("*").eq("id", invoiceId).maybeSingle();
+  if (!inv) return { ok: false, error: "Invoice not found" };
+  if (inv.status === "paid" || inv.status === "partially_paid") {
+    return { ok: false, error: "Paid invoices can't be deleted — they're part of your revenue record." };
+  }
+
+  if (inv.square_invoice_id && squareConfigured()) {
+    const current = await square(`/invoices/${inv.square_invoice_id}`);
+    const sqStatus = String(current.data?.invoice?.status || "").toUpperCase();
+    const version = current.data?.invoice?.version ?? inv.square_version;
+    if (current.ok && sqStatus === "DRAFT") {
+      await square(`/invoices/${inv.square_invoice_id}?version=${version}`, { method: "DELETE" });
+    } else if (current.ok && !["CANCELED", "PAID", "REFUNDED"].includes(sqStatus)) {
+      const res = await square(`/invoices/${inv.square_invoice_id}/cancel`, {
+        method: "POST",
+        body: { version },
+      });
+      if (!res.ok) return { ok: false, error: squareErrorMessage(res.data) };
+    }
+  }
+
+  await db.from("invoice_payments").delete().eq("invoice_id", invoiceId);
+  await db.from("invoice_line_items").delete().eq("invoice_id", invoiceId);
+  if (inv.pipeline_id) await db.from("business_pipeline").delete().eq("id", inv.pipeline_id);
+  const { error } = await db.from("invoices").delete().eq("id", invoiceId);
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
+/**
+ * Permanently remove a service. Removes the Square catalog item too. Services
+ * with bookings attached are kept (deactivate them instead) so history survives.
+ */
+async function deleteService(serviceId: string) {
+  const db = admin();
+  const { data: svc } = await db.from("services").select("*").eq("id", serviceId).maybeSingle();
+  if (!svc) return { ok: false, error: "Service not found" };
+
+  const { count } = await db
+    .from("service_bookings")
+    .select("id", { count: "exact", head: true })
+    .eq("service_id", serviceId);
+  if ((count || 0) > 0) {
+    return {
+      ok: false,
+      error: `This service has ${count} booking(s) attached. Mark it inactive instead so the history stays intact.`,
+    };
+  }
+
+  if (svc.square_catalog_object_id && squareConfigured()) {
+    await square(`/catalog/object/${svc.square_catalog_object_id}`, { method: "DELETE" });
+  }
+
+  const { error } = await db.from("services").delete().eq("id", serviceId);
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
+/**
  * Manual payment (Interac e-Transfer, cheque, wire). No Square call — the
  * advisor confirms the funds landed, we record the payment and sync revenue.
  */
