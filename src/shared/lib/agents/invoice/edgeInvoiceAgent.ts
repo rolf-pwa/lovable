@@ -61,6 +61,26 @@ export const edgeInvoiceAgent: IInvoiceAgentProvider = {
     return data;
   },
 
+  async markSentManually(invoiceId: string) {
+    const data = await invoke<{ ok: boolean; error?: string; status?: string }>("square-service", {
+      action: "markSentManually",
+      invoiceId,
+    });
+    if (!data?.ok) throw new Error(data?.error || "Could not issue this invoice.");
+    return data;
+  },
+
+  async markPaidManually(invoiceId: string, reference?: string) {
+    const data = await invoke<{ ok: boolean; error?: string; status?: string }>("square-service", {
+      action: "markPaidManually",
+      invoiceId,
+      reference,
+    });
+    if (!data?.ok) throw new Error(data?.error || "Could not mark this invoice paid.");
+    return data;
+  },
+
+
   async syncService(serviceId: string) {
     const data = await invoke<{ ok: boolean; error?: string; squareId?: string }>("square-service", {
       action: "syncService",
