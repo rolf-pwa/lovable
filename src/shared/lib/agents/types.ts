@@ -141,6 +141,11 @@ export interface IInvoiceAgentProvider {
   sendInvoice(invoiceId: string): Promise<{ ok: boolean; publicUrl?: string; status?: string }>;
   refreshInvoice(invoiceId: string): Promise<{ ok: boolean; status?: string }>;
   cancelInvoice(invoiceId: string): Promise<{ ok: boolean }>;
+  /** Interac e-Transfer: issue the invoice without charging a card. */
+  markSentManually(invoiceId: string): Promise<{ ok: boolean; status?: string }>;
+  /** Interac e-Transfer: advisor confirms funds landed; records payment + revenue. */
+  markPaidManually(invoiceId: string, reference?: string): Promise<{ ok: boolean; status?: string }>;
+
   syncService(serviceId: string): Promise<{ ok: boolean; squareId?: string }>;
   getStatus(): Promise<{ configured: boolean; environment: string }>;
 }
