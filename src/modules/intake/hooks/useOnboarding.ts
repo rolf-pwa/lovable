@@ -126,8 +126,9 @@ export function useOnboarding(portalToken?: string) {
 
   return {
     state,
+    disabled,
     loading,
-    saving,
+
     error,
     refresh,
     checkAuditBooking,
