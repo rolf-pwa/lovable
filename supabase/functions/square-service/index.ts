@@ -240,7 +240,12 @@ async function sendInvoice(invoiceId: string) {
         delivery_method: "EMAIL",
         accepted_payment_methods: { card: true, square_gift_card: false, bank_account: false },
         title: inv.invoice_number ? `Invoice ${inv.invoice_number}` : "Invoice",
-        description: inv.notes || undefined,
+        description:
+          inv.payment_method === "either"
+            ? [inv.notes, "You may also pay by Interac e-Transfer — reply to this invoice for details."]
+                .filter(Boolean)
+                .join("\n\n")
+            : inv.notes || undefined,
       },
     },
   });
