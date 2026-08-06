@@ -38,7 +38,7 @@ export function InvoiceDialog({ open, onOpenChange, invoiceId, onSaved }: Props)
   const [tax, setTax] = useState("0");
   const [taxRate, setTaxRate] = useState("5");
   const [autoTax, setAutoTax] = useState(true);
-  const [paymentMethod, setPaymentMethod] = useState<"card" | "e_transfer">("card");
+  const [paymentMethod, setPaymentMethod] = useState<"card" | "e_transfer" | "either">("either");
   const [lines, setLines] = useState<LineDraft[]>([emptyLine()]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -67,7 +67,13 @@ export function InvoiceDialog({ open, onOpenChange, invoiceId, onSaved }: Props)
         setDiscount(String(invoice?.discount_amount ?? 0));
         setTax(String(invoice?.tax_amount ?? 0));
         setTaxRate(String(invoice?.tax_rate ?? 0));
-        setPaymentMethod(invoice?.payment_method === "e_transfer" ? "e_transfer" : "card");
+        setPaymentMethod(
+          invoice?.payment_method === "e_transfer"
+            ? "e_transfer"
+            : invoice?.payment_method === "card"
+              ? "card"
+              : "either",
+        );
         setAutoTax(Number(invoice?.tax_rate ?? 0) > 0);
         setReadOnly(Boolean(invoice && invoice.status !== "draft"));
         setLines(
