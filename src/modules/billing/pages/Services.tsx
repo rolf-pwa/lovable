@@ -6,7 +6,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui
 import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table";
-import { Loader2, Plus, Pencil, RefreshCw, CloudUpload, AlertTriangle, Link as LinkIcon } from "lucide-react";
+import {
+  Loader2,
+  Plus,
+  Pencil,
+  RefreshCw,
+  CloudUpload,
+  AlertTriangle,
+  Link as LinkIcon,
+  Trash2,
+} from "lucide-react";
 import { toast } from "sonner";
 import { ServiceDialog, type ServiceRecord } from "../components/ServiceDialog";
 import { BookingsPanel } from "../components/BookingsPanel";
@@ -209,6 +218,15 @@ export default function Services() {
                               ) : (
                                 <CloudUpload className="h-4 w-4" />
                               )}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              title="Delete service"
+                              disabled={syncingId === s.id}
+                              onClick={() => remove(s)}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
                             </Button>
                           </div>
                         </TableCell>
