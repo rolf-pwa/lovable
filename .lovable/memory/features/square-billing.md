@@ -21,3 +21,5 @@ Wix replacement for services + invoicing, built in-house on Square.
 **Secrets required**: `SQUARE_ACCESS_TOKEN`, `SQUARE_LOCATION_ID`, `SQUARE_ENVIRONMENT` (`sandbox`|`production`), `SQUARE_WEBHOOK_SIGNATURE_KEY`, `SQUARE_WEBHOOK_URL`. Money is dollars in the DB, minor units at the Square boundary.
 
 Rule: nothing reaches a client until an advisor presses send. AI never sends.
+
+**Custom items, tax, and payment methods**: invoices carry `payment_method` (`card` | `e_transfer`), `tax_rate` (%), and `payment_reference`. Tax is charged on subtotal less discount, so custom line items (e.g. Virtual Family Office Fee) are taxed like catalog items. e-Transfer invoices never touch Square: `markSentManually` issues them and `markPaidManually` records an `invoice_payments` row, sets `paid`, and syncs the revenue pipeline.
