@@ -243,7 +243,29 @@ export function InvoiceDialog({ open, onOpenChange, invoiceId, onSaved }: Props)
                   disabled={readOnly}
                 />
               </div>
+              <div className="space-y-2">
+                <Label>Payment method</Label>
+                <Select
+                  value={paymentMethod}
+                  onValueChange={(v) => setPaymentMethod(v as "card" | "e_transfer")}
+                  disabled={readOnly}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="card">Credit card (Square)</SelectItem>
+                    <SelectItem value="e_transfer">Interac e-Transfer</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  {paymentMethod === "card"
+                    ? "Sends through Square with a hosted card payment page."
+                    : "No Square charge — put your e-Transfer address in the notes, then mark the invoice paid when the funds land."}
+                </p>
+              </div>
             </div>
+
 
             <div className="space-y-3">
               <div className="flex items-center justify-between">
