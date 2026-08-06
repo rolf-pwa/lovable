@@ -36,7 +36,9 @@ export function InvoiceDialog({ open, onOpenChange, invoiceId, onSaved }: Props)
   const [notes, setNotes] = useState("");
   const [discount, setDiscount] = useState("0");
   const [tax, setTax] = useState("0");
+  const [taxRate, setTaxRate] = useState("5");
   const [autoTax, setAutoTax] = useState(true);
+  const [paymentMethod, setPaymentMethod] = useState<"card" | "e_transfer">("card");
   const [lines, setLines] = useState<LineDraft[]>([emptyLine()]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -64,7 +66,9 @@ export function InvoiceDialog({ open, onOpenChange, invoiceId, onSaved }: Props)
         setNotes(invoice?.notes || "");
         setDiscount(String(invoice?.discount_amount ?? 0));
         setTax(String(invoice?.tax_amount ?? 0));
-        setAutoTax(false);
+        setTaxRate(String(invoice?.tax_rate ?? 0));
+        setPaymentMethod(invoice?.payment_method === "e_transfer" ? "e_transfer" : "card");
+        setAutoTax(Number(invoice?.tax_rate ?? 0) > 0);
         setReadOnly(Boolean(invoice && invoice.status !== "draft"));
         setLines(
           ((lineData as any[]) || []).map((l) => ({
@@ -82,6 +86,8 @@ export function InvoiceDialog({ open, onOpenChange, invoiceId, onSaved }: Props)
         setNotes("");
         setDiscount("0");
         setTax("0");
+        setTaxRate("5");
+        setPaymentMethod("card");
         setAutoTax(true);
         setReadOnly(false);
         setLines([emptyLine()]);
@@ -90,17 +96,13 @@ export function InvoiceDialog({ open, onOpenChange, invoiceId, onSaved }: Props)
     })();
   }, [open, invoiceId]);
 
-  const computedTax = useMemo(
-    () =>
-      round2(
-        lines.reduce((acc, l) => {
-          const rate = Number(services.find((s) => s.id === l.service_id)?.tax_rate ?? 0);
-          if (!rate) return acc;
-          return acc + Number(l.quantity || 0) * Number(l.unit_amount || 0) * (rate / 100);
-        }, 0),
-      ),
-    [lines, services],
-  );
+  /** Tax is charged on the invoice total (subtotal less discount), so custom
+   *  items like a Virtual Family Office Fee are taxed the same as catalog items. */
+  const computedTax = useMemo(() => {
+    const subtotal = lines.reduce((acc, l) => acc + Number(l.quantity || 0) * Number(l.unit_amount || 0), 0);
+    const taxable = Math.max(subtotal - Number(discount || 0), 0);
+    return round2(taxable * (Number(taxRate || 0) / 100));
+  }, [lines, discount, taxRate]);
 
   useEffect(() => {
     if (autoTax && !readOnly) setTax(String(computedTax));
@@ -115,8 +117,10 @@ export function InvoiceDialog({ open, onOpenChange, invoiceId, onSaved }: Props)
     return { subtotal, discount: d, tax: t, total: round2(subtotal - d + t) };
   }, [lines, discount, tax, autoTax, computedTax]);
 
+
   const applyService = (index: number, serviceId: string) => {
     const svc = services.find((s) => s.id === serviceId);
+    if (svc && Number(svc.tax_rate ?? 0) > 0) setTaxRate(String(svc.tax_rate));
     setLines((prev) =>
       prev.map((l, i) =>
         i === index
@@ -130,6 +134,7 @@ export function InvoiceDialog({ open, onOpenChange, invoiceId, onSaved }: Props)
       ),
     );
   };
+
 
   const save = async () => {
     if (!contactId) {
@@ -148,10 +153,13 @@ export function InvoiceDialog({ open, onOpenChange, invoiceId, onSaved }: Props)
       subtotal: totals.subtotal,
       discount_amount: totals.discount,
       tax_amount: totals.tax,
+      tax_rate: autoTax ? Number(taxRate || 0) : 0,
+      payment_method: paymentMethod,
       total: totals.total,
       due_date: dueDate || null,
       notes: notes.trim() || null,
     };
+
 
     let id = invoiceId;
     if (id) {
@@ -210,7 +218,7 @@ export function InvoiceDialog({ open, onOpenChange, invoiceId, onSaved }: Props)
           </div>
         ) : (
           <div className="space-y-5">
-            <div className="grid gap-3 md:grid-cols-2">
+            <div className="grid gap-3 md:grid-cols-3">
               <div className="space-y-2">
                 <Label>Client</Label>
                 <Select value={contactId} onValueChange={setContactId} disabled={readOnly}>
@@ -237,7 +245,29 @@ export function InvoiceDialog({ open, onOpenChange, invoiceId, onSaved }: Props)
                   disabled={readOnly}
                 />
               </div>
+              <div className="space-y-2">
+                <Label>Payment method</Label>
+                <Select
+                  value={paymentMethod}
+                  onValueChange={(v) => setPaymentMethod(v as "card" | "e_transfer")}
+                  disabled={readOnly}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="card">Credit card (Square)</SelectItem>
+                    <SelectItem value="e_transfer">Interac e-Transfer</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  {paymentMethod === "card"
+                    ? "Sends through Square with a hosted card payment page."
+                    : "No Square charge — put your e-Transfer address in the notes, then mark the invoice paid when the funds land."}
+                </p>
+              </div>
             </div>
+
 
             <div className="space-y-3">
               <div className="flex items-center justify-between">
@@ -321,7 +351,7 @@ export function InvoiceDialog({ open, onOpenChange, invoiceId, onSaved }: Props)
               ))}
             </div>
 
-            <div className="grid gap-3 md:grid-cols-3">
+            <div className="grid gap-3 md:grid-cols-4">
               <div className="space-y-2">
                 <Label htmlFor="inv-disc">Discount (CAD)</Label>
                 <Input
@@ -333,6 +363,19 @@ export function InvoiceDialog({ open, onOpenChange, invoiceId, onSaved }: Props)
                   onChange={(e) => setDiscount(e.target.value)}
                   disabled={readOnly}
                 />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="inv-tax-rate">Tax rate (%)</Label>
+                <Input
+                  id="inv-tax-rate"
+                  type="number"
+                  min="0"
+                  step="0.001"
+                  value={taxRate}
+                  onChange={(e) => setTaxRate(e.target.value)}
+                  disabled={readOnly || !autoTax}
+                />
+                <p className="text-xs text-muted-foreground">Applied to subtotal less discount.</p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="inv-tax">Tax / GST (CAD)</Label>
@@ -349,7 +392,7 @@ export function InvoiceDialog({ open, onOpenChange, invoiceId, onSaved }: Props)
                   <div className="flex items-center gap-2">
                     <Switch id="inv-auto-tax" checked={autoTax} onCheckedChange={setAutoTax} />
                     <Label htmlFor="inv-auto-tax" className="text-xs text-muted-foreground">
-                      Auto-calculate from service tax rates
+                      Calculate from rate
                     </Label>
                   </div>
                 )}
@@ -369,6 +412,7 @@ export function InvoiceDialog({ open, onOpenChange, invoiceId, onSaved }: Props)
                 </div>
               </div>
             </div>
+
 
             <div className="space-y-2">
               <Label htmlFor="inv-notes">Notes shown to the client</Label>

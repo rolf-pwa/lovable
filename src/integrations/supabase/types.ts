@@ -1890,6 +1890,8 @@ export type Database = {
           last_error: string | null
           notes: string | null
           paid_at: string | null
+          payment_method: string
+          payment_reference: string | null
           pipeline_id: string | null
           public_payment_url: string | null
           review_queue_id: string | null
@@ -1900,6 +1902,7 @@ export type Database = {
           status: string
           subtotal: number
           tax_amount: number
+          tax_rate: number
           total: number
           updated_at: string
         }
@@ -1918,6 +1921,8 @@ export type Database = {
           last_error?: string | null
           notes?: string | null
           paid_at?: string | null
+          payment_method?: string
+          payment_reference?: string | null
           pipeline_id?: string | null
           public_payment_url?: string | null
           review_queue_id?: string | null
@@ -1928,6 +1933,7 @@ export type Database = {
           status?: string
           subtotal?: number
           tax_amount?: number
+          tax_rate?: number
           total?: number
           updated_at?: string
         }
@@ -1946,6 +1952,8 @@ export type Database = {
           last_error?: string | null
           notes?: string | null
           paid_at?: string | null
+          payment_method?: string
+          payment_reference?: string | null
           pipeline_id?: string | null
           public_payment_url?: string | null
           review_queue_id?: string | null
@@ -1956,6 +1964,7 @@ export type Database = {
           status?: string
           subtotal?: number
           tax_amount?: number
+          tax_rate?: number
           total?: number
           updated_at?: string
         }

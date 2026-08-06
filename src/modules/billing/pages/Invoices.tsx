@@ -18,6 +18,8 @@ import {
   Send,
   Sparkles,
   Ban,
+  CheckCircle2,
+
   Pencil,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -36,6 +38,8 @@ interface InvoiceRow {
   is_ai_draft: boolean;
   last_error: string | null;
   paid_at: string | null;
+  payment_method?: string | null;
+
   contact?: { id: string; full_name: string } | null;
 }
 
@@ -113,9 +117,14 @@ export default function Invoices() {
     }
     setBusyId(invoice.id);
     try {
-      const result = await getInvoiceAgent().sendInvoice(invoice.id);
-      toast.success("Invoice sent through Square");
-      if (result.publicUrl) window.open(result.publicUrl, "_blank", "noopener");
+      if (invoice.payment_method === "e_transfer") {
+        await getInvoiceAgent().markSentManually(invoice.id);
+        toast.success("Invoice issued — send your e-Transfer request to the client.");
+      } else {
+        const result = await getInvoiceAgent().sendInvoice(invoice.id);
+        toast.success("Invoice sent through Square");
+        if (result.publicUrl) window.open(result.publicUrl, "_blank", "noopener");
+      }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Send failed");
     } finally {
@@ -123,6 +132,21 @@ export default function Invoices() {
       load();
     }
   };
+
+  const markPaid = async (invoice: InvoiceRow) => {
+    const reference = window.prompt("e-Transfer reference or note (optional)") ?? undefined;
+    setBusyId(invoice.id);
+    try {
+      await getInvoiceAgent().markPaidManually(invoice.id, reference?.trim() || undefined);
+      toast.success("Invoice marked paid");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not mark paid");
+    } finally {
+      setBusyId(null);
+      load();
+    }
+  };
+
 
   const refresh = async (invoice: InvoiceRow) => {
     setBusyId(invoice.id);
@@ -322,15 +346,27 @@ export default function Invoices() {
                           )}
                           {["sent", "partially_paid"].includes(inv.status) && (
                             <>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                title="Refresh status"
-                                disabled={busyId === inv.id}
-                                onClick={() => refresh(inv)}
-                              >
-                                <RefreshCw className="h-4 w-4" />
-                              </Button>
+                              {inv.payment_method === "e_transfer" ? (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  title="Mark paid (e-Transfer received)"
+                                  disabled={busyId === inv.id}
+                                  onClick={() => markPaid(inv)}
+                                >
+                                  <CheckCircle2 className="h-4 w-4 text-accent" />
+                                </Button>
+                              ) : (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  title="Refresh status"
+                                  disabled={busyId === inv.id}
+                                  onClick={() => refresh(inv)}
+                                >
+                                  <RefreshCw className="h-4 w-4" />
+                                </Button>
+                              )}
                               <Button
                                 variant="ghost"
                                 size="icon"
@@ -342,6 +378,7 @@ export default function Invoices() {
                               </Button>
                             </>
                           )}
+
                           {inv.public_payment_url && (
                             <Button variant="ghost" size="icon" title="Open payment page" asChild>
                               <a href={inv.public_payment_url} target="_blank" rel="noopener noreferrer">

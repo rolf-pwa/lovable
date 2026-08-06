@@ -328,6 +328,59 @@ async function cancelInvoice(invoiceId: string) {
   return { ok: true };
 }
 
+/**
+ * Manual payment (Interac e-Transfer, cheque, wire). No Square call — the
+ * advisor confirms the funds landed, we record the payment and sync revenue.
+ */
+async function markPaidManually(invoiceId: string, reference?: string, amount?: number) {
+  const db = admin();
+  const { data: inv } = await db.from("invoices").select("*").eq("id", invoiceId).maybeSingle();
+  if (!inv) return { ok: false, error: "Invoice not found" };
+  if (inv.status === "paid") return { ok: false, error: "This invoice is already marked paid." };
+  if (inv.status === "canceled") return { ok: false, error: "This invoice was canceled." };
+
+  const paidAt = new Date().toISOString();
+  const paidAmount = Number(amount ?? inv.total ?? 0);
+
+  const { error: payErr } = await db.from("invoice_payments").insert({
+    invoice_id: invoiceId,
+    amount: paidAmount,
+    currency: inv.currency || "CAD",
+    status: "completed",
+    paid_at: paidAt,
+    raw_payload: { source: "manual", method: inv.payment_method || "e_transfer", reference: reference || null },
+  });
+  if (payErr) return { ok: false, error: payErr.message };
+
+  await db
+    .from("invoices")
+    .update({
+      status: "paid",
+      paid_at: paidAt,
+      payment_reference: reference || null,
+      sent_at: inv.sent_at || paidAt,
+      last_error: null,
+    })
+    .eq("id", invoiceId);
+
+  await syncPipelineForPaidInvoice(invoiceId);
+  return { ok: true, status: "paid" };
+}
+
+/** e-Transfer invoices never touch Square — mark them issued so they show as outstanding. */
+async function markSentManually(invoiceId: string) {
+  const db = admin();
+  const { data: inv } = await db.from("invoices").select("*").eq("id", invoiceId).maybeSingle();
+  if (!inv) return { ok: false, error: "Invoice not found" };
+  if (inv.status !== "draft") return { ok: false, error: "Only draft invoices can be issued." };
+  await db
+    .from("invoices")
+    .update({ status: "sent", sent_at: new Date().toISOString(), last_error: null })
+    .eq("id", invoiceId);
+  return { ok: true, status: "sent" };
+}
+
+
 /** Paid invoice -> business_pipeline consulting revenue row. */
 export async function syncPipelineForPaidInvoice(invoiceId: string) {
   const db = admin();
@@ -378,12 +431,27 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Manual (e-Transfer) actions work with or without Square configured.
+    if (action === "markPaidManually") {
+      return json(
+        await markPaidManually(
+          String(body.invoiceId),
+          body.reference ? String(body.reference).slice(0, 200) : undefined,
+          body.amount === undefined ? undefined : Number(body.amount),
+        ),
+      );
+    }
+    if (action === "markSentManually") {
+      return json(await markSentManually(String(body.invoiceId)));
+    }
+
     if (!squareConfigured()) {
       return json(
         { ok: false, error: "Square is not connected yet. Add SQUARE_ACCESS_TOKEN and SQUARE_LOCATION_ID." },
         400,
       );
     }
+
 
     switch (action) {
       case "syncService":
