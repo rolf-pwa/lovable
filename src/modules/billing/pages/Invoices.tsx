@@ -18,6 +18,8 @@ import {
   Send,
   Sparkles,
   Ban,
+  CheckCircle2,
+
   Pencil,
 } from "lucide-react";
 import { toast } from "sonner";
