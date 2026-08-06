@@ -145,7 +145,11 @@ export interface IInvoiceAgentProvider {
   markSentManually(invoiceId: string): Promise<{ ok: boolean; status?: string }>;
   /** Interac e-Transfer: advisor confirms funds landed; records payment + revenue. */
   markPaidManually(invoiceId: string, reference?: string): Promise<{ ok: boolean; status?: string }>;
+  /** Permanent removal. Paid invoices are refused server-side. */
+  deleteInvoice(invoiceId: string): Promise<{ ok: boolean }>;
 
   syncService(serviceId: string): Promise<{ ok: boolean; squareId?: string }>;
+  /** Permanent removal. Services with bookings attached are refused server-side. */
+  deleteService(serviceId: string): Promise<{ ok: boolean }>;
   getStatus(): Promise<{ configured: boolean; environment: string }>;
 }

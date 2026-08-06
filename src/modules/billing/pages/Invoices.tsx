@@ -19,6 +19,7 @@ import {
   Sparkles,
   Ban,
   CheckCircle2,
+  Trash2,
 
   Pencil,
 } from "lucide-react";
@@ -162,12 +163,32 @@ export default function Invoices() {
   };
 
   const cancel = async (invoice: InvoiceRow) => {
+    if (!window.confirm("Cancel this invoice? The client will no longer be able to pay it.")) return;
     setBusyId(invoice.id);
     try {
       await getInvoiceAgent().cancelInvoice(invoice.id);
       toast.success("Invoice canceled");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Cancel failed");
+    } finally {
+      setBusyId(null);
+      load();
+    }
+  };
+
+  const remove = async (invoice: InvoiceRow) => {
+    if (
+      !window.confirm(
+        "Delete this invoice permanently? It will be canceled in Square and removed from your records. This can't be undone.",
+      )
+    )
+      return;
+    setBusyId(invoice.id);
+    try {
+      await getInvoiceAgent().deleteInvoice(invoice.id);
+      toast.success("Invoice deleted");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Delete failed");
     } finally {
       setBusyId(null);
       load();
@@ -385,6 +406,17 @@ export default function Invoices() {
                               <a href={inv.public_payment_url} target="_blank" rel="noopener noreferrer">
                                 <ExternalLink className="h-4 w-4" />
                               </a>
+                            </Button>
+                          )}
+                          {!["paid", "partially_paid"].includes(inv.status) && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              title="Delete invoice"
+                              disabled={busyId === inv.id}
+                              onClick={() => remove(inv)}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
                             </Button>
                           )}
                         </div>
