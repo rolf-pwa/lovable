@@ -51,6 +51,8 @@ interface Resolved {
   shareToken: string | null;
   manifestUrl: string | null;
   uploadUrl: string | null;
+  /** Legacy households are opted out of the guided Audit onboarding. */
+  onboardingEnabled: boolean;
 }
 
 async function resolveHousehold(req: Request): Promise<Resolved | null> {
