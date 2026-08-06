@@ -61,6 +61,7 @@ async function call(portalToken: string, body: Record<string, unknown>) {
  */
 export function useOnboarding(portalToken?: string) {
   const [state, setState] = useState<OnboardingState | null>(null);
+  const [disabled, setDisabled] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -70,6 +71,12 @@ export function useOnboarding(portalToken?: string) {
     try {
       setError(null);
       const data = await call(portalToken, { action: "onboarding" });
+      if ((data as { disabled?: boolean })?.disabled) {
+        setDisabled(true);
+        setState(null);
+        return;
+      }
+      setDisabled(false);
       setState(data as OnboardingState);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unable to load your onboarding");
@@ -89,6 +96,10 @@ export function useOnboarding(portalToken?: string) {
       setError(null);
       try {
         const data = await call(portalToken, body);
+        if ((data as { disabled?: boolean })?.disabled) {
+          setDisabled(true);
+          return false;
+        }
         setState(data as OnboardingState);
         return true;
       } catch (e) {
@@ -100,6 +111,7 @@ export function useOnboarding(portalToken?: string) {
     },
     [portalToken],
   );
+
 
   const checkAuditBooking = useCallback(async (): Promise<boolean> => {
     if (!portalToken) return false;
