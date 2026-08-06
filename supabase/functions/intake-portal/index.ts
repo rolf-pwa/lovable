@@ -1111,6 +1111,18 @@ serve(async (req) => {
     const contentType = req.headers.get("content-type") ?? "";
     const isUpload = contentType.includes("multipart/form-data");
 
+    // Legacy clients never went through the paid Sovereignty Audit flow, so the
+    // guided onboarding and its checklist stay hidden for them entirely.
+    if (!resolved.onboardingEnabled) {
+      if (isUpload) return json({ error: "Onboarding is not enabled for this household" }, 403);
+      const body = await req.json().catch(() => ({}));
+      const act = String(body?.action ?? "manifest");
+      if (ONBOARDING_ACTIONS.has(act)) {
+        return json({ ok: false, disabled: true, reason: "legacy_client" });
+      }
+      return json({ enabled: false, reason: "legacy_client" });
+    }
+
     // Onboarding actions are mode-independent: they live entirely in the CRM.
     let payload: any = {};
     if (!isUpload) {
