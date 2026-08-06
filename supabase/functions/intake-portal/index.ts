@@ -51,8 +51,10 @@ interface Resolved {
   shareToken: string | null;
   manifestUrl: string | null;
   uploadUrl: string | null;
-  /** Legacy households are opted out of the guided Audit onboarding. */
+  /** Legacy households, or households that haven't paid the Audit fee, are opted out. */
   onboardingEnabled: boolean;
+  /** Why onboarding is hidden, when it is. */
+  disabledReason: "legacy_client" | "audit_unpaid" | null;
 }
 
 async function resolveHousehold(req: Request): Promise<Resolved | null> {
@@ -78,15 +80,39 @@ async function resolveHousehold(req: Request): Promise<Resolved | null> {
     .eq("id", contact.household_id)
     .maybeSingle();
   if (!hh) return null;
+
+  const flagOn = hh.onboarding_enabled !== false;
+
+  // The Audit card only appears once the Audit fee is actually paid.
+  let auditPaid = false;
+  if (flagOn) {
+    const { data: members } = await admin
+      .from("contacts")
+      .select("id")
+      .eq("household_id", hh.id);
+    const ids = (members ?? []).map((m: { id: string }) => m.id);
+    if (ids.length) {
+      const { data: paid } = await admin
+        .from("service_bookings")
+        .select("id")
+        .in("contact_id", ids)
+        .eq("payment_status", "paid")
+        .limit(1);
+      auditPaid = Boolean(paid?.length);
+    }
+  }
+
   return {
     householdId: hh.id,
     contactId: tok.contact_id,
     shareToken: hh.intake_share_token ?? null,
     manifestUrl: hh.intake_manifest_url ?? null,
     uploadUrl: hh.intake_upload_url ?? null,
-    onboardingEnabled: hh.onboarding_enabled !== false,
+    onboardingEnabled: flagOn && auditPaid,
+    disabledReason: !flagOn ? "legacy_client" : auditPaid ? null : "audit_unpaid",
   };
 }
+
 
 // ═════════════════════════════════════════════════════════════════════════════
 //  PROXY MODE — existing external-agent passthrough
@@ -1111,17 +1137,19 @@ serve(async (req) => {
     const contentType = req.headers.get("content-type") ?? "";
     const isUpload = contentType.includes("multipart/form-data");
 
-    // Legacy clients never went through the paid Sovereignty Audit flow, so the
-    // guided onboarding and its checklist stay hidden for them entirely.
+    // Legacy clients, and anyone who hasn't paid the Audit fee, don't see the
+    // guided onboarding or its checklist at all.
     if (!resolved.onboardingEnabled) {
+      const reason = resolved.disabledReason ?? "legacy_client";
       if (isUpload) return json({ error: "Onboarding is not enabled for this household" }, 403);
       const body = await req.json().catch(() => ({}));
       const act = String(body?.action ?? "manifest");
       if (ONBOARDING_ACTIONS.has(act)) {
-        return json({ ok: false, disabled: true, reason: "legacy_client" });
+        return json({ ok: false, disabled: true, reason });
       }
-      return json({ enabled: false, reason: "legacy_client" });
+      return json({ enabled: false, reason });
     }
+
 
     // Onboarding actions are mode-independent: they live entirely in the CRM.
     let payload: any = {};
