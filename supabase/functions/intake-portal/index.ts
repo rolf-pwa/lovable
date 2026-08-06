@@ -51,8 +51,10 @@ interface Resolved {
   shareToken: string | null;
   manifestUrl: string | null;
   uploadUrl: string | null;
-  /** Legacy households are opted out of the guided Audit onboarding. */
+  /** Legacy households, or households that haven't paid the Audit fee, are opted out. */
   onboardingEnabled: boolean;
+  /** Why onboarding is hidden, when it is. */
+  disabledReason: "legacy_client" | "audit_unpaid" | null;
 }
 
 async function resolveHousehold(req: Request): Promise<Resolved | null> {
@@ -78,15 +80,39 @@ async function resolveHousehold(req: Request): Promise<Resolved | null> {
     .eq("id", contact.household_id)
     .maybeSingle();
   if (!hh) return null;
+
+  const flagOn = hh.onboarding_enabled !== false;
+
+  // The Audit card only appears once the Audit fee is actually paid.
+  let auditPaid = false;
+  if (flagOn) {
+    const { data: members } = await admin
+      .from("contacts")
+      .select("id")
+      .eq("household_id", hh.id);
+    const ids = (members ?? []).map((m: { id: string }) => m.id);
+    if (ids.length) {
+      const { data: paid } = await admin
+        .from("service_bookings")
+        .select("id")
+        .in("contact_id", ids)
+        .eq("payment_status", "paid")
+        .limit(1);
+      auditPaid = Boolean(paid?.length);
+    }
+  }
+
   return {
     householdId: hh.id,
     contactId: tok.contact_id,
     shareToken: hh.intake_share_token ?? null,
     manifestUrl: hh.intake_manifest_url ?? null,
     uploadUrl: hh.intake_upload_url ?? null,
-    onboardingEnabled: hh.onboarding_enabled !== false,
+    onboardingEnabled: flagOn && auditPaid,
+    disabledReason: !flagOn ? "legacy_client" : auditPaid ? null : "audit_unpaid",
   };
 }
+
 
 // ═════════════════════════════════════════════════════════════════════════════
 //  PROXY MODE — existing external-agent passthrough
