@@ -349,7 +349,7 @@ export function InvoiceDialog({ open, onOpenChange, invoiceId, onSaved }: Props)
               ))}
             </div>
 
-            <div className="grid gap-3 md:grid-cols-3">
+            <div className="grid gap-3 md:grid-cols-4">
               <div className="space-y-2">
                 <Label htmlFor="inv-disc">Discount (CAD)</Label>
                 <Input
@@ -361,6 +361,19 @@ export function InvoiceDialog({ open, onOpenChange, invoiceId, onSaved }: Props)
                   onChange={(e) => setDiscount(e.target.value)}
                   disabled={readOnly}
                 />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="inv-tax-rate">Tax rate (%)</Label>
+                <Input
+                  id="inv-tax-rate"
+                  type="number"
+                  min="0"
+                  step="0.001"
+                  value={taxRate}
+                  onChange={(e) => setTaxRate(e.target.value)}
+                  disabled={readOnly || !autoTax}
+                />
+                <p className="text-xs text-muted-foreground">Applied to subtotal less discount.</p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="inv-tax">Tax / GST (CAD)</Label>
@@ -377,7 +390,7 @@ export function InvoiceDialog({ open, onOpenChange, invoiceId, onSaved }: Props)
                   <div className="flex items-center gap-2">
                     <Switch id="inv-auto-tax" checked={autoTax} onCheckedChange={setAutoTax} />
                     <Label htmlFor="inv-auto-tax" className="text-xs text-muted-foreground">
-                      Auto-calculate from service tax rates
+                      Calculate from rate
                     </Label>
                   </div>
                 )}
@@ -397,6 +410,7 @@ export function InvoiceDialog({ open, onOpenChange, invoiceId, onSaved }: Props)
                 </div>
               </div>
             </div>
+
 
             <div className="space-y-2">
               <Label htmlFor="inv-notes">Notes shown to the client</Label>
