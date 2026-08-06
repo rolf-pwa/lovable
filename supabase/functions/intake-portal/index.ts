@@ -74,7 +74,7 @@ async function resolveHousehold(req: Request): Promise<Resolved | null> {
 
   const { data: hh } = await admin
     .from("households")
-    .select("id, intake_share_token, intake_manifest_url, intake_upload_url")
+    .select("id, intake_share_token, intake_manifest_url, intake_upload_url, onboarding_enabled")
     .eq("id", contact.household_id)
     .maybeSingle();
   if (!hh) return null;
@@ -84,6 +84,7 @@ async function resolveHousehold(req: Request): Promise<Resolved | null> {
     shareToken: hh.intake_share_token ?? null,
     manifestUrl: hh.intake_manifest_url ?? null,
     uploadUrl: hh.intake_upload_url ?? null,
+    onboardingEnabled: hh.onboarding_enabled !== false,
   };
 }
 
