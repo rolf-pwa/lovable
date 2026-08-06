@@ -151,10 +151,13 @@ export function InvoiceDialog({ open, onOpenChange, invoiceId, onSaved }: Props)
       subtotal: totals.subtotal,
       discount_amount: totals.discount,
       tax_amount: totals.tax,
+      tax_rate: autoTax ? Number(taxRate || 0) : 0,
+      payment_method: paymentMethod,
       total: totals.total,
       due_date: dueDate || null,
       notes: notes.trim() || null,
     };
+
 
     let id = invoiceId;
     if (id) {
