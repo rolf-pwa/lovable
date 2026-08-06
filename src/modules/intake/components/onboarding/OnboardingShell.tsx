@@ -23,6 +23,7 @@ interface Props {
 export const OnboardingShell = ({ portalToken, onBack, onAskForHelp }: Props) => {
   const {
     state,
+    disabled,
     loading,
     saving,
     error,
@@ -49,6 +50,23 @@ export const OnboardingShell = ({ portalToken, onBack, onAskForHelp }: Props) =>
     );
   }
 
+  // Legacy clients aren't in the Sovereignty Audit onboarding flow.
+  if (disabled) {
+    return (
+      <Card>
+        <CardContent className="space-y-3 p-6 text-center">
+          <p className="text-sm text-muted-foreground">
+            Your household isn't in the Sovereignty Audit onboarding flow — everything you need is
+            in your portal.
+          </p>
+          <Button variant="outline" size="sm" onClick={onBack}>
+            Back to your portal
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
   if (!state) {
     return (
       <Card>
@@ -61,6 +79,7 @@ export const OnboardingShell = ({ portalToken, onBack, onAskForHelp }: Props) =>
       </Card>
     );
   }
+
 
   const firstName = state.contact.firstName || state.contact.fullName || "there";
 
