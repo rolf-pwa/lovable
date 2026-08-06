@@ -407,6 +407,17 @@ export default function Invoices() {
                               </a>
                             </Button>
                           )}
+                          {!["paid", "partially_paid"].includes(inv.status) && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              title="Delete invoice"
+                              disabled={busyId === inv.id}
+                              onClick={() => remove(inv)}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
