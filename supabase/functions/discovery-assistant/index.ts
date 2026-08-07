@@ -273,17 +273,32 @@ serve(async (req) => {
         });
       }
 
+      // Compose the handoff brief into discovery_notes so Rolf opens with context.
+      const briefLines = [
+        discoveryData.track ? `Track: ${discoveryData.track}` : null,
+        discoveryData.timing ? `Timing: ${discoveryData.timing}` : null,
+        discoveryData.pressure_signals ? `Pressure: ${discoveryData.pressure_signals}` : null,
+        discoveryData.complexity_flags ? `Complexity: ${discoveryData.complexity_flags}` : null,
+        discoveryData.recommended_path ? `Recommended path: ${discoveryData.recommended_path}` : null,
+        discoveryData.fit_note ? `Fit: ${discoveryData.fit_note}` : null,
+      ].filter(Boolean) as string[];
+      const composedNotes = [
+        briefLines.length ? `Handoff brief\n${briefLines.join("\n")}` : null,
+        discoveryData.discovery_notes || null,
+      ].filter(Boolean).join("\n\n");
+
       const { data, error } = await supabase
         .from("discovery_leads")
         .insert({
           first_name: first_name.trim().slice(0, 100),
           phone: phone?.trim().slice(0, 20) || null,
           email: email.trim().toLowerCase().slice(0, 255),
-          transition_type: discoveryData.transition_type || null,
+          transition_type: discoveryData.transition_type || discoveryData.track || null,
           anxiety_anchor: discoveryData.anxiety_anchor || null,
           vision_summary: discoveryData.vision_summary || null,
           vineyard_summary: discoveryData.vineyard_summary || null,
-          discovery_notes: discoveryData.discovery_notes || null,
+          discovery_notes: composedNotes || null,
+
           sovereignty_status: "transition_session_requested",
           pipeda_consent: true,
           pipeda_consented_at: new Date().toISOString(),
