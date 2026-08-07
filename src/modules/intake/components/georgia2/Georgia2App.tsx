@@ -39,19 +39,22 @@ function Shell({ embed }: { embed?: boolean }) {
             <Stepper current={state.step} />
           </div>
         )}
-        <div className="grid gap-6 md:grid-cols-5">
-          <div className="rounded-2xl border border-border bg-card p-5 md:col-span-3 md:p-8">
+        <div className="grid items-start gap-6 lg:grid-cols-2">
+          {/* Input pane */}
+          <div className="rounded-2xl border border-border bg-card p-5 md:p-8">
             {state.step === 1 && <StepDomain />}
             {state.step === 2 && <StepCatalyst />}
-            {state.step === 3 && <StepDiagnostic />}
-            {state.step === 4 && <StepResults />}
+            {(state.step === 3 || state.step === 4) && <StepDiagnostic />}
             {state.step === 5 && <StepLeadCapture />}
             {state.step === 6 && <StepSuccess />}
           </div>
-          <aside className="rounded-2xl border border-border bg-muted/30 p-5 md:col-span-2 md:p-6">
-            <BlueprintCanvas />
+
+          {/* Results pane, side by side */}
+          <aside className="rounded-2xl border border-border bg-muted/30 p-5 md:p-6">
+            {state.step >= 4 ? <StepResults /> : <BlueprintCanvas />}
           </aside>
         </div>
+
         <p className="mt-6 text-center text-[10px] uppercase tracking-widest text-muted-foreground">
           Montréal Data Pinning · Zero Tracking Cookies · PIPEDA-Aligned
         </p>
