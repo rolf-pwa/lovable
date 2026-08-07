@@ -188,25 +188,48 @@ const TOOLS = [
     functionDeclarations: [
       {
         name: "register_discovery_lead",
-          description: "MUST be called ONLY when the visitor has explicitly agreed to book a Sovereignty Audit with Rolf OR has explicitly asked to receive the complimentary guide. For corporate/business visitors, vague interest or questions about the audit do NOT count — only clear affirmative booking language triggers this. This triggers the lead capture form.",
+        description: "Call EXACTLY ONCE, only at the moment the visitor commits to a next step (asks for the Clarity Call link, the Sovereignty Survey link, or an Academy guide). Never speculatively, never before commitment. Submits the handoff brief and triggers the lead capture form.",
         parameters: {
           type: "OBJECT",
           properties: {
+            track: {
+              type: "STRING",
+              description: "One of: business_exit (liquidity event, sale closed or pending), growth_founder (still operating, fast-growing), family_individual (inheritance, divorce, executive retirement, windfall)",
+            },
             transition_type: {
               type: "STRING",
-              description: "Type of transition: business_sale, divorce, legacy_event, academy (for visitors below the $1M threshold being referred to the ProsperWise Academy), or other",
+              description: "Specific situation: business_sale, pre_exit, growth_founder, inheritance, divorce, executive_retirement, windfall, academy (early/hypothetical, referred to an Academy guide), or other",
             },
-            anxiety_anchor: { type: "STRING", description: "The prospect's primary friction point or anxiety" },
-            vision_summary: { type: "STRING", description: "Their 3-year sovereignty vision summary" },
-            vineyard_summary: { type: "STRING", description: "Summary of vineyard audit findings" },
-            discovery_notes: { type: "STRING", description: "Full conversation summary" },
+            timing: {
+              type: "STRING",
+              description: "recent (just happened), unresolved (happened a while ago, still open), upcoming (coming soon), or hypothetical (years out / exploring)",
+            },
+            pressure_signals: {
+              type: "STRING",
+              description: "Time-sensitive pressures named by the visitor (advisor already reached out, money already moved, deadline, family pressure), or 'none'",
+            },
+            complexity_flags: {
+              type: "STRING",
+              description: "Layered complexity: business+personal overlap, blended family, multiple entities, prior advisors to untangle, etc. 'none' if simple and contained.",
+            },
+            recommended_path: {
+              type: "STRING",
+              description: "One of: academy_guide, clarity_call, sovereignty_survey — with one-line rationale appended",
+            },
+            fit_note: {
+              type: "STRING",
+              description: "Which $1M threshold applies (transition value for exits/family transfers, annual company revenue for still-operating founders) and whether signals put the case above, below, or unclear relative to it. No dollar figures.",
+            },
+            anxiety_anchor: { type: "STRING", description: "The visitor's primary friction point in their own framing" },
+            discovery_notes: { type: "STRING", description: "Short case notes for Rolf — no names unless volunteered, no dollar figures, no account or institution details" },
             requested_guide: {
               type: "BOOLEAN",
-              description: "True only when the visitor asked to receive the complimentary guide instead of booking a session",
+              description: "True only when the visitor asked for an Academy guide instead of booking a Call or Survey",
             },
           },
-          required: ["transition_type", "discovery_notes"],
+          required: ["track", "timing", "recommended_path", "discovery_notes"],
         },
+
       },
     ],
   },
