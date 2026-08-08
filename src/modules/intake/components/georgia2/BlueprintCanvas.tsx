@@ -36,16 +36,6 @@ export function BlueprintCanvas() {
         </p>
       </div>
 
-      {/* Georgia Insights */}
-      <div className="space-y-2">
-        {insights.map((ins, i) => (
-          <div key={i} className="rounded-lg border border-accent/30 bg-accent/5 p-3">
-            <p className="text-[10px] uppercase tracking-widest text-accent">{ins.tag}</p>
-            <p className="mt-1 text-xs leading-relaxed text-foreground">{ins.body}</p>
-          </div>
-        ))}
-      </div>
-
       {/* Timeline */}
       <div>
         <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
