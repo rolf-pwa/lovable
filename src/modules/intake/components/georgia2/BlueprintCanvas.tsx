@@ -17,7 +17,6 @@ export function BlueprintCanvas() {
   const gauges = computeGauges(state.domain, state.catalyst, state.answers, state.scale);
   const notes = bcContextNotes(state.domain, state.catalyst, state.answers);
   const insights = georgiaInsights(state.domain, state.catalyst, state.answers, state.scale);
-  const nextStep = insights.find((i) => i.tag === "Your Next Step") ?? null;
   const riskNotes = insights.filter((i) => i.tag !== "Your Next Step");
   const timeline = state.catalyst ? CATALYST_TIMELINES[state.catalyst] : null;
   const currentStage = timeline
@@ -151,13 +150,6 @@ export function BlueprintCanvas() {
         </div>
       </div>
 
-      {/* Next Step — pinned to the bottom, above the pathway button */}
-      {nextStep && (
-        <div className="rounded-lg border border-accent/30 bg-accent/5 p-3 lg:hidden">
-          <p className="text-[10px] uppercase tracking-widest text-accent">{nextStep.tag}</p>
-          <p className="mt-1 text-xs leading-relaxed text-foreground">{nextStep.body}</p>
-        </div>
-      )}
     </div>
   );
 }
