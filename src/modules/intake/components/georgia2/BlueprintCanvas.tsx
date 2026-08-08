@@ -74,8 +74,7 @@ export function BlueprintCanvas() {
                         className={cn(
                           "relative z-10 flex h-6 w-6 items-center justify-center rounded-full border text-[10px] font-semibold transition-colors duration-500",
                           done && "border-accent bg-accent text-background",
-                          current &&
-                            "border-accent bg-accent text-background ring-4 ring-accent/30",
+                          current && "border-border bg-background text-muted-foreground",
                           !done && !current && "border-border bg-background text-muted-foreground"
                         )}
                       >
@@ -85,7 +84,7 @@ export function BlueprintCanvas() {
                     <p
                       className={cn(
                         "text-xs leading-tight",
-                        done || current ? "font-semibold text-accent" : "font-medium"
+                        done ? "font-semibold text-accent" : "font-medium"
                       )}
                     >
                       {m.label}
