@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useGeorgia2 } from "./state";
 import { Button } from "@/shared/components/ui/button";
 import { ArrowLeft, ArrowRight, Calendar, BookOpen } from "lucide-react";
@@ -14,9 +14,14 @@ import { trackGeorgia2 } from "@/modules/intake/lib/session-tracker";
 export function StepResults() {
   const { state, dispatch } = useGeorgia2();
   const rootRef = useRef<HTMLDivElement>(null);
+  // The full recommendation stays hidden until the visitor asks to see it by
+  // clicking "See my pathway". The first click reveals the card and stays put;
+  // a second click proceeds to lead capture.
+  const [revealed, setRevealed] = useState(false);
   if (!state.domain || !state.catalyst) return null;
   const result = deriveResult(state.domain);
   const academy = CATALYST_ACADEMY[state.catalyst];
+
 
   // On stacked/mobile layouts, bring the top of the results card into view as
   // soon as it appears, so the visitor lands on the recommendation rather than
