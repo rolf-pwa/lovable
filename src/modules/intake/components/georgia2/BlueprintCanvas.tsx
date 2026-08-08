@@ -4,7 +4,7 @@ import {
   CATALYST_TIMELINES,
   bcContextNotes,
   computeGauges,
-  formatCAD,
+  
   georgiaInsights,
   hasDiagnosticInput,
   timelineStageIndex,
