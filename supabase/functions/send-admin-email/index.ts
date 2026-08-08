@@ -1,5 +1,5 @@
 // send-admin-email
-// Sends transactional notifications from admin@prosperwise.ca via the
+// Sends transactional notifications from noreply@prosperwise.ca via the
 // Lovable Gmail connector gateway. Additive to the Wix relay — callers
 // decide whether to invoke this based on NOTIFICATION_CHANNEL.
 //
@@ -11,7 +11,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { checkOutboundPii } from "../_shared/pii-shield.ts";
 
 const GATEWAY_URL = "https://connector-gateway.lovable.dev/google_mail/gmail/v1";
-const SENDER_DISPLAY = "ProsperWise <admin@prosperwise.ca>";
+const SENDER_DISPLAY = "ProsperWise <noreply@prosperwise.ca>";
 const APP_URL = "https://app.prosperwise.ca";
 
 function appendAppLinkText(body: string): string {

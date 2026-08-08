@@ -306,24 +306,25 @@ async function sendFailureAlert(admin: any, failures: TestResult[]) {
     await admin.from("staff_notifications").insert(notifications);
   }
 
-  // Also try sending email via Resend if configured
-  const resendKey = Deno.env.get("RESEND_API_KEY");
-  if (resendKey) {
-    const failSummary = failures.map((f) => `❌ ${f.test_name}: ${f.logic_trace.substring(0, 150)}`).join("\n\n");
-    try {
-      await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: { "Authorization": `Bearer ${resendKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          from: "ProsperWise Security <onboarding@resend.dev>",
-          to: ["alerts@prosperwise.ca"],
-          subject: `🚨 Security Audit FAILURE — ${failures.length} test(s) failed`,
-          text: `ProsperWise Automated Security Audit detected ${failures.length} failure(s):\n\n${failSummary}\n\nRun timestamp: ${new Date().toISOString()}\n\nImmediate review required.`,
-        }),
-      });
-    } catch (emailErr) {
-      console.error("Failed to send alert email:", emailErr);
-    }
+  // Route the alert through send-admin-email (Gmail) rather than a
+  // standalone Resend call, so every system-generated email shares one path.
+  const failSummary = failures.map((f) => `❌ ${f.test_name}: ${f.logic_trace.substring(0, 150)}`).join("\n\n");
+  try {
+    await fetch(`${SUPABASE_URL()}/functions/v1/send-admin-email`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${SERVICE_KEY()}`,
+        "x-internal-secret": Deno.env.get("INTERNAL_FUNCTION_SECRET") ?? "",
+      },
+      body: JSON.stringify({
+        to: ["alerts@prosperwise.ca"],
+        subject: `🚨 Security Audit FAILURE — ${failures.length} test(s) failed`,
+        text: `ProsperWise Automated Security Audit detected ${failures.length} failure(s):\n\n${failSummary}\n\nRun timestamp: ${new Date().toISOString()}\n\nImmediate review required.`,
+      }),
+    });
+  } catch (emailErr) {
+    console.error("Failed to send alert email:", emailErr);
   }
 }
 
