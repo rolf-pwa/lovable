@@ -37,6 +37,7 @@ export function StepResults() {
   const pick = (p: Pathway) => {
     dispatch({ type: "set_pathway", pathway: p });
     trackGeorgia2({ chosen_pathway: p, reached_lead_capture: true, final_phase: "lead_capture" });
+    dispatch({ type: "set_step", step: 5 });
   };
 
   return (
@@ -66,21 +67,25 @@ export function StepResults() {
             </p>
           </div>
 
-          <div className="rounded-xl border-2 border-primary/40 bg-primary/5 p-6">
-            <h3 className="text-xl">Your next step</h3>
+          <div className="rounded-xl border-2 border-primary/40 bg-primary/5 p-4 md:p-6">
+            <h3 className="text-lg md:text-xl">Your next step</h3>
             <p className="mt-2 text-sm text-muted-foreground">
               Based on what you've shared, the Sovereignty Survey is the right starting point.{" "}
               {formatCAD(result.surveyPrice)} for {result.domainLabel} situations like yours.
             </p>
             <div className="mt-5 flex flex-col gap-2">
-              <Button size="lg" className="w-full" onClick={() => pick("survey")}>
+              <Button
+                size="lg"
+                className="h-auto w-full whitespace-normal py-3 text-center leading-snug"
+                onClick={() => pick("survey")}
+              >
                 <Calendar className="mr-2 h-4 w-4 shrink-0" />
                 Start the Sovereignty Survey — {formatCAD(result.surveyPrice)}
               </Button>
               <Button
                 size="lg"
                 variant="outline"
-                className="w-full"
+                className="h-auto w-full whitespace-normal py-3 text-center leading-snug"
                 onClick={() => {
                   trackGeorgia2({ chosen_pathway: "academy_guide" });
                   window.open(academy.url, "_blank", "noopener,noreferrer");
@@ -93,26 +98,11 @@ export function StepResults() {
           </div>
         </>
       )}
-
-
-      <Button
-        size="lg"
-        className="w-full"
-        onClick={() => {
-          if (!revealed) {
-            // First click reveals the recommendation and stays on this screen.
-            setRevealed(true);
-            return;
-          }
-          if (!state.chosenPathway) {
-            dispatch({ type: "set_pathway", pathway: "survey" });
-          } else {
-            dispatch({ type: "set_step", step: 5 });
-          }
-        }}
-      >
-        See my pathway <ArrowRight className="ml-1 h-4 w-4" />
-      </Button>
+      {!revealed && (
+        <Button size="lg" className="w-full" onClick={() => setRevealed(true)}>
+          See my pathway <ArrowRight className="ml-1 h-4 w-4" />
+        </Button>
+      )}
 
     </div>
   );
