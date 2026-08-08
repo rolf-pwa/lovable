@@ -563,7 +563,7 @@ export function bcContextNotes(
   const notes: string[] = [];
   if (domain === "corporate") {
     notes.push(
-      "BC-registered CCPCs may access the Lifetime Capital Gains Exemption (LCGE): $1,016,836 (2024) per shareholder."
+      "BC-registered CCPCs may access the Lifetime Capital Gains Exemption (LCGE): $1,250,000 per shareholder."
     );
     if (answers.holdco && answers.holdco !== "yes") {
       notes.push("Without an active HoldCo, retained earnings face full corporate + personal tax on distribution.");
