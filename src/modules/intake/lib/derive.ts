@@ -255,6 +255,7 @@ export const CATALYST_QUESTIONS: Record<Catalyst, Question[]> = {
       ],
     },
   ],
+  // Legacy key retained for historical session data; folded into sudden_windfall.
   insurance_settlement: [
     {
       key: "allocation",
@@ -269,6 +270,20 @@ export const CATALYST_QUESTIONS: Record<Catalyst, Question[]> = {
     },
   ],
   sudden_windfall: [
+    {
+      key: "windfall_type",
+      text: "What kind of windfall are we working with?",
+      tooltip:
+        "Each windfall type carries a different tax and structural sequence — a settlement behaves nothing like a crypto gain or an equity payout.",
+      options: [
+        { id: "settlement", label: "Insurance or legal settlement", risks: { structure: 2 } },
+        { id: "lottery", label: "Lottery or prize", risks: { structure: 2, noise: 3 } },
+        { id: "real_estate", label: "Real estate sale", risks: { tax: 2 } },
+        { id: "equity", label: "Equity, bonus, or stock payout", risks: { tax: 3 } },
+        { id: "crypto", label: "Crypto or digital assets", risks: { tax: 3, structure: 2 } },
+        { id: "gift", label: "Gift from family", risks: { noise: 2 } },
+      ],
+    },
     {
       key: "safe_harbor",
       text: "Where does this windfall capital currently reside?",
@@ -285,32 +300,42 @@ export const CATALYST_QUESTIONS: Record<Catalyst, Question[]> = {
 
 // ---- Routing ---------------------------------------------------------------
 
+/**
+ * The only commitment this tool drives to is the Sovereignty Survey.
+ * The Sovereignty Operating System™ Build is a later-stage commitment and is
+ * intentionally out of scope here.
+ */
 export type Pathway =
+  | "survey"
+  | "academy_guide"
+  // Legacy values retained so historical lead rows still type-check.
   | "vfo_stabilization"
   | "vfo_catalyst_guide"
   | "standalone_build"
   | "academy_pass";
 
+export const SURVEY_PRICE: Record<Domain, number> = {
+  personal: 750,
+  corporate: 1_500,
+};
+
 export interface DerivedResult {
-  qualified: boolean;
-  fee: number | null;
-  pathwayHeadline: string;
+  surveyPrice: number;
+  domainLabel: string;
+  headline: string;
 }
 
-export function deriveResult(domain: Domain, scale: number): DerivedResult {
-  if (scale >= VELVET_ROPE) {
-    return {
-      qualified: true,
-      fee: null,
-      pathwayHeadline: "Scale qualifies for the Full Sovereignty Route — ongoing VFO oversight.",
-    };
-  }
+export function deriveResult(domain: Domain, _scale?: number): DerivedResult {
+  const surveyPrice = SURVEY_PRICE[domain];
   return {
-    qualified: false,
-    fee: domain === "corporate" ? 10_000 : 5_000,
-    pathwayHeadline: "Structured Builder Route — 90-day Sovereignty OS™ Build, then self-directed.",
+    surveyPrice,
+    domainLabel: domain === "corporate" ? "corporate" : "personal",
+    headline: `The Sovereignty Survey is your next step — ${formatCAD(surveyPrice)} for ${
+      domain === "corporate" ? "corporate" : "personal"
+    } situations.`,
   };
 }
+
 
 // ---- Risk gauges (0–100) ---------------------------------------------------
 
