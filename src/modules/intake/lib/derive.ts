@@ -339,9 +339,16 @@ export function deriveResult(domain: Domain, _scale?: number): DerivedResult {
 
 // ---- Risk gauges (0–100) ---------------------------------------------------
 
+/** True once at least one diagnostic question has a real answer. */
+export function hasDiagnosticInput(catalyst: Catalyst | null, answers: Answers): boolean {
+  if (!catalyst) return false;
+  return CATALYST_QUESTIONS[catalyst].some((q) => Boolean(answers[q.key]));
+}
+
 function clamp(n: number): number {
   return Math.max(0, Math.min(100, Math.round(n)));
 }
+
 
 export interface Gauges {
   taxDragRisk: number;
