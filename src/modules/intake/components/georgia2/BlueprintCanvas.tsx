@@ -121,6 +121,16 @@ export function BlueprintCanvas() {
             Awaiting answers
           </p>
         )}
+        {riskNotes.length > 0 && (
+          <div className="mt-3 space-y-2">
+            {riskNotes.map((ins, i) => (
+              <div key={i} className="rounded-lg border border-accent/30 bg-accent/5 p-3">
+                <p className="text-[10px] uppercase tracking-widest text-accent">{ins.tag}</p>
+                <p className="mt-1 text-xs leading-relaxed text-foreground">{ins.body}</p>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* BC Context */}
