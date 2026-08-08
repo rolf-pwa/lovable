@@ -475,6 +475,23 @@ export const CATALYST_TIMELINES: Record<Catalyst, Milestone[]> = {
   ],
 };
 
+/**
+ * Derive which timeline milestone the visitor currently sits at (0-based),
+ * based on their diagnostic responses. Each answered question advances them
+ * one stage along the catalyst's process, capped at the final milestone.
+ * With no answers yet, they are at the very start (stage 0).
+ */
+export function timelineStageIndex(
+  catalyst: Catalyst | null,
+  answers: Answers,
+  milestoneCount: number
+): number {
+  if (!catalyst || milestoneCount <= 0) return 0;
+  const answered = CATALYST_QUESTIONS[catalyst].filter((q) => Boolean(answers[q.key])).length;
+  return Math.max(0, Math.min(answered, milestoneCount - 1));
+}
+
+
 // ---- Georgia Insights (dynamic quotes) ------------------------------------
 
 export interface GeorgiaInsight {
