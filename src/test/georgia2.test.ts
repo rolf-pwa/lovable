@@ -33,10 +33,15 @@ describe("georgia2 derive", () => {
     const notes = bcContextNotes("personal", "divorce_restructuring", {});
     expect(notes.some((n) => n.includes("BC Family Law Act"))).toBe(true);
   });
-  it("emits decoupled build insight below $1M", () => {
-    const ins = georgiaInsights("personal", "inheritance", {}, 500_000);
-    expect(ins.some((i) => i.tag === "Decoupled Build")).toBe(true);
+  it("emits the Survey next-step insight once answers exist", () => {
+    const ins = georgiaInsights("personal", "inheritance", { probate: "yes" }, 500_000);
+    expect(ins.some((i) => i.tag === "Your Next Step")).toBe(true);
   });
+  it("holds back the next-step insight before any answers", () => {
+    const ins = georgiaInsights("personal", "inheritance", {}, 500_000);
+    expect(ins.some((i) => i.tag === "Your Next Step")).toBe(false);
+  });
+
   it("emits noise exposure insight for contested divorce", () => {
     const ins = georgiaInsights(
       "personal",
