@@ -484,13 +484,14 @@ export function georgiaInsights(
   const insights: GeorgiaInsight[] = [];
   const gauges = computeGauges(domain, catalyst, answers, scale);
 
-  if (domain && scale < VELVET_ROPE) {
+  if (domain && hasDiagnosticInput(catalyst, answers)) {
     insights.push({
-      tag: "Decoupled Build",
+      tag: "Your Next Step",
       body:
-        "While your current transition scale sits below our ongoing VFO threshold of $1M, your structural complexity is highly evident. Our decoupled Sovereignty OS™ Build is a dedicated 90-day project to construct your private container and Sovereignty Charter — then you transition to the self-directed Academy with zero ongoing advisory fees.",
+        "The Sovereignty Survey is a 90-minute working session built around exactly what you've told me — you leave with a Stabilization Map, an Immediate Risk Scan, and a 30-Day Action Framework. No pitch, no commitment beyond the session itself.",
     });
   }
+
 
   if (gauges.noiseStrain >= 70) {
     insights.push({
