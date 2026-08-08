@@ -27,13 +27,11 @@ function Shell({ embed }: { embed?: boolean }) {
     state.sessionKey
   );
 
-  // On stacked/mobile layouts, bring the top of the wizard back into view
-  // whenever the visitor advances a step, so they don't have to scroll up manually.
-  // Step 4 is skipped because StepResults scrolls to its own card header instead
-  // of the input pane above it.
+  // Bring the top of the wizard back into view whenever the visitor advances
+  // a step, so they don't have to scroll up manually. Step 4 is skipped because
+  // StepResults scrolls to its own card header instead of the input pane above it.
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (window.innerWidth >= 1024) return; // side-by-side layout already shows both panes
     if (state.step === 4) return; // results pane handles its own scroll target
     if (rootRef.current) {
       rootRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
