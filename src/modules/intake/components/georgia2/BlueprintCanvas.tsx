@@ -7,6 +7,7 @@ import {
   formatCAD,
   georgiaInsights,
   hasDiagnosticInput,
+  timelineStageIndex,
 } from "@/modules/intake/lib/derive";
 import { cn } from "@/shared/lib/utils";
 
