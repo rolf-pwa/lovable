@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { useGeorgia2 } from "./state";
 import { Button } from "@/shared/components/ui/button";
 import { ArrowLeft, ArrowRight, Calendar, BookOpen } from "lucide-react";
@@ -12,9 +13,21 @@ import { trackGeorgia2 } from "@/modules/intake/lib/session-tracker";
 
 export function StepResults() {
   const { state, dispatch } = useGeorgia2();
+  const rootRef = useRef<HTMLDivElement>(null);
   if (!state.domain || !state.catalyst) return null;
   const result = deriveResult(state.domain);
   const academy = CATALYST_ACADEMY[state.catalyst];
+
+  // On stacked/mobile layouts, bring the top of the results card into view as
+  // soon as it appears, so the visitor lands on the recommendation rather than
+  // the question section above it.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.innerWidth >= 1024) return; // side-by-side layout already shows the card
+    if (rootRef.current) {
+      rootRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, []);
 
   const pick = (p: Pathway) => {
     dispatch({ type: "set_pathway", pathway: p });
@@ -22,7 +35,8 @@ export function StepResults() {
   };
 
   return (
-    <div className="space-y-6">
+    <div ref={rootRef} className="space-y-6">
+
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-xs uppercase tracking-wider text-muted-foreground">
