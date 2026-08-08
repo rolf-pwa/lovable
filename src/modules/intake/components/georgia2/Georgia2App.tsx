@@ -66,10 +66,11 @@ function Shell({ embed }: { embed?: boolean }) {
           </div>
 
           {/* Results pane, side by side */}
-          <aside className="space-y-6 rounded-2xl border border-border bg-muted/30 p-5 md:p-6">
-            {state.step >= 4 && <StepResults />}
-            <BlueprintCanvas />
-          </aside>
+            <aside className="space-y-6 rounded-2xl border border-border bg-muted/30 p-5 md:p-6">
+              <BlueprintCanvas />
+              {state.step >= 4 && <StepResults />}
+            </aside>
+
 
         </div>
 
