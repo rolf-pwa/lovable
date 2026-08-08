@@ -4,7 +4,7 @@ import {
   CATALYST_TIMELINES,
   bcContextNotes,
   computeGauges,
-  formatCAD,
+  
   georgiaInsights,
   hasDiagnosticInput,
   timelineStageIndex,
@@ -17,6 +17,8 @@ export function BlueprintCanvas() {
   const gauges = computeGauges(state.domain, state.catalyst, state.answers, state.scale);
   const notes = bcContextNotes(state.domain, state.catalyst, state.answers);
   const insights = georgiaInsights(state.domain, state.catalyst, state.answers, state.scale);
+  const nextStep = insights.find((i) => i.tag === "Your Next Step") ?? null;
+  const riskNotes = insights.filter((i) => i.tag !== "Your Next Step");
   const timeline = state.catalyst ? CATALYST_TIMELINES[state.catalyst] : null;
   const currentStage = timeline
     ? timelineStageIndex(state.catalyst, state.answers, timeline.length)
@@ -34,16 +36,6 @@ export function BlueprintCanvas() {
         <p className="text-sm text-muted-foreground">
           Live-render updates as you answer.
         </p>
-      </div>
-
-      {/* Georgia Insights */}
-      <div className="space-y-2">
-        {insights.map((ins, i) => (
-          <div key={i} className="rounded-lg border border-accent/30 bg-accent/5 p-3">
-            <p className="text-[10px] uppercase tracking-widest text-accent">{ins.tag}</p>
-            <p className="mt-1 text-xs leading-relaxed text-foreground">{ins.body}</p>
-          </div>
-        ))}
       </div>
 
       {/* Timeline */}
@@ -82,8 +74,7 @@ export function BlueprintCanvas() {
                         className={cn(
                           "relative z-10 flex h-6 w-6 items-center justify-center rounded-full border text-[10px] font-semibold transition-colors duration-500",
                           done && "border-accent bg-accent text-background",
-                          current &&
-                            "border-accent bg-accent text-background ring-4 ring-accent/30",
+                          current && "border-border bg-background text-muted-foreground",
                           !done && !current && "border-border bg-background text-muted-foreground"
                         )}
                       >
@@ -93,7 +84,7 @@ export function BlueprintCanvas() {
                     <p
                       className={cn(
                         "text-xs leading-tight",
-                        done || current ? "font-semibold text-accent" : "font-medium"
+                        done ? "font-semibold text-accent" : "font-medium"
                       )}
                     >
                       {m.label}
@@ -131,6 +122,16 @@ export function BlueprintCanvas() {
             Awaiting answers
           </p>
         )}
+        {riskNotes.length > 0 && (
+          <div className="mt-3 space-y-2">
+            {riskNotes.map((ins, i) => (
+              <div key={i} className="rounded-lg border border-accent/30 bg-accent/5 p-3">
+                <p className="text-[10px] uppercase tracking-widest text-accent">{ins.tag}</p>
+                <p className="mt-1 text-xs leading-relaxed text-foreground">{ins.body}</p>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* BC Context */}
@@ -150,13 +151,11 @@ export function BlueprintCanvas() {
         </div>
       </div>
 
-      {/* Capital Scale — only once the visitor is on the Diagnostic step */}
-      {state.step >= 3 && (
-        <div className="rounded-lg border border-border bg-card p-4 text-center">
-          <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
-            Capital Scale
-          </p>
-          <p className="mt-1 font-serif text-2xl">{formatCAD(state.scale)}</p>
+      {/* Next Step — pinned to the bottom, above the pathway button */}
+      {nextStep && (
+        <div className="rounded-lg border border-accent/30 bg-accent/5 p-3">
+          <p className="text-[10px] uppercase tracking-widest text-accent">{nextStep.tag}</p>
+          <p className="mt-1 text-xs leading-relaxed text-foreground">{nextStep.body}</p>
         </div>
       )}
     </div>
