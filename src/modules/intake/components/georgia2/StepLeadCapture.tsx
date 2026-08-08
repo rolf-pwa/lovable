@@ -55,7 +55,7 @@ export function StepLeadCapture() {
       }
       trackGeorgia2({ lead_captured: true, final_phase: "complete", ended: true });
       if (state.chosenPathway === "survey") {
-        const url = "https://www.prosperwise.ca/sovereignty-audit";
+        const url = "https://www.prosperwise.ca/sovereignty-audit#pricing";
         // Break out of the embed iframe so the visitor lands on the real page.
         try {
           if (window.top && window.top !== window.self) {
