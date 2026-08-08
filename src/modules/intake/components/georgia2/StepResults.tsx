@@ -51,23 +51,25 @@ export function StepResults() {
           Based on what you've shared, the Sovereignty Survey is the right starting point.{" "}
           {formatCAD(result.surveyPrice)} for {result.domainLabel} situations like yours.
         </p>
-        <div className="mt-5 flex flex-col gap-2 sm:flex-row">
-          <Button size="lg" onClick={() => pick("survey")}>
-            <Calendar className="mr-2 h-4 w-4" />
+        <div className="mt-5 flex flex-col gap-2">
+          <Button size="lg" className="w-full" onClick={() => pick("survey")}>
+            <Calendar className="mr-2 h-4 w-4 shrink-0" />
             Start the Sovereignty Survey — {formatCAD(result.surveyPrice)}
           </Button>
           <Button
             size="lg"
             variant="outline"
+            className="w-full"
             onClick={() => {
               trackGeorgia2({ chosen_pathway: "academy_guide" });
               window.open(academy.url, "_blank", "noopener,noreferrer");
             }}
           >
-            <BookOpen className="mr-2 h-4 w-4" />
+            <BookOpen className="mr-2 h-4 w-4 shrink-0" />
             Read the {academy.title} Guide
           </Button>
         </div>
+
       </div>
     </div>
   );
