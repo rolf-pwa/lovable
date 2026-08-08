@@ -17,7 +17,6 @@ export function BlueprintCanvas() {
   const gauges = computeGauges(state.domain, state.catalyst, state.answers, state.scale);
   const notes = bcContextNotes(state.domain, state.catalyst, state.answers);
   const insights = georgiaInsights(state.domain, state.catalyst, state.answers, state.scale);
-  const nextStep = insights.find((i) => i.tag === "Your Next Step") ?? null;
   const riskNotes = insights.filter((i) => i.tag !== "Your Next Step");
   const timeline = state.catalyst ? CATALYST_TIMELINES[state.catalyst] : null;
   const currentStage = timeline
