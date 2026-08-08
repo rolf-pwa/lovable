@@ -8,7 +8,7 @@ import {
   SCALE_MAX,
   SCALE_MIN,
   SCALE_STEP,
-  VELVET_ROPE,
+  
   deriveResult,
 } from "@/modules/intake/lib/derive";
 import { cn } from "@/shared/lib/utils";
@@ -86,32 +86,18 @@ export function StepDiagnostic() {
               trackGeorgia2({ scale: v[0] });
             }}
           />
-          <div
-            className="pointer-events-none absolute top-0 flex flex-col items-center"
-            style={{ left: `${((VELVET_ROPE - SCALE_MIN) / (SCALE_MAX - SCALE_MIN)) * 100}%` }}
-          >
-            <span className="h-6 w-px bg-accent" />
-            <span className="mt-1 whitespace-nowrap text-[10px] uppercase tracking-wider text-accent">
-              Velvet Rope · $1M
-            </span>
-          </div>
         </div>
-        <div className="mt-8 flex items-center justify-between text-xs text-muted-foreground">
+        <div className="mt-4 flex items-center justify-between text-xs text-muted-foreground">
+
           <span>{formatCAD(SCALE_MIN)}</span>
           <span>{formatCAD(SCALE_MAX)}</span>
         </div>
-        {result && (
-          <div
-            className={cn(
-              "mt-4 rounded-md border px-3 py-2 text-sm",
-              result.qualified
-                ? "border-primary/40 bg-primary/5 text-primary"
-                : "border-accent/40 bg-accent/5 text-foreground"
-            )}
-          >
-            {result.pathwayHeadline}
+        {result && allAnswered && (
+          <div className="mt-4 rounded-md border border-primary/40 bg-primary/5 px-3 py-2 text-sm text-primary">
+            {result.headline}
           </div>
         )}
+
       </div>
 
       <div className="flex justify-end">
