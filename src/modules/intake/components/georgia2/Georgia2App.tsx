@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { Georgia2Provider, useGeorgia2 } from "./state";
 import { Stepper } from "./Stepper";
 import { StepDomain } from "./StepDomain";
