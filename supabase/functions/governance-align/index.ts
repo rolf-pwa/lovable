@@ -4,6 +4,7 @@
 import "https://deno.land/std@0.224.0/dotenv/load.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { z } from "https://esm.sh/zod@3.23.8";
+import { generateVertexContent, parseServiceAccountKey, extractJson } from "../_shared/vertex-ai.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -145,10 +146,7 @@ Deno.serve(async (req) => {
       return json({ ok: true, alignments: rows.length, note: "no_charter" });
     }
 
-    // 5. Call Lovable AI Gateway (Gemini 2.5 Flash)
-    const apiKey = Deno.env.get("LOVABLE_API_KEY");
-    if (!apiKey) return json({ error: "Missing LOVABLE_API_KEY" }, 500);
-
+    // 5. Call Vertex AI directly (Gemini 2.5 Flash) — no Lovable gateway
     const systemPrompt = `You are the Charter Alignment Engine for ProsperWise's Sovereignty Operating System.
 You judge whether monthly performance facts remain aligned with a family's ratified Sovereignty Charter.
 
@@ -169,33 +167,24 @@ Output STRICT JSON: { "results": [ { "fact_key": string, "charter_section_key": 
       performance_facts: facts,
     };
 
-    const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: JSON.stringify(userPayload) },
-        ],
-        response_format: { type: "json_object" },
-      }),
-    });
-
-    if (!aiResp.ok) {
-      const txt = await aiResp.text();
-      await supabase.from("monthly_governance_reviews").update({
-        generation_error: `AI ${aiResp.status}: ${txt.slice(0, 500)}`,
-      }).eq("id", review_id);
-      return json({ error: "AI gateway error", status: aiResp.status, body: txt.slice(0, 500) }, 502);
-    }
-    const aiJson = await aiResp.json();
-    const content = aiJson?.choices?.[0]?.message?.content || "{}";
     let parsedOut: any = {};
-    try { parsedOut = JSON.parse(content); } catch { parsedOut = {}; }
+    try {
+      const sa = await parseServiceAccountKey(Deno.env.get("GCP_SERVICE_ACCOUNT_KEY"));
+      const vertexResult = await generateVertexContent(
+        sa,
+        "gemini-2.5-flash",
+        [{ role: "user", parts: [{ text: `${systemPrompt}\n\n${JSON.stringify(userPayload)}` }] }],
+        { temperature: 0.2, maxOutputTokens: 4096, responseMimeType: "application/json" },
+      );
+      const rawText = vertexResult?.candidates?.[0]?.content?.parts?.map((p: any) => p.text).join("") || "{}";
+      parsedOut = extractJson(rawText);
+    } catch (aiErr) {
+      const message = aiErr instanceof Error ? aiErr.message : String(aiErr);
+      await supabase.from("monthly_governance_reviews").update({
+        generation_error: `AI error: ${message.slice(0, 500)}`,
+      }).eq("id", review_id);
+      return json({ error: "AI generation error", message: message.slice(0, 500) }, 502);
+    }
     const results: any[] = Array.isArray(parsedOut?.results) ? parsedOut.results : [];
 
     // 6. Persist alignment results

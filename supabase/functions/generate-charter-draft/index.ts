@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { z } from "https://esm.sh/zod@3.25.76";
+import { generateVertexContent, parseServiceAccountKey, extractJson } from "../_shared/vertex-ai.ts";
 
 const ALLOWED_ORIGINS = [
   "https://prosperwise.lovable.app",
@@ -8,7 +9,7 @@ const ALLOWED_ORIGINS = [
   "https://id-preview--339dfc8f-3e82-4b05-8a36-a9f66fc58449.lovable.app",
 ];
 
-const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
+const MODEL = "gemini-2.5-flash";
 const MAX_SOURCE_TEXT = 20000;
 const MAX_SOURCES = 12;
 const GOOGLE_CLIENT_ID = Deno.env.get("GOOGLE_CLIENT_ID") || "";
@@ -387,11 +388,6 @@ serve(async (req) => {
       })
     );
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
-    }
-
     const systemPrompt = `${SOVEREIGN_ARCHITECT_SYSTEM_PROMPT}${knowledgeBaseBlock}
 
 You are ProsperWise's charter architect. Draft the initial Sovereignty Charter using only the supplied contact profile, current financial structure, and resource materials.
@@ -481,36 +477,21 @@ CRITICAL RULES:
       sourceMaterials: preparedSources.map((item) => item.promptText),
     });
 
-    const aiResponse = await fetch(AI_URL, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        response_format: { type: "json_object" },
-      }),
-    });
-
-    if (!aiResponse.ok) {
-      if (aiResponse.status === 429) {
-        return respond(req, { ok: false, error: "Rate limits exceeded, please try again later.", diagnostics: { stage: "ai_gateway", status: 429 } });
-      }
-      if (aiResponse.status === 402) {
-        return respond(req, { ok: false, error: "Payment required, please add funds to your Lovable AI workspace.", diagnostics: { stage: "ai_gateway", status: 402 } });
-      }
-      const errorText = await aiResponse.text();
-      throw new Error(`AI gateway error: ${errorText}`);
+    let parsedDraft: any;
+    try {
+      const sa = await parseServiceAccountKey(Deno.env.get("GCP_SERVICE_ACCOUNT_KEY"));
+      const vertexResult = await generateVertexContent(
+        sa,
+        MODEL,
+        [{ role: "user", parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }] }],
+        { temperature: 0.4, maxOutputTokens: 8192, responseMimeType: "application/json" },
+      );
+      const rawText = vertexResult?.candidates?.[0]?.content?.parts?.map((p: any) => p.text).join("") || "";
+      parsedDraft = extractJson(rawText);
+    } catch (aiErr) {
+      const message = aiErr instanceof Error ? aiErr.message : String(aiErr);
+      return respond(req, { ok: false, error: "AI generation failed", diagnostics: { stage: "vertex_ai", message } });
     }
-
-    const aiData = await aiResponse.json();
-    const content = aiData.choices?.[0]?.message?.content;
-    const parsedDraft = typeof content === "string" ? JSON.parse(content) : content;
 
     const customSections = {
       pageOne: Array.isArray(parsedDraft.custom_sections?.pageOne) ? parsedDraft.custom_sections.pageOne : [],
