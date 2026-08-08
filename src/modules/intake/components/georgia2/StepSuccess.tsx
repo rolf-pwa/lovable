@@ -7,27 +7,39 @@ const PATHWAY_COPY: Record<
   string,
   { title: string; body: string; next: string }
 > = {
-  vfo_stabilization: {
-    title: "Stabilization Session Requested",
-    body: "Rolf's office will reach out within one business day to confirm your $249 Stabilization Session and share a private prep brief.",
+  survey: {
+    title: "Sovereignty Survey Requested",
+    body: "Rolf's office will reach out within one business day to confirm your Sovereignty Survey — a 90-minute working session — and share a private prep brief.",
     next: "Watch for a confidential email from ProsperWise. Add rolf@prosperwise.ca to your safe senders.",
+  },
+  academy_guide: {
+    title: "Academy Guide Opened",
+    body: "Your catalyst-matched Academy article is public and free to read. When you're ready for a working session, the Sovereignty Survey is the next step.",
+    next: "No email required — the Academy is self-guided.",
+  },
+  // Legacy pathway labels retained for historical sessions.
+  vfo_stabilization: {
+    title: "Sovereignty Survey Requested",
+    body: "Rolf's office will reach out within one business day to confirm your Sovereignty Survey and share a private prep brief.",
+    next: "Watch for a confidential email from ProsperWise.",
   },
   vfo_catalyst_guide: {
     title: "Catalyst Guide Requested",
-    body: "Your catalyst-specific sovereignty guide is being prepared and will be delivered to your confidential inbox shortly.",
+    body: "Your catalyst-specific guide is being prepared and will be delivered to your confidential inbox shortly.",
     next: "We'll follow up with an optional 20-minute framing call if you'd like one.",
   },
   standalone_build: {
-    title: "90-Day Build Request Received",
-    body: "A private scoping call will be sent to your inbox. This is a flat, project-based engagement — no recurring fees, no drag.",
-    next: "You'll receive a scoping questionnaire and calendar link within one business day.",
+    title: "Request Received",
+    body: "A private scoping call will be sent to your inbox.",
+    next: "You'll receive a calendar link within one business day.",
   },
   academy_pass: {
-    title: "Academy Pass Unlocked",
-    body: "Your complimentary ProsperWise Academy access is being issued. Look for your welcome email momentarily.",
+    title: "Academy Access Confirmed",
+    body: "Your ProsperWise Academy access is ready.",
     next: "The Academy is self-guided — start whenever you're ready.",
   },
 };
+
 
 export function StepSuccess() {
   const { state, dispatch } = useGeorgia2();

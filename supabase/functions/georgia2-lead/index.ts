@@ -33,11 +33,15 @@ const BodySchema = z.object({
   domain: z.enum(["corporate", "personal"]),
   catalyst: z.string().min(1).max(64),
   chosen_pathway: z.enum([
+    "survey",
+    "academy_guide",
+    // legacy values
     "vfo_stabilization",
     "vfo_catalyst_guide",
     "standalone_build",
     "academy_pass",
   ]),
+
   scale: z.number().min(0).max(1_000_000_000),
   answers: z.record(z.string(), z.any()).default({}),
 });

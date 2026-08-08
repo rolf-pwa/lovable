@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { Georgia2Provider, useGeorgia2 } from "./state";
 import { Stepper } from "./Stepper";
 import { StepDomain } from "./StepDomain";
@@ -11,6 +12,7 @@ import { useGeorgia2ExitBeacon } from "@/modules/intake/lib/session-tracker";
 
 function Shell({ embed }: { embed?: boolean }) {
   const { state } = useGeorgia2();
+  const rootRef = useRef<HTMLDivElement>(null);
   useGeorgia2ExitBeacon(
     () => ({
       domain: state.domain,
@@ -25,13 +27,25 @@ function Shell({ embed }: { embed?: boolean }) {
     state.sessionKey
   );
 
+  // Bring the top of the wizard back into view whenever the visitor advances
+  // a step, so they don't have to scroll up manually. Step 4 is skipped because
+  // StepResults scrolls to its own card header instead of the input pane above it.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (state.step === 4) return; // results pane handles its own scroll target
+    if (rootRef.current) {
+      rootRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [state.step]);
+
   return (
-    <div className={embed ? "min-h-screen bg-background" : "min-h-screen bg-background"}>
+    <div ref={rootRef} className={embed ? "min-h-screen bg-background" : "min-h-screen bg-background"}>
       <div className="mx-auto max-w-6xl px-4 py-6 md:py-10">
         {!embed && (
           <div className="mb-6">
-            <p className="text-xs uppercase tracking-widest text-accent">Georgia · Sovereignty OS™</p>
-            <h1 className="mt-1 font-serif text-3xl md:text-4xl">Decoupled Sovereignty Diagnostic</h1>
+            <p className="text-xs uppercase tracking-widest text-accent">Georgia · Sovereignty Operating System™</p>
+            <h1 className="mt-1 font-serif text-3xl md:text-4xl">Sovereignty Diagnostic</h1>
+
           </div>
         )}
         {state.step < 6 && (
@@ -39,19 +53,25 @@ function Shell({ embed }: { embed?: boolean }) {
             <Stepper current={state.step} />
           </div>
         )}
-        <div className="grid gap-6 md:grid-cols-5">
-          <div className="rounded-2xl border border-border bg-card p-5 md:col-span-3 md:p-8">
+        <div className="grid items-start gap-6 lg:grid-cols-2">
+          {/* Input pane */}
+          <div className="rounded-2xl border border-border bg-card p-5 md:p-8">
             {state.step === 1 && <StepDomain />}
             {state.step === 2 && <StepCatalyst />}
-            {state.step === 3 && <StepDiagnostic />}
-            {state.step === 4 && <StepResults />}
+            {(state.step === 3 || state.step === 4) && <StepDiagnostic />}
             {state.step === 5 && <StepLeadCapture />}
             {state.step === 6 && <StepSuccess />}
           </div>
-          <aside className="rounded-2xl border border-border bg-muted/30 p-5 md:col-span-2 md:p-6">
-            <BlueprintCanvas />
-          </aside>
+
+          {/* Results pane, side by side */}
+            <aside className="space-y-6 rounded-2xl border border-border bg-muted/30 p-5 md:p-6">
+              <BlueprintCanvas />
+              {state.step >= 4 && <StepResults />}
+            </aside>
+
+
         </div>
+
         <p className="mt-6 text-center text-[10px] uppercase tracking-widest text-muted-foreground">
           Montréal Data Pinning · Zero Tracking Cookies · PIPEDA-Aligned
         </p>

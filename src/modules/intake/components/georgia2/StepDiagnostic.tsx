@@ -1,14 +1,15 @@
+import { useEffect, useRef } from "react";
 import { useGeorgia2 } from "./state";
 import { Button } from "@/shared/components/ui/button";
 import { Slider } from "@/shared/components/ui/slider";
-import { ArrowLeft, ArrowRight, Info } from "lucide-react";
+import { ArrowLeft, Info } from "lucide-react";
 import {
   CATALYST_QUESTIONS,
   formatCAD,
   SCALE_MAX,
   SCALE_MIN,
   SCALE_STEP,
-  VELVET_ROPE,
+  
   deriveResult,
 } from "@/modules/intake/lib/derive";
 import { cn } from "@/shared/lib/utils";
@@ -19,6 +20,25 @@ export function StepDiagnostic() {
   const questions = state.catalyst ? CATALYST_QUESTIONS[state.catalyst] : [];
   const allAnswered = questions.every((q) => state.answers[q.key]);
   const result = state.domain ? deriveResult(state.domain, state.scale) : null;
+  const questionRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  // Once every question is answered, flow naturally into the results card.
+  useEffect(() => {
+    if (allAnswered && state.step === 3) {
+      dispatch({ type: "set_step", step: 4 });
+    }
+  }, [allAnswered, state.step, dispatch]);
+
+  // On stacked/mobile layouts, bring the next unanswered question into view
+  // after each answer so the visitor doesn't have to scroll down manually.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.innerWidth >= 1024) return; // side-by-side layout already shows everything
+    const next = questions.find((q) => !state.answers[q.key]);
+    if (next && questionRefs.current[next.key]) {
+      questionRefs.current[next.key].scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [state.answers, questions]);
 
   return (
     <div className="space-y-6">
@@ -38,7 +58,13 @@ export function StepDiagnostic() {
         {questions.map((q) => {
           const value = state.answers[q.key] ?? null;
           return (
-            <div key={q.key} className="rounded-lg border border-border bg-card p-4">
+            <div
+              key={q.key}
+              ref={(el) => {
+                questionRefs.current[q.key] = el;
+              }}
+              className="rounded-lg border border-border bg-card p-4"
+            >
               <p className="text-sm font-medium">{q.text}</p>
               <p className="mt-1 flex items-start gap-1.5 text-[11px] leading-relaxed text-muted-foreground">
                 <Info className="mt-0.5 h-3 w-3 shrink-0 text-accent" />
@@ -86,39 +112,20 @@ export function StepDiagnostic() {
               trackGeorgia2({ scale: v[0] });
             }}
           />
-          <div
-            className="pointer-events-none absolute top-0 flex flex-col items-center"
-            style={{ left: `${((VELVET_ROPE - SCALE_MIN) / (SCALE_MAX - SCALE_MIN)) * 100}%` }}
-          >
-            <span className="h-6 w-px bg-accent" />
-            <span className="mt-1 whitespace-nowrap text-[10px] uppercase tracking-wider text-accent">
-              Velvet Rope · $1M
-            </span>
-          </div>
         </div>
-        <div className="mt-8 flex items-center justify-between text-xs text-muted-foreground">
+        <div className="mt-4 flex items-center justify-between text-xs text-muted-foreground">
+
           <span>{formatCAD(SCALE_MIN)}</span>
           <span>{formatCAD(SCALE_MAX)}</span>
         </div>
-        {result && (
-          <div
-            className={cn(
-              "mt-4 rounded-md border px-3 py-2 text-sm",
-              result.qualified
-                ? "border-primary/40 bg-primary/5 text-primary"
-                : "border-accent/40 bg-accent/5 text-foreground"
-            )}
-          >
-            {result.pathwayHeadline}
+        {result && allAnswered && (
+          <div className="mt-4 rounded-md border border-primary/40 bg-primary/5 px-3 py-2 text-sm text-primary">
+            {result.headline}
           </div>
         )}
+
       </div>
 
-      <div className="flex justify-end">
-        <Button disabled={!allAnswered} onClick={() => dispatch({ type: "set_step", step: 4 })}>
-          See my pathway <ArrowRight className="ml-1 h-4 w-4" />
-        </Button>
-      </div>
     </div>
   );
 }

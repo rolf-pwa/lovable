@@ -54,7 +54,22 @@ export function StepLeadCapture() {
         throw new Error(body?.error || `Submission failed (${res.status})`);
       }
       trackGeorgia2({ lead_captured: true, final_phase: "complete", ended: true });
+      if (state.chosenPathway === "survey") {
+        const url = "https://www.prosperwise.ca/sovereignty-audit#pricing";
+        // Break out of the embed iframe so the visitor lands on the real page.
+        try {
+          if (window.top && window.top !== window.self) {
+            window.top.location.href = url;
+          } else {
+            window.location.href = url;
+          }
+        } catch {
+          window.open(url, "_blank", "noopener,noreferrer");
+        }
+        return;
+      }
       dispatch({ type: "set_step", step: 6 });
+
     } catch (err) {
       dispatch({
         type: "submit_error",

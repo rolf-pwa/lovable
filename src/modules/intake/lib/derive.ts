@@ -25,13 +25,13 @@ export const SCALE_MAX = 10_000_000;
 export const SCALE_STEP = 100_000;
 
 export const CATALYST_LABELS: Record<Catalyst, string> = {
-  founder_exit: "Founder Exit",
-  growth_stage_founder: "Growth Stage Founder",
-  inheritance: "Inheritance",
-  executive_exit: "Executive Exit",
-  divorce_restructuring: "Matrimonial Restructuring",
-  insurance_settlement: "Insurance Settlement",
-  sudden_windfall: "Sudden Windfall",
+  founder_exit: "Business Exit Planning",
+  growth_stage_founder: "Growth-Stage Founder Planning",
+  inheritance: "Inheritance Planning",
+  executive_exit: "Executive Retirement Planning",
+  divorce_restructuring: "Divorce Financial Planning",
+  insurance_settlement: "Sudden Wealth Planning",
+  sudden_windfall: "Sudden Wealth Planning",
 };
 
 export const CATALYST_DESCRIPTIONS: Record<Catalyst, string> = {
@@ -40,21 +40,55 @@ export const CATALYST_DESCRIPTIONS: Record<Catalyst, string> = {
   inheritance: "Legacy transfers, estate & trust windfalls.",
   executive_exit: "Vesting options, severance, retiring allowance.",
   divorce_restructuring: "Matrimonial division, asset splitting.",
-  insurance_settlement: "Personal injury or critical illness payouts.",
-  sudden_windfall: "Crypto, lottery, or outlier capital events.",
+  insurance_settlement: "Insurance or legal settlement payouts.",
+  sudden_windfall:
+    "Lottery, insurance or legal settlement, real estate, equity/bonus, crypto, or gift.",
+};
+
+/** Public Academy article for each catalyst (opened in a new tab). */
+export const CATALYST_ACADEMY: Record<Catalyst, { title: string; url: string }> = {
+  founder_exit: {
+    title: "The Liquidity Event",
+    url: "https://www.prosperwise.ca/academy/liquidity-event",
+  },
+  growth_stage_founder: {
+    title: "The Velocity Surge",
+    url: "https://www.prosperwise.ca/academy/velocity-surge",
+  },
+  inheritance: {
+    title: "Navigating the Inheritance",
+    url: "https://www.prosperwise.ca/academy/navigating-the-inheritance",
+  },
+  executive_exit: {
+    title: "The Transition Cliff",
+    url: "https://www.prosperwise.ca/academy/transition-cliff",
+  },
+  divorce_restructuring: {
+    title: "The Settlement Gap",
+    url: "https://www.prosperwise.ca/academy/settlement-gap",
+  },
+  insurance_settlement: {
+    title: "Sudden Wealth Syndrome",
+    url: "https://www.prosperwise.ca/academy/sudden-wealth-syndrome",
+  },
+  sudden_windfall: {
+    title: "Sudden Wealth Syndrome",
+    url: "https://www.prosperwise.ca/academy/sudden-wealth-syndrome",
+  },
 };
 
 export const CORPORATE_CATALYSTS: CorporateCatalyst[] = [
   "founder_exit",
   "growth_stage_founder",
 ];
+// Matches the site's four personal service pages exactly.
 export const PERSONAL_CATALYSTS: PersonalCatalyst[] = [
   "inheritance",
-  "executive_exit",
   "divorce_restructuring",
-  "insurance_settlement",
+  "executive_exit",
   "sudden_windfall",
 ];
+
 
 export const DOMAIN_GREETING: Record<Domain, string> = {
   corporate:
@@ -221,6 +255,7 @@ export const CATALYST_QUESTIONS: Record<Catalyst, Question[]> = {
       ],
     },
   ],
+  // Legacy key retained for historical session data; folded into sudden_windfall.
   insurance_settlement: [
     {
       key: "allocation",
@@ -235,6 +270,20 @@ export const CATALYST_QUESTIONS: Record<Catalyst, Question[]> = {
     },
   ],
   sudden_windfall: [
+    {
+      key: "windfall_type",
+      text: "What kind of windfall are we working with?",
+      tooltip:
+        "Each windfall type carries a different tax and structural sequence — a settlement behaves nothing like a crypto gain or an equity payout.",
+      options: [
+        { id: "settlement", label: "Insurance or legal settlement", risks: { structure: 2 } },
+        { id: "lottery", label: "Lottery or prize", risks: { structure: 2, noise: 3 } },
+        { id: "real_estate", label: "Real estate sale", risks: { tax: 2 } },
+        { id: "equity", label: "Equity, bonus, or stock payout", risks: { tax: 3 } },
+        { id: "crypto", label: "Crypto or digital assets", risks: { tax: 3, structure: 2 } },
+        { id: "gift", label: "Gift from family", risks: { noise: 2 } },
+      ],
+    },
     {
       key: "safe_harbor",
       text: "Where does this windfall capital currently reside?",
@@ -251,38 +300,55 @@ export const CATALYST_QUESTIONS: Record<Catalyst, Question[]> = {
 
 // ---- Routing ---------------------------------------------------------------
 
+/**
+ * The only commitment this tool drives to is the Sovereignty Survey.
+ * The Sovereignty Operating System™ Build is a later-stage commitment and is
+ * intentionally out of scope here.
+ */
 export type Pathway =
+  | "survey"
+  | "academy_guide"
+  // Legacy values retained so historical lead rows still type-check.
   | "vfo_stabilization"
   | "vfo_catalyst_guide"
   | "standalone_build"
   | "academy_pass";
 
+export const SURVEY_PRICE: Record<Domain, number> = {
+  personal: 750,
+  corporate: 1_500,
+};
+
 export interface DerivedResult {
-  qualified: boolean;
-  fee: number | null;
-  pathwayHeadline: string;
+  surveyPrice: number;
+  domainLabel: string;
+  headline: string;
 }
 
-export function deriveResult(domain: Domain, scale: number): DerivedResult {
-  if (scale >= VELVET_ROPE) {
-    return {
-      qualified: true,
-      fee: null,
-      pathwayHeadline: "Scale qualifies for the Full Sovereignty Route — ongoing VFO oversight.",
-    };
-  }
+export function deriveResult(domain: Domain, _scale?: number): DerivedResult {
+  const surveyPrice = SURVEY_PRICE[domain];
   return {
-    qualified: false,
-    fee: domain === "corporate" ? 10_000 : 5_000,
-    pathwayHeadline: "Structured Builder Route — 90-day Sovereignty OS™ Build, then self-directed.",
+    surveyPrice,
+    domainLabel: domain === "corporate" ? "corporate" : "personal",
+    headline: `The Sovereignty Survey is your next step — ${formatCAD(surveyPrice)} for ${
+      domain === "corporate" ? "corporate" : "personal"
+    } situations.`,
   };
 }
 
+
 // ---- Risk gauges (0–100) ---------------------------------------------------
+
+/** True once at least one diagnostic question has a real answer. */
+export function hasDiagnosticInput(catalyst: Catalyst | null, answers: Answers): boolean {
+  if (!catalyst) return false;
+  return CATALYST_QUESTIONS[catalyst].some((q) => Boolean(answers[q.key]));
+}
 
 function clamp(n: number): number {
   return Math.max(0, Math.min(100, Math.round(n)));
 }
+
 
 export interface Gauges {
   taxDragRisk: number;
@@ -409,6 +475,23 @@ export const CATALYST_TIMELINES: Record<Catalyst, Milestone[]> = {
   ],
 };
 
+/**
+ * Derive which timeline milestone the visitor currently sits at (0-based),
+ * based on their diagnostic responses. Each answered question advances them
+ * one stage along the catalyst's process, capped at the final milestone.
+ * With no answers yet, they are at the very start (stage 0).
+ */
+export function timelineStageIndex(
+  catalyst: Catalyst | null,
+  answers: Answers,
+  milestoneCount: number
+): number {
+  if (!catalyst || milestoneCount <= 0) return 0;
+  const answered = CATALYST_QUESTIONS[catalyst].filter((q) => Boolean(answers[q.key])).length;
+  return Math.max(0, Math.min(answered, milestoneCount - 1));
+}
+
+
 // ---- Georgia Insights (dynamic quotes) ------------------------------------
 
 export interface GeorgiaInsight {
@@ -425,13 +508,14 @@ export function georgiaInsights(
   const insights: GeorgiaInsight[] = [];
   const gauges = computeGauges(domain, catalyst, answers, scale);
 
-  if (domain && scale < VELVET_ROPE) {
+  if (domain && hasDiagnosticInput(catalyst, answers)) {
     insights.push({
-      tag: "Decoupled Build",
+      tag: "Your Next Step",
       body:
-        "While your current transition scale sits below our ongoing VFO threshold of $1M, your structural complexity is highly evident. Our decoupled Sovereignty OS™ Build is a dedicated 90-day project to construct your private container and Sovereignty Charter — then you transition to the self-directed Academy with zero ongoing advisory fees.",
+        "The Sovereignty Survey is a 90-minute working session built around exactly what you've told me — you leave with a Stabilization Map, an Immediate Risk Scan, and a 30-Day Action Framework. No pitch, no commitment beyond the session itself.",
     });
   }
+
 
   if (gauges.noiseStrain >= 70) {
     insights.push({
@@ -479,7 +563,7 @@ export function bcContextNotes(
   const notes: string[] = [];
   if (domain === "corporate") {
     notes.push(
-      "BC-registered CCPCs may access the Lifetime Capital Gains Exemption (LCGE): $1,016,836 (2024) per shareholder."
+      "BC-registered CCPCs may access the Lifetime Capital Gains Exemption (LCGE): $1,250,000 per shareholder."
     );
     if (answers.holdco && answers.holdco !== "yes") {
       notes.push("Without an active HoldCo, retained earnings face full corporate + personal tax on distribution.");
@@ -492,9 +576,11 @@ export function bcContextNotes(
     }
   }
   if (domain === "personal") {
-    notes.push(
-      "BC Probate fees: ~1.4% on estates over $50,000. Assets in joint tenancy or trust may bypass probate."
-    );
+    if (catalyst === "inheritance") {
+      notes.push(
+        "BC Probate fees: ~1.4% on estates over $50,000. Assets in joint tenancy or trust may bypass probate."
+      );
+    }
     if (catalyst === "divorce_restructuring") {
       notes.push("BC Family Law Act: family property is presumed 50/50 unless a cohabitation or marriage agreement applies.");
     }
