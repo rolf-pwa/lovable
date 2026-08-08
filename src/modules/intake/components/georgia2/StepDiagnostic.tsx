@@ -86,17 +86,9 @@ export function StepDiagnostic() {
               trackGeorgia2({ scale: v[0] });
             }}
           />
-          <div
-            className="pointer-events-none absolute top-0 flex flex-col items-center"
-            style={{ left: `${((VELVET_ROPE - SCALE_MIN) / (SCALE_MAX - SCALE_MIN)) * 100}%` }}
-          >
-            <span className="h-6 w-px bg-accent" />
-            <span className="mt-1 whitespace-nowrap text-[10px] uppercase tracking-wider text-accent">
-              Velvet Rope · $1M
-            </span>
-          </div>
         </div>
-        <div className="mt-8 flex items-center justify-between text-xs text-muted-foreground">
+        <div className="mt-4 flex items-center justify-between text-xs text-muted-foreground">
+
           <span>{formatCAD(SCALE_MIN)}</span>
           <span>{formatCAD(SCALE_MAX)}</span>
         </div>
