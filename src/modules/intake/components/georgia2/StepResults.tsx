@@ -23,12 +23,10 @@ export function StepResults() {
   const academy = CATALYST_ACADEMY[state.catalyst];
 
 
-  // On stacked/mobile layouts, bring the top of the results card into view as
-  // soon as it appears, so the visitor lands on the recommendation rather than
-  // the question section above it.
+  // Bring the top of the results card into view as soon as it appears, so the
+  // visitor lands on the recommendation rather than the question section above it.
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (window.innerWidth >= 1024) return; // side-by-side layout already shows the card
     if (rootRef.current) {
       rootRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
     }
