@@ -12,6 +12,7 @@ import { useGeorgia2ExitBeacon } from "@/modules/intake/lib/session-tracker";
 
 function Shell({ embed }: { embed?: boolean }) {
   const { state } = useGeorgia2();
+  const rootRef = useRef<HTMLDivElement>(null);
   useGeorgia2ExitBeacon(
     () => ({
       domain: state.domain,
@@ -26,8 +27,18 @@ function Shell({ embed }: { embed?: boolean }) {
     state.sessionKey
   );
 
+  // On stacked/mobile layouts, bring the top of the wizard back into view
+  // whenever the visitor advances a step, so they don't have to scroll up manually.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.innerWidth >= 1024) return; // side-by-side layout already shows both panes
+    if (rootRef.current) {
+      rootRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [state.step]);
+
   return (
-    <div className={embed ? "min-h-screen bg-background" : "min-h-screen bg-background"}>
+    <div ref={rootRef} className={embed ? "min-h-screen bg-background" : "min-h-screen bg-background"}>
       <div className="mx-auto max-w-6xl px-4 py-6 md:py-10">
         {!embed && (
           <div className="mb-6">
