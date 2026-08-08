@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { useGeorgia2 } from "./state";
 import { Button } from "@/shared/components/ui/button";
 import { Slider } from "@/shared/components/ui/slider";
@@ -19,6 +20,20 @@ export function StepDiagnostic() {
   const questions = state.catalyst ? CATALYST_QUESTIONS[state.catalyst] : [];
   const allAnswered = questions.every((q) => state.answers[q.key]);
   const result = state.domain ? deriveResult(state.domain, state.scale) : null;
+  const questionRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const ctaRef = useRef<HTMLDivElement>(null);
+
+  // On stacked/mobile layouts, bring the next unanswered question into view
+  // after each answer so the visitor doesn't have to scroll down manually.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.innerWidth >= 1024) return; // side-by-side layout already shows everything
+    const next = questions.find((q) => !state.answers[q.key]);
+    const target = next ? questionRefs.current[next.key] : ctaRef.current;
+    if (target) {
+      target.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [state.answers, questions]);
 
   return (
     <div className="space-y-6">
@@ -38,7 +53,13 @@ export function StepDiagnostic() {
         {questions.map((q) => {
           const value = state.answers[q.key] ?? null;
           return (
-            <div key={q.key} className="rounded-lg border border-border bg-card p-4">
+            <div
+              key={q.key}
+              ref={(el) => {
+                questionRefs.current[q.key] = el;
+              }}
+              className="rounded-lg border border-border bg-card p-4"
+            >
               <p className="text-sm font-medium">{q.text}</p>
               <p className="mt-1 flex items-start gap-1.5 text-[11px] leading-relaxed text-muted-foreground">
                 <Info className="mt-0.5 h-3 w-3 shrink-0 text-accent" />
@@ -100,7 +121,7 @@ export function StepDiagnostic() {
 
       </div>
 
-      <div className="flex justify-end">
+      <div ref={ctaRef} className="flex justify-end">
         <Button disabled={!allAnswered} onClick={() => dispatch({ type: "set_step", step: 4 })}>
           See my pathway <ArrowRight className="ml-1 h-4 w-4" />
         </Button>
