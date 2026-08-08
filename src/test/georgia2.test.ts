@@ -8,20 +8,17 @@ import {
 } from "@/modules/intake/lib/derive";
 
 describe("georgia2 derive", () => {
-  it("routes >=1M to VFO", () => {
-    const r = deriveResult("corporate", VELVET_ROPE);
-    expect(r.qualified).toBe(true);
-    expect(r.fee).toBeNull();
+  it("prices the personal Survey at $750", () => {
+    expect(deriveResult("personal").surveyPrice).toBe(750);
   });
-  it("routes <1M corporate to $10k standalone", () => {
-    const r = deriveResult("corporate", 500_000);
-    expect(r.qualified).toBe(false);
-    expect(r.fee).toBe(10_000);
+  it("prices the corporate Survey at $1,500", () => {
+    expect(deriveResult("corporate").surveyPrice).toBe(1_500);
   });
-  it("routes <1M personal to $5k standalone", () => {
-    const r = deriveResult("personal", 500_000);
-    expect(r.fee).toBe(5_000);
+  it("headline always points at the Survey regardless of scale", () => {
+    expect(deriveResult("personal", 5_000_000).headline).toContain("Sovereignty Survey");
+    expect(deriveResult("personal", 200_000).headline).toContain("Sovereignty Survey");
   });
+
   it("spikes tax drag when LCGE unsure", () => {
     const low = computeGauges("corporate", "founder_exit", { lcge: "intact" }, 2_000_000);
     const high = computeGauges("corporate", "founder_exit", { lcge: "unsure" }, 2_000_000);
