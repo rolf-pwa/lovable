@@ -25,13 +25,13 @@ export const SCALE_MAX = 10_000_000;
 export const SCALE_STEP = 100_000;
 
 export const CATALYST_LABELS: Record<Catalyst, string> = {
-  founder_exit: "Founder Exit",
-  growth_stage_founder: "Growth Stage Founder",
-  inheritance: "Inheritance",
-  executive_exit: "Executive Exit",
-  divorce_restructuring: "Matrimonial Restructuring",
-  insurance_settlement: "Insurance Settlement",
-  sudden_windfall: "Sudden Windfall",
+  founder_exit: "Business Exit Planning",
+  growth_stage_founder: "Growth-Stage Founder Planning",
+  inheritance: "Inheritance Planning",
+  executive_exit: "Executive Retirement Planning",
+  divorce_restructuring: "Divorce Financial Planning",
+  insurance_settlement: "Sudden Wealth Planning",
+  sudden_windfall: "Sudden Wealth Planning",
 };
 
 export const CATALYST_DESCRIPTIONS: Record<Catalyst, string> = {
@@ -40,21 +40,55 @@ export const CATALYST_DESCRIPTIONS: Record<Catalyst, string> = {
   inheritance: "Legacy transfers, estate & trust windfalls.",
   executive_exit: "Vesting options, severance, retiring allowance.",
   divorce_restructuring: "Matrimonial division, asset splitting.",
-  insurance_settlement: "Personal injury or critical illness payouts.",
-  sudden_windfall: "Crypto, lottery, or outlier capital events.",
+  insurance_settlement: "Insurance or legal settlement payouts.",
+  sudden_windfall:
+    "Lottery, insurance or legal settlement, real estate, equity/bonus, crypto, or gift.",
+};
+
+/** Public Academy article for each catalyst (opened in a new tab). */
+export const CATALYST_ACADEMY: Record<Catalyst, { title: string; url: string }> = {
+  founder_exit: {
+    title: "The Liquidity Event",
+    url: "https://www.prosperwise.ca/academy/the-liquidity-event",
+  },
+  growth_stage_founder: {
+    title: "The Velocity Surge",
+    url: "https://www.prosperwise.ca/academy/the-velocity-surge",
+  },
+  inheritance: {
+    title: "Navigating the Inheritance",
+    url: "https://www.prosperwise.ca/academy/navigating-the-inheritance",
+  },
+  executive_exit: {
+    title: "The Transition Cliff",
+    url: "https://www.prosperwise.ca/academy/the-transition-cliff",
+  },
+  divorce_restructuring: {
+    title: "The Settlement Gap",
+    url: "https://www.prosperwise.ca/academy/the-settlement-gap",
+  },
+  insurance_settlement: {
+    title: "Sudden Wealth Syndrome",
+    url: "https://www.prosperwise.ca/academy/sudden-wealth-syndrome",
+  },
+  sudden_windfall: {
+    title: "Sudden Wealth Syndrome",
+    url: "https://www.prosperwise.ca/academy/sudden-wealth-syndrome",
+  },
 };
 
 export const CORPORATE_CATALYSTS: CorporateCatalyst[] = [
   "founder_exit",
   "growth_stage_founder",
 ];
+// Matches the site's four personal service pages exactly.
 export const PERSONAL_CATALYSTS: PersonalCatalyst[] = [
   "inheritance",
-  "executive_exit",
   "divorce_restructuring",
-  "insurance_settlement",
+  "executive_exit",
   "sudden_windfall",
 ];
+
 
 export const DOMAIN_GREETING: Record<Domain, string> = {
   corporate:
