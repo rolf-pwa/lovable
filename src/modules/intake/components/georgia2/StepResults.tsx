@@ -1,6 +1,6 @@
 import { useGeorgia2 } from "./state";
 import { Button } from "@/shared/components/ui/button";
-import { ArrowLeft, Calendar, BookOpen } from "lucide-react";
+import { ArrowLeft, ArrowRight, Calendar, BookOpen } from "lucide-react";
 import {
   deriveResult,
   formatCAD,
@@ -71,6 +71,20 @@ export function StepResults() {
         </div>
 
       </div>
+
+      <Button
+        size="lg"
+        className="w-full"
+        onClick={() => {
+          if (!state.chosenPathway) {
+            dispatch({ type: "set_pathway", pathway: "survey" });
+          } else {
+            dispatch({ type: "set_step", step: 5 });
+          }
+        }}
+      >
+        Continue — secure your details <ArrowRight className="ml-1 h-4 w-4" />
+      </Button>
     </div>
   );
 }
