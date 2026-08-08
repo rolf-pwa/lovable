@@ -53,7 +53,13 @@ export function StepDiagnostic() {
         {questions.map((q) => {
           const value = state.answers[q.key] ?? null;
           return (
-            <div key={q.key} className="rounded-lg border border-border bg-card p-4">
+            <div
+              key={q.key}
+              ref={(el) => {
+                questionRefs.current[q.key] = el;
+              }}
+              className="rounded-lg border border-border bg-card p-4"
+            >
               <p className="text-sm font-medium">{q.text}</p>
               <p className="mt-1 flex items-start gap-1.5 text-[11px] leading-relaxed text-muted-foreground">
                 <Info className="mt-0.5 h-3 w-3 shrink-0 text-accent" />
