@@ -99,6 +99,11 @@ export function StepResults() {
         size="lg"
         className="w-full"
         onClick={() => {
+          if (!revealed) {
+            // First click reveals the recommendation and stays on this screen.
+            setRevealed(true);
+            return;
+          }
           if (!state.chosenPathway) {
             dispatch({ type: "set_pathway", pathway: "survey" });
           } else {
@@ -108,6 +113,7 @@ export function StepResults() {
       >
         See my pathway <ArrowRight className="ml-1 h-4 w-4" />
       </Button>
+
     </div>
   );
 }
