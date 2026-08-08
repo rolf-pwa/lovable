@@ -4,19 +4,19 @@ import {
   CATALYST_TIMELINES,
   bcContextNotes,
   computeGauges,
-  deriveResult,
   formatCAD,
   georgiaInsights,
+  hasDiagnosticInput,
 } from "@/modules/intake/lib/derive";
 import { cn } from "@/shared/lib/utils";
 
 export function BlueprintCanvas() {
   const { state } = useGeorgia2();
+  const answered = hasDiagnosticInput(state.catalyst, state.answers);
   const gauges = computeGauges(state.domain, state.catalyst, state.answers, state.scale);
   const notes = bcContextNotes(state.domain, state.catalyst, state.answers);
   const insights = georgiaInsights(state.domain, state.catalyst, state.answers, state.scale);
   const timeline = state.catalyst ? CATALYST_TIMELINES[state.catalyst] : null;
-  const result = state.domain ? deriveResult(state.domain, state.scale) : null;
 
   return (
     <div className="space-y-6">
@@ -28,7 +28,7 @@ export function BlueprintCanvas() {
           {state.catalyst ? CATALYST_LABELS[state.catalyst] : "Awaiting inputs…"}
         </h3>
         <p className="text-sm text-muted-foreground">
-          {result ? result.pathwayHeadline : "Live-render updates as you answer."}
+          Live-render updates as you answer.
         </p>
       </div>
 
@@ -45,7 +45,9 @@ export function BlueprintCanvas() {
       {/* Timeline */}
       <div>
         <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-          Timeline
+          {state.catalyst
+            ? `Where you are in the ${CATALYST_LABELS[state.catalyst].replace(/ Planning$/, "")} process`
+            : "Where you are in your process"}
         </p>
         <div className="rounded-lg border border-border bg-card p-4">
           {timeline ? (
@@ -80,11 +82,20 @@ export function BlueprintCanvas() {
           Risk Metrics
         </p>
         <div className="grid grid-cols-2 gap-3">
-          <Gauge label="Tax Drag Risk" value={gauges.taxDragRisk} tone="risk" />
-          <Gauge label="Structure Safety" value={gauges.structureSafety} tone="safety" />
-          <Gauge label="Noise Strain" value={gauges.noiseStrain} tone="risk" />
-          <Gauge label="Readiness" value={gauges.readiness} tone="safety" />
+          <Gauge label="Tax Drag Risk" value={answered ? gauges.taxDragRisk : null} tone="risk" />
+          <Gauge
+            label="Structure Safety"
+            value={answered ? gauges.structureSafety : null}
+            tone="safety"
+          />
+          <Gauge label="Noise Strain" value={answered ? gauges.noiseStrain : null} tone="risk" />
+          <Gauge label="Readiness" value={answered ? gauges.readiness : null} tone="safety" />
         </div>
+        {!answered && (
+          <p className="mt-2 text-[10px] uppercase tracking-widest text-muted-foreground">
+            Awaiting answers
+          </p>
+        )}
       </div>
 
       {/* BC Context */}
@@ -104,7 +115,8 @@ export function BlueprintCanvas() {
         </div>
       </div>
 
-      {state.scale > 0 && (
+      {/* Capital Scale — only once the visitor is on the Diagnostic step */}
+      {state.step >= 3 && (
         <div className="rounded-lg border border-border bg-card p-4 text-center">
           <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
             Capital Scale
@@ -122,16 +134,21 @@ function Gauge({
   tone,
 }: {
   label: string;
-  value: number;
+  value: number | null;
   tone: "risk" | "safety";
 }) {
-  const isBad = tone === "risk" ? value >= 60 : value < 40;
+  const isBad = value === null ? false : tone === "risk" ? value >= 60 : value < 40;
   return (
     <div className="rounded-lg border border-border bg-card p-3">
       <div className="flex items-baseline justify-between">
         <p className="text-xs font-medium">{label}</p>
-        <p className={cn("text-xs font-medium", isBad ? "text-destructive" : "text-primary")}>
-          {value}
+        <p
+          className={cn(
+            "text-xs font-medium",
+            value === null ? "text-muted-foreground" : isBad ? "text-destructive" : "text-primary"
+          )}
+        >
+          {value === null ? "—" : value}
         </p>
       </div>
       <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-muted">
@@ -140,7 +157,7 @@ function Gauge({
             "h-full rounded-full transition-all duration-500",
             isBad ? "bg-destructive" : "bg-primary"
           )}
-          style={{ width: `${value}%` }}
+          style={{ width: `${value ?? 0}%` }}
         />
       </div>
     </div>
