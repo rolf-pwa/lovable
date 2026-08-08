@@ -18,6 +18,9 @@ export function BlueprintCanvas() {
   const notes = bcContextNotes(state.domain, state.catalyst, state.answers);
   const insights = georgiaInsights(state.domain, state.catalyst, state.answers, state.scale);
   const timeline = state.catalyst ? CATALYST_TIMELINES[state.catalyst] : null;
+  const currentStage = timeline
+    ? timelineStageIndex(state.catalyst, state.answers, timeline.length)
+    : 0;
 
   return (
     <div className="space-y-6">
