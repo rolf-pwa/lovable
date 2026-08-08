@@ -96,8 +96,6 @@ export function StepResults() {
               </Button>
             </div>
           </div>
-            </div>
-          </div>
         </>
       )}
       {!revealed && (
