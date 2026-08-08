@@ -8,7 +8,7 @@ import {
   SCALE_MAX,
   SCALE_MIN,
   SCALE_STEP,
-  VELVET_ROPE,
+  
   deriveResult,
 } from "@/modules/intake/lib/derive";
 import { cn } from "@/shared/lib/utils";
