@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { getServiceGoogleAccessToken } from "../_shared/google-token.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -165,11 +166,10 @@ Deno.serve(async (req) => {
     if (raw_text) {
       text = raw_text;
     } else if (doc_id) {
-      const gwKey = Deno.env.get("GOOGLE_DOCS_API_KEY");
-      const lovableKey = Deno.env.get("LOVABLE_API_KEY");
-      if (!gwKey || !lovableKey) throw new Error("Google Docs connector not configured");
-      const resp = await fetch(`https://connector-gateway.lovable.dev/google_docs/v1/documents/${doc_id}`, {
-        headers: { Authorization: `Bearer ${lovableKey}`, "X-Connection-Api-Key": gwKey },
+      const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+      const accessToken = await getServiceGoogleAccessToken(admin);
+      const resp = await fetch(`https://docs.googleapis.com/v1/documents/${doc_id}`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
       });
       if (!resp.ok) throw new Error(`Google Docs fetch failed: ${resp.status} ${await resp.text()}`);
       const doc = await resp.json();

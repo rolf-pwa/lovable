@@ -9,8 +9,9 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { checkOutboundPii } from "../_shared/pii-shield.ts";
+import { getServiceGoogleAccessToken } from "../_shared/google-token.ts";
 
-const GATEWAY_URL = "https://connector-gateway.lovable.dev/google_mail/gmail/v1";
+const GATEWAY_URL = "https://gmail.googleapis.com/gmail/v1";
 const SENDER_DISPLAY = "ProsperWise <admin@prosperwise.ca>";
 const APP_URL = "https://app.prosperwise.ca";
 
@@ -128,21 +129,6 @@ serve(async (req) => {
     });
   }
 
-  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-  const GOOGLE_MAIL_API_KEY = Deno.env.get("GOOGLE_MAIL_API_KEY");
-  if (!LOVABLE_API_KEY) {
-    return new Response(JSON.stringify({ error: "LOVABLE_API_KEY not configured" }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
-  if (!GOOGLE_MAIL_API_KEY) {
-    return new Response(JSON.stringify({ error: "GOOGLE_MAIL_API_KEY not configured" }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
-
   // Auth: either a Supabase JWT (logged-in staff/user) or an internal call
   // from another edge function presenting the dedicated INTERNAL_FUNCTION_SECRET.
   // We deliberately no longer accept the raw SUPABASE_SERVICE_ROLE_KEY as a
@@ -223,11 +209,13 @@ serve(async (req) => {
   const rawEncoded = base64UrlEncode(raw);
 
   try {
+    const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    const accessToken = await getServiceGoogleAccessToken(admin);
+
     const gmRes = await fetch(`${GATEWAY_URL}/users/me/messages/send`, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "X-Connection-Api-Key": GOOGLE_MAIL_API_KEY,
+        Authorization: `Bearer ${accessToken}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ raw: rawEncoded }),
