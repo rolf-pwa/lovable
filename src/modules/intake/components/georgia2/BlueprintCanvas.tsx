@@ -153,7 +153,7 @@ export function BlueprintCanvas() {
 
       {/* Next Step — pinned to the bottom, above the pathway button */}
       {nextStep && (
-        <div className="rounded-lg border border-accent/30 bg-accent/5 p-3">
+        <div className="rounded-lg border border-accent/30 bg-accent/5 p-3 lg:hidden">
           <p className="text-[10px] uppercase tracking-widest text-accent">{nextStep.tag}</p>
           <p className="mt-1 text-xs leading-relaxed text-foreground">{nextStep.body}</p>
         </div>
