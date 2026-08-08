@@ -49,11 +49,11 @@ export const CATALYST_DESCRIPTIONS: Record<Catalyst, string> = {
 export const CATALYST_ACADEMY: Record<Catalyst, { title: string; url: string }> = {
   founder_exit: {
     title: "The Liquidity Event",
-    url: "https://www.prosperwise.ca/academy/the-liquidity-event",
+    url: "https://www.prosperwise.ca/academy/liquidity-event",
   },
   growth_stage_founder: {
     title: "The Velocity Surge",
-    url: "https://www.prosperwise.ca/academy/the-velocity-surge",
+    url: "https://www.prosperwise.ca/academy/velocity-surge",
   },
   inheritance: {
     title: "Navigating the Inheritance",
@@ -61,11 +61,11 @@ export const CATALYST_ACADEMY: Record<Catalyst, { title: string; url: string }> 
   },
   executive_exit: {
     title: "The Transition Cliff",
-    url: "https://www.prosperwise.ca/academy/the-transition-cliff",
+    url: "https://www.prosperwise.ca/academy/transition-cliff",
   },
   divorce_restructuring: {
     title: "The Settlement Gap",
-    url: "https://www.prosperwise.ca/academy/the-settlement-gap",
+    url: "https://www.prosperwise.ca/academy/settlement-gap",
   },
   insurance_settlement: {
     title: "Sudden Wealth Syndrome",
