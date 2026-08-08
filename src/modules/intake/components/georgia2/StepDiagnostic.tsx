@@ -121,7 +121,7 @@ export function StepDiagnostic() {
 
       </div>
 
-      <div className="flex justify-end">
+      <div ref={ctaRef} className="flex justify-end">
         <Button disabled={!allAnswered} onClick={() => dispatch({ type: "set_step", step: 4 })}>
           See my pathway <ArrowRight className="ml-1 h-4 w-4" />
         </Button>
