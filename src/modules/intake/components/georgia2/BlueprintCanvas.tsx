@@ -56,23 +56,54 @@ export function BlueprintCanvas() {
         <div className="rounded-lg border border-border bg-card p-4">
           {timeline ? (
             <ol className="flex items-start justify-between gap-2">
-              {timeline.map((m, i) => (
-                <li key={m.label} className="flex-1 text-center">
-                  <div className="relative mx-auto mb-2 flex h-6 items-center justify-center">
-                    {i > 0 && <span className="absolute left-0 right-1/2 top-1/2 h-px bg-border" />}
-                    {i < timeline.length - 1 && (
-                      <span className="absolute left-1/2 right-0 top-1/2 h-px bg-border" />
-                    )}
-                    <span className="relative z-10 flex h-6 w-6 items-center justify-center rounded-full border border-accent bg-background text-[10px] font-medium text-accent">
-                      {i + 1}
-                    </span>
-                  </div>
-                  <p className="text-xs font-medium leading-tight">{m.label}</p>
-                  <p className="mt-0.5 text-[10px] leading-tight text-muted-foreground">
-                    {m.detail}
-                  </p>
-                </li>
-              ))}
+              {timeline.map((m, i) => {
+                const done = i < currentStage;
+                const current = i === currentStage;
+                return (
+                  <li key={m.label} className="flex-1 text-center">
+                    <div className="relative mx-auto mb-2 flex h-6 items-center justify-center">
+                      {i > 0 && (
+                        <span
+                          className={cn(
+                            "absolute left-0 right-1/2 top-1/2 h-px",
+                            i <= currentStage ? "bg-accent" : "bg-border"
+                          )}
+                        />
+                      )}
+                      {i < timeline.length - 1 && (
+                        <span
+                          className={cn(
+                            "absolute left-1/2 right-0 top-1/2 h-px",
+                            i < currentStage ? "bg-accent" : "bg-border"
+                          )}
+                        />
+                      )}
+                      <span
+                        className={cn(
+                          "relative z-10 flex h-6 w-6 items-center justify-center rounded-full border text-[10px] font-semibold transition-colors duration-500",
+                          done && "border-accent bg-accent text-background",
+                          current &&
+                            "border-accent bg-accent text-background ring-4 ring-accent/30",
+                          !done && !current && "border-border bg-background text-muted-foreground"
+                        )}
+                      >
+                        {i + 1}
+                      </span>
+                    </div>
+                    <p
+                      className={cn(
+                        "text-xs leading-tight",
+                        done || current ? "font-semibold text-accent" : "font-medium"
+                      )}
+                    >
+                      {m.label}
+                    </p>
+                    <p className="mt-0.5 text-[10px] leading-tight text-muted-foreground">
+                      {m.detail}
+                    </p>
+                  </li>
+                );
+              })}
             </ol>
           ) : (
             <p className="text-xs text-muted-foreground">Pick a catalyst to render your timeline.</p>
