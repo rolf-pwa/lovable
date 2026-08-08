@@ -37,6 +37,7 @@ export function StepResults() {
   const pick = (p: Pathway) => {
     dispatch({ type: "set_pathway", pathway: p });
     trackGeorgia2({ chosen_pathway: p, reached_lead_capture: true, final_phase: "lead_capture" });
+    dispatch({ type: "set_step", step: 5 });
   };
 
   return (
