@@ -30,8 +30,9 @@ function Shell({ embed }: { embed?: boolean }) {
       <div className="mx-auto max-w-6xl px-4 py-6 md:py-10">
         {!embed && (
           <div className="mb-6">
-            <p className="text-xs uppercase tracking-widest text-accent">Georgia · Sovereignty OS™</p>
-            <h1 className="mt-1 font-serif text-3xl md:text-4xl">Decoupled Sovereignty Diagnostic</h1>
+            <p className="text-xs uppercase tracking-widest text-accent">Georgia · Sovereignty Operating System™</p>
+            <h1 className="mt-1 font-serif text-3xl md:text-4xl">Sovereignty Diagnostic</h1>
+
           </div>
         )}
         {state.step < 6 && (
