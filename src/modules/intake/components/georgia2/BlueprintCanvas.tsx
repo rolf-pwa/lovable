@@ -140,13 +140,11 @@ export function BlueprintCanvas() {
         </div>
       </div>
 
-      {/* Capital Scale — only once the visitor is on the Diagnostic step */}
-      {state.step >= 3 && (
-        <div className="rounded-lg border border-border bg-card p-4 text-center">
-          <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
-            Capital Scale
-          </p>
-          <p className="mt-1 font-serif text-2xl">{formatCAD(state.scale)}</p>
+      {/* Next Step — pinned to the bottom, above the pathway button */}
+      {nextStep && (
+        <div className="rounded-lg border border-accent/30 bg-accent/5 p-3">
+          <p className="text-[10px] uppercase tracking-widest text-accent">{nextStep.tag}</p>
+          <p className="mt-1 text-xs leading-relaxed text-foreground">{nextStep.body}</p>
         </div>
       )}
     </div>
