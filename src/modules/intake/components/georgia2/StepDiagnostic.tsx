@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import { useGeorgia2 } from "./state";
 import { Button } from "@/shared/components/ui/button";
 import { Slider } from "@/shared/components/ui/slider";
-import { ArrowLeft, ArrowRight, Info } from "lucide-react";
+import { ArrowLeft, Info } from "lucide-react";
 import {
   CATALYST_QUESTIONS,
   formatCAD,
@@ -21,7 +21,13 @@ export function StepDiagnostic() {
   const allAnswered = questions.every((q) => state.answers[q.key]);
   const result = state.domain ? deriveResult(state.domain, state.scale) : null;
   const questionRefs = useRef<Record<string, HTMLDivElement | null>>({});
-  const ctaRef = useRef<HTMLDivElement>(null);
+
+  // Once every question is answered, flow naturally into the results card.
+  useEffect(() => {
+    if (allAnswered && state.step === 3) {
+      dispatch({ type: "set_step", step: 4 });
+    }
+  }, [allAnswered, state.step, dispatch]);
 
   // On stacked/mobile layouts, bring the next unanswered question into view
   // after each answer so the visitor doesn't have to scroll down manually.
@@ -29,9 +35,8 @@ export function StepDiagnostic() {
     if (typeof window === "undefined") return;
     if (window.innerWidth >= 1024) return; // side-by-side layout already shows everything
     const next = questions.find((q) => !state.answers[q.key]);
-    const target = next ? questionRefs.current[next.key] : ctaRef.current;
-    if (target) {
-      target.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (next && questionRefs.current[next.key]) {
+      questionRefs.current[next.key].scrollIntoView({ behavior: "smooth", block: "start" });
     }
   }, [state.answers, questions]);
 
@@ -121,11 +126,6 @@ export function StepDiagnostic() {
 
       </div>
 
-      <div ref={ctaRef} className="flex justify-end">
-        <Button disabled={!allAnswered} onClick={() => dispatch({ type: "set_step", step: 4 })}>
-          See my pathway <ArrowRight className="ml-1 h-4 w-4" />
-        </Button>
-      </div>
     </div>
   );
 }
