@@ -100,18 +100,12 @@ export function StepDiagnostic() {
           <span>{formatCAD(SCALE_MIN)}</span>
           <span>{formatCAD(SCALE_MAX)}</span>
         </div>
-        {result && (
-          <div
-            className={cn(
-              "mt-4 rounded-md border px-3 py-2 text-sm",
-              result.qualified
-                ? "border-primary/40 bg-primary/5 text-primary"
-                : "border-accent/40 bg-accent/5 text-foreground"
-            )}
-          >
-            {result.pathwayHeadline}
+        {result && allAnswered && (
+          <div className="mt-4 rounded-md border border-primary/40 bg-primary/5 px-3 py-2 text-sm text-primary">
+            {result.headline}
           </div>
         )}
+
       </div>
 
       <div className="flex justify-end">
