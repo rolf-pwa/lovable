@@ -576,9 +576,11 @@ export function bcContextNotes(
     }
   }
   if (domain === "personal") {
-    notes.push(
-      "BC Probate fees: ~1.4% on estates over $50,000. Assets in joint tenancy or trust may bypass probate."
-    );
+    if (catalyst === "inheritance") {
+      notes.push(
+        "BC Probate fees: ~1.4% on estates over $50,000. Assets in joint tenancy or trust may bypass probate."
+      );
+    }
     if (catalyst === "divorce_restructuring") {
       notes.push("BC Family Law Act: family property is presumed 50/50 unless a cohabitation or marriage agreement applies.");
     }
