@@ -83,7 +83,7 @@ export function StepResults() {
           }
         }}
       >
-        Continue — secure your details <ArrowRight className="ml-1 h-4 w-4" />
+        See my pathway <ArrowRight className="ml-1 h-4 w-4" />
       </Button>
     </div>
   );
