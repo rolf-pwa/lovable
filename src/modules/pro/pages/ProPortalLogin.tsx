@@ -7,7 +7,6 @@ import { Label } from "@/shared/components/ui/label";
 import { toast } from "sonner";
 import { Briefcase, Mail, KeyRound } from "lucide-react";
 import { supabase } from "@/shared/integrations/supabase/client";
-import { lovable } from "@/shared/integrations/lovable/index";
 
 const FN_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/pro-portal-otp`;
 
@@ -80,15 +79,16 @@ export default function ProPortalLogin() {
   async function signInWithGoogle() {
     setOauthLoading(true);
     try {
-      const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: `${window.location.origin}/pro-portal/login`,
-        extraParams: { prompt: "select_account" },
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/pro-portal/login`,
+          queryParams: { prompt: "select_account" },
+        },
       });
-      if (result.error) throw result.error;
-      if (result.redirected) return; // browser will navigate to Google
-      // Popup flow — session set by helper
-      const { data } = await supabase.auth.getSession();
-      if (data.session) await exchangeSupabaseSession(data.session.access_token);
+      if (error) throw error;
+      // Browser is navigating to Google now; the post-redirect useEffect
+      // picks the session back up via exchangeSupabaseSession.
     } catch (e: any) {
       toast.error(e.message || "Could not start Google sign-in");
       setOauthLoading(false);

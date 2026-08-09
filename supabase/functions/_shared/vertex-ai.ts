@@ -87,6 +87,15 @@ export interface VertexContent {
   parts: Array<{ text?: string; fileData?: { mimeType: string; fileUri: string } }>;
 }
 
+/** Pulls a JSON object out of a model response, tolerating ```json fences and stray prose. */
+export function extractJson(text: string): any {
+  const cleaned = text.replace(/```json/gi, "").replace(/```/g, "").trim();
+  const start = cleaned.indexOf("{");
+  const end = cleaned.lastIndexOf("}");
+  if (start === -1 || end === -1) throw new Error("The model did not return a usable JSON object.");
+  return JSON.parse(cleaned.slice(start, end + 1));
+}
+
 export async function generateVertexContent(
   sa: ServiceAccountKey,
   model: string,

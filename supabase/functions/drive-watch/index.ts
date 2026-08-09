@@ -10,6 +10,7 @@ const CHARTER_SUBFOLDER_NAME = "Sovereignty Charter Sources";
 const CHARTER_BUCKET = "charter-source-uploads";
 const CHARTER_TEXT_LIMIT = 20000;
 const ALLOWED_ORIGINS = [
+  "https://prosperwise-portal.web.app",
   "https://prosperwise.lovable.app",
   "https://app.prosperwise.ca",
   "https://id-preview--339dfc8f-3e82-4b05-8a36-a9f66fc58449.lovable.app",

@@ -1,16 +1,16 @@
 import { supabase } from "@/shared/integrations/supabase/client";
-import { lovable } from "@/shared/integrations/lovable/index";
 
 const ALLOWED_DOMAIN = "prosperwise.ca";
 
 export async function signInWithGoogle() {
-  const result = await lovable.auth.signInWithOAuth("google", {
-    redirect_uri: window.location.origin,
-    extraParams: {
-      prompt: "select_account",
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      redirectTo: window.location.origin,
+      queryParams: { prompt: "select_account" },
     },
   });
-  return result;
+  return { data, error };
 }
 
 export async function signOut() {

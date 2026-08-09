@@ -1,7 +1,8 @@
 // send-admin-email
-// Sends transactional notifications from admin@prosperwise.ca via the
-// Lovable Gmail connector gateway. Additive to the Wix relay — callers
-// decide whether to invoke this based on NOTIFICATION_CHANNEL.
+// Sends transactional notifications from rolf@prosperwise.ca (admin@ is a
+// Google Group with no login of its own, so Gmail auth runs as this real
+// account instead — see _shared/google-token.ts). Additive to the Wix
+// relay — callers decide whether to invoke this based on NOTIFICATION_CHANNEL.
 //
 // Runs PII Shield BEFORE building the raw RFC 2822 message; rejects with
 // 422 on hit. JWT validated in code.
@@ -9,9 +10,10 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { checkOutboundPii } from "../_shared/pii-shield.ts";
+import { getServiceGoogleAccessToken } from "../_shared/google-token.ts";
 
-const GATEWAY_URL = "https://connector-gateway.lovable.dev/google_mail/gmail/v1";
-const SENDER_DISPLAY = "ProsperWise <admin@prosperwise.ca>";
+const GATEWAY_URL = "https://gmail.googleapis.com/gmail/v1";
+const SENDER_DISPLAY = "ProsperWise <rolf@prosperwise.ca>";
 const APP_URL = "https://app.prosperwise.ca";
 
 function appendAppLinkText(body: string): string {
@@ -27,6 +29,7 @@ function appendAppLinkHtml(body: string): string {
 }
 
 const ALLOWED_ORIGINS = [
+  "https://prosperwise-portal.web.app",
   "https://prosperwise.lovable.app",
   "https://app.prosperwise.ca",
   "https://id-preview--339dfc8f-3e82-4b05-8a36-a9f66fc58449.lovable.app",
@@ -128,21 +131,6 @@ serve(async (req) => {
     });
   }
 
-  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-  const GOOGLE_MAIL_API_KEY = Deno.env.get("GOOGLE_MAIL_API_KEY");
-  if (!LOVABLE_API_KEY) {
-    return new Response(JSON.stringify({ error: "LOVABLE_API_KEY not configured" }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
-  if (!GOOGLE_MAIL_API_KEY) {
-    return new Response(JSON.stringify({ error: "GOOGLE_MAIL_API_KEY not configured" }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
-
   // Auth: either a Supabase JWT (logged-in staff/user) or an internal call
   // from another edge function presenting the dedicated INTERNAL_FUNCTION_SECRET.
   // We deliberately no longer accept the raw SUPABASE_SERVICE_ROLE_KEY as a
@@ -223,11 +211,13 @@ serve(async (req) => {
   const rawEncoded = base64UrlEncode(raw);
 
   try {
+    const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    const accessToken = await getServiceGoogleAccessToken(admin);
+
     const gmRes = await fetch(`${GATEWAY_URL}/users/me/messages/send`, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "X-Connection-Api-Key": GOOGLE_MAIL_API_KEY,
+        Authorization: `Bearer ${accessToken}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ raw: rawEncoded }),

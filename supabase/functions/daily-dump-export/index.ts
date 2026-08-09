@@ -9,6 +9,7 @@ const ASANA_ACCESS_TOKEN = Deno.env.get("ASANA_ACCESS_TOKEN");
 const ASANA_WORKSPACE_ID = Deno.env.get("ASANA_WORKSPACE_ID");
 
 const ALLOWED_ORIGINS = [
+  "https://prosperwise-portal.web.app",
   "https://prosperwise.lovable.app",
   "https://app.prosperwise.ca",
   "https://id-preview--339dfc8f-3e82-4b05-8a36-a9f66fc58449.lovable.app",

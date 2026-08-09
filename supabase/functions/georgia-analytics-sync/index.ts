@@ -1,14 +1,16 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { z } from "https://esm.sh/zod@3.25.76";
+import { getServiceGoogleAccessToken } from "../_shared/google-token.ts";
 
 const ALLOWED_ORIGINS = [
+  "https://prosperwise-portal.web.app",
   "https://prosperwise.lovable.app",
   "https://app.prosperwise.ca",
   "https://id-preview--339dfc8f-3e82-4b05-8a36-a9f66fc58449.lovable.app",
 ];
 
-const GATEWAY_URL = "https://connector-gateway.lovable.dev/google_sheets/v4";
+const GATEWAY_URL = "https://sheets.googleapis.com/v4";
 const PAGE_SIZE = 1000;
 
 const BodySchema = z.object({
@@ -72,18 +74,11 @@ function toDateKey(value: string) {
   return value.slice(0, 10);
 }
 
-async function gatewayFetch(path: string, init: RequestInit = {}) {
-  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-  if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
-
-  const GOOGLE_SHEETS_API_KEY = Deno.env.get("GOOGLE_SHEETS_API_KEY");
-  if (!GOOGLE_SHEETS_API_KEY) throw new Error("GOOGLE_SHEETS_API_KEY is not configured");
-
+async function gatewayFetch(accessToken: string, path: string, init: RequestInit = {}) {
   const response = await fetch(`${GATEWAY_URL}${path}`, {
     ...init,
     headers: {
-      Authorization: `Bearer ${LOVABLE_API_KEY}`,
-      "X-Connection-Api-Key": GOOGLE_SHEETS_API_KEY,
+      Authorization: `Bearer ${accessToken}`,
       "Content-Type": "application/json",
       ...(init.headers || {}),
     },
@@ -187,14 +182,14 @@ function buildAbandonedRows(starts: SessionStartRow[]) {
   return rows;
 }
 
-async function ensureSheets(spreadsheetId: string, titles: string[]) {
-  const metadata = await gatewayFetch(`/spreadsheets/${spreadsheetId}`) as { sheets?: Array<{ properties?: { title?: string } }> };
+async function ensureSheets(accessToken: string, spreadsheetId: string, titles: string[]) {
+  const metadata = await gatewayFetch(accessToken, `/spreadsheets/${spreadsheetId}`) as { sheets?: Array<{ properties?: { title?: string } }> };
   const existing = new Set((metadata.sheets || []).map((sheet) => sheet.properties?.title).filter(Boolean));
   const missing = titles.filter((title) => !existing.has(title));
 
   if (missing.length === 0) return;
 
-  await gatewayFetch(`/spreadsheets/${spreadsheetId}:batchUpdate`, {
+  await gatewayFetch(accessToken, `/spreadsheets/${spreadsheetId}:batchUpdate`, {
     method: "POST",
     body: JSON.stringify({
       requests: missing.map((title) => ({ addSheet: { properties: { title } } })),
@@ -203,6 +198,7 @@ async function ensureSheets(spreadsheetId: string, titles: string[]) {
 }
 
 async function writeSheetData(
+  accessToken: string,
   spreadsheetId: string,
   summaryTitle: string,
   trafficTitle: string,
@@ -211,7 +207,7 @@ async function writeSheetData(
   trafficRows: (string | number | boolean)[][],
   abandonedRows: (string | number | boolean)[][],
 ) {
-  await gatewayFetch(`/spreadsheets/${spreadsheetId}/values:batchClear`, {
+  await gatewayFetch(accessToken, `/spreadsheets/${spreadsheetId}/values:batchClear`, {
     method: "POST",
     body: JSON.stringify({
       ranges: [
@@ -222,7 +218,7 @@ async function writeSheetData(
     }),
   });
 
-  await gatewayFetch(`/spreadsheets/${spreadsheetId}/values:batchUpdate`, {
+  await gatewayFetch(accessToken, `/spreadsheets/${spreadsheetId}/values:batchUpdate`, {
     method: "POST",
     body: JSON.stringify({
       valueInputOption: "USER_ENTERED",
@@ -298,8 +294,11 @@ serve(async (req) => {
     const trafficRows = buildTrafficRows(starts);
     const abandonedRows = buildAbandonedRows(starts);
 
-    await ensureSheets(config.spreadsheet_id, [config.worksheet_summary_name, config.worksheet_traffic_name, abandonedTitle]);
+    const accessToken = await getServiceGoogleAccessToken(supabase);
+
+    await ensureSheets(accessToken, config.spreadsheet_id, [config.worksheet_summary_name, config.worksheet_traffic_name, abandonedTitle]);
     await writeSheetData(
+      accessToken,
       config.spreadsheet_id,
       config.worksheet_summary_name,
       config.worksheet_traffic_name,

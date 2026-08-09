@@ -8,6 +8,7 @@ import {
 } from "../_shared/pro-portal-auth.ts";
 
 const ALLOWED_ORIGINS = [
+  "https://prosperwise-portal.web.app",
   "https://prosperwise.lovable.app",
   "https://app.prosperwise.ca",
   "https://id-preview--339dfc8f-3e82-4b05-8a36-a9f66fc58449.lovable.app",

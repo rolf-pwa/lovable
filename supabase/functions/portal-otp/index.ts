@@ -100,6 +100,7 @@ async function fetchMeetingsForContact(supabase: any, contactEmail: string | nul
 }
 
 const ALLOWED_ORIGIN_EXACT = new Set([
+  "https://prosperwise-portal.web.app",
   "https://prosperwise.lovable.app",
   "https://app.prosperwise.ca",
 ]);
