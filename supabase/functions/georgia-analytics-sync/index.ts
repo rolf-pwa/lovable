@@ -4,6 +4,7 @@ import { z } from "https://esm.sh/zod@3.25.76";
 import { getServiceGoogleAccessToken } from "../_shared/google-token.ts";
 
 const ALLOWED_ORIGINS = [
+  "https://prosperwise-portal.web.app",
   "https://prosperwise.lovable.app",
   "https://app.prosperwise.ca",
   "https://id-preview--339dfc8f-3e82-4b05-8a36-a9f66fc58449.lovable.app",
