@@ -7,7 +7,11 @@
 // reads to auth.uid() = user_id, which a per-request user JWT can't satisfy
 // for an account that isn't the caller).
 
-export const ADMIN_INBOX_EMAIL = "admin@prosperwise.ca";
+// admin@prosperwise.ca is a Google Group (collaborative inbox) — Groups have
+// no login of their own and can't be used for "Sign in with Google", so the
+// 3 connector-gateway functions resolve against a real signed-in account
+// instead. Update this if a dedicated Workspace mailbox is ever provisioned.
+export const ADMIN_INBOX_EMAIL = "rolf@prosperwise.ca";
 
 async function refreshAccessToken(refreshToken: string): Promise<{ access_token: string; expires_in: number }> {
   const res = await fetch("https://oauth2.googleapis.com/token", {

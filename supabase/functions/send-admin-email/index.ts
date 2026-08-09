@@ -1,6 +1,7 @@
 // send-admin-email
-// Sends transactional notifications from admin@prosperwise.ca (shared
-// inbox) via the Lovable Gmail connector gateway. Additive to the Wix
+// Sends transactional notifications from rolf@prosperwise.ca (admin@ is a
+// Google Group with no login of its own, so Gmail auth runs as this real
+// account instead — see _shared/google-token.ts). Additive to the Wix
 // relay — callers decide whether to invoke this based on NOTIFICATION_CHANNEL.
 //
 // Runs PII Shield BEFORE building the raw RFC 2822 message; rejects with
@@ -12,7 +13,7 @@ import { checkOutboundPii } from "../_shared/pii-shield.ts";
 import { getServiceGoogleAccessToken } from "../_shared/google-token.ts";
 
 const GATEWAY_URL = "https://gmail.googleapis.com/gmail/v1";
-const SENDER_DISPLAY = "ProsperWise <admin@prosperwise.ca>";
+const SENDER_DISPLAY = "ProsperWise <rolf@prosperwise.ca>";
 const APP_URL = "https://app.prosperwise.ca";
 
 function appendAppLinkText(body: string): string {
