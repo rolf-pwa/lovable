@@ -1,5 +1,6 @@
 import { AppSidebar, SidebarCollapseProvider } from "./AppSidebar";
 import { AssistantSidebar } from "@/shared/components/AssistantSidebar";
+import { CommandPalette } from "@/shared/components/CommandPalette";
 import { DashboardSidebar } from "./DashboardSidebar";
 import { useAuth } from "@/shared/hooks/useAuth";
 import { signOut } from "@/shared/lib/auth";
@@ -56,6 +57,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           </main>
         </div>
         <AssistantSidebar />
+        <CommandPalette />
       </div>
     </SidebarCollapseProvider>
   );

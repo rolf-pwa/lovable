@@ -4,7 +4,7 @@ import reactHooks from "eslint-plugin-react-hooks";
 import reactRefresh from "eslint-plugin-react-refresh";
 import tseslint from "typescript-eslint";
 
-const MODULES = ["intake", "crm", "portal", "pro", "audit"];
+const MODULES = ["intake", "crm", "portal", "pro", "audit", "brain"];
 
 // Modular monolith boundary: a module may import from `@/shared/*`, its own
 // folder, and other modules' public barrels (`@/modules/<name>`) only.

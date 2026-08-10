@@ -58,6 +58,9 @@ const BookService = lazy(() => import("@/modules/billing/pages/BookService"));
 const BookingConfirmation = lazy(() => import("@/modules/billing/pages/BookingConfirmation"));
 const QuickPay = lazy(() => import("@/modules/billing/pages/QuickPay"));
 
+const Brain = lazy(() => import("@/modules/brain/pages/Brain"));
+const BrainDocument = lazy(() => import("@/modules/brain/pages/BrainDocument"));
+
 const Analytics = lazy(() => import("@/modules/crm/pages/Analytics"));
 const StabilizationMap = lazy(() => import("@/modules/audit/pages/StabilizationMap"));
 const StabilizationMapResolver = lazy(() => import("@/modules/audit/pages/StabilizationMapResolver"));
@@ -155,6 +158,8 @@ const App = () => (
               <Route path="/vault/guest/:token" element={<VaultGuest />} />
               <Route path="/vault/share/:token" element={<VaultGuest />} />
               <Route path="/knowledge-base" element={<ProtectedRoute><KnowledgeBase /></ProtectedRoute>} />
+              <Route path="/brain" element={<ProtectedRoute><Brain /></ProtectedRoute>} />
+              <Route path="/brain/:id" element={<ProtectedRoute><BrainDocument /></ProtectedRoute>} />
               <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
               <Route path="/stabilization-map/lead/:leadId" element={<ProtectedRoute><StabilizationMapResolver /></ProtectedRoute>} />
               <Route path="/stabilization-map/contact/:contactId" element={<ProtectedRoute><StabilizationMapResolver /></ProtectedRoute>} />

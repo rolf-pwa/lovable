@@ -96,6 +96,67 @@ export function extractJson(text: string): any {
   return JSON.parse(cleaned.slice(start, end + 1));
 }
 
+export function vertexPredictUrl(projectId: string, model: string) {
+  return `https://${REGION}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${REGION}/publishers/google/models/${model}:predict`;
+}
+
+export type EmbeddingTaskType = "RETRIEVAL_DOCUMENT" | "RETRIEVAL_QUERY" | "SEMANTIC_SIMILARITY";
+
+/**
+ * Embeds a batch of texts with a Vertex AI text-embedding model. `taskType` must be
+ * RETRIEVAL_DOCUMENT when embedding content to index and RETRIEVAL_QUERY when embedding
+ * a search query — mismatching these measurably hurts recall.
+ */
+export async function embedTexts(
+  sa: ServiceAccountKey,
+  texts: Array<{ title?: string; content: string }>,
+  taskType: EmbeddingTaskType,
+  model = "text-embedding-005",
+  dimensions = 768,
+): Promise<number[][]> {
+  if (!texts.length) return [];
+  const accessToken = await getGcpAccessToken(sa);
+  const url = vertexPredictUrl(sa.project_id, model);
+  const BATCH_SIZE = 32;
+  const results: number[][] = [];
+
+  for (let i = 0; i < texts.length; i += BATCH_SIZE) {
+    const batch = texts.slice(i, i + BATCH_SIZE);
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({
+        instances: batch.map((t) => ({
+          task_type: taskType,
+          title: t.title,
+          content: t.content,
+        })),
+        parameters: { outputDimensionality: dimensions, autoTruncate: true },
+      }),
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`Vertex AI embedding error ${res.status}: ${text.slice(0, 500)}`);
+    }
+    const data = await res.json();
+    const predictions = data?.predictions;
+    if (!Array.isArray(predictions)) {
+      throw new Error("Vertex AI embedding response did not include predictions.");
+    }
+    for (const p of predictions) {
+      const values = p?.embeddings?.values;
+      if (!Array.isArray(values)) {
+        throw new Error("Vertex AI embedding response was missing embedding values.");
+      }
+      results.push(values);
+    }
+  }
+  return results;
+}
+
 export async function generateVertexContent(
   sa: ServiceAccountKey,
   model: string,

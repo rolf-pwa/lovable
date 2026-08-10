@@ -1,4 +1,5 @@
 import { supabase } from "@/shared/integrations/supabase/client";
+import type { BrainCitation } from "@/shared/lib/brain";
 
 const FUNCTIONS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
 
@@ -12,6 +13,7 @@ export interface FunctionCall {
 export interface AssistantResponse {
   text: string;
   functionCalls: FunctionCall[];
+  citations: BrainCitation[];
 }
 
 async function getAuthHeaders() {
@@ -28,19 +30,21 @@ export async function askAssistant(
   messages: Message[],
   contactContext?: Record<string, any>,
   documentData?: { mimeType: string; base64: string },
-  model?: string
+  model?: string,
+  useBrain = true,
 ): Promise<AssistantResponse> {
   const headers = await getAuthHeaders();
   const res = await fetch(`${FUNCTIONS_URL}/vertex-ai`, {
     method: "POST",
     headers,
-    body: JSON.stringify({ messages, model, contactContext, documentData }),
+    body: JSON.stringify({ messages, model, contactContext, documentData, useBrain }),
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || "Vertex AI request failed");
   return {
     text: data.text || "",
     functionCalls: data.functionCalls || [],
+    citations: data.citations || [],
   };
 }
 

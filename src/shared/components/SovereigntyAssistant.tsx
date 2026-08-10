@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui
 import { Badge } from "@/shared/components/ui/badge";
 import { ScrollArea } from "@/shared/components/ui/scroll-area";
 import { Separator } from "@/shared/components/ui/separator";
+import { Switch } from "@/shared/components/ui/switch";
 import {
   Bot,
   Send,
@@ -12,9 +13,12 @@ import {
   Shield,
   X,
   MessageSquare,
+  Brain,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { askAssistant, type Message, type FunctionCall, type AssistantResponse } from "@/shared/lib/vertex-ai";
+import { type BrainCitation } from "@/shared/lib/brain";
+import { CitationList } from "@/shared/components/CitationList";
 import { ProposedUpdateCard } from "./ProposedUpdateCard";
 import { toast } from "sonner";
 
@@ -23,6 +27,7 @@ interface ChatMessage {
   role: "user" | "assistant";
   content: string;
   functionCalls?: FunctionCall[];
+  citations?: BrainCitation[];
   approvedActions?: Set<number>;
   timestamp: Date;
 }
@@ -42,6 +47,7 @@ export function SovereigntyAssistant({
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [attachedFile, setAttachedFile] = useState<{ name: string; mimeType: string; base64: string } | null>(null);
+  const [useBrain, setUseBrain] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -99,7 +105,9 @@ export function SovereigntyAssistant({
       const response: AssistantResponse = await askAssistant(
         apiMessages,
         contactContext,
-        attachedFile ? { mimeType: attachedFile.mimeType, base64: attachedFile.base64 } : undefined
+        attachedFile ? { mimeType: attachedFile.mimeType, base64: attachedFile.base64 } : undefined,
+        undefined,
+        useBrain,
       );
 
       const assistantMsg: ChatMessage = {
@@ -107,6 +115,7 @@ export function SovereigntyAssistant({
         role: "assistant",
         content: response.text,
         functionCalls: response.functionCalls.length > 0 ? response.functionCalls : undefined,
+        citations: response.citations.length > 0 ? response.citations : undefined,
         approvedActions: new Set(),
         timestamp: new Date(),
       };
@@ -157,6 +166,11 @@ export function SovereigntyAssistant({
         <p className="text-xs text-muted-foreground">
           AI-powered support · All outputs are drafts for your review
         </p>
+        <label className="flex items-center gap-2 pt-1 text-xs text-muted-foreground">
+          <Switch checked={useBrain} onCheckedChange={setUseBrain} className="scale-75" />
+          <Brain className="h-3 w-3" />
+          Use Second Brain
+        </label>
       </CardHeader>
 
       <Separator />
@@ -202,6 +216,8 @@ export function SovereigntyAssistant({
                       <p className="whitespace-pre-wrap">{msg.content}</p>
                     )}
                   </div>
+
+                  {msg.citations && msg.citations.length > 0 && <CitationList citations={msg.citations} />}
 
                   {/* Function call cards */}
                   {msg.functionCalls?.map((fc, idx) => (

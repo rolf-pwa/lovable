@@ -12,6 +12,12 @@ verify_jwt = false
 [functions.vertex-ai]
 verify_jwt = false
 
+[functions.brain-index]
+verify_jwt = false
+
+[functions.brain-search]
+verify_jwt = false
+
 [functions.portal-validate]
 verify_jwt = false
 
