@@ -106,3 +106,6 @@ verify_jwt = false
 
 [functions.square-webhook]
 verify_jwt = false
+
+[functions.retention-review]
+verify_jwt = false
