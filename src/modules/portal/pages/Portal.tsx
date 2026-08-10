@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { toast } from "sonner";
@@ -549,6 +549,13 @@ const Portal = ({ intakeRoute = false }: { intakeRoute?: boolean }) => {
           <p className="text-xs text-muted-foreground">
             OTP code expires in 10 minutes · Max 3 requests per hour
           </p>
+
+          <Link
+            to="/portal/privacy"
+            className="block text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2"
+          >
+            Privacy & Security Policy
+          </Link>
         </div>
       </div>
     );
@@ -1472,10 +1479,16 @@ const Portal = ({ intakeRoute = false }: { intakeRoute?: boolean }) => {
 
       {/* Footer */}
       <footer className="border-t border-border mt-12">
-        <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 text-center">
+        <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 text-center space-y-1.5">
           <p className="text-xs text-muted-foreground">
             ProsperWise Advisors — Your Personal CFO
           </p>
+          <Link
+            to="/portal/privacy"
+            className="block text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2"
+          >
+            Privacy & Security Policy
+          </Link>
         </div>
       </footer>
 

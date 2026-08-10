@@ -22,6 +22,7 @@ const ContactForm = lazy(() => import("@/modules/crm/pages/ContactForm"));
 const GoogleCallback = lazy(() => import("@/pages/GoogleCallback"));
 const Portal = lazy(() => import("@/modules/portal/pages/Portal"));
 const VfoPortal = lazy(() => import("@/modules/portal/pages/VfoPortal"));
+const PrivacyPolicy = lazy(() => import("@/modules/portal/pages/PrivacyPolicy"));
 const AdminVfo = lazy(() => import("@/modules/crm/pages/AdminVfo"));
 const Families = lazy(() => import("@/modules/crm/pages/Families"));
 const FamilyDetail = lazy(() => import("@/modules/crm/pages/FamilyDetail"));
@@ -104,6 +105,7 @@ const App = () => (
               <Route path="/vfo-onboarding/embed" element={<VfoOnboardingEmbed />} />
               <Route path="/portal" element={<Portal />} />
               <Route path="/portal/intake" element={<Portal intakeRoute />} />
+              <Route path="/portal/privacy" element={<PrivacyPolicy />} />
               <Route path="/portal/:token" element={<Portal />} />
               <Route path="/portal/:token/intake" element={<Portal intakeRoute />} />
               <Route path="/vfo/:token" element={<VfoPortal />} />
