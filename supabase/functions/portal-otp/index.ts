@@ -548,12 +548,13 @@ serve(async (req) => {
       }
 
       // Now load portal data
-      const [contactRes, accountsRes, storehousesRes, auditRes, requestsRes] = await Promise.all([
+      const [contactRes, accountsRes, storehousesRes, auditRes, requestsRes, holdingTankRes] = await Promise.all([
         supabase.from("contacts").select("id, first_name, last_name, full_name, email, email_notifications_enabled, governance_status, fiduciary_entity, quiet_period_start_date, google_drive_url, charter_url, asana_url, ia_financial_url, vineyard_ebitda, vineyard_operating_income, vineyard_balance_sheet_summary, family_id, household_id, family_role, is_minor").eq("id", contactId).maybeSingle(),
         supabase.from("vineyard_accounts").select("*").eq("contact_id", contactId).order("created_at"),
         supabase.from("storehouses").select("*").eq("contact_id", contactId).order("storehouse_number"),
         supabase.from("sovereignty_audit_trail").select("*").eq("contact_id", contactId).order("created_at", { ascending: false }).limit(50),
         supabase.from("portal_requests").select("*, messages:portal_request_messages(*)").eq("contact_id", contactId).order("created_at", { ascending: false }),
+        supabase.from("holding_tank").select("*").eq("contact_id", contactId).eq("status", "holding").order("created_at"),
       ]);
 
       let family = null;
@@ -627,6 +628,7 @@ serve(async (req) => {
         storehouses: storehousesRes.data || [],
         audit_trail: auditRes.data || [],
         portal_requests: requestsRes.data || [],
+        holding_tank: holdingTankRes.data || [],
         meetings,
         family,
         household,
@@ -712,11 +714,12 @@ serve(async (req) => {
       }
 
       // Load portal data (same as OTP verify flow)
-      const [accountsRes, storehousesRes, auditRes, requestsRes] = await Promise.all([
+      const [accountsRes, storehousesRes, auditRes, requestsRes, holdingTankRes] = await Promise.all([
         supabase.from("vineyard_accounts").select("*").eq("contact_id", contact.id).order("created_at"),
         supabase.from("storehouses").select("*").eq("contact_id", contact.id).order("storehouse_number"),
         supabase.from("sovereignty_audit_trail").select("*").eq("contact_id", contact.id).order("created_at", { ascending: false }).limit(50),
         supabase.from("portal_requests").select("*, messages:portal_request_messages(*)").eq("contact_id", contact.id).order("created_at", { ascending: false }),
+        supabase.from("holding_tank").select("*").eq("contact_id", contact.id).eq("status", "holding").order("created_at"),
       ]);
 
       let family = null;
@@ -786,6 +789,7 @@ serve(async (req) => {
         storehouses: storehousesRes.data || [],
         audit_trail: auditRes.data || [],
         portal_requests: requestsRes.data || [],
+        holding_tank: holdingTankRes.data || [],
         meetings,
         family,
         household,
