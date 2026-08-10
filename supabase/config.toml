@@ -1,4 +1,4 @@
-project_id = "skcgdoiestzqxsooaxur"
+project_id = "rpxevcovasrgmrzkpknu"
 
 [functions.google-auth]
 verify_jwt = false
@@ -10,6 +10,12 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.vertex-ai]
+verify_jwt = false
+
+[functions.brain-index]
+verify_jwt = false
+
+[functions.brain-search]
 verify_jwt = false
 
 [functions.portal-validate]

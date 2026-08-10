@@ -24,7 +24,9 @@ import {
   Share2,
   Plus,
   KeyRound,
+  Brain,
 } from "lucide-react";
+import { indexVaultFile } from "@/shared/lib/brain";
 import { toast } from "sonner";
 
 type DriveFolder = { id: string; name: string; modifiedTime?: string };
@@ -82,6 +84,19 @@ function FolderNode({
   const [files, setFiles] = useState<DriveFile[]>([]);
   const [visMap, setVisMap] = useState<Record<string, boolean>>({});
   const [loaded, setLoaded] = useState(false);
+  const [brainBusyId, setBrainBusyId] = useState<string | null>(null);
+
+  const addToBrain = async (f: DriveFile) => {
+    setBrainBusyId(f.id);
+    try {
+      await indexVaultFile({ driveId: f.id, name: f.name, mimeType: f.mimeType, householdId });
+      toast.success(`"${f.name}" added to the Second Brain`);
+    } catch (e: any) {
+      toast.error(e.message || "Could not add this file to the Second Brain");
+    } finally {
+      setBrainBusyId(null);
+    }
+  };
 
   const loadVisibility = async (ids: string[]) => {
     if (!ids.length) return;
@@ -259,6 +274,20 @@ function FolderNode({
                 </Button>
                 <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => downloadFile(f)}>
                   <Download className="h-3.5 w-3.5" />
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 px-2"
+                  title="Add to Second Brain"
+                  disabled={brainBusyId === f.id}
+                  onClick={() => addToBrain(f)}
+                >
+                  {brainBusyId === f.id ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Brain className="h-3.5 w-3.5" />
+                  )}
                 </Button>
                 {householdId && (
                   <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100">

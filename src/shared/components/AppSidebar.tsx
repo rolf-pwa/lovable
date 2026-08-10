@@ -29,6 +29,7 @@ import {
   Inbox as InboxIcon,
   Briefcase,
   Upload,
+  Brain,
 } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 import { Separator } from "@/shared/components/ui/separator";
@@ -72,6 +73,7 @@ const topItems = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/contacts", label: "CRM", icon: Users },
   { to: "/inbox", label: "Inbox", icon: InboxIcon, inboxBadge: true },
+  { to: "/brain", label: "Second Brain", icon: Brain },
 ];
 
 const marketingItems = [
@@ -93,7 +95,7 @@ const adminItems = [
   { to: "/onboarding", label: "Onboarding", icon: PackagePlus },
   { to: "/importers", label: "Bulk Importers", icon: Upload },
   { to: "/review-queue", label: "Review Queue", icon: ClipboardCheck, reviewBadge: true },
-  { to: "/knowledge-base", label: "Knowledge Base", icon: BookOpen },
+  { to: "/knowledge-base", label: "Bot Knowledge", icon: BookOpen },
   { to: "/workbench", label: "Workbench", icon: Cpu },
   { to: "/admin/vfo", label: "VFO Roster", icon: Crown },
   { to: "/professionals", label: "Professionals", icon: Briefcase },

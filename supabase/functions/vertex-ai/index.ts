@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { retrieveBrainContext } from "../_shared/brain-retrieval.ts";
 
 const ALLOWED_ORIGINS = [
   "https://prosperwise-portal.web.app",
@@ -460,7 +461,7 @@ serve(async (req) => {
       });
     }
 
-    const { messages, model, contactContext, documentData } = await req.json();
+    const { messages, model, contactContext, documentData, useBrain = true } = await req.json();
     if (!messages || !Array.isArray(messages)) {
       return new Response(JSON.stringify({ error: "messages array is required" }), {
         status: 400,
@@ -484,6 +485,34 @@ serve(async (req) => {
     let systemText = SYSTEM_PROMPT;
     if (contactContext) {
       systemText += `\n\n## Current Contact Context\n${JSON.stringify(contactContext, null, 2)}`;
+    }
+
+    // Optionally ground the response in the Second Brain — the CFO's private
+    // knowledge layer. Best-effort: a retrieval failure must never break the
+    // assistant, so it's caught and logged rather than surfaced to the user.
+    let brainCitations: unknown[] = [];
+    if (useBrain !== false) {
+      const lastUserMessage = [...messages].reverse().find((m: any) => m.role === "user" && m.content);
+      if (lastUserMessage?.content) {
+        try {
+          const admin = createClient(
+            Deno.env.get("SUPABASE_URL")!,
+            Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+            { auth: { persistSession: false } },
+          );
+          const entityId = contactContext?.id ? String(contactContext.id) : undefined;
+          const brain = await retrieveBrainContext(admin, saKey, lastUserMessage.content, {
+            entityType: entityId ? "contact" : undefined,
+            entityId,
+          });
+          if (brain.block) {
+            systemText += `\n\n${brain.block}\n\nWhen you use information from the Second Brain Context above, cite it inline as [^n] matching its number.`;
+            brainCitations = brain.citations;
+          }
+        } catch (e) {
+          console.warn("[VertexAI] Second Brain retrieval failed, continuing without it:", e);
+        }
+      }
     }
 
     // Build contents - support multimodal (documents/images)
@@ -573,6 +602,7 @@ serve(async (req) => {
       JSON.stringify({
         text: textParts.join("\n"),
         functionCalls,
+        citations: brainCitations,
         raw: result,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }

@@ -1,6 +1,8 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/shared/integrations/supabase/client";
+import { syncKnowledgeBaseToBrain } from "@/shared/lib/brain";
 import { useAuth } from "@/shared/hooks/useAuth";
 import { AppLayout } from "@/shared/components/AppLayout";
 import { Button } from "@/shared/components/ui/button";
@@ -27,6 +29,7 @@ import {
   Link2,
   ExternalLink,
   GripVertical,
+  Brain as BrainIcon,
 } from "lucide-react";
 
 // ─── Knowledge Entry Types ───
@@ -86,6 +89,7 @@ function KnowledgeTab() {
   const [filterTarget, setFilterTarget] = useState<string>("all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<KnowledgeEntry | null>(null);
+  const [syncingToBrain, setSyncingToBrain] = useState(false);
 
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -266,6 +270,33 @@ function KnowledgeTab() {
 
   return (
     <div className="space-y-6">
+      <div className="flex items-start justify-between gap-4 rounded-lg border border-accent/30 bg-accent/5 px-4 py-3 text-sm">
+        <p className="text-muted-foreground">
+          This feeds Georgia, the client-facing portal assistant — keep it client-safe. For your own private
+          notes and memory, use the <Link to="/brain" className="font-medium text-accent underline">Second Brain</Link> instead.
+        </p>
+        <Button
+          size="sm"
+          variant="outline"
+          className="shrink-0 gap-1.5"
+          disabled={syncingToBrain}
+          onClick={async () => {
+            setSyncingToBrain(true);
+            try {
+              const result = await syncKnowledgeBaseToBrain();
+              toast.success(`Synced ${result.synced} ${result.synced === 1 ? "entry" : "entries"} to the Second Brain`);
+            } catch (e: any) {
+              toast.error(e.message || "Sync failed");
+            } finally {
+              setSyncingToBrain(false);
+            }
+          }}
+        >
+          {syncingToBrain ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <BrainIcon className="h-3.5 w-3.5" />}
+          Sync to Second Brain
+        </Button>
+      </div>
+
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
           {activeCount} active {activeCount === 1 ? "entry" : "entries"}
