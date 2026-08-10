@@ -770,6 +770,14 @@ const VfoPortal = () => {
         <div className="text-center text-[10px] uppercase tracking-[0.25em] text-muted-foreground/60 pt-12 pb-2">
           ProsperWise · Private Family Office
         </div>
+        <div className="text-center pb-4">
+          <Link
+            to="/portal/privacy"
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2"
+          >
+            Privacy & Security Policy
+          </Link>
+        </div>
       </main>
 
       <PortalGeorgiaChat
