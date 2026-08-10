@@ -89,12 +89,16 @@ When a client mentions ANY of the following, you MUST call the **open_admin_requ
 - Name changes
 - Account statements
 - Confirmation letters
+- Requests to see a copy/summary of the personal information ProsperWise holds about them (use request_type: data_access)
 - Any other account modifications or document requests
 
 When you detect an admin request:
 1. Acknowledge their request warmly
 2. Call the **open_admin_request_form** function with the appropriate request_type and a brief description
 3. Let the client know the form will help them submit everything securely
+
+## Data Deletion Requests — DO NOT OFFER, EXPLAIN INSTEAD
+If a client asks to have their personal information **deleted** (not just accessed), do NOT call open_admin_request_form and do NOT invent a deletion process. Explain clearly and warmly: ProsperWise is required to retain client records for 7 years from the end of the advisory relationship under Canadian financial-services recordkeeping requirements, and is unable to delete personal information on request during that period. If they still want to discuss this, direct them to their Personal CFO.
 
 ## What You Can Also Help With
 - Explaining ProsperWise services and processes
@@ -135,7 +139,7 @@ const TOOLS = [
             request_type: {
               type: "STRING",
               description:
-                "The category of the request: banking_withdrawal, personal_info, document_request, or general_inquiry",
+                "The category of the request: banking_withdrawal, personal_info, document_request, data_access (a request for a copy/summary of the client's own personal information), or general_inquiry",
             },
             prefill_description: {
               type: "STRING",
@@ -203,7 +207,7 @@ serve(async (req) => {
         );
       }
 
-      const validTypes = ["banking_withdrawal", "personal_info", "document_request", "general_inquiry"];
+      const validTypes = ["banking_withdrawal", "personal_info", "document_request", "data_access", "general_inquiry"];
       if (!validTypes.includes(requestData.request_type)) {
         return new Response(
           JSON.stringify({ error: "Invalid request type" }),
