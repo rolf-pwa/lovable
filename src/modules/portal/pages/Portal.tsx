@@ -390,11 +390,20 @@ const Portal = ({ intakeRoute = false }: { intakeRoute?: boolean }) => {
         const dev = await supabase.functions.invoke("portal-otp", {
           body: { action: "device-login", email: email.trim(), trusted_device_token: stored.token },
         });
-        if (!dev.error && !dev.data?.error && dev.data?.contact) {
-          setData(dev.data);
-          setDrilldown({ level: "individual" });
-          setOtpLoading(false);
-          return;
+        if (!dev.error && !dev.data?.error && dev.data?.portal_token) {
+          // device-login only confirms trust and issues a token — it does not
+          // return full portal data. Fetch that via portal-validate, same as
+          // the token-based magic-link path, rather than setting state from
+          // its minimal { contact } response.
+          const full = await supabase.functions.invoke("portal-validate", {
+            body: { token: dev.data.portal_token },
+          });
+          if (!full.error && !full.data?.error) {
+            setData(full.data);
+            setDrilldown({ level: "individual" });
+            setOtpLoading(false);
+            return;
+          }
         }
         // token rejected — clear it so we don't loop
         clearTrustedDevice();
