@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
+import { format } from "date-fns";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { AppLayout } from "@/shared/components/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
@@ -15,6 +16,17 @@ import {
   SelectValue,
 } from "@/shared/components/ui/select";
 import { Input } from "@/shared/components/ui/input";
+import { Textarea } from "@/shared/components/ui/textarea";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/shared/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
 import {
   DropdownMenu,
@@ -56,6 +68,8 @@ import {
   Users,
   Anchor,
   Briefcase,
+  CalendarOff,
+  RotateCcw,
 } from "lucide-react";
 import { ContactAnalytics } from "@/modules/crm/components/ContactAnalytics";
 
@@ -110,6 +124,10 @@ const HouseholdDetail = () => {
   const [corporations, setCorporations] = useState<any[]>([]);
   const [holdingTank, setHoldingTank] = useState<any[]>([]);
   const [insurancePolicies, setInsurancePolicies] = useState<any[]>([]);
+  const [endRelationshipOpen, setEndRelationshipOpen] = useState(false);
+  const [endReason, setEndReason] = useState("");
+  const [endDate, setEndDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [reopenRelationshipOpen, setReopenRelationshipOpen] = useState(false);
 
   // Guard against setState after unmount when fetchData reruns via mutation callbacks.
   const mountedRef = useRef(true);
@@ -343,6 +361,12 @@ const HouseholdDetail = () => {
                             : "Core"}
                       </Badge>
                     )}
+                    {household.relationship_ended_at && (
+                      <Badge variant="outline" className="text-[10px] uppercase gap-1">
+                        <CalendarOff className="h-3 w-3" />
+                        Relationship Ended {format(new Date(household.relationship_ended_at), "MMM yyyy")}
+                      </Badge>
+                    )}
                   </div>
                 </div>
               </div>
@@ -378,10 +402,119 @@ const HouseholdDetail = () => {
                         <BarChart3 className="mr-2 h-4 w-4" /> Cashflow Analyst
                       </Link>
                     </DropdownMenuItem>
+                    {household.relationship_ended_at ? (
+                      <DropdownMenuItem onClick={() => setReopenRelationshipOpen(true)}>
+                        <RotateCcw className="mr-2 h-4 w-4" /> Reopen Relationship
+                      </DropdownMenuItem>
+                    ) : (
+                      <DropdownMenuItem onClick={() => setEndRelationshipOpen(true)}>
+                        <CalendarOff className="mr-2 h-4 w-4" /> End Advisory Relationship
+                      </DropdownMenuItem>
+                    )}
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
             </div>
+
+            <AlertDialog open={endRelationshipOpen} onOpenChange={setEndRelationshipOpen}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>End Advisory Relationship</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This starts ProsperWise's 7-year recordkeeping retention clock for this household. It
+                    does not delete or hide any data — it only marks when retention review becomes
+                    eligible.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <div className="space-y-3">
+                  <div>
+                    <Label htmlFor="end-date" className="text-xs text-muted-foreground">
+                      Relationship end date
+                    </Label>
+                    <Input
+                      id="end-date"
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="end-reason" className="text-xs text-muted-foreground">
+                      Reason (optional, for internal audit context)
+                    </Label>
+                    <Textarea
+                      id="end-reason"
+                      value={endReason}
+                      onChange={(e) => setEndReason(e.target.value)}
+                      placeholder="e.g. Client transferred to another advisor"
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={async () => {
+                      const relationship_ended_at = new Date(endDate).toISOString();
+                      await supabase
+                        .from("households")
+                        .update({
+                          relationship_ended_at,
+                          relationship_end_reason: endReason || null,
+                        } as any)
+                        .eq("id", household.id);
+                      setHousehold({
+                        ...household,
+                        relationship_ended_at,
+                        relationship_end_reason: endReason || null,
+                      });
+                      setEndReason("");
+                      toast.success("Advisory relationship marked as ended");
+                    }}
+                  >
+                    Confirm
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+
+            <AlertDialog open={reopenRelationshipOpen} onOpenChange={setReopenRelationshipOpen}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Reopen Relationship</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This clears the relationship-ended date and resets retention tracking for this
+                    household. Use this if the relationship end was recorded in error or the client has
+                    returned.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={async () => {
+                      await supabase
+                        .from("households")
+                        .update({
+                          relationship_ended_at: null,
+                          relationship_end_reason: null,
+                          retention_flagged_at: null,
+                        } as any)
+                        .eq("id", household.id);
+                      setHousehold({
+                        ...household,
+                        relationship_ended_at: null,
+                        relationship_end_reason: null,
+                        retention_flagged_at: null,
+                      });
+                      toast.success("Advisory relationship reopened");
+                    }}
+                  >
+                    Confirm
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
 
             {/* Info grid */}
             <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
