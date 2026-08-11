@@ -69,8 +69,7 @@ export const StepHouseholdProfile = ({ state, saving, onSave }: Props) => {
         <div className="space-y-1.5">
           <h2 className="font-serif text-lg font-semibold text-foreground">Your household</h2>
           <p className="text-sm text-muted-foreground">
-            This is how we'll refer to your household across your Sanctuary. Only the people you
-            list here will ever be part of it.
+            Add your spouse, children or other dependants. You can always add more later.
           </p>
         </div>
 
@@ -156,11 +155,7 @@ export const StepHouseholdProfile = ({ state, saving, onSave }: Props) => {
             </div>
           )}
 
-          {members.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              Add your spouse, children or other dependants. You can always add more later.
-            </p>
-          ) : (
+          {members.length > 0 && (
             <div className="space-y-3">
               {members.map((member, index) => (
                 <div
