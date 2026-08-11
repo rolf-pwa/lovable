@@ -164,6 +164,14 @@ export const OnboardingShell = ({ portalToken, onBack, onAskForHelp }: Props) =>
 
       {current === 4 && (
         <div className="space-y-4">
+          <PortalIntakePage
+            portalToken={portalToken}
+            onBack={onBack}
+            onAskForHelp={onAskForHelp}
+            onComplete={
+              state.household.onboardingCompletedAt ? undefined : () => void markDocumentsComplete()
+            }
+          />
           {state.household.onboardingCompletedAt && (
             <div className="flex flex-col gap-3 rounded-lg border border-primary/30 bg-primary/10 p-3 text-sm text-foreground sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-2">
@@ -181,14 +189,6 @@ export const OnboardingShell = ({ portalToken, onBack, onAskForHelp }: Props) =>
               </Button>
             </div>
           )}
-          <PortalIntakePage
-            portalToken={portalToken}
-            onBack={onBack}
-            onAskForHelp={onAskForHelp}
-            onComplete={
-              state.household.onboardingCompletedAt ? undefined : () => void markDocumentsComplete()
-            }
-          />
         </div>
       )}
 
