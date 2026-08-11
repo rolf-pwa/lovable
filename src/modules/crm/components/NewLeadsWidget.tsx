@@ -6,17 +6,56 @@ import { Loader2, UserPlus } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { supabase } from "@/shared/integrations/supabase/client";
 
+type MergedLead = {
+  id: string;
+  first_name: string;
+  email: string | null;
+  created_at: string;
+  badge: string;
+  subtitle: string | null;
+};
+
 export function NewLeadsWidget() {
   const { data: leads, isLoading, error } = useQuery({
-    queryKey: ["discovery-leads"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("discovery_leads")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(10);
-      if (error) throw error;
-      return data;
+    queryKey: ["new-leads-widget"],
+    queryFn: async (): Promise<MergedLead[]> => {
+      const [discoveryRes, georgia2Res] = await Promise.all([
+        supabase
+          .from("discovery_leads")
+          .select("id, first_name, email, transition_type, anxiety_anchor, created_at")
+          .not("sovereignty_status", "in", "(converted_to_contact,dismissed)")
+          .order("created_at", { ascending: false })
+          .limit(10),
+        supabase
+          .from("georgia2_leads" as any)
+          .select("id, first_name, email, domain, catalyst, created_at")
+          .not("status", "in", "(converted_to_contact,dismissed)")
+          .order("created_at", { ascending: false })
+          .limit(10),
+      ]);
+      if (discoveryRes.error) throw discoveryRes.error;
+      if (georgia2Res.error) throw georgia2Res.error;
+
+      const fromDiscovery: MergedLead[] = (discoveryRes.data || []).map((l: any) => ({
+        id: l.id,
+        first_name: l.first_name,
+        email: l.email,
+        created_at: l.created_at,
+        badge: l.transition_type?.replace(/_/g, " ") || "VFO Onboarding",
+        subtitle: l.anxiety_anchor,
+      }));
+      const fromGeorgia2: MergedLead[] = (georgia2Res.data || []).map((l: any) => ({
+        id: l.id,
+        first_name: l.first_name,
+        email: l.email,
+        created_at: l.created_at,
+        badge: `Georgia 2.0 · ${l.domain}`,
+        subtitle: l.catalyst?.replace(/_/g, " ") || null,
+      }));
+
+      return [...fromDiscovery, ...fromGeorgia2]
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+        .slice(0, 10);
     },
   });
 
@@ -63,14 +102,14 @@ export function NewLeadsWidget() {
                   </div>
                   <Badge
                     variant="outline"
-                    className="text-[10px] shrink-0 whitespace-nowrap"
+                    className="text-[10px] shrink-0 whitespace-nowrap capitalize"
                   >
-                    {lead.transition_type?.replace(/_/g, " ") || "Discovery"}
+                    {lead.badge}
                   </Badge>
                 </div>
-                {lead.anxiety_anchor && (
+                {lead.subtitle && (
                   <p className="mt-1.5 text-xs text-muted-foreground line-clamp-2">
-                    {lead.anxiety_anchor}
+                    {lead.subtitle}
                   </p>
                 )}
                 <p className="mt-1 text-[10px] text-muted-foreground">
