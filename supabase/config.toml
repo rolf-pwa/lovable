@@ -109,3 +109,33 @@ verify_jwt = false
 
 [functions.retention-review]
 verify_jwt = false
+
+# Client-facing (portal_token auth, no Supabase session) or fully public —
+# each does its own internal auth; the gateway JWT check was blocking every
+# call before the function ever ran, same root cause as vault-service.
+[functions.portal-notifications]
+verify_jwt = false
+
+[functions.portal-track]
+verify_jwt = false
+
+[functions.portal-update-scope]
+verify_jwt = false
+
+[functions.portal-upload]
+verify_jwt = false
+
+[functions.intake-portal]
+verify_jwt = false
+
+[functions.portal-request-reply]
+verify_jwt = false
+
+[functions.georgia2-lead]
+verify_jwt = false
+
+[functions.georgia2-session]
+verify_jwt = false
+
+[functions.book-checkout]
+verify_jwt = false
