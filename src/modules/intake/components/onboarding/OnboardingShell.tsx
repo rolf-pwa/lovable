@@ -16,9 +16,9 @@ interface Props {
 }
 
 /**
- * Guided Sovereignty Audit onboarding — Georgia walks a brand-new client
+ * Guided Sovereignty Survey onboarding — Georgia walks a brand-new client
  * through booking, household details, their wealth event, and finally their
- * documents (which reuses the existing Audit checklist).
+ * documents (which reuses the existing Survey checklist).
  */
 export const OnboardingShell = ({ portalToken, onBack, onAskForHelp }: Props) => {
   const {
@@ -50,13 +50,13 @@ export const OnboardingShell = ({ portalToken, onBack, onAskForHelp }: Props) =>
     );
   }
 
-  // Legacy clients aren't in the Sovereignty Audit onboarding flow.
+  // Legacy clients aren't in the Sovereignty Survey onboarding flow.
   if (disabled) {
     return (
       <Card>
         <CardContent className="space-y-3 p-6 text-center">
           <p className="text-sm text-muted-foreground">
-            Your household isn't in the Sovereignty Audit onboarding flow — everything you need is
+            Your household isn't in the Sovereignty Survey onboarding flow — everything you need is
             in your portal.
           </p>
           <Button variant="outline" size="sm" onClick={onBack}>
@@ -93,7 +93,7 @@ export const OnboardingShell = ({ portalToken, onBack, onAskForHelp }: Props) =>
               Welcome, {firstName}.
             </h1>
             <p className="max-w-2xl text-sm text-muted-foreground">
-              I'm Georgia. There are four short steps to get your Sovereignty Audit underway — no
+              I'm Georgia. There are four short steps to get your Sovereignty Survey underway — no
               pressure, no sales, and you can stop and come back at any time.
             </p>
           </div>

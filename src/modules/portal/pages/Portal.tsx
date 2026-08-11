@@ -1082,7 +1082,7 @@ const Portal = ({ intakeRoute = false }: { intakeRoute?: boolean }) => {
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Main Content: Tabbed Interface */}
         <div className="space-y-4 lg:col-span-2">
-          {/* Sovereignty Audit — auto-hides once the audit is complete */}
+          {/* Sovereignty Survey — auto-hides once the survey is complete */}
           {isSelf && (
             <PortalIntakeBanner
               portalToken={portalToken}
@@ -1160,7 +1160,7 @@ const Portal = ({ intakeRoute = false }: { intakeRoute?: boolean }) => {
                     className="inline-flex items-center gap-1.5 rounded-md bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/20 transition-colors border border-primary/20"
                   >
                     <MapPin className="h-3.5 w-3.5" />
-                    Audit — Personal
+                    Survey — Personal
                   </a>
                   <a
                     href="https://calendar.app.google/raxnRa2RFQGL7KnD9"
@@ -1169,7 +1169,7 @@ const Portal = ({ intakeRoute = false }: { intakeRoute?: boolean }) => {
                     className="inline-flex items-center gap-1.5 rounded-md bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/20 transition-colors border border-primary/20"
                   >
                     <Building2 className="h-3.5 w-3.5" />
-                    Audit — Corporate
+                    Survey — Corporate
                   </a>
                 </div>
               )}

@@ -95,7 +95,7 @@ export function PortalIntakePage({ portalToken, onBack, onAskForHelp, onComplete
           <ArrowLeft className="h-3.5 w-3.5" />
           Back to portal
         </button>
-        <h1 className="font-serif text-2xl text-foreground">Sovereignty Audit</h1>
+        <h1 className="font-serif text-2xl text-foreground">Sovereignty Survey</h1>
         <p className="text-sm text-muted-foreground">
           {manifest?.householdName
             ? `${manifest.householdName} · secure Canadian infrastructure`
@@ -128,7 +128,7 @@ export function PortalIntakePage({ portalToken, onBack, onAskForHelp, onComplete
           <CardContent className="p-10 text-center">
             <Inbox className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
             <p className="text-sm text-muted-foreground">
-              Your vault is still being prepared. We'll let you know as soon as your Sovereignty Audit is
+              Your vault is still being prepared. We'll let you know as soon as your Sovereignty Survey is
               open.
             </p>
           </CardContent>

@@ -416,7 +416,7 @@ async function findAuditEvent(email: string): Promise<
       );
       if (match) {
         return {
-          summary: match.summary ?? "Sovereignty Audit",
+          summary: match.summary ?? "Sovereignty Survey",
           start: match.start?.dateTime ?? match.start?.date ?? new Date().toISOString(),
           htmlLink: match.htmlLink ?? null,
         };

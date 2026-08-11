@@ -18,7 +18,7 @@ interface Props {
   onCheckBooking?: () => Promise<boolean>;
 }
 
-/** Step 1 — book the Sovereignty Audit session. */
+/** Step 1 — book the Sovereignty Survey session. */
 export const StepBookAudit = ({
   fullName,
   email,
@@ -72,7 +72,7 @@ export const StepBookAudit = ({
     <Card>
       <CardContent className="space-y-5 p-6">
         <div className="space-y-1.5">
-          <h2 className="font-serif text-lg font-semibold text-foreground">Book your Audit</h2>
+          <h2 className="font-serif text-lg font-semibold text-foreground">Book your Survey</h2>
           <p className="text-sm text-muted-foreground">
             Your payment is confirmed{serviceName ? ` for the ${serviceName}` : ""}. Choose a time
             that works for you — the session runs about 90 minutes, and there is nothing to prepare
@@ -99,7 +99,7 @@ export const StepBookAudit = ({
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                {isCorporate ? "Personal Audit instead" : "Corporate Audit instead"}
+                {isCorporate ? "Personal Survey instead" : "Corporate Survey instead"}
                 <ExternalLink className="h-3.5 w-3.5" />
               </a>
             </Button>
