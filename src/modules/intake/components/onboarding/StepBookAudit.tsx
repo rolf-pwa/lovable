@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Building2, CalendarCheck, ExternalLink, Loader2, MapPin } from "lucide-react";
+import { CalendarCheck, ExternalLink, Loader2 } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { Card, CardContent } from "@/shared/components/ui/card";
 
@@ -39,15 +39,12 @@ export const StepBookAudit = ({
   onCheckBooking,
 }: Props) => {
   const isCorporate = (serviceName || "").toLowerCase().includes("corporate");
-  const defaultUrl = isCorporate ? CORPORATE_SCHEDULE_URL : PERSONAL_SCHEDULE_URL;
-  // A CRM-pinned schedulingUrl (already embeddable) removes the ambiguity —
-  // otherwise pick by service type and let the client switch if we guessed wrong.
+  // A CRM-pinned schedulingUrl (already embeddable) wins; otherwise the
+  // calendar is picked automatically from what they paid for.
   const pinnedUrl = schedulingUrl && isEmbeddable(schedulingUrl) ? schedulingUrl : null;
-  const canToggle = !pinnedUrl;
+  const embedUrl = pinnedUrl ?? (isCorporate ? CORPORATE_SCHEDULE_URL : PERSONAL_SCHEDULE_URL);
 
-  const [embedUrl, setEmbedUrl] = useState(pinnedUrl ?? defaultUrl);
   const [iframeLoading, setIframeLoading] = useState(true);
-
   useEffect(() => {
     setIframeLoading(true);
   }, [embedUrl]);
@@ -59,9 +56,10 @@ export const StepBookAudit = ({
   }).toString()}`;
   const embedSrc = `${embedUrl}${qs}`;
 
-  // Calendar-verified auto-advance: we poll the CRM, which looks for this
-  // client's session on the staff Google Calendars. No manual click needed.
-  const [checking, setChecking] = useState(false);
+  // Silent background auto-advance: we poll the CRM, which checks the staff
+  // Google Calendars for this client's session, and jump ahead the moment
+  // it's found — the "Continue" button below is there for anyone who'd
+  // rather not wait for it.
   const checkRef = useRef(onCheckBooking);
   checkRef.current = onCheckBooking;
   const canCheck = Boolean(onCheckBooking);
@@ -73,11 +71,9 @@ export const StepBookAudit = ({
 
     const poll = async () => {
       if (cancelled || document.visibilityState !== "visible") return;
-      setChecking(true);
-      const found = await checkRef.current?.();
+      await checkRef.current?.();
       if (cancelled) return;
-      setChecking(false);
-      if (!found) timer = window.setTimeout(poll, 15000);
+      timer = window.setTimeout(poll, 15000);
     };
 
     void poll();
@@ -100,29 +96,6 @@ export const StepBookAudit = ({
             below — the session runs about 90 minutes, and there is nothing to prepare beforehand.
           </p>
         </div>
-
-        {canToggle && (
-          <div className="flex flex-wrap gap-2">
-            <Button
-              type="button"
-              size="sm"
-              variant={embedUrl === PERSONAL_SCHEDULE_URL ? "default" : "outline"}
-              onClick={() => setEmbedUrl(PERSONAL_SCHEDULE_URL)}
-            >
-              <MapPin className="h-3.5 w-3.5" />
-              Personal
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant={embedUrl === CORPORATE_SCHEDULE_URL ? "default" : "outline"}
-              onClick={() => setEmbedUrl(CORPORATE_SCHEDULE_URL)}
-            >
-              <Building2 className="h-3.5 w-3.5" />
-              Corporate
-            </Button>
-          </div>
-        )}
 
         <div className="relative overflow-hidden rounded-lg border border-border">
           {iframeLoading && (
@@ -150,34 +123,14 @@ export const StepBookAudit = ({
           <ExternalLink className="h-3 w-3" />
         </a>
 
-        <div className="rounded-lg border border-border bg-muted/30 p-4">
-          {bookedAt ? (
-            <p className="flex items-center gap-2 text-sm text-foreground">
-              <CalendarCheck className="h-4 w-4 text-primary" />
-              Thank you — we have your session on the calendar.
-            </p>
+        <Button className="w-full" onClick={onConfirm} disabled={saving}>
+          {saving ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
-            <div className="space-y-3">
-              <p className="flex items-center gap-2 text-sm text-muted-foreground">
-                {checking ? (
-                  <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
-                ) : (
-                  <CalendarCheck className="h-4 w-4 shrink-0" />
-                )}
-                Pick your time above — we watch our calendar and move you to the next step
-                automatically as soon as your session appears. No extra click needed.
-              </p>
-              <button
-                type="button"
-                onClick={onConfirm}
-                disabled={saving}
-                className="text-sm text-muted-foreground underline underline-offset-4 transition-colors hover:text-foreground disabled:opacity-50"
-              >
-                Booked somewhere else? Continue anyway
-              </button>
-            </div>
+            <CalendarCheck className="h-4 w-4" />
           )}
-        </div>
+          Continue to next step
+        </Button>
       </CardContent>
     </Card>
   );
