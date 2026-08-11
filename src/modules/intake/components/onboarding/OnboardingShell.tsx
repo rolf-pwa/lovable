@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { AlertCircle, HelpCircle, Loader2, PartyPopper } from "lucide-react";
+import { AlertCircle, FileText, HelpCircle, Loader2, PartyPopper } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { Card, CardContent } from "@/shared/components/ui/card";
 import { useOnboarding } from "../../hooks/useOnboarding";
 import { OnboardingStepper } from "./OnboardingStepper";
+import { OnboardingSummary } from "./OnboardingSummary";
 import { StepBookAudit } from "./StepBookAudit";
 import { StepHouseholdProfile } from "./StepHouseholdProfile";
 import { StepWealthEvent } from "./StepWealthEvent";
@@ -36,6 +37,7 @@ export const OnboardingShell = ({ portalToken, onBack, onAskForHelp }: Props) =>
 
   const furthest = state?.household.step ?? 1;
   const [current, setCurrent] = useState(furthest);
+  const [summaryOpen, setSummaryOpen] = useState(false);
 
   // Follow the server's progress forward as steps complete.
   useEffect(() => {
@@ -163,9 +165,20 @@ export const OnboardingShell = ({ portalToken, onBack, onAskForHelp }: Props) =>
       {current === 4 && (
         <div className="space-y-4">
           {state.household.onboardingCompletedAt && (
-            <div className="flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/10 p-3 text-sm text-foreground">
-              <PartyPopper className="h-4 w-4 text-primary" />
-              Your onboarding is complete — thank you. We'll take it from here.
+            <div className="flex flex-col gap-3 rounded-lg border border-primary/30 bg-primary/10 p-3 text-sm text-foreground sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-2">
+                <PartyPopper className="h-4 w-4 shrink-0 text-primary" />
+                Your onboarding is complete — thank you. We'll take it from here.
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="shrink-0"
+                onClick={() => setSummaryOpen(true)}
+              >
+                <FileText className="h-4 w-4" />
+                View summary
+              </Button>
             </div>
           )}
           <PortalIntakePage
@@ -177,6 +190,15 @@ export const OnboardingShell = ({ portalToken, onBack, onAskForHelp }: Props) =>
             }
           />
         </div>
+      )}
+
+      {state.household.onboardingCompletedAt && (
+        <OnboardingSummary
+          portalToken={portalToken}
+          state={state}
+          open={summaryOpen}
+          onOpenChange={setSummaryOpen}
+        />
       )}
     </div>
   );
