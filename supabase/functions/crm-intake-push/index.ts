@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { pushHouseholdToIntakeAgent } from "../_shared/intake-push.ts";
+import { provisionClientFolderTree } from "../_shared/vault-provisioning.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -38,17 +38,12 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    // Staff pushes are always honoured (this is also the retry path), so we do
-    // not short-circuit on a previous push here.
-    const result = await pushHouseholdToIntakeAgent(admin, householdId, userData.user.id);
-    if (!result.ok) return json({ error: result.error }, result.status);
+    // Idempotent: no-ops (success, vaultRootFolderId of the existing vault)
+    // if this household is already provisioned — safe to click more than once.
+    const result = await provisionClientFolderTree(admin, householdId);
+    if (!result.ok) return json({ error: result.error }, 500);
 
-    return json({
-      success: true,
-      itemsSent: result.itemsSent,
-      members: result.members,
-      response: result.response,
-    });
+    return json({ success: true, vaultRootFolderId: result.vaultRootFolderId });
   } catch (e) {
     console.error("crm-intake-push error", e);
     return json({ error: e instanceof Error ? e.message : "Unexpected error" }, 500);

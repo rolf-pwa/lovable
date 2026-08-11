@@ -9,14 +9,14 @@ import { useToast } from "@/shared/hooks/use-toast";
 interface Row {
   id: string;
   label: string;
-  hasToken: boolean;
+  hasVault: boolean;
 }
 
 /**
- * Onboarding Agent token backfill.
- * Households provisioned before the agent's callback contract included
- * `shareToken` have no `intake_share_token`, so their client portal intake
- * page stays hidden. Re-pushing them repopulates the token.
+ * Vault provisioning backfill.
+ * Households that somehow ended up without a Drive vault (vault_root_folder_id)
+ * have no document checklist in their client portal. Re-provisioning builds
+ * the Family/Household/Vault/Advisor-Files tree and links it.
  */
 export const IntakeBackfillTile = () => {
   const { toast } = useToast();
@@ -28,13 +28,13 @@ export const IntakeBackfillTile = () => {
   const load = useCallback(async () => {
     const { data } = await supabase
       .from("households")
-      .select("id, label, intake_share_token")
+      .select("id, label, vault_root_folder_id")
       .order("label");
     setRows(
       (data || []).map((h: any) => ({
         id: h.id,
         label: h.label,
-        hasToken: !!h.intake_share_token,
+        hasVault: !!h.vault_root_folder_id,
       })),
     );
     setLoading(false);
@@ -44,9 +44,9 @@ export const IntakeBackfillTile = () => {
     load();
   }, [load]);
 
-  const missing = rows.filter((r) => !r.hasToken);
+  const missing = rows.filter((r) => !r.hasVault);
 
-  const rePushAll = async () => {
+  const provisionAll = async () => {
     setRunning(true);
     let ok = 0;
     const failures: string[] = [];
@@ -72,10 +72,10 @@ export const IntakeBackfillTile = () => {
     await load();
 
     toast({
-      title: `Re-pushed ${ok} household${ok === 1 ? "" : "s"}`,
+      title: `Provisioned ${ok} household${ok === 1 ? "" : "s"}`,
       description: failures.length
-        ? `Skipped/failed: ${failures.slice(0, 6).join(", ")}${failures.length > 6 ? `, +${failures.length - 6} more` : ""}`
-        : "Tokens will land as the agent's callbacks arrive.",
+        ? `Failed: ${failures.slice(0, 6).join(", ")}${failures.length > 6 ? `, +${failures.length - 6} more` : ""}`
+        : "Vault folders were created in Drive and linked.",
       variant: failures.length ? "destructive" : "default",
     });
   };
@@ -85,7 +85,7 @@ export const IntakeBackfillTile = () => {
       <CardHeader className="pb-3">
         <CardTitle className="text-sm flex items-center gap-2">
           <ShieldCheck className="h-4 w-4 text-sanctuary-bronze" />
-          Audit Agent Tokens
+          Vault Provisioning
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -98,24 +98,24 @@ export const IntakeBackfillTile = () => {
               <Badge variant="outline">{missing.length} missing</Badge>
             </div>
             <p className="text-xs text-muted-foreground">
-              Households without a portal share token can&apos;t show the client intake page.
-              Re-push them to the Audit Agent to populate it.
+              Households without a Drive vault can&apos;t show the client document checklist.
+              Provision them to build the folder tree and link it.
             </p>
             <Button
               size="sm"
               className="w-full"
               disabled={running || missing.length === 0}
-              onClick={rePushAll}
+              onClick={provisionAll}
             >
               {running ? (
                 <>
                   <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
-                  {current ? `Pushing ${current}…` : "Pushing…"}
+                  {current ? `Provisioning ${current}…` : "Provisioning…"}
                 </>
               ) : (
                 <>
                   <RefreshCw className="mr-2 h-3.5 w-3.5" />
-                  Re-push {missing.length} household{missing.length === 1 ? "" : "s"}
+                  Provision {missing.length} household{missing.length === 1 ? "" : "s"}
                 </>
               )}
             </Button>
