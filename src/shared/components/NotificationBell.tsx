@@ -102,6 +102,7 @@ export function NotificationBell() {
       case "new_request": return "📋";
       case "task_comment": return "🗨️";
       case "drive_watch": return "📄";
+      case "retention_review": return "🗄️";
       default: return "🔔";
     }
   };

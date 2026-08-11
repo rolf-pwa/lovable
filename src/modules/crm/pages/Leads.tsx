@@ -22,6 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/shared/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
 import { Loader2, UserPlus, ArrowRight, Check, TreesIcon, FileText, Info, X } from "lucide-react";
 import { format } from "date-fns";
 import { supabase } from "@/shared/integrations/supabase/client";
@@ -30,7 +31,7 @@ import { CrmTabs } from "@/modules/crm/components/CrmTabs";
 import { toast } from "sonner";
 import { useAuth } from "@/shared/hooks/useAuth";
 
-type Lead = {
+type DiscoveryLead = {
   id: string;
   first_name: string;
   email: string | null;
@@ -44,23 +45,49 @@ type Lead = {
   created_at: string;
 };
 
+type Georgia2Lead = {
+  id: string;
+  first_name: string;
+  email: string;
+  mobile: string | null;
+  domain: string;
+  catalyst: string;
+  chosen_pathway: string;
+  scale: number;
+  answers: Record<string, unknown>;
+  status: string;
+  created_at: string;
+};
+
+// Normalized shape for the shared convert-to-contact dialog, regardless of source.
+type ConvertTarget = {
+  source: "discovery" | "georgia2";
+  id: string;
+  first_name: string;
+  email: string | null;
+  phone: string | null;
+};
+
 const ROLE_OPTIONS = [
   { value: "head_of_family", label: "Head of Family" },
   { value: "spouse", label: "Spouse" },
   { value: "beneficiary", label: "Beneficiary" },
 ];
 
+const formatCurrency = (value: number) =>
+  new Intl.NumberFormat("en-CA", { style: "currency", currency: "CAD", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(value);
+
 export default function Leads() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const [convertTarget, setConvertTarget] = useState<Lead | null>(null);
+  const [convertTarget, setConvertTarget] = useState<ConvertTarget | null>(null);
   const [familyName, setFamilyName] = useState("");
   const [householdLabel, setHouseholdLabel] = useState("Primary");
   const [role, setRole] = useState("head_of_family");
 
-  const { data: leads, isLoading } = useQuery({
+  const { data: discoveryLeads, isLoading: discoveryLoading } = useQuery({
     queryKey: ["discovery-leads"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -69,11 +96,24 @@ export default function Leads() {
         .not("sovereignty_status", "in", "(converted_to_contact,dismissed)")
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data as Lead[];
+      return data as DiscoveryLead[];
     },
   });
 
-  const dismissMutation = useMutation({
+  const { data: georgia2Leads, isLoading: georgia2Loading } = useQuery({
+    queryKey: ["georgia2-leads"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("georgia2_leads" as any)
+        .select("*")
+        .not("status", "in", "(converted_to_contact,dismissed)")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data as unknown as Georgia2Lead[];
+    },
+  });
+
+  const dismissDiscoveryMutation = useMutation({
     mutationFn: async (leadId: string) => {
       const { error } = await supabase
         .from("discovery_leads")
@@ -90,10 +130,26 @@ export default function Leads() {
     },
   });
 
-  const openConvertDialog = (lead: Lead) => {
-    setConvertTarget(lead);
-    // Pre-fill family name from lead's first name
-    setFamilyName(`The ${lead.first_name} Family`);
+  const dismissGeorgia2Mutation = useMutation({
+    mutationFn: async (leadId: string) => {
+      const { error } = await supabase
+        .from("georgia2_leads" as any)
+        .update({ status: "dismissed" } as any)
+        .eq("id", leadId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["georgia2-leads"] });
+      toast.success("Lead dismissed");
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : "Failed to dismiss lead");
+    },
+  });
+
+  const openConvertDialog = (target: ConvertTarget) => {
+    setConvertTarget(target);
+    setFamilyName(`The ${target.first_name} Family`);
     setHouseholdLabel("Primary");
     setRole("head_of_family");
   };
@@ -154,17 +210,23 @@ export default function Leads() {
         .single();
       if (contactErr || !contact) throw contactErr ?? new Error("Failed to create contact");
 
-      // 4. Mark lead as converted (hide from queue)
-      await supabase
-        .from("discovery_leads")
-        .update({ sovereignty_status: "converted_to_contact" })
-        .eq("id", convertTarget.id);
-
-      // 4b. Carry the Stabilization Map over to the new contact
-      await supabase
-        .from("stabilization_maps")
-        .update({ contact_id: contact.id })
-        .eq("lead_id", convertTarget.id);
+      // 4. Mark lead as converted (hide from queue) and, for discovery leads only,
+      // carry over any Stabilization Map (georgia2 leads have no equivalent).
+      if (convertTarget.source === "discovery") {
+        await supabase
+          .from("discovery_leads")
+          .update({ sovereignty_status: "converted_to_contact" })
+          .eq("id", convertTarget.id);
+        await supabase
+          .from("stabilization_maps")
+          .update({ contact_id: contact.id })
+          .eq("lead_id", convertTarget.id);
+      } else {
+        await supabase
+          .from("georgia2_leads" as any)
+          .update({ status: "converted_to_contact" } as any)
+          .eq("id", convertTarget.id);
+      }
 
       // 5. Trigger fee tier calculation
       await recalcTier((family as any).id);
@@ -173,6 +235,7 @@ export default function Leads() {
     },
     onSuccess: (contact) => {
       queryClient.invalidateQueries({ queryKey: ["discovery-leads"] });
+      queryClient.invalidateQueries({ queryKey: ["georgia2-leads"] });
       setConvertTarget(null);
       toast.success("Lead converted — Family & Household initialized", {
         action: {
@@ -192,14 +255,14 @@ export default function Leads() {
         <PageBreadcrumbs
           items={[
             { label: "Dashboard", href: "/dashboard" },
-            { label: "Discovery Leads" },
+            { label: "Leads" },
           ]}
         />
         <CrmTabs />
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Discovery Leads</h1>
+          <h1 className="text-3xl font-bold text-foreground">Leads</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Prospects from the Georgia Transition Assistant
+            Prospects from VFO Onboarding and the Georgia 2.0 intake flow
           </p>
         </div>
 
@@ -209,127 +272,231 @@ export default function Leads() {
             <p className="font-medium text-foreground">What happens on conversion?</p>
             <p className="text-muted-foreground">
               <strong>Convert to Contact</strong> initializes a Family and Household in the
-              Sovereignty Tree, creates a Contact record, carries over the Stabilization Map, and
-              triggers fee tier calculation. <strong>Dismiss</strong> removes the lead from this
-              queue without creating any records.
+              Sovereignty Tree, creates a Contact record, and triggers fee tier calculation
+              (Stabilization Map carry-over applies to VFO Onboarding leads only).{" "}
+              <strong>Dismiss</strong> removes the lead from this queue without creating any records.
             </p>
           </div>
         </div>
 
-        {isLoading ? (
-          <div className="flex justify-center py-12">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-          </div>
-        ) : !leads?.length ? (
-          <Card className="border-dashed">
-            <CardContent className="flex flex-col items-center gap-3 p-8 text-center">
-              <UserPlus className="h-8 w-8 text-muted-foreground/40" />
-              <p className="text-sm text-muted-foreground">No pending discovery leads.</p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-3">
-            {leads.map((lead) => (
-              <Card key={lead.id}>
-                <CardContent className="p-5">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="min-w-0 flex-1">
-                      <h3 className="text-base font-semibold text-foreground">
-                        {lead.first_name}
-                      </h3>
-                      <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
-                        {lead.email && <span>{lead.email}</span>}
-                        {lead.phone && <span>{lead.phone}</span>}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <Badge variant="outline" className="text-[10px]">
-                        {lead.transition_type?.replace(/_/g, " ") || "Discovery"}
-                      </Badge>
-                      <Badge variant="secondary" className="text-[10px]">
-                        {lead.sovereignty_status?.replace(/_/g, " ")}
-                      </Badge>
-                    </div>
-                  </div>
+        <Tabs defaultValue="vfo" className="w-full">
+          <TabsList>
+            <TabsTrigger value="vfo" className="gap-1.5">
+              VFO Onboarding
+              {!!discoveryLeads?.length && (
+                <Badge variant="secondary" className="text-[10px]">{discoveryLeads.length}</Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="georgia2" className="gap-1.5">
+              Georgia 2.0
+              {!!georgia2Leads?.length && (
+                <Badge variant="secondary" className="text-[10px]">{georgia2Leads.length}</Badge>
+              )}
+            </TabsTrigger>
+          </TabsList>
 
-                  {(lead.anxiety_anchor || lead.vision_summary || lead.vineyard_summary || lead.discovery_notes) && (
-                    <div className="mt-3 space-y-2 rounded-md border border-border bg-muted/30 p-3">
-                      {lead.anxiety_anchor && (
-                        <div>
-                          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
-                            Anxiety Anchor
-                          </p>
-                          <p className="text-sm text-foreground">{lead.anxiety_anchor}</p>
-                        </div>
-                      )}
-                      {lead.vision_summary && (
-                        <div>
-                          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
-                            Vision
-                          </p>
-                          <p className="text-sm text-foreground">{lead.vision_summary}</p>
-                        </div>
-                      )}
-                      {lead.vineyard_summary && (
-                        <div>
-                          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
-                            Vineyard Summary
-                          </p>
-                          <p className="text-sm text-foreground">{lead.vineyard_summary}</p>
-                        </div>
-                      )}
-                      {lead.discovery_notes && (
-                        <div>
-                          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
-                            Notes
-                          </p>
-                          <p className="text-sm text-foreground">{lead.discovery_notes}</p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  <div className="mt-3 flex items-center justify-between gap-2">
-                    <p className="text-xs text-muted-foreground">
-                      {format(new Date(lead.created_at), "MMM d, yyyy 'at' h:mm a")}
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => dismissMutation.mutate(lead.id)}
-                        disabled={dismissMutation.isPending}
-                        className="text-muted-foreground hover:text-destructive"
-                      >
-                        <X className="mr-1.5 h-3.5 w-3.5" />
-                        Dismiss
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => navigate(`/stabilization-map/lead/${lead.id}`)}
-                      >
-                        <FileText className="mr-1.5 h-3.5 w-3.5" />
-                        Stabilization Map
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => openConvertDialog(lead)}
-                      >
-                        <ArrowRight className="mr-1.5 h-3.5 w-3.5" />
-                        Convert to Contact
-                      </Button>
-                    </div>
-                  </div>
+          <TabsContent value="vfo" className="mt-4">
+            {discoveryLoading ? (
+              <div className="flex justify-center py-12">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : !discoveryLeads?.length ? (
+              <Card className="border-dashed">
+                <CardContent className="flex flex-col items-center gap-3 p-8 text-center">
+                  <UserPlus className="h-8 w-8 text-muted-foreground/40" />
+                  <p className="text-sm text-muted-foreground">No pending VFO Onboarding leads.</p>
                 </CardContent>
               </Card>
-            ))}
-          </div>
-        )}
+            ) : (
+              <div className="space-y-3">
+                {discoveryLeads.map((lead) => (
+                  <Card key={lead.id}>
+                    <CardContent className="p-5">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="min-w-0 flex-1">
+                          <h3 className="text-base font-semibold text-foreground">{lead.first_name}</h3>
+                          <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                            {lead.email && <span>{lead.email}</span>}
+                            {lead.phone && <span>{lead.phone}</span>}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <Badge variant="outline" className="text-[10px]">
+                            {lead.transition_type?.replace(/_/g, " ") || "Discovery"}
+                          </Badge>
+                          <Badge variant="secondary" className="text-[10px]">
+                            {lead.sovereignty_status?.replace(/_/g, " ")}
+                          </Badge>
+                        </div>
+                      </div>
+
+                      {(lead.anxiety_anchor || lead.vision_summary || lead.vineyard_summary || lead.discovery_notes) && (
+                        <div className="mt-3 space-y-2 rounded-md border border-border bg-muted/30 p-3">
+                          {lead.anxiety_anchor && (
+                            <div>
+                              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">Anxiety Anchor</p>
+                              <p className="text-sm text-foreground">{lead.anxiety_anchor}</p>
+                            </div>
+                          )}
+                          {lead.vision_summary && (
+                            <div>
+                              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">Vision</p>
+                              <p className="text-sm text-foreground">{lead.vision_summary}</p>
+                            </div>
+                          )}
+                          {lead.vineyard_summary && (
+                            <div>
+                              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">Vineyard Summary</p>
+                              <p className="text-sm text-foreground">{lead.vineyard_summary}</p>
+                            </div>
+                          )}
+                          {lead.discovery_notes && (
+                            <div>
+                              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">Notes</p>
+                              <p className="text-sm text-foreground">{lead.discovery_notes}</p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      <div className="mt-3 flex items-center justify-between gap-2">
+                        <p className="text-xs text-muted-foreground">
+                          {format(new Date(lead.created_at), "MMM d, yyyy 'at' h:mm a")}
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => dismissDiscoveryMutation.mutate(lead.id)}
+                            disabled={dismissDiscoveryMutation.isPending}
+                            className="text-muted-foreground hover:text-destructive"
+                          >
+                            <X className="mr-1.5 h-3.5 w-3.5" />
+                            Dismiss
+                          </Button>
+                          <Button size="sm" variant="ghost" onClick={() => navigate(`/stabilization-map/lead/${lead.id}`)}>
+                            <FileText className="mr-1.5 h-3.5 w-3.5" />
+                            Stabilization Map
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openConvertDialog({
+                              source: "discovery",
+                              id: lead.id,
+                              first_name: lead.first_name,
+                              email: lead.email,
+                              phone: lead.phone,
+                            })}
+                          >
+                            <ArrowRight className="mr-1.5 h-3.5 w-3.5" />
+                            Convert to Contact
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="georgia2" className="mt-4">
+            {georgia2Loading ? (
+              <div className="flex justify-center py-12">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : !georgia2Leads?.length ? (
+              <Card className="border-dashed">
+                <CardContent className="flex flex-col items-center gap-3 p-8 text-center">
+                  <UserPlus className="h-8 w-8 text-muted-foreground/40" />
+                  <p className="text-sm text-muted-foreground">No pending Georgia 2.0 leads.</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-3">
+                {georgia2Leads.map((lead) => (
+                  <Card key={lead.id}>
+                    <CardContent className="p-5">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="min-w-0 flex-1">
+                          <h3 className="text-base font-semibold text-foreground">{lead.first_name}</h3>
+                          <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                            {lead.email && <span>{lead.email}</span>}
+                            {lead.mobile && <span>{lead.mobile}</span>}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <Badge variant="outline" className="text-[10px] capitalize">{lead.domain}</Badge>
+                          <Badge variant="secondary" className="text-[10px]">{formatCurrency(lead.scale)}</Badge>
+                        </div>
+                      </div>
+
+                      <div className="mt-3 space-y-2 rounded-md border border-border bg-muted/30 p-3">
+                        <div>
+                          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">Catalyst</p>
+                          <p className="text-sm text-foreground">{lead.catalyst.replace(/_/g, " ")}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">Chosen Pathway</p>
+                          <p className="text-sm text-foreground">{lead.chosen_pathway.replace(/_/g, " ")}</p>
+                        </div>
+                        {lead.answers && Object.keys(lead.answers).length > 0 && (
+                          <div>
+                            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">Diagnostic Answers</p>
+                            <div className="mt-1 space-y-0.5">
+                              {Object.entries(lead.answers).map(([key, value]) => (
+                                <p key={key} className="text-sm text-foreground">
+                                  <span className="text-muted-foreground">{key.replace(/_/g, " ")}: </span>
+                                  {String(value)}
+                                </p>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="mt-3 flex items-center justify-between gap-2">
+                        <p className="text-xs text-muted-foreground">
+                          {format(new Date(lead.created_at), "MMM d, yyyy 'at' h:mm a")}
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => dismissGeorgia2Mutation.mutate(lead.id)}
+                            disabled={dismissGeorgia2Mutation.isPending}
+                            className="text-muted-foreground hover:text-destructive"
+                          >
+                            <X className="mr-1.5 h-3.5 w-3.5" />
+                            Dismiss
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openConvertDialog({
+                              source: "georgia2",
+                              id: lead.id,
+                              first_name: lead.first_name,
+                              email: lead.email,
+                              phone: lead.mobile,
+                            })}
+                          >
+                            <ArrowRight className="mr-1.5 h-3.5 w-3.5" />
+                            Convert to Contact
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
 
-      {/* Conversion Dialog */}
+      {/* Conversion Dialog — shared by both sources */}
       <Dialog
         open={!!convertTarget}
         onOpenChange={(open) => { if (!open) setConvertTarget(null); }}

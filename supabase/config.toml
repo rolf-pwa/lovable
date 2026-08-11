@@ -30,7 +30,7 @@ verify_jwt = false
 [functions.portal-otp]
 verify_jwt = false
 
-[functions.discovery-assistant]
+[functions.vault-service]
 verify_jwt = false
 
 [functions.portal-assistant]
@@ -105,6 +105,9 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.square-webhook]
+verify_jwt = false
+
+[functions.retention-review]
 verify_jwt = false
 
 # Client-facing (portal_token auth, no Supabase session) or fully public —

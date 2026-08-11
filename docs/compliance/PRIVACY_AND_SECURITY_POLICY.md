@@ -79,7 +79,7 @@ We are committed to protecting your personal information in accordance with PIPE
 
 **Openness.** This document is our commitment to being transparent about our practices. We are also open about the current limits of those practices — see "Where we're still building," below.
 
-**Individual access.** You may request a summary of the personal information we hold about you by contacting your advisor directly. **We do not yet have an automated self-service tool for this within the portal** — today, this is handled as a manual request to our team.
+**Individual access.** You may request a summary of the personal information we hold about you by contacting your advisor directly. **We do not yet have an automated self-service tool for this within the portal** — today, this is handled as a manual request to our team. Note that ProsperWise retains client records for 7 years from the end of the advisory relationship (see "Data retention," above); we are unable to delete personal information on request during that period.
 
 **Challenging compliance.** If you have concerns about how your information is handled, please contact your advisor or ProsperWise directly. You also have the right to file a complaint with the Office of the Privacy Commissioner of Canada or BC's Office of the Information and Privacy Commissioner.
 
@@ -94,7 +94,7 @@ We work with the following categories of service providers, each of whom process
 
 ### Data retention
 
-**We are in the process of formalizing a data retention schedule.** Today, records are retained for the duration of the advisory relationship and are removed by staff action when no longer needed, rather than on an automated schedule. We will update this policy as a formal retention schedule is adopted.
+ProsperWise retains client records for **7 years from the end of the advisory relationship**, consistent with Canadian financial-services recordkeeping practice. This applies regardless of any request to delete information sooner — we are unable to delete personal information during this retention period. We are building automated internal tooling to track this retention period and flag records for staff review once it has elapsed; see "Where we're still building," below.
 
 ### Where your data is stored
 
@@ -106,9 +106,8 @@ Our production database is operated in the Canada Central data center region.
 
 In the interest of transparency, here is what we consider works-in-progress rather than finished commitments:
 
-- A formal, published data retention and deletion schedule
-- A self-service tool for clients to request a copy or deletion of their information directly through the portal
-- Move from firm-wide staff access toward more granular, role-based access restricted to each client's assigned advisory team
+- Automated internal tooling to track our 7-year retention period and flag records for staff review once it has elapsed (the retention period itself is fixed at 7 years — see "Data retention," above; this is about building the tooling to monitor it)
+- A self-service tool for clients to request a copy of their information directly through the portal (deletion is not offered as a self-service option — see "Data retention," above)
 - A formally documented registry of service-provider agreements
 - Formal, scheduled database backups (currently relying on underlying infrastructure resilience only)
 

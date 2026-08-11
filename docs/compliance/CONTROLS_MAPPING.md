@@ -2,7 +2,7 @@
 
 Internal reference mapping every claim in [`PRIVACY_AND_SECURITY_POLICY.md`](./PRIVACY_AND_SECURITY_POLICY.md) to the actual code, database schema, or infrastructure that implements it. Keep this in sync with the codebase — if a control here changes or is removed, update the external policy in the same change.
 
-Last verified against: `remove-lovable-auth-branding` branch state, 2026-08-10.
+Last verified against: `main` branch state, 2026-08-10.
 
 ---
 
@@ -16,7 +16,7 @@ Last verified against: `remove-lovable-auth-branding` branch state, 2026-08-10.
 | Returning devices can skip re-entering a passcode via a secure trusted-device token | `supabase/functions/_shared/trusted-device.ts` — 32-byte random token; only its SHA-256 hash (`token_hash`) is persisted, never the raw token |
 | Clients never receive direct database access | Portal frontend (`src/modules/portal/`) never calls `supabase.from()` — all client requests are proxied through edge functions using the service-role key, with server-side scoping (see §6) |
 
-**Known limitation:** there is no role-based access control (RBAC) layer. Any authenticated `@prosperwise.ca` account has the same broad access to staff-facing tables (see §2). Access control today is "who can authenticate" (domain-gated), not "what can this specific person see" (least-privilege). Tracked as a roadmap item.
+**Design decision, not a gap:** there is no role-based access control (RBAC) layer. Any authenticated `@prosperwise.ca` account has the same broad access to staff-facing tables (see §2). This is deliberate: ProsperWise is a small advisory team where every staff member works across the client base, so per-advisor/least-privilege scoping would add engineering and operational overhead without a corresponding security benefit for a firm this size. Access control is enforced at the boundary that actually matters here — who can authenticate at all (domain-gated to `@prosperwise.ca`) — rather than through internal role segmentation. Revisit if the team structure changes (e.g. advisors who should not see each other's clients).
 
 ## 2. Row Level Security (database-level access control)
 
@@ -26,7 +26,7 @@ Last verified against: `remove-lovable-auth-branding` branch state, 2026-08-10.
 - A smaller set of self-service tables restrict to `auth.uid() = user_id` (e.g. `profiles`).
 - Client-facing tables (`portal_tokens`, `portal_otps`, etc.) have no direct client grants — reachable only through edge functions running as service-role.
 
-**Known limitation:** `portal-uploads` storage bucket policy grants `SELECT` to any authenticated user rather than scoping to the relevant household — same flat-trust caveat as above.
+**Design decision, not a gap:** `portal-uploads` storage bucket policy grants `SELECT` to any authenticated staff user rather than scoping to the relevant household — same intentional flat-trust model as §1, for the same reason (small team, full client-base visibility by design).
 
 ## 3. Client portal data scoping
 
@@ -147,10 +147,9 @@ Category-level summary (not exhaustive column list) — see `supabase/migrations
 
 These are known, deliberate gaps — listed here rather than silently omitted, so this document stays honest as a living reference:
 
-1. **Formal data retention & deletion policy**, including a defined retention schedule and a scheduled/automatic deletion mechanism.
-2. **Client-facing self-service data access/export/deletion request mechanism** in the portal.
-3. **Role-based access control (RBAC)** for staff, moving from domain-gated flat access toward least-privilege, per-advisor scoping.
-4. **Household-scoped `portal-uploads` bucket policy**, replacing the current any-authenticated-user grant.
-5. **Documented sub-processor / DPA registry** maintained outside of code, confirmed with each vendor (Google, Square, Asana, OpenPhone, Wix).
-6. **Reconcile the stale cron reference** to the old Supabase project.
-7. **Enable database backups / point-in-time recovery** on the production Supabase project — currently none configured. Highest-priority item on this list; this is an operational data-loss risk, not just a documentation gap.
+1. **Formal data retention & deletion policy — retention period confirmed at 7 years from the end of the advisory relationship.** In progress: a staff-reviewed retention-monitoring mechanism (§16) that flags households past the 7-year floor for manual staff decision. Deletion is never automatic and is never triggered by a client request — see item 2.
+2. **Client-facing self-service data request mechanism** in the portal. In progress: clients can request a *copy* of their data (see §17). Deletion is explicitly **not** offered as a client-initiated action — ProsperWise is required to retain client records for 7 years from relationship end regardless of any request, so there is no client-facing deletion path by design, now or planned.
+3. ~~Role-based access control~~ / ~~household-scoped `portal-uploads` policy~~ — reclassified as deliberate design decisions, not gaps. See §1 and §2 above.
+4. **Documented sub-processor / DPA registry** maintained outside of code, confirmed with each vendor (Google, Square, Asana, OpenPhone, Wix). See `SUBPROCESSORS.md` (template drafted, vendor confirmation still needed — not something this document can self-certify).
+5. **Reconcile the stale cron reference** to the old Supabase project ✅ **DONE** — `brain-index-drain`'s live schedule was pointed at the decommissioned project (`skcgdoiestzqxsooaxur`); fixed via a follow-up migration re-scheduling the job at the correct project URL, verified directly against `cron.job`.
+6. **Enable database backups / point-in-time recovery** on the production Supabase project — currently none configured. Tracked separately (Asana), not part of this document's engineering scope. Highest-priority item on this list; this is an operational data-loss risk, not just a documentation gap.

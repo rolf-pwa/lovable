@@ -112,6 +112,36 @@ async function staffUserId(client: any): Promise<string | null> {
   return data?.user_id ?? null;
 }
 
+/**
+ * Payment is the only real conversion signal for a lead — someone can start
+ * checkout and stop, and stay a pending lead for staff to follow up on by
+ * phone; only an actual completed payment (whether the buyer finished it
+ * themselves or staff walked them through it) should mark a lead converted.
+ * Matches both lead sources by email, since a buyer's identity here is only
+ * ever known by the email they paid with.
+ */
+async function convertMatchingLeads(client: any, email: string): Promise<void> {
+  if (!email) return;
+  try {
+    await client
+      .from("georgia2_leads")
+      .update({ status: "converted_to_contact" })
+      .ilike("email", email)
+      .not("status", "in", "(converted_to_contact,dismissed)");
+  } catch (e) {
+    console.error("[enrollPaidBooking] georgia2_leads conversion update failed:", e);
+  }
+  try {
+    await client
+      .from("discovery_leads")
+      .update({ sovereignty_status: "converted_to_contact" })
+      .ilike("email", email)
+      .not("sovereignty_status", "in", "(converted_to_contact,dismissed)");
+  } catch (e) {
+    console.error("[enrollPaidBooking] discovery_leads conversion update failed:", e);
+  }
+}
+
 export interface EnrollmentResult {
   contactId: string | null;
   householdId: string | null;
@@ -241,7 +271,10 @@ export async function enrollPaidBooking(
     created = true;
   }
 
-  // ---- 3. Link the booking ----------------------------------------------
+  // ---- 3. Convert any matching pending lead — see convertMatchingLeads() ----
+  await convertMatchingLeads(client, email);
+
+  // ---- 4. Link the booking ----------------------------------------------
   await client.from("service_bookings").update({ contact_id: contactId }).eq("id", bookingId);
 
   // Anyone who pays for an Audit is a new client and gets the guided
@@ -256,7 +289,7 @@ export async function enrollPaidBooking(
     .eq("id", booking.service_id)
     .maybeSingle();
 
-  // ---- 4. Provision the vault autonomously ------------------------------
+  // ---- 5. Provision the vault autonomously ------------------------------
   // The client should never wait on the office: push the household to the
   // Audit Agent right away. Failures never block enrollment — staff still get
   // the manual "Push to Audit Agent" retry on the household page.
@@ -276,7 +309,7 @@ export async function enrollPaidBooking(
     }
   }
 
-  // ---- 5. Tell staff ----------------------------------------------------
+  // ---- 6. Tell staff ----------------------------------------------------
   const vaultNote =
     vaultProvisioning === "started"
       ? "Vault provisioning started automatically — the Audit checklist opens in their portal as soon as the agent replies."
