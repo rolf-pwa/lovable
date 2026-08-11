@@ -14,6 +14,7 @@ import {
   ArrowLeft,
   HelpCircle,
   Circle,
+  ArrowRight,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -365,6 +366,20 @@ export function PortalIntakePage({ portalToken, onBack, onAskForHelp, onComplete
           )}
         </CardContent>
       </Card>
+
+      {onComplete && (
+        <div className="flex flex-col items-center gap-2 text-center">
+          <Button onClick={onComplete}>
+            <CheckCircle2 className="h-4 w-4" />
+            I've sent everything I have — Continue
+            <ArrowRight className="h-4 w-4" />
+          </Button>
+          <p className="text-xs text-muted-foreground">
+            Missing something? No problem — send it whenever it's ready, and our team will follow up
+            on anything still outstanding.
+          </p>
+        </div>
+      )}
     </div>
   );
 }
