@@ -33,9 +33,6 @@ verify_jwt = false
 [functions.vault-service]
 verify_jwt = false
 
-[functions.discovery-assistant]
-verify_jwt = false
-
 [functions.portal-assistant]
 verify_jwt = false
 

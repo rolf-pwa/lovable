@@ -106,7 +106,7 @@ async function testMontrealResidency(): Promise<TestResult> {
     // We verify by calling the functions with OPTIONS and checking they respond (deployed)
     // Then we check the hardcoded region in the function source files at build time
     const AI_FUNCTIONS = [
-      "portal-assistant", "discovery-assistant", "content-ai",
+      "portal-assistant", "content-ai",
       "ingest-statement", "onboarding-ingest", "bulk-onboarding-classify",
       "cashflow-analyst", "recap-draft", "vertex-ai",
     ];

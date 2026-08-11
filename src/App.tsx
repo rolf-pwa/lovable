@@ -26,8 +26,6 @@ const PrivacyPolicy = lazy(() => import("@/modules/portal/pages/PrivacyPolicy"))
 const AdminVfo = lazy(() => import("@/modules/crm/pages/AdminVfo"));
 const Families = lazy(() => import("@/modules/crm/pages/Families"));
 const FamilyDetail = lazy(() => import("@/modules/crm/pages/FamilyDetail"));
-const Discovery = lazy(() => import("@/modules/intake/pages/Discovery"));
-const DiscoveryEmbed = lazy(() => import("@/modules/intake/pages/DiscoveryEmbed"));
 const DiscoveryV2 = lazy(() => import("@/modules/intake/pages/DiscoveryV2"));
 const DiscoveryV2Embed = lazy(() => import("@/modules/intake/pages/DiscoveryV2Embed"));
 const VfoOnboardingEmbed = lazy(() => import("@/modules/intake/pages/VfoOnboardingEmbed"));
@@ -95,9 +93,6 @@ const App = () => (
               <Route path="/" element={<AuthCallback />} />
               <Route path="/login" element={<Login />} />
               <Route path="/access-denied" element={<AccessDenied />} />
-              <Route path="/discovery" element={<Discovery />} />
-              <Route path="/discovery/embed" element={<DiscoveryEmbed />} />
-              <Route path="/discovery-embed" element={<DiscoveryEmbed />} />
               <Route path="/discovery-v2" element={<DiscoveryV2 />} />
               <Route path="/discovery-v2/embed" element={<DiscoveryV2Embed />} />
               <Route path="/discovery-v2-embed" element={<DiscoveryV2Embed />} />
