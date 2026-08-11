@@ -8,7 +8,7 @@ export interface OnboardingStepMeta {
 }
 
 export const ONBOARDING_STEPS: OnboardingStepMeta[] = [
-  { id: 1, title: "Book your Audit", hint: "Pick the time that suits you" },
+  { id: 1, title: "Book your Survey", hint: "Pick the time that suits you" },
   { id: 2, title: "Your household", hint: "Who we'll be working with" },
   { id: 3, title: "Your wealth event", hint: "What brought you here" },
   { id: 4, title: "Your documents", hint: "Upload what you have" },
@@ -21,7 +21,7 @@ interface Props {
   busy?: boolean;
 }
 
-/** Horizontal stepper for the guided audit onboarding. */
+/** Horizontal stepper for the guided survey onboarding. */
 export const OnboardingStepper = ({ current, furthest, onSelect, busy }: Props) => (
   <ol className="flex flex-col gap-2 sm:flex-row sm:items-stretch sm:gap-3">
     {ONBOARDING_STEPS.map((step) => {

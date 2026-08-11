@@ -43,7 +43,7 @@ export const StepWealthEvent = ({ state, saving, onSave }: Props) => {
         <div className="space-y-1.5">
           <h2 className="font-serif text-lg font-semibold text-foreground">Your wealth event</h2>
           <p className="text-sm text-muted-foreground">
-            Every Audit starts with context. Tell us what changed — there are no wrong answers, and
+            Every Survey starts with context. Tell us what changed — there are no wrong answers, and
             nothing here is shared outside your Sanctuary.
           </p>
         </div>
@@ -76,7 +76,7 @@ export const StepWealthEvent = ({ state, saving, onSave }: Props) => {
           />
           <p className="text-xs text-muted-foreground">
             Please leave out account numbers, SIN or health details — we'll gather anything sensitive
-            securely during your Audit.
+            securely during your Survey.
           </p>
         </div>
 
