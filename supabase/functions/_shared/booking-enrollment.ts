@@ -10,7 +10,7 @@
 // page fallback — it no-ops once the booking already has a contact_id.
 
 import { square } from "./square.ts";
-import { alreadyPushed, pushHouseholdToIntakeAgent } from "./intake-push.ts";
+import { provisionClientFolderTree } from "./vault-provisioning.ts";
 
 function splitName(fullName: string): { first: string; last: string } {
   const parts = String(fullName || "").trim().split(/\s+/).filter(Boolean);
@@ -146,7 +146,7 @@ export interface EnrollmentResult {
   contactId: string | null;
   householdId: string | null;
   created: boolean;
-  vaultProvisioning?: "started" | "failed" | "skipped";
+  vaultProvisioning?: "provisioned" | "failed" | "skipped";
 }
 
 export async function enrollPaidBooking(
@@ -290,31 +290,28 @@ export async function enrollPaidBooking(
     .maybeSingle();
 
   // ---- 5. Provision the vault autonomously ------------------------------
-  // The client should never wait on the office: push the household to the
-  // Audit Agent right away. Failures never block enrollment — staff still get
-  // the manual "Push to Audit Agent" retry on the household page.
+  // The client should never wait on the office: build the Drive folder tree
+  // (Family > Household > Vault + Advisor Files) directly, right away.
+  // Failures never block enrollment — staff can re-provision from the
+  // household's Vault page if this doesn't land.
   let vaultProvisioning: EnrollmentResult["vaultProvisioning"] = "skipped";
   if (householdId) {
     try {
-      if (await alreadyPushed(client, householdId)) {
-        vaultProvisioning = "skipped";
-      } else {
-        const push = await pushHouseholdToIntakeAgent(client, householdId, null);
-        vaultProvisioning = push.ok ? "started" : "failed";
-        if (!push.ok) console.error("[enrollPaidBooking] autonomous vault push failed:", push.error);
-      }
+      const result = await provisionClientFolderTree(client, householdId);
+      vaultProvisioning = result.ok ? "provisioned" : "failed";
+      if (!result.ok) console.error("[enrollPaidBooking] autonomous vault provisioning failed:", result.error);
     } catch (e) {
       vaultProvisioning = "failed";
-      console.error("[enrollPaidBooking] autonomous vault push threw:", e);
+      console.error("[enrollPaidBooking] autonomous vault provisioning threw:", e);
     }
   }
 
   // ---- 6. Tell staff ----------------------------------------------------
   const vaultNote =
-    vaultProvisioning === "started"
-      ? "Vault provisioning started automatically — the Audit checklist opens in their portal as soon as the agent replies."
+    vaultProvisioning === "provisioned"
+      ? "Vault folders were created automatically in Drive — their document checklist is ready in the portal."
       : vaultProvisioning === "failed"
-        ? "Automatic vault provisioning FAILED — open the household and push to the Audit Agent manually."
+        ? "Automatic vault provisioning FAILED — open the household's Vault page and click Provision Vault manually."
         : "Vault was already provisioned.";
 
   await client.from("staff_notifications").insert({
