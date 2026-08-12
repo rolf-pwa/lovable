@@ -270,16 +270,12 @@ function factsBlock(
   lines.push(
     `Total investable assets (AUM): $${Math.round(diagnostics.aum).toLocaleString()}`,
     `Document readiness: ${diagnostics.document_readiness.criticalSatisfied}/${diagnostics.document_readiness.criticalTotal} required documents filed (${diagnostics.document_readiness.percent}%)`,
+    `Asset protection (total insurance coverage on file): $${Math.round(diagnostics.insurance_coverage_total ?? 0).toLocaleString()}`,
   );
   if (diagnostics.document_readiness.missingCritical?.length) {
     lines.push(`Missing required documents: ${diagnostics.document_readiness.missingCritical.join(", ")}`);
   }
   if (diagnostics.track_type === "corporate") {
-    if (diagnostics.fee_drag) {
-      lines.push(
-        `Investment fee drag: ${diagnostics.fee_drag.fee_drag_pct}% above benchmark — projected 5yr cost $${Math.round(diagnostics.fee_drag.year5).toLocaleString()}, 10yr $${Math.round(diagnostics.fee_drag.year10).toLocaleString()}, 20yr $${Math.round(diagnostics.fee_drag.year20).toLocaleString()}`,
-      );
-    }
     if (typeof diagnostics.sbd_clawback === "number") {
       lines.push(`Small Business Deduction clawback exposure: $${Math.round(diagnostics.sbd_clawback).toLocaleString()}`);
     }
@@ -293,10 +289,6 @@ function factsBlock(
         `Unanimous Shareholder Agreement: ${diagnostics.usa_staleness.onFile ? `on file, last reviewed ${diagnostics.usa_staleness.ageYears} years ago` : "not on file"} — ${diagnostics.usa_staleness.isStale ? "STALE, needs review" : "current"}`,
       );
     }
-  } else if (diagnostics.fee_drag) {
-    lines.push(
-      `Investment fee drag: ${diagnostics.fee_drag.fee_drag_pct}% above benchmark — projected 5yr cost $${Math.round(diagnostics.fee_drag.year5).toLocaleString()}, 10yr $${Math.round(diagnostics.fee_drag.year10).toLocaleString()}, 20yr $${Math.round(diagnostics.fee_drag.year20).toLocaleString()}`,
-    );
   }
   if (diagnostics.estate_hygiene) {
     lines.push(

@@ -34,6 +34,8 @@ type Diagnostics = {
   usa_staleness?: { onFile: boolean; isStale: boolean; ageYears: number | null };
   estate_hygiene?: { will_status: string | null; poa_status: string | null; beneficiary_coordination_status: string | null };
   aum?: number;
+  storehouse_reserves?: { liquidity: number; strategic: number; philanthropic: number; legacy: number };
+  insurance_coverage_total?: number;
 };
 
 type DiagnosticInputs = {
@@ -548,16 +550,33 @@ export default function StabilizationMap() {
 
             {isHouseholdMap ? (
               <>
-                {/* Capital & Tax Drag Diagnostic */}
+                {/* Capital & Asset Protection */}
                 <div>
-                  <div style={colLabel}>Capital &amp; Tax Drag Diagnostic</div>
+                  <div style={colLabel}>Capital &amp; Asset Protection</div>
+
+                  <div style={{ marginBottom: "3mm" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                      <span style={{ fontSize: "8.5pt", fontWeight: 600, color: "#334155" }}>Total Assets (AUM)</span>
+                      <span style={{ fontSize: "8.5pt", fontWeight: 600, color: "#334155" }}>{fmtCurrency(diag.aum)}</span>
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1mm 6mm", marginTop: "1.5mm", paddingLeft: "3mm" }}>
+                      {(
+                        [
+                          ["Liquidity Reserve", diag.storehouse_reserves?.liquidity],
+                          ["Strategic Reserve", diag.storehouse_reserves?.strategic],
+                          ["Philanthropic Trust", diag.storehouse_reserves?.philanthropic],
+                          ["Legacy Trust", diag.storehouse_reserves?.legacy],
+                        ] as const
+                      ).map(([label, value]) => (
+                        <div key={label} style={{ display: "flex", justifyContent: "space-between", fontSize: "7.5pt", color: "#64748b" }}>
+                          <span>{label}</span>
+                          <span>{fmtCurrency(value ?? 0)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "4mm" }}>
-                    {diag.fee_drag && (
-                      <StatRow
-                        label="Fee Drag (20yr)"
-                        value={`${diag.fee_drag.fee_drag_pct}% above benchmark — ${fmtCurrency(diag.fee_drag.year20)}`}
-                      />
-                    )}
                     {typeof diag.sbd_clawback === "number" && map.track_type === "corporate" && (
                       <StatRow label="SBD Clawback" value={fmtCurrency(diag.sbd_clawback)} />
                     )}
@@ -567,13 +586,7 @@ export default function StabilizationMap() {
                         value={`${Math.round(diag.active_asset_ratio.ratio * 100)}%${diag.active_asset_ratio.belowLcgeThreshold ? " (below 90% LCGE)" : " (meets 90% LCGE)"}`}
                       />
                     )}
-                    <StatRow label="Total Assets (AUM)" value={fmtCurrency(diag.aum)} />
-                    {diag.document_readiness && (
-                      <StatRow
-                        label="Document Readiness"
-                        value={`${diag.document_readiness.criticalSatisfied}/${diag.document_readiness.criticalTotal} required (${diag.document_readiness.percent}%)`}
-                      />
-                    )}
+                    <StatRow label="Asset Protection" value={fmtCurrency(diag.insurance_coverage_total ?? 0)} />
                   </div>
                 </div>
 
@@ -834,14 +847,9 @@ function EditorForm({
           <div className="space-y-2 rounded-md border border-[#e2e8f0] p-3">
             <div className="text-xs font-semibold uppercase tracking-wider text-[#a37c58]">Diagnostic Inputs</div>
             <p className="text-[11px] text-muted-foreground">
-              These come from documents on file (fee disclosures, T2 financials, the USA) — type in what the
-              advisor reads, the system computes the figures.
+              These come from documents on file (T2 financials, the USA) — type in what the advisor reads, the
+              system computes the figures. Fee drag is paused until CRM3's fee-disclosure data is live.
             </p>
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-              {N("assumed_return_rate_pct", "Assumed Return Rate (%)", "6")}
-              {N("advisor_fee_rate_pct", "Current Advisor Fee Rate (%)")}
-              {N("benchmark_fee_rate_pct", "Benchmark Fee Rate (%)", "0")}
-            </div>
             {map.track_type === "corporate" ? (
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                 {N("corporate_passive_income_annual", "Corporate Passive Income (annual $)")}
