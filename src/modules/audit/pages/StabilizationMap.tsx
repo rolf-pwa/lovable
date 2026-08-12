@@ -488,8 +488,17 @@ export default function StabilizationMap() {
             </div>
             <hr style={{ border: "none", borderTop: "1px solid rgba(255,255,255,.18)" }} />
             <div>
-              <strong style={{ display: "block", fontSize: "8.5pt", fontWeight: 600 }}>Rolf Issler</strong>
-              <p style={{ fontSize: "7.5pt", color: "rgba(255,255,255,.5)", marginTop: "1pt" }}>Founder · Sudden Wealth Specialist · Fee-Only · Canada</p>
+              {isHouseholdMap ? (
+                <>
+                  <strong style={{ display: "block", fontSize: "8.5pt", fontWeight: 600 }}>Prepared By: Rolf Issler, BMgt, CLU</strong>
+                  <p style={{ fontSize: "7.5pt", color: "rgba(255,255,255,.5)", marginTop: "1pt" }}>Sudden Wealth Specialist, Family CFO</p>
+                </>
+              ) : (
+                <>
+                  <strong style={{ display: "block", fontSize: "8.5pt", fontWeight: 600 }}>Rolf Issler</strong>
+                  <p style={{ fontSize: "7.5pt", color: "rgba(255,255,255,.5)", marginTop: "1pt" }}>Founder · Sudden Wealth Specialist · Fee-Only · Canada</p>
+                </>
+              )}
             </div>
             <div style={{ marginTop: "auto", paddingTop: "4mm" }}>
               <div style={{ fontSize: "6.5pt", color: "rgba(255,255,255,.4)", lineHeight: 1.5 }}>
@@ -501,17 +510,14 @@ export default function StabilizationMap() {
 
           {/* Main */}
           <main style={{ flex: 1, padding: "10mm 10mm 0 10mm", display: "flex", flexDirection: "column", gap: "5mm" }}>
-            <div>
-              <div style={{ fontSize: "7.5pt", letterSpacing: ".1em", textTransform: "uppercase", color: "#94a3b8", marginBottom: "1.5mm" }}>
+            <div style={{ marginBottom: isHouseholdMap ? "3mm" : 0 }}>
+              <div style={{ fontSize: "7.5pt", letterSpacing: ".1em", textTransform: "uppercase", color: "#94a3b8", marginBottom: isHouseholdMap ? "3mm" : "1.5mm" }}>
                 Stabilization Map &nbsp;·&nbsp; Prepared for <strong>{fullName}</strong>
                 {sessionDateLabel && <> &nbsp;·&nbsp; {sessionDateLabel}</>}
               </div>
-              <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: isHouseholdMap ? "22pt" : "26pt", fontWeight: 300, color: "#334155", lineHeight: 1.1, letterSpacing: "-0.005em" }}>
+              <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: isHouseholdMap ? "25pt" : "26pt", fontWeight: 300, color: "#334155", lineHeight: isHouseholdMap ? 1.3 : 1.1, letterSpacing: "-0.005em" }}>
                 {isHouseholdMap ? (
-                  <>
-                    {map.track_type === "corporate" ? "Corporate" : "Personal"} Track &nbsp;·&nbsp; {map.event_type || "Sovereignty Survey"}<br />
-                    Sovereignty Survey — Stabilization Findings
-                  </>
+                  "Sovereignty Survey — Stabilization Map"
                 ) : (
                   <>
                     {map.event_type} &nbsp;·&nbsp; {map.event_context || "Post-Close Governance"}<br />
@@ -519,7 +525,7 @@ export default function StabilizationMap() {
                   </>
                 )}
               </div>
-              <hr style={{ width: "18mm", height: "3px", background: "#a37c58", border: "none", marginTop: "2.5mm" }} />
+              <hr style={{ width: "18mm", height: "3px", background: "#a37c58", border: "none", marginTop: isHouseholdMap ? "4mm" : "2.5mm" }} />
             </div>
 
             {/* Insight */}
