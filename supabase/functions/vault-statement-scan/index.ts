@@ -114,8 +114,18 @@ async function callVertex(accessToken: string, projectId: string, systemPrompt: 
   if (!res.ok) throw new Error(`AI parsing failed: ${await res.text()}`);
   const result = await res.json();
   const raw = result.candidates?.[0]?.content?.parts?.[0]?.text || "";
-  const jsonStr = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-  return JSON.parse(jsonStr);
+  // Models routinely emit a trailing comma before a closing } or ] despite instructions
+  // not to — strict JSON.parse rejects that, so strip it before parsing.
+  const jsonStr = raw
+    .replace(/```json\n?/g, "")
+    .replace(/```\n?/g, "")
+    .trim()
+    .replace(/,(\s*[}\]])/g, "$1");
+  try {
+    return JSON.parse(jsonStr);
+  } catch {
+    throw new Error(`Failed to parse AI response as JSON: ${jsonStr.slice(0, 300)}`);
+  }
 }
 
 const INVESTMENT_SYSTEM_PROMPT = `You are a financial statement parser for a Canadian family office. Extract investment/brokerage account data from the uploaded document.

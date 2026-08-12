@@ -188,7 +188,13 @@ Guidelines:
 
     const aiResult = await aiResponse.json();
     const rawContent = aiResult.candidates?.[0]?.content?.parts?.[0]?.text || "";
-    const jsonStr = rawContent.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+    // Trailing-comma strip handles the common "model emitted valid-but-strict-invalid JSON"
+    // case; the catch block below still handles genuinely truncated JSON separately.
+    const jsonStr = rawContent
+      .replace(/```json\n?/g, "")
+      .replace(/```\n?/g, "")
+      .trim()
+      .replace(/,(\s*[}\]])/g, "$1");
 
     let parsed: any;
     try {
