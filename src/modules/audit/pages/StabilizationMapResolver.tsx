@@ -5,11 +5,14 @@ import { supabase } from "@/shared/integrations/supabase/client";
 import { toast } from "sonner";
 
 /**
- * Resolves /stabilization-map/lead/:leadId or /stabilization-map/contact/:contactId
- * into an actual map id, then redirects to /stabilization-map/:id.
+ * Resolves /stabilization-map/lead/:leadId, /stabilization-map/contact/:contactId,
+ * or /stabilization-map/household/:householdId into an actual map id, then
+ * redirects to /stabilization-map/:id.
  */
 export default function StabilizationMapResolver() {
-  const { leadId, contactId } = useParams<{ leadId?: string; contactId?: string }>();
+  const { leadId, contactId, householdId } = useParams<{
+    leadId?: string; contactId?: string; householdId?: string;
+  }>();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -26,7 +29,8 @@ export default function StabilizationMapResolver() {
 
         if (leadId) query = query.eq("lead_id", leadId);
         else if (contactId) query = query.eq("contact_id", contactId);
-        else throw new Error("Missing lead or contact");
+        else if (householdId) query = query.eq("household_id", householdId);
+        else throw new Error("Missing lead, contact, or household");
 
         const { data: existing } = await query.maybeSingle();
 
@@ -45,7 +49,7 @@ export default function StabilizationMapResolver() {
             apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
             Authorization: `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
           },
-          body: JSON.stringify(leadId ? { leadId } : { contactId }),
+          body: JSON.stringify(leadId ? { leadId } : householdId ? { householdId } : { contactId }),
         });
         const data = await res.json();
         if (!res.ok || !data.mapId) throw new Error(data.error || "Failed to create map");
@@ -60,7 +64,7 @@ export default function StabilizationMapResolver() {
 
     resolve();
     return () => { cancelled = true; };
-  }, [leadId, contactId, navigate]);
+  }, [leadId, contactId, householdId, navigate]);
 
   return (
     <div className="flex h-screen items-center justify-center">

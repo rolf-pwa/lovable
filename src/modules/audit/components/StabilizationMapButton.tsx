@@ -29,10 +29,11 @@ function fileToBase64(file: File): Promise<string> {
 }
 
 interface Props {
-  contactId: string;
+  contactId?: string;
+  householdId?: string;
 }
 
-export function StabilizationMapButton({ contactId }: Props) {
+export function StabilizationMapButton({ contactId, householdId }: Props) {
   const navigate = useNavigate();
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -108,15 +109,27 @@ export function StabilizationMapButton({ contactId }: Props) {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-64">
-          <DropdownMenuItem onClick={() => navigate(`/stabilization-map/contact/${contactId}`)}>
+          <DropdownMenuItem
+            onClick={() =>
+              navigate(
+                householdId
+                  ? `/stabilization-map/household/${householdId}`
+                  : `/stabilization-map/contact/${contactId}`,
+              )
+            }
+          >
             <FileText className="mr-2 h-4 w-4" />
             Open / Generate from intake
           </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={pickFile} disabled={uploading}>
-            <Upload className="mr-2 h-4 w-4" />
-            Generate from Sovereignty Audit PDF…
-          </DropdownMenuItem>
+          {contactId && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={pickFile} disabled={uploading}>
+                <Upload className="mr-2 h-4 w-4" />
+                Generate from Sovereignty Audit PDF…
+              </DropdownMenuItem>
+            </>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
     </>

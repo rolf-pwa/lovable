@@ -1,5 +1,9 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  computeSovereigntyDiagnostics,
+  type DiagnosticInputs,
+} from "../_shared/sovereignty-diagnostics.ts";
 
 const ALLOWED_ORIGINS = [
   "https://prosperwise-portal.web.app",
@@ -170,6 +174,313 @@ const TOOL_SCHEMA = {
   ],
 };
 
+// ---------- Household-track (Sovereignty Survey) narrative prompt ----------
+// Numbers are never generated here — they're computed deterministically by
+// sovereignty-diagnostics.ts and handed in as read-only facts. The model only
+// drafts prose: the situation summary, urgency flag, and 90-day action plan
+// bullets, exactly like generate-charter-draft does for the Sovereignty Charter.
+
+const HOUSEHOLD_EXTRACTION_PROMPT = `You are an expert ProsperWise stabilization analyst. You are drafting the narrative portions of a one-page **Sovereignty Survey Stabilization Map** that Rolf Issler will review with the client in their first live Stabilization Session.
+
+You will receive already-computed, verified facts about the household: its wealth event, track type (personal or corporate), document readiness, and — where applicable — quantified financial diagnostics (fee drag, tax exposure, governance risk flags). These numbers are final and correct.
+
+Your job: draft ONLY the narrative fields below. **Never invent, restate incorrectly, or alter any dollar figure or percentage** — reference them by describing their significance, not by recomputing them.
+
+## Rules
+- Write in the Sanctuary voice — calm, direct, non-alarmist, professional. No jargon, no exclamations.
+- situation_summary: 1-2 sentences summarizing the household's transition/wealth event and current state of stabilization.
+- urgency_flag: 1 sentence describing what is currently absent or exposed (governance gaps, unaddressed drag, missing structure).
+- Action plan: draft 2-4 concrete bullet items for EACH of three phases, grounded in the facts provided:
+  - Phase 1 (Immediate, Days 1-30): protective/administrative steps — never structural changes.
+  - Phase 2 (Structural Purification, Days 31-60): the concrete structural/tax remediation this household's facts call for.
+  - Phase 3 (Governance Ratification, Days 61-90): charter/governance ratification and cadence-setting steps.
+  - Each bullet needs a short title (max ~50 characters) and one supporting sentence of detail.
+
+## Output
+Call \`populate_household_stabilization_map\` with all fields filled.`;
+
+const HOUSEHOLD_TOOL_SCHEMA = {
+  functionDeclarations: [
+    {
+      name: "populate_household_stabilization_map",
+      description: "Populate the narrative fields of a household-track Stabilization Map.",
+      parameters: {
+        type: "OBJECT",
+        properties: {
+          situation_summary: { type: "STRING" },
+          urgency_flag: { type: "STRING" },
+          action_plan_phase_1: {
+            type: "ARRAY",
+            items: {
+              type: "OBJECT",
+              properties: { title: { type: "STRING" }, detail: { type: "STRING" } },
+              required: ["title", "detail"],
+            },
+          },
+          action_plan_phase_2: {
+            type: "ARRAY",
+            items: {
+              type: "OBJECT",
+              properties: { title: { type: "STRING" }, detail: { type: "STRING" } },
+              required: ["title", "detail"],
+            },
+          },
+          action_plan_phase_3: {
+            type: "ARRAY",
+            items: {
+              type: "OBJECT",
+              properties: { title: { type: "STRING" }, detail: { type: "STRING" } },
+              required: ["title", "detail"],
+            },
+          },
+        },
+        required: [
+          "situation_summary",
+          "urgency_flag",
+          "action_plan_phase_1",
+          "action_plan_phase_2",
+          "action_plan_phase_3",
+        ],
+      },
+    },
+  ],
+};
+
+function factsBlock(householdLabel: string, familyName: string, wealthEventType: string, wealthEventNotes: string, diagnostics: any): string {
+  const lines = [
+    `Household: ${householdLabel} (${familyName})`,
+    `Wealth event: ${wealthEventType || "(not specified)"}`,
+    `Wealth event notes: ${wealthEventNotes || "(none provided)"}`,
+    `Track type: ${diagnostics.track_type}`,
+    `Total investable assets (AUM): $${Math.round(diagnostics.aum).toLocaleString()}`,
+    `Document readiness: ${diagnostics.document_readiness.criticalSatisfied}/${diagnostics.document_readiness.criticalTotal} required documents filed (${diagnostics.document_readiness.percent}%)`,
+  ];
+  if (diagnostics.document_readiness.missingCritical?.length) {
+    lines.push(`Missing required documents: ${diagnostics.document_readiness.missingCritical.join(", ")}`);
+  }
+  if (diagnostics.track_type === "corporate") {
+    if (diagnostics.fee_drag) {
+      lines.push(
+        `Investment fee drag: ${diagnostics.fee_drag.fee_drag_pct}% above benchmark — projected 5yr cost $${Math.round(diagnostics.fee_drag.year5).toLocaleString()}, 10yr $${Math.round(diagnostics.fee_drag.year10).toLocaleString()}, 20yr $${Math.round(diagnostics.fee_drag.year20).toLocaleString()}`,
+      );
+    }
+    if (typeof diagnostics.sbd_clawback === "number") {
+      lines.push(`Small Business Deduction clawback exposure: $${Math.round(diagnostics.sbd_clawback).toLocaleString()}`);
+    }
+    if (diagnostics.active_asset_ratio) {
+      lines.push(
+        `Active asset ratio: ${Math.round(diagnostics.active_asset_ratio.ratio * 100)}% (${diagnostics.active_asset_ratio.belowLcgeThreshold ? "BELOW the 90% LCGE eligibility threshold — needs purification" : "meets the 90% LCGE eligibility threshold"})`,
+      );
+    }
+    if (diagnostics.usa_staleness) {
+      lines.push(
+        `Unanimous Shareholder Agreement: ${diagnostics.usa_staleness.onFile ? `on file, last reviewed ${diagnostics.usa_staleness.ageYears} years ago` : "not on file"} — ${diagnostics.usa_staleness.isStale ? "STALE, needs review" : "current"}`,
+      );
+    }
+  } else if (diagnostics.fee_drag) {
+    lines.push(
+      `Investment fee drag: ${diagnostics.fee_drag.fee_drag_pct}% above benchmark — projected 5yr cost $${Math.round(diagnostics.fee_drag.year5).toLocaleString()}, 10yr $${Math.round(diagnostics.fee_drag.year10).toLocaleString()}, 20yr $${Math.round(diagnostics.fee_drag.year20).toLocaleString()}`,
+    );
+  }
+  if (diagnostics.estate_hygiene) {
+    lines.push(
+      `Estate hygiene — Will: ${diagnostics.estate_hygiene.will_status || "unknown"}, POA: ${diagnostics.estate_hygiene.poa_status || "unknown"}, Beneficiary coordination: ${diagnostics.estate_hygiene.beneficiary_coordination_status || "unknown"}`,
+    );
+  }
+  return lines.join("\n");
+}
+
+// ---------- Household-track generation handler ----------
+
+async function handleHouseholdGeneration(
+  // deno-lint-ignore no-explicit-any
+  supabase: any,
+  householdId: string,
+  mapId: string | undefined,
+  staffUserId: string | null,
+  corsHeaders: Record<string, string>,
+): Promise<Response> {
+  const json = (body: unknown, status = 200) =>
+    new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
+  const { data: household, error: hhErr } = await supabase
+    .from("households")
+    .select("id, wealth_event_type, wealth_event_notes")
+    .eq("id", householdId)
+    .maybeSingle();
+  if (hhErr || !household) return json({ error: "Household not found" }, 404);
+
+  const { data: contacts } = await supabase
+    .from("contacts")
+    .select("id, first_name, last_name, family_role")
+    .eq("household_id", householdId);
+  const roleRank = (r: string | null | undefined) => {
+    const v = (r || "").toLowerCase();
+    if (v === "hof" || v === "head_of_family" || v.includes("head of family")) return 0;
+    if (v === "hoh" || v === "head_of_household" || v.includes("head of household")) return 1;
+    return 2;
+  };
+  const primaryContact = [...(contacts ?? [])].sort(
+    (a: any, b: any) => roleRank(a.family_role) - roleRank(b.family_role),
+  )[0];
+
+  // Find or seed the map row, preserving any advisor-entered diagnostic_inputs across regenerations.
+  let existingMapId = mapId;
+  let existingInputs: DiagnosticInputs = {};
+  if (!existingMapId) {
+    const { data: existingForHousehold } = await supabase
+      .from("stabilization_maps")
+      .select("id, diagnostic_inputs")
+      .eq("household_id", householdId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (existingForHousehold?.id) {
+      existingMapId = existingForHousehold.id;
+      existingInputs = existingForHousehold.diagnostic_inputs ?? {};
+    }
+  } else {
+    const { data: existing } = await supabase
+      .from("stabilization_maps")
+      .select("diagnostic_inputs")
+      .eq("id", existingMapId)
+      .maybeSingle();
+    existingInputs = existing?.diagnostic_inputs ?? {};
+  }
+
+  if (!existingMapId) {
+    const { data: inserted, error: insErr } = await supabase
+      .from("stabilization_maps")
+      .insert({
+        household_id: householdId,
+        client_first_name: primaryContact?.first_name || "",
+        client_last_name: primaryContact?.last_name || "",
+        session_date: new Date().toISOString().slice(0, 10),
+        event_type: household.wealth_event_type || "",
+        generation_status: "generating",
+      })
+      .select("id")
+      .single();
+    if (insErr || !inserted) return json({ error: "Failed to create map record" }, 500);
+    existingMapId = inserted.id;
+  } else {
+    await supabase
+      .from("stabilization_maps")
+      .update({
+        client_first_name: primaryContact?.first_name || "",
+        client_last_name: primaryContact?.last_name || "",
+        generation_status: "generating",
+        generation_error: null,
+      })
+      .eq("id", existingMapId);
+  }
+
+  try {
+    const { track_type, diagnostics } = await computeSovereigntyDiagnostics(supabase, householdId, existingInputs);
+
+    const gcpKeyRaw = Deno.env.get("GCP_SERVICE_ACCOUNT_KEY");
+    if (!gcpKeyRaw) throw new Error("GCP_SERVICE_ACCOUNT_KEY not configured");
+    const sa: ServiceAccountKey = JSON.parse(gcpKeyRaw);
+    const accessToken = await getAccessToken(sa);
+    const vertexUrl =
+      `https://${REGION}-aiplatform.googleapis.com/v1/projects/${sa.project_id}/locations/${REGION}/publishers/google/models/${MODEL}:generateContent`;
+
+    const facts = factsBlock(
+      diagnostics.household_label,
+      diagnostics.family_name,
+      household.wealth_event_type || "",
+      household.wealth_event_notes || "",
+      diagnostics,
+    );
+
+    const aiRes = await fetch(vertexUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+      body: JSON.stringify({
+        contents: [
+          { role: "user", parts: [{ text: HOUSEHOLD_EXTRACTION_PROMPT }] },
+          { role: "model", parts: [{ text: "Understood. Provide the household facts and I will draft the narrative." }] },
+          { role: "user", parts: [{ text: facts }] },
+        ],
+        tools: [HOUSEHOLD_TOOL_SCHEMA],
+        toolConfig: {
+          functionCallingConfig: { mode: "ANY", allowedFunctionNames: ["populate_household_stabilization_map"] },
+        },
+        generationConfig: { temperature: 0.3, maxOutputTokens: 2048 },
+      }),
+    });
+
+    if (!aiRes.ok) {
+      const errText = await aiRes.text();
+      console.error(`[stabilization-map-generate] household Vertex error ${aiRes.status}:`, errText);
+      await supabase.from("stabilization_maps")
+        .update({ generation_status: "failed", generation_error: `Vertex AI ${aiRes.status}` })
+        .eq("id", existingMapId);
+      return json({ error: "AI generation failed", mapId: existingMapId }, 502);
+    }
+
+    const result = await aiRes.json();
+    const parts = result.candidates?.[0]?.content?.parts || [];
+    const fnCall = parts.find((p: any) => p.functionCall)?.functionCall;
+    if (!fnCall || !fnCall.args) {
+      await supabase.from("stabilization_maps")
+        .update({ generation_status: "failed", generation_error: "AI did not return structured data" })
+        .eq("id", existingMapId);
+      return json({ error: "AI did not return structured data", mapId: existingMapId }, 502);
+    }
+
+    const args = fnCall.args;
+    const cleanBullets = (arr: unknown): { title: string; detail: string }[] =>
+      Array.isArray(arr)
+        ? arr
+            .filter((b: any) => b && typeof b === "object")
+            .map((b: any) => ({ title: String(b.title || "").slice(0, 80), detail: String(b.detail || "").slice(0, 300) }))
+            .slice(0, 6)
+        : [];
+
+    const update = {
+      household_id: householdId,
+      track_type,
+      diagnostics,
+      event_type: household.wealth_event_type || "",
+      action_plan: {
+        phase_1: cleanBullets(args.action_plan_phase_1),
+        phase_2: cleanBullets(args.action_plan_phase_2),
+        phase_3: cleanBullets(args.action_plan_phase_3),
+      },
+      situation_summary: String(args.situation_summary || "").slice(0, 1200),
+      urgency_flag: String(args.urgency_flag || "").slice(0, 1200),
+      generation_status: "ready",
+      generation_error: null,
+    };
+
+    const { error: updErr } = await supabase.from("stabilization_maps").update(update).eq("id", existingMapId);
+    if (updErr) throw updErr;
+
+    if (primaryContact?.id) {
+      try {
+        await supabase.from("sovereignty_audit_trail").insert({
+          contact_id: primaryContact.id,
+          user_id: staffUserId,
+          action_type: "stabilization_map_household_generate",
+          action_description: `Sovereignty Survey Stabilization Map generated for household ${householdId}`,
+          proposed_data: { mapId: existingMapId, householdId, track_type },
+        });
+      } catch (e) {
+        console.warn("[stabilization-map-generate] household audit-trail insert failed", e);
+      }
+    }
+
+    return json({ success: true, mapId: existingMapId });
+  } catch (e) {
+    console.error("[stabilization-map-generate] household generation error:", e);
+    await supabase.from("stabilization_maps")
+      .update({ generation_status: "failed", generation_error: e instanceof Error ? e.message : "Unknown error" })
+      .eq("id", existingMapId);
+    return json({ error: e instanceof Error ? e.message : "Unknown error", mapId: existingMapId }, 500);
+  }
+}
+
 // ---------- Main ----------
 
 serve(async (req) => {
@@ -183,6 +494,7 @@ serve(async (req) => {
     const authHeader = req.headers.get("Authorization") || "";
     const token = authHeader.replace(/^Bearer\s+/i, "").trim();
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    let staffUserId: string | null = null;
     if (!token) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -201,14 +513,17 @@ serve(async (req) => {
           status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
+      staffUserId = userData.user.id;
     }
 
     const body = await req.json();
-    const { leadId, mapId, contactId } = body as { leadId?: string; mapId?: string; contactId?: string };
+    const { leadId, mapId, contactId, householdId } = body as {
+      leadId?: string; mapId?: string; contactId?: string; householdId?: string;
+    };
 
-    if (!leadId && !mapId && !contactId) {
+    if (!leadId && !mapId && !contactId && !householdId) {
       return new Response(
-        JSON.stringify({ error: "leadId, contactId, or mapId is required" }),
+        JSON.stringify({ error: "leadId, contactId, householdId, or mapId is required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
@@ -217,6 +532,22 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_URL")!,
       serviceKey,
     );
+
+    // ---- Household-track (Sovereignty Survey) branch — entirely separate from
+    // the lead/contact narrative-extraction flow below. ----
+    let resolvedHouseholdId = householdId;
+    if (mapId && !resolvedHouseholdId) {
+      const { data: existing } = await supabase
+        .from("stabilization_maps")
+        .select("household_id")
+        .eq("id", mapId)
+        .maybeSingle();
+      resolvedHouseholdId = existing?.household_id || undefined;
+    }
+
+    if (resolvedHouseholdId) {
+      return await handleHouseholdGeneration(supabase, resolvedHouseholdId, mapId, staffUserId, corsHeaders);
+    }
 
     // Resolve the lead (from either leadId, mapId, or contactId)
     let resolvedLeadId = leadId;
