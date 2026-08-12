@@ -8,7 +8,7 @@
 // to draft narrative text around them (situation summary, action plan prose).
 
 import { getServiceGoogleAccessToken } from "./google-token.ts";
-import { driveListChildren } from "./vault-provisioning.ts";
+import { driveListChildren, matchVaultCategoryFolder } from "./vault-provisioning.ts";
 
 // deno-lint-ignore no-explicit-any
 type SupabaseClient = any;
@@ -219,19 +219,7 @@ export async function computeVaultReadiness(
   const missing: string[] = [];
 
   for (const cat of categories) {
-    const keywords = cat.display_name
-      .replace(/^\d+\s*/, "")
-      .replace(/\(.*?\)/g, "")
-      .trim()
-      .split(/\s+/)
-      .filter((w) => w.length > 2 && w !== "&");
-
-    const folder = rootChildren.find((f) => {
-      if (f.mimeType !== "application/vnd.google-apps.folder") return false;
-      if (f.name.trim() === cat.display_name.trim()) return true;
-      const lower = f.name.toLowerCase();
-      return keywords.some((k) => lower.includes(k.toLowerCase()));
-    });
+    const folder = matchVaultCategoryFolder(rootChildren, cat.display_name);
 
     if (!folder) {
       missing.push(cat.display_name);

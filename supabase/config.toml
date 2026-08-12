@@ -42,6 +42,9 @@ verify_jwt = false
 [functions.ingest-statement]
 verify_jwt = false
 
+[functions.vault-statement-scan]
+verify_jwt = false
+
 [functions.cashflow-analyst]
 verify_jwt = false
 
