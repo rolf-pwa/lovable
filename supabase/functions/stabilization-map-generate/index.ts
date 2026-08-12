@@ -188,6 +188,7 @@ Your job: draft ONLY the narrative fields below. **Never invent, restate incorre
 
 ## Rules
 - Write in the Sanctuary voice — calm, direct, non-alarmist, professional. No jargon, no exclamations.
+- If the facts state this is an existing/managed client formalizing their SOS (not a new engagement), the situation_summary and Phase 1 action items must reflect *formalizing/ratifying* their existing arrangement — never use "initiating," "Day One," or basic-document-collection language ("secure government IDs," "collect bank statements") for a client who already has a governed relationship on file.
 - situation_summary: 1-2 sentences summarizing the household's transition/wealth event and current state of stabilization.
 - urgency_flag: 1 sentence describing what is currently absent or exposed (governance gaps, unaddressed drag, missing structure).
 - Action plan: draft 2-4 concrete bullet items for EACH of three phases, grounded in the facts provided:
@@ -246,15 +247,30 @@ const HOUSEHOLD_TOOL_SCHEMA = {
   ],
 };
 
-function factsBlock(householdLabel: string, familyName: string, wealthEventType: string, wealthEventNotes: string, diagnostics: any): string {
-  const lines = [
-    `Household: ${householdLabel} (${familyName})`,
-    `Wealth event: ${wealthEventType || "(not specified)"}`,
-    `Wealth event notes: ${wealthEventNotes || "(none provided)"}`,
-    `Track type: ${diagnostics.track_type}`,
+function factsBlock(
+  householdLabel: string,
+  familyName: string,
+  wealthEventType: string,
+  wealthEventNotes: string,
+  diagnostics: any,
+  isLegacyClient: boolean,
+): string {
+  const lines = [`Household: ${householdLabel} (${familyName})`];
+  if (isLegacyClient) {
+    lines.push(
+      "Engagement stage: Existing managed client formalizing their Sovereignty Operating System — NOT a new-lead onboarding. Do not frame this as an initial/Day-1 engagement.",
+    );
+    if (wealthEventType) lines.push(`Wealth event: ${wealthEventType}`);
+    if (wealthEventNotes) lines.push(`Wealth event notes: ${wealthEventNotes}`);
+  } else {
+    lines.push(`Wealth event: ${wealthEventType || "(not specified)"}`);
+    lines.push(`Wealth event notes: ${wealthEventNotes || "(none provided)"}`);
+  }
+  lines.push(`Track type: ${diagnostics.track_type}`);
+  lines.push(
     `Total investable assets (AUM): $${Math.round(diagnostics.aum).toLocaleString()}`,
     `Document readiness: ${diagnostics.document_readiness.criticalSatisfied}/${diagnostics.document_readiness.criticalTotal} required documents filed (${diagnostics.document_readiness.percent}%)`,
-  ];
+  );
   if (diagnostics.document_readiness.missingCritical?.length) {
     lines.push(`Missing required documents: ${diagnostics.document_readiness.missingCritical.join(", ")}`);
   }
@@ -305,10 +321,11 @@ async function handleHouseholdGeneration(
 
   const { data: household, error: hhErr } = await supabase
     .from("households")
-    .select("id, wealth_event_type, wealth_event_notes")
+    .select("id, wealth_event_type, wealth_event_notes, onboarding_enabled")
     .eq("id", householdId)
     .maybeSingle();
   if (hhErr || !household) return json({ error: "Household not found" }, 404);
+  const isLegacyClient = household.onboarding_enabled === false;
 
   const { data: contacts } = await supabase
     .from("contacts")
@@ -391,6 +408,7 @@ async function handleHouseholdGeneration(
       household.wealth_event_type || "",
       household.wealth_event_notes || "",
       diagnostics,
+      isLegacyClient,
     );
 
     const aiRes = await fetch(vertexUrl, {
