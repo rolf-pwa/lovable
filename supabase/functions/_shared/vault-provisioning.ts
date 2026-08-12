@@ -44,6 +44,46 @@ export async function driveListChildren(
   return (await r.json()).files ?? [];
 }
 
+/** Downloads a Drive file's raw bytes. Callers should skip Google-native docs (Sheets/Docs/Slides) via mimeType before calling — those need the separate /export endpoint, not this one. */
+export async function driveDownloadFile(fileId: string, accessToken: string): Promise<ArrayBuffer> {
+  const r = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!r.ok) throw new Error(`drive_download_failed: ${await r.text()}`);
+  return r.arrayBuffer();
+}
+
+/**
+ * Matches a household's standard Vault category folder (e.g. "05 Investment
+ * Statements") among a Drive folder's already-fetched children, by
+ * vault_folder_templates display_name. Exact-matches first, falling back to
+ * a keyword match (derived from that same display_name, stripped of its
+ * leading position number and any parenthetical) so a staff-renamed folder
+ * still resolves. Pure/no I/O — callers fetch the children and template rows
+ * themselves so they can batch those calls however suits them. Shared by
+ * computeVaultReadiness and vault-statement-scan so the two never drift
+ * apart on what "the Insurance folder" means.
+ */
+export function matchVaultCategoryFolder(
+  children: { id: string; name: string; mimeType: string }[],
+  displayName: string,
+): { id: string; name: string } | null {
+  const keywords = displayName
+    .replace(/^\d+\s*/, "")
+    .replace(/\(.*?\)/g, "")
+    .trim()
+    .split(/\s+/)
+    .filter((w) => w.length > 2 && w !== "&");
+
+  const folder = children.find((f) => {
+    if (f.mimeType !== "application/vnd.google-apps.folder") return false;
+    if (f.name.trim() === displayName.trim()) return true;
+    const lower = f.name.toLowerCase();
+    return keywords.some((k) => lower.includes(k.toLowerCase()));
+  });
+  return folder ? { id: folder.id, name: folder.name } : null;
+}
+
 export interface ProvisionResult {
   ok: boolean;
   vaultRootFolderId?: string;

@@ -70,6 +70,7 @@ import {
   Briefcase,
   CalendarOff,
   RotateCcw,
+  ScanSearch,
 } from "lucide-react";
 import { ContactAnalytics } from "@/modules/crm/components/ContactAnalytics";
 
@@ -128,6 +129,7 @@ const HouseholdDetail = () => {
   const [endReason, setEndReason] = useState("");
   const [endDate, setEndDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [reopenRelationshipOpen, setReopenRelationshipOpen] = useState(false);
+  const [vaultScanning, setVaultScanning] = useState(false);
 
   // Guard against setState after unmount when fetchData reruns via mutation callbacks.
   const mountedRef = useRef(true);
@@ -791,6 +793,53 @@ const HouseholdDetail = () => {
                   </CardHeader>
                   <CardContent className="flex flex-wrap gap-2">
                     <StabilizationMapButton householdId={id} />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={vaultScanning}
+                      onClick={async () => {
+                        if (!id) return;
+                        setVaultScanning(true);
+                        try {
+                          const { data, error } = await supabase.functions.invoke("vault-statement-scan", {
+                            body: { householdId: id },
+                          });
+                          if (error) throw error;
+                          if (data?.error) throw new Error(data.error);
+                          const parts: string[] = [];
+                          if (data.investmentFilesParsed || data.investmentAccountsUnmatched) {
+                            parts.push(
+                              `${data.investmentAccountsMatched} account${data.investmentAccountsMatched === 1 ? "" : "s"} updated` +
+                                (data.investmentAccountsUnmatched ? `, ${data.investmentAccountsUnmatched} unmatched → Holding Tank` : ""),
+                            );
+                          }
+                          if (data.insuranceFilesParsed) {
+                            parts.push(
+                              `${data.insurancePoliciesMatched} polic${data.insurancePoliciesMatched === 1 ? "y" : "ies"} updated` +
+                                (data.insurancePoliciesCreated ? `, ${data.insurancePoliciesCreated} new` : ""),
+                            );
+                          }
+                          if (!data.investmentsFolderFound && !data.insuranceFolderFound) {
+                            toast.error("Couldn't find the Investment Statements or Insurance Vault folders for this household.");
+                          } else if (parts.length === 0) {
+                            toast.info("Scanned the Vault — no statement or policy files found to parse.");
+                          } else {
+                            toast.success(`Vault scan complete: ${parts.join("; ")}.`);
+                          }
+                          if (data.errors?.length) {
+                            toast.warning(`${data.errors.length} file(s) couldn't be parsed — see review queue for details.`);
+                          }
+                          fetchData();
+                        } catch (e: any) {
+                          toast.error(`Vault scan failed: ${e.message || "Unknown error"}`);
+                        } finally {
+                          setVaultScanning(false);
+                        }
+                      }}
+                    >
+                      {vaultScanning ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <ScanSearch className="h-4 w-4 mr-1.5" />}
+                      Scan Vault for Updates
+                    </Button>
                   </CardContent>
                 </Card>
                 <CharterRatificationTile householdId={id} />

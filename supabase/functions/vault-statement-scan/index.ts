@@ -1,0 +1,474 @@
+// vault-statement-scan
+// Staff-triggered, household-scoped: scans the "Investment Statements" and
+// "Insurance" Vault folders, AI-extracts figures from every file in each,
+// and writes them directly onto matched vineyard_accounts/storehouses/
+// insurance_policies rows — same "extract, match, write" shape as
+// ingest-statement (which does this for a single pre-uploaded contact
+// statement), just widened to a whole household's Vault folders and to a
+// second document category (insurance policies) that nothing parses today.
+//
+// No automatic trigger — staff clicks "Scan Vault for Updates" on the
+// household page. Building real Drive push-notification automation is a
+// separate, bigger piece of infra, deliberately out of scope for this pass.
+
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getServiceGoogleAccessToken } from "../_shared/google-token.ts";
+import { driveListChildren, driveDownloadFile, matchVaultCategoryFolder } from "../_shared/vault-provisioning.ts";
+
+const ALLOWED_ORIGINS = [
+  "https://prosperwise-portal.web.app",
+  "https://prosperwise.lovable.app",
+  "https://app.prosperwise.ca",
+  "https://id-preview--339dfc8f-3e82-4b05-8a36-a9f66fc58449.lovable.app",
+];
+
+function getCorsHeaders(req: Request) {
+  const origin = req.headers.get("Origin") || "";
+  const allowed = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  return {
+    "Access-Control-Allow-Origin": allowed,
+    "Access-Control-Allow-Headers":
+      "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  };
+}
+
+// ---------- Vertex AI auth (same self-contained pattern as ingest-statement) ----------
+
+const REGION = "northamerica-northeast1";
+const MODEL = "gemini-2.5-flash-preview-05-20";
+
+interface ServiceAccountKey {
+  type: string;
+  project_id: string;
+  private_key: string;
+  client_email: string;
+  token_uri: string;
+}
+
+async function getVertexAccessToken(sa: ServiceAccountKey): Promise<string> {
+  const now = Math.floor(Date.now() / 1000);
+  const header = { alg: "RS256", typ: "JWT" };
+  const payload = {
+    iss: sa.client_email,
+    scope: "https://www.googleapis.com/auth/cloud-platform",
+    aud: sa.token_uri,
+    iat: now,
+    exp: now + 3600,
+  };
+  const enc = (obj: unknown) => btoa(JSON.stringify(obj)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  const unsigned = `${enc(header)}.${enc(payload)}`;
+  const pemBody = sa.private_key.replace(/-----BEGIN PRIVATE KEY-----/, "").replace(/-----END PRIVATE KEY-----/, "").replace(/\s/g, "");
+  const binaryKey = Uint8Array.from(atob(pemBody), (c) => c.charCodeAt(0));
+  const cryptoKey = await crypto.subtle.importKey("pkcs8", binaryKey, { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["sign"]);
+  const signatureBuffer = await crypto.subtle.sign("RSASSA-PKCS1-v1_5", cryptoKey, new TextEncoder().encode(unsigned));
+  const signature = btoa(String.fromCharCode(...new Uint8Array(signatureBuffer))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  const jwt = `${unsigned}.${signature}`;
+  const res = await fetch(sa.token_uri, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer", assertion: jwt }),
+  });
+  const data = await res.json();
+  if (data.error) throw new Error(`Token exchange failed: ${data.error_description || data.error}`);
+  return data.access_token;
+}
+
+function normalizeToken(value: string | null | undefined) {
+  return (value || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+// Chunked, unlike ingest-statement's spread-based btoa(String.fromCharCode(...bytes)) —
+// insurance policy contracts run larger than typical statements and can exceed the
+// JS engine's max call-stack argument count if spread all at once.
+function bytesToBase64(bytes: Uint8Array): string {
+  const CHUNK_SIZE = 8192;
+  let binary = "";
+  for (let i = 0; i < bytes.length; i += CHUNK_SIZE) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK_SIZE));
+  }
+  return btoa(binary);
+}
+
+const GOOGLE_NATIVE_MIME = new Set([
+  "application/vnd.google-apps.document",
+  "application/vnd.google-apps.spreadsheet",
+  "application/vnd.google-apps.presentation",
+  "application/vnd.google-apps.folder",
+]);
+
+async function callVertex(accessToken: string, projectId: string, systemPrompt: string, instruction: string, base64: string, mimeType: string) {
+  const vertexUrl = `https://${REGION}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${REGION}/publishers/google/models/${MODEL}:generateContent`;
+  const res = await fetch(vertexUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+    body: JSON.stringify({
+      contents: [
+        {
+          role: "user",
+          parts: [{ text: systemPrompt + "\n\n" + instruction }, { inlineData: { mimeType, data: base64 } }],
+        },
+      ],
+      generationConfig: { temperature: 0.1, maxOutputTokens: 4000 },
+    }),
+  });
+  if (!res.ok) throw new Error(`AI parsing failed: ${await res.text()}`);
+  const result = await res.json();
+  const raw = result.candidates?.[0]?.content?.parts?.[0]?.text || "";
+  const jsonStr = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+  return JSON.parse(jsonStr);
+}
+
+const INVESTMENT_SYSTEM_PROMPT = `You are a financial statement parser for a Canadian family office. Extract investment/brokerage account data from the uploaded document.
+Return a JSON object with this exact structure:
+{
+  "statement_date": "YYYY-MM-DD or null",
+  "accounts": [
+    {
+      "account_name": "Institution - Account Type (e.g. iA Financial - RRSP)",
+      "account_number": "string or null",
+      "account_type": "Portfolio|RRSP|TFSA|RESP|LIRA|LIF|Corporate|Trust|Other",
+      "account_owner": "Full name of the account holder or null",
+      "custodian": "Name of the financial institution",
+      "book_value": number or null,
+      "current_harvest": number or null,
+      "current_value": number or null,
+      "notes": "Any classification notes"
+    }
+  ],
+  "summary": "Brief one-line summary of total holdings",
+  "missing_fields": ["list of fields that could not be confidently extracted"]
+}
+Guidelines:
+- "book_value" is the beginning-of-year value, cost basis, or original investment amount
+- "current_harvest" is the year-to-date gain/loss if shown, otherwise current_value minus book_value
+- "current_value" is the most recent market value shown
+- Use null for any values you cannot confidently extract
+- Return ONLY the JSON, no markdown`;
+
+const INSURANCE_SYSTEM_PROMPT = `You are an insurance policy document parser for a Canadian family office. Extract policy data from the uploaded document (a policy schedule, illustration, or annual statement).
+Return a JSON object with this exact structure:
+{
+  "policies": [
+    {
+      "carrier": "Name of the insurance company",
+      "policy_number": "string or null",
+      "policy_type": "life|critical_illness|disability|other",
+      "insured_name": "Full name of the insured person, or the corporation name if this is a corporate-owned policy",
+      "coverage_amount": number or null,
+      "cash_value": number or null,
+      "premium_amount": number or null,
+      "premium_frequency": "annual|semi-annual|monthly|single or null",
+      "issue_date": "YYYY-MM-DD or null",
+      "renewal_date": "YYYY-MM-DD or null"
+    }
+  ],
+  "summary": "Brief one-line summary",
+  "missing_fields": ["list of fields that could not be confidently extracted"]
+}
+Guidelines:
+- "coverage_amount" is the face amount / death benefit / sum insured
+- "cash_value" is the policy's current cash surrender value, if shown (often absent on term policies — use null)
+- Use null for any values you cannot confidently extract
+- Return ONLY the JSON, no markdown`;
+
+Deno.serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req);
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+
+  try {
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) throw new Error("Missing auth header");
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+    const userClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: { user }, error: authErr } = await userClient.auth.getUser();
+    if (authErr || !user) throw new Error("Unauthorized");
+    if (!user.email?.toLowerCase().endsWith("@prosperwise.ca")) {
+      return new Response(JSON.stringify({ error: "Access denied: unauthorized domain" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const admin = createClient(supabaseUrl, supabaseServiceKey);
+
+    const { householdId } = await req.json();
+    if (!householdId) throw new Error("Missing householdId");
+
+    const { data: household } = await admin
+      .from("households")
+      .select("id, label, vault_root_folder_id")
+      .eq("id", householdId)
+      .maybeSingle();
+    if (!household) throw new Error("Household not found");
+    if (!household.vault_root_folder_id) {
+      return new Response(JSON.stringify({ error: "This household's Vault isn't provisioned yet." }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const { data: contacts } = await admin
+      .from("contacts")
+      .select("id, first_name, last_name, family_role")
+      .eq("household_id", householdId);
+    const members = contacts ?? [];
+    const memberIds = members.map((c: any) => c.id);
+    const roleRank = (r: string | null | undefined) => {
+      const v = (r || "").toLowerCase();
+      if (v === "hof" || v === "head_of_family" || v.includes("head of family")) return 0;
+      if (v === "hoh" || v === "head_of_household" || v.includes("head of household")) return 1;
+      return 2;
+    };
+    const headOfHousehold = [...members].sort((a: any, b: any) => roleRank(a.family_role) - roleRank(b.family_role))[0];
+
+    const { data: shareholders } = memberIds.length
+      ? await admin.from("shareholders").select("corporation_id").in("contact_id", memberIds).eq("is_active", true)
+      : { data: [] };
+    const corpIds = [...new Set((shareholders ?? []).map((s: any) => s.corporation_id))];
+    const { data: corporations } = corpIds.length
+      ? await admin.from("corporations").select("id, name").in("id", corpIds)
+      : { data: [] };
+
+    // ---------- Google auth + locate the two Vault category folders ----------
+
+    const driveAccessToken = await getServiceGoogleAccessToken(admin);
+    const rootChildren = await driveListChildren(household.vault_root_folder_id, driveAccessToken);
+
+    const { data: templates } = await admin
+      .from("vault_folder_templates")
+      .select("display_name, slug")
+      .eq("is_active", true)
+      .in("slug", ["investments", "insurance"]);
+    const investmentsTemplate = (templates ?? []).find((t: any) => t.slug === "investments");
+    const insuranceTemplate = (templates ?? []).find((t: any) => t.slug === "insurance");
+
+    const investmentsFolder = investmentsTemplate ? matchVaultCategoryFolder(rootChildren, investmentsTemplate.display_name) : null;
+    const insuranceFolder = insuranceTemplate ? matchVaultCategoryFolder(rootChildren, insuranceTemplate.display_name) : null;
+
+    // ---------- Vertex AI auth ----------
+
+    const gcpKeyRaw = Deno.env.get("GCP_SERVICE_ACCOUNT_KEY");
+    if (!gcpKeyRaw) throw new Error("GCP_SERVICE_ACCOUNT_KEY not configured");
+    const sa: ServiceAccountKey = JSON.parse(gcpKeyRaw);
+    const vertexAccessToken = await getVertexAccessToken(sa);
+
+    const filesToParse = async (folder: { id: string; name: string } | null) => {
+      if (!folder) return [];
+      const children = await driveListChildren(folder.id, driveAccessToken);
+      return children.filter((f) => !GOOGLE_NATIVE_MIME.has(f.mimeType));
+    };
+
+    // ---------- Investment Statements ----------
+
+    const { data: existingVineyard } = memberIds.length
+      ? await admin.from("vineyard_accounts").select("id, contact_id, account_name, account_number").in("contact_id", memberIds)
+      : { data: [] };
+    const { data: existingStorehouses } = memberIds.length
+      ? await admin.from("storehouses").select("id, contact_id, label, asset_type").in("contact_id", memberIds)
+      : { data: [] };
+
+    const vineyardByNumber = new Map(
+      (existingVineyard ?? []).filter((a: any) => a.account_number).map((a: any) => [normalizeToken(a.account_number), a]),
+    );
+    const vineyardByName = new Map((existingVineyard ?? []).map((a: any) => [normalizeToken(a.account_name), a]));
+    const storehouseByName = new Map(
+      (existingStorehouses ?? []).flatMap((s: any) =>
+        [s.label, s.asset_type].filter(Boolean).map((v: string) => [normalizeToken(v), s] as const),
+      ),
+    );
+    const memberByName = new Map(members.map((m: any) => [normalizeToken(`${m.first_name} ${m.last_name}`), m]));
+
+    let investmentAccountsExtracted = 0;
+    let investmentAccountsMatched = 0;
+    const investmentUnmatched: string[] = [];
+    const investmentFilesParsed: string[] = [];
+    const investmentErrors: string[] = [];
+
+    for (const file of await filesToParse(investmentsFolder)) {
+      try {
+        const bytes = await driveDownloadFile(file.id, driveAccessToken);
+        const base64 = bytesToBase64(new Uint8Array(bytes));
+        const parsed = await callVertex(
+          vertexAccessToken,
+          sa.project_id,
+          INVESTMENT_SYSTEM_PROMPT,
+          `Parse this financial statement for the ${household.label} household. Extract all investment accounts.`,
+          base64,
+          file.mimeType,
+        );
+        investmentFilesParsed.push(file.name);
+
+        for (const account of parsed.accounts || []) {
+          investmentAccountsExtracted += 1;
+          const normalizedNumber = normalizeToken(account.account_number);
+          const normalizedName = normalizeToken(account.account_name);
+          const matched = (normalizedNumber && vineyardByNumber.get(normalizedNumber)) || vineyardByName.get(normalizedName) || storehouseByName.get(normalizedName);
+
+          const currentValue = account.current_value ?? 0;
+          const bookValue = account.book_value ?? 0;
+
+          if (matched) {
+            const isVineyard = "account_name" in matched;
+            await admin
+              .from(isVineyard ? "vineyard_accounts" : "storehouses")
+              .update({ book_value: bookValue, current_value: currentValue })
+              .eq("id", (matched as any).id);
+            investmentAccountsMatched += 1;
+            continue;
+          }
+
+          investmentUnmatched.push(account.account_name);
+          const owner = memberByName.get(normalizeToken(account.account_owner)) || headOfHousehold;
+          await admin.from("holding_tank").insert({
+            contact_id: owner?.id,
+            household_id: householdId,
+            account_name: account.account_name,
+            account_number: account.account_number,
+            account_type: account.account_type || "Portfolio",
+            account_owner: account.account_owner,
+            custodian: account.custodian,
+            book_value: account.book_value,
+            current_value: account.current_value,
+            notes: account.notes,
+            source_file: `vault:${file.id}:${file.name}`,
+            status: "holding",
+          });
+        }
+      } catch (e) {
+        investmentErrors.push(`${file.name}: ${e instanceof Error ? e.message : String(e)}`);
+      }
+    }
+
+    // ---------- Insurance ----------
+
+    const { data: existingPolicies } = await admin
+      .from("insurance_policies")
+      .select("id, contact_id, corporation_id, carrier, policy_number, insured_name")
+      .or(`contact_id.in.(${memberIds.length ? memberIds.join(",") : "00000000-0000-0000-0000-000000000000"})${corpIds.length ? `,corporation_id.in.(${corpIds.join(",")})` : ""}`);
+
+    const policyByNumber = new Map(
+      (existingPolicies ?? []).filter((p: any) => p.policy_number).map((p: any) => [normalizeToken(p.policy_number), p]),
+    );
+    const policyByCarrierInsured = new Map(
+      (existingPolicies ?? []).map((p: any) => [normalizeToken(`${p.carrier}${p.insured_name}`), p]),
+    );
+    const corpByName = new Map((corporations ?? []).map((c: any) => [normalizeToken(c.name), c]));
+
+    let insurancePoliciesExtracted = 0;
+    let insurancePoliciesMatched = 0;
+    let insurancePoliciesCreated = 0;
+    const insuranceFilesParsed: string[] = [];
+    const insuranceErrors: string[] = [];
+
+    for (const file of await filesToParse(insuranceFolder)) {
+      try {
+        const bytes = await driveDownloadFile(file.id, driveAccessToken);
+        const base64 = bytesToBase64(new Uint8Array(bytes));
+        const parsed = await callVertex(
+          vertexAccessToken,
+          sa.project_id,
+          INSURANCE_SYSTEM_PROMPT,
+          `Parse this insurance document for the ${household.label} household. Extract all policies shown.`,
+          base64,
+          file.mimeType,
+        );
+        insuranceFilesParsed.push(file.name);
+
+        for (const policy of parsed.policies || []) {
+          insurancePoliciesExtracted += 1;
+          const normalizedNumber = normalizeToken(policy.policy_number);
+          const normalizedCarrierInsured = normalizeToken(`${policy.carrier}${policy.insured_name}`);
+          const matched = (normalizedNumber && policyByNumber.get(normalizedNumber)) || policyByCarrierInsured.get(normalizedCarrierInsured);
+
+          const update: Record<string, unknown> = {};
+          if (typeof policy.coverage_amount === "number") update.coverage_amount = policy.coverage_amount;
+          if (typeof policy.cash_value === "number") update.cash_value = policy.cash_value;
+          if (typeof policy.premium_amount === "number") update.premium_amount = policy.premium_amount;
+          if (policy.premium_frequency) update.premium_frequency = policy.premium_frequency;
+          if (policy.issue_date) update.issue_date = policy.issue_date;
+          if (policy.renewal_date) update.renewal_date = policy.renewal_date;
+
+          if (matched) {
+            if (Object.keys(update).length > 0) {
+              await admin.from("insurance_policies").update(update).eq("id", (matched as any).id);
+            }
+            insurancePoliciesMatched += 1;
+            continue;
+          }
+
+          const matchedMember = memberByName.get(normalizeToken(policy.insured_name));
+          const matchedCorp = !matchedMember ? corpByName.get(normalizeToken(policy.insured_name)) : null;
+          await admin.from("insurance_policies").insert({
+            contact_id: matchedCorp ? null : (matchedMember?.id ?? headOfHousehold?.id ?? null),
+            corporation_id: matchedCorp ? (matchedCorp as any).id : null,
+            carrier: policy.carrier,
+            policy_number: policy.policy_number,
+            policy_type: policy.policy_type || "other",
+            insured_name: policy.insured_name,
+            coverage_amount: policy.coverage_amount ?? 0,
+            cash_value: policy.cash_value ?? 0,
+            premium_amount: policy.premium_amount ?? null,
+            premium_frequency: policy.premium_frequency ?? null,
+            issue_date: policy.issue_date ?? null,
+            renewal_date: policy.renewal_date ?? null,
+            notes: `Created from Vault scan of "${file.name}".`,
+            vault_folder_id: insuranceFolder?.id ?? null,
+          });
+          insurancePoliciesCreated += 1;
+        }
+      } catch (e) {
+        insuranceErrors.push(`${file.name}: ${e instanceof Error ? e.message : String(e)}`);
+      }
+    }
+
+    // ---------- Accountability log ----------
+
+    await admin.from("review_queue").insert({
+      action_type: "vault_statement_scan",
+      action_description: `Scanned Vault for ${household.label}: ${investmentFilesParsed.length} investment file(s), ${insuranceFilesParsed.length} insurance file(s).`,
+      contact_id: headOfHousehold?.id ?? null,
+      created_by: user.id,
+      proposed_data: {
+        investment_files: investmentFilesParsed,
+        investment_accounts_matched: investmentAccountsMatched,
+        investment_accounts_unmatched: investmentUnmatched,
+        insurance_files: insuranceFilesParsed,
+        insurance_policies_matched: insurancePoliciesMatched,
+        insurance_policies_created: insurancePoliciesCreated,
+        errors: [...investmentErrors, ...insuranceErrors],
+      },
+      logic_trace: `Vault-scan triggered by ${user.email}. Investment folder ${investmentsFolder ? "found" : "not found"}, insurance folder ${insuranceFolder ? "found" : "not found"}.`,
+      status: "approved",
+    });
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        investmentsFolderFound: Boolean(investmentsFolder),
+        insuranceFolderFound: Boolean(insuranceFolder),
+        investmentFilesParsed: investmentFilesParsed.length,
+        investmentAccountsExtracted,
+        investmentAccountsMatched,
+        investmentAccountsUnmatched: investmentUnmatched.length,
+        insuranceFilesParsed: insuranceFilesParsed.length,
+        insurancePoliciesExtracted,
+        insurancePoliciesMatched,
+        insurancePoliciesCreated,
+        errors: [...investmentErrors, ...insuranceErrors],
+      }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
+  } catch (err) {
+    console.error("vault-statement-scan error:", err);
+    const corsHeaders = getCorsHeaders(req);
+    return new Response(JSON.stringify({ error: err instanceof Error ? err.message : "Unknown error" }), {
+      status: 400,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+});
