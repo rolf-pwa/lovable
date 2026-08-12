@@ -340,7 +340,9 @@ Deno.serve(async (req) => {
           });
         }
       } catch (e) {
-        investmentErrors.push(`${file.name}: ${e instanceof Error ? e.message : String(e)}`);
+        const message = e instanceof Error ? e.message : String(e);
+        console.error(`[vault-statement-scan] investment file "${file.name}" failed:`, message);
+        investmentErrors.push(`${file.name}: ${message}`);
       }
     }
 
@@ -422,7 +424,9 @@ Deno.serve(async (req) => {
           insurancePoliciesCreated += 1;
         }
       } catch (e) {
-        insuranceErrors.push(`${file.name}: ${e instanceof Error ? e.message : String(e)}`);
+        const message = e instanceof Error ? e.message : String(e);
+        console.error(`[vault-statement-scan] insurance file "${file.name}" failed:`, message);
+        insuranceErrors.push(`${file.name}: ${message}`);
       }
     }
 
