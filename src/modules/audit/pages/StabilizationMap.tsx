@@ -34,6 +34,8 @@ type Diagnostics = {
   usa_staleness?: { onFile: boolean; isStale: boolean; ageYears: number | null };
   estate_hygiene?: { will_status: string | null; poa_status: string | null; beneficiary_coordination_status: string | null };
   aum?: number;
+  storehouse_reserves?: { liquidity: number; strategic: number; philanthropic: number; legacy: number };
+  insurance_coverage_total?: number;
 };
 
 type DiagnosticInputs = {
@@ -548,9 +550,32 @@ export default function StabilizationMap() {
 
             {isHouseholdMap ? (
               <>
-                {/* Capital & Tax Drag Diagnostic */}
+                {/* Capital & Asset Protection */}
                 <div>
-                  <div style={colLabel}>Capital &amp; Tax Drag Diagnostic</div>
+                  <div style={colLabel}>Capital &amp; Asset Protection</div>
+
+                  <div style={{ marginBottom: "3mm" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                      <span style={{ fontSize: "8.5pt", fontWeight: 600, color: "#334155" }}>Total Assets (AUM)</span>
+                      <span style={{ fontSize: "8.5pt", fontWeight: 600, color: "#334155" }}>{fmtCurrency(diag.aum)}</span>
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1mm 6mm", marginTop: "1.5mm", paddingLeft: "3mm" }}>
+                      {(
+                        [
+                          ["Liquidity Reserve", diag.storehouse_reserves?.liquidity],
+                          ["Strategic Reserve", diag.storehouse_reserves?.strategic],
+                          ["Philanthropic Trust", diag.storehouse_reserves?.philanthropic],
+                          ["Legacy Trust", diag.storehouse_reserves?.legacy],
+                        ] as const
+                      ).map(([label, value]) => (
+                        <div key={label} style={{ display: "flex", justifyContent: "space-between", fontSize: "7.5pt", color: "#64748b" }}>
+                          <span>{label}</span>
+                          <span>{fmtCurrency(value ?? 0)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "4mm" }}>
                     {typeof diag.sbd_clawback === "number" && map.track_type === "corporate" && (
                       <StatRow label="SBD Clawback" value={fmtCurrency(diag.sbd_clawback)} />
@@ -561,13 +586,7 @@ export default function StabilizationMap() {
                         value={`${Math.round(diag.active_asset_ratio.ratio * 100)}%${diag.active_asset_ratio.belowLcgeThreshold ? " (below 90% LCGE)" : " (meets 90% LCGE)"}`}
                       />
                     )}
-                    <StatRow label="Total Assets (AUM)" value={fmtCurrency(diag.aum)} />
-                    {diag.document_readiness && (
-                      <StatRow
-                        label="Document Readiness"
-                        value={`${diag.document_readiness.criticalSatisfied}/${diag.document_readiness.criticalTotal} required (${diag.document_readiness.percent}%)`}
-                      />
-                    )}
+                    <StatRow label="Asset Protection" value={fmtCurrency(diag.insurance_coverage_total ?? 0)} />
                   </div>
                 </div>
 

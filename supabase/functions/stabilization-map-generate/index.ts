@@ -270,6 +270,7 @@ function factsBlock(
   lines.push(
     `Total investable assets (AUM): $${Math.round(diagnostics.aum).toLocaleString()}`,
     `Document readiness: ${diagnostics.document_readiness.criticalSatisfied}/${diagnostics.document_readiness.criticalTotal} required documents filed (${diagnostics.document_readiness.percent}%)`,
+    `Asset protection (total insurance coverage on file): $${Math.round(diagnostics.insurance_coverage_total ?? 0).toLocaleString()}`,
   );
   if (diagnostics.document_readiness.missingCritical?.length) {
     lines.push(`Missing required documents: ${diagnostics.document_readiness.missingCritical.join(", ")}`);

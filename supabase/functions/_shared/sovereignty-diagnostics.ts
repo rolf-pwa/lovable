@@ -254,6 +254,21 @@ export async function computeVaultReadiness(
   return { percent, criticalTotal, criticalSatisfied, missingCritical: missing, missingRecommended: [] };
 }
 
+export interface StorehouseReserves {
+  liquidity: number;
+  strategic: number;
+  philanthropic: number;
+  legacy: number;
+}
+
+const REAL_ESTATE_ASSET_TYPE = "Primary Residence & Protected Legacy Accounts";
+const RESERVE_KEY_BY_STOREHOUSE_NUMBER: Record<number, keyof StorehouseReserves> = {
+  1: "liquidity",
+  2: "strategic",
+  3: "philanthropic",
+  4: "legacy",
+};
+
 export interface HouseholdFinancials {
   householdLabel: string;
   familyName: string;
@@ -269,6 +284,8 @@ export interface HouseholdFinancials {
   totalHoldingTank: number;
   onboardingEnabled: boolean;
   vaultRootFolderId: string | null;
+  storehouseReserves: StorehouseReserves;
+  totalInsuranceCoverage: number;
 }
 
 /** Mirrors the financial-data gathering in HouseholdDetail.tsx's fetchData(). */
@@ -310,6 +327,8 @@ export async function gatherHouseholdFinancials(
       totalHoldingTank: 0,
       onboardingEnabled: household?.onboarding_enabled !== false,
       vaultRootFolderId: household?.vault_root_folder_id ?? null,
+      storehouseReserves: { liquidity: 0, strategic: 0, philanthropic: 0, legacy: 0 },
+      totalInsuranceCoverage: 0,
     };
   }
 
@@ -354,12 +373,36 @@ export async function gatherHouseholdFinancials(
     .from("insurance_policies")
     .select("*")
     .or(`contact_id.in.(${memberIds.join(",")})${corpIds.length ? `,corporation_id.in.(${corpIds.join(",")})` : ""}`);
+  const insurancePolicies = ins ?? [];
 
   const totalHoldingTank = holdingTank.reduce((sum: number, h: any) => sum + (Number(h.current_value) || 0), 0);
 
+  // Mirrors HouseholdDetail.tsx's totalStorehouses exactly: excludes real-estate
+  // placeholder rows and folds in insurance cash values booked against a storehouse,
+  // grouped by the household's 4 canonical reserves (storehouse_number 1-4).
+  const insuranceCashForStorehouse = (storehouseId: string) =>
+    insurancePolicies.reduce(
+      (sum: number, p: any) => sum + (p.cash_value_storehouse_id === storehouseId ? Number(p.cash_value) || 0 : 0),
+      0,
+    );
+  const storehouseReserves: StorehouseReserves = { liquidity: 0, strategic: 0, philanthropic: 0, legacy: 0 };
+  for (const s of storehouses) {
+    if (s.asset_type === REAL_ESTATE_ASSET_TYPE) continue;
+    const key = RESERVE_KEY_BY_STOREHOUSE_NUMBER[s.storehouse_number];
+    if (!key) continue;
+    storehouseReserves[key] += (Number(s.current_value) || 0) + insuranceCashForStorehouse(s.id);
+  }
+  const totalStorehouses =
+    storehouseReserves.liquidity + storehouseReserves.strategic + storehouseReserves.philanthropic + storehouseReserves.legacy;
+
+  const totalInsuranceCoverage = insurancePolicies.reduce(
+    (sum: number, p: any) => sum + (Number(p.coverage_amount) || 0),
+    0,
+  );
+
   const totalAum =
     vineyardAccounts.reduce((sum: number, a: any) => sum + (Number(a.current_value) || 0), 0) +
-    storehouses.reduce((sum: number, s: any) => sum + (Number(s.current_value) || 0), 0) +
+    totalStorehouses +
     totalCorpAssets +
     totalHoldingTank;
 
@@ -372,12 +415,14 @@ export async function gatherHouseholdFinancials(
     storehouses,
     corporations,
     shareholders: shareholderRows,
-    insurancePolicies: ins ?? [],
+    insurancePolicies,
     totalCorpAssets,
     holdingTank,
     totalHoldingTank,
     onboardingEnabled: household?.onboarding_enabled !== false,
     vaultRootFolderId: household?.vault_root_folder_id ?? null,
+    storehouseReserves,
+    totalInsuranceCoverage,
   };
 }
 
@@ -396,6 +441,8 @@ export interface SovereigntyDiagnostics {
   aum: number;
   household_label: string;
   family_name: string;
+  storehouse_reserves: StorehouseReserves;
+  insurance_coverage_total: number;
 }
 
 /** Orchestrator: gathers real data, infers track type, computes the applicable formulas. */
@@ -417,6 +464,8 @@ export async function computeSovereigntyDiagnostics(
     aum: financials.totalAum,
     household_label: financials.householdLabel,
     family_name: financials.familyName,
+    storehouse_reserves: financials.storehouseReserves,
+    insurance_coverage_total: financials.totalInsuranceCoverage,
   };
 
   // Fee drag is paused (not just hidden) until CRM3's fee-disclosure data feeds
