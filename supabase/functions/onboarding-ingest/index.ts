@@ -20,7 +20,7 @@ function getCorsHeaders(req: Request) {
 // ---------- Vertex AI Auth ----------
 
 const REGION = "northamerica-northeast1";
-const MODEL = "gemini-2.5-flash-preview-05-20";
+const MODEL = "gemini-2.5-flash";
 
 interface ServiceAccountKey {
   type: string;
