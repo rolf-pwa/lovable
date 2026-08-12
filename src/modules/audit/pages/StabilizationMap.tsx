@@ -444,12 +444,23 @@ export default function StabilizationMap() {
           }}
         >
           {/* Sidebar */}
-          <aside style={{ width: "72mm", backgroundColor: "#1e293b", color: "#fff", padding: "10mm 7mm", display: "flex", flexDirection: "column", gap: "6mm", flexShrink: 0 }}>
+          <aside
+            style={{
+              width: isHouseholdMap ? "60mm" : "72mm",
+              backgroundColor: "#1e293b",
+              color: "#fff",
+              padding: isHouseholdMap ? "10mm 6mm" : "10mm 7mm",
+              display: "flex",
+              flexDirection: "column",
+              gap: "6mm",
+              flexShrink: 0,
+            }}
+          >
             <div>
               <img
                 src={pwLogoWhite}
                 alt="ProsperWise"
-                style={{ width: "48mm", height: "auto", display: "block", marginBottom: "3mm" }}
+                style={{ width: isHouseholdMap ? "42mm" : "48mm", height: "auto", display: "block", marginBottom: "3mm" }}
               />
               <div style={{ fontSize: "9pt", fontWeight: 300, color: "rgba(255,255,255,.5)", letterSpacing: ".08em", textTransform: "uppercase" }}>
                 Sovereignty Operating System™
@@ -463,16 +474,16 @@ export default function StabilizationMap() {
             <div>
               <div style={{ fontSize: "6.5pt", letterSpacing: ".12em", textTransform: "uppercase", color: "rgba(255,255,255,.4)", marginBottom: "2mm" }}>Our Process</div>
               <div style={{ marginBottom: "3mm" }}>
-                <strong style={{ fontSize: "8.5pt", fontWeight: 600 }}>1 · Stabilize</strong>
-                <p style={{ fontSize: "7.5pt", color: "rgba(255,255,255,.5)", marginTop: "1pt" }}>Find your footing. Quiet the noise.</p>
+                <strong style={{ fontSize: "8.5pt", fontWeight: 600 }}>1 · Stabilization</strong>
+                <p style={{ fontSize: "7.5pt", color: "rgba(255,255,255,.5)", marginTop: "1pt" }}>Secure your funds, lower the noise, buy time to think clearly.</p>
               </div>
               <div style={{ marginBottom: "3mm" }}>
                 <strong style={{ fontSize: "8.5pt", fontWeight: 600 }}>2 · Charter</strong>
-                <p style={{ fontSize: "7.5pt", color: "rgba(255,255,255,.5)", marginTop: "1pt" }}>Author your governing document.</p>
+                <p style={{ fontSize: "7.5pt", color: "rgba(255,255,255,.5)", marginTop: "1pt" }}>Define your governing constitution and liquidity rules.</p>
               </div>
               <div style={{ marginBottom: "3mm" }}>
-                <strong style={{ fontSize: "8.5pt", fontWeight: 600 }}>3 · Govern</strong>
-                <p style={{ fontSize: "7.5pt", color: "rgba(255,255,255,.5)", marginTop: "1pt" }}>Operate with clarity. Compound quietly.</p>
+                <strong style={{ fontSize: "8.5pt", fontWeight: 600 }}>3 · Integration</strong>
+                <p style={{ fontSize: "7.5pt", color: "rgba(255,255,255,.5)", marginTop: "1pt" }}>Deploy capital, coordinate your team, silence the noise.</p>
               </div>
             </div>
             <hr style={{ border: "none", borderTop: "1px solid rgba(255,255,255,.18)" }} />
