@@ -327,16 +327,16 @@ export default function QuarterlySystemReview() {
   }, { boy: 0, harvest: 0, current: 0 });
 
   return (
-    <div className="min-h-screen bg-[#F8F6F2]">
-      <div className="print:hidden sticky top-0 z-20 border-b border-[#D3C5B7] bg-[#F8F6F2]/95 backdrop-blur">
+    <div className="min-h-screen bg-[#fafafa]">
+      <div className="print:hidden sticky top-0 z-20 border-b border-[#e2e8f0] bg-[#fafafa]/95 backdrop-blur">
         <div className="mx-auto flex max-w-[1100px] items-center justify-between px-6 py-3">
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
               <ArrowLeft className="mr-1 h-4 w-4" /> Back
             </Button>
-            <div className="text-sm text-[#3B3F3F]">
+            <div className="text-sm text-[#334155]">
               <span className="font-semibold">Quarterly System Review</span>
-              <span className="ml-2 text-xs uppercase tracking-wider text-[#A98C5A]">
+              <span className="ml-2 text-xs uppercase tracking-wider text-[#a37c58]">
                 {review.generation_status.replace(/_/g, " ")}
               </span>
             </div>
@@ -393,8 +393,8 @@ export default function QuarterlySystemReview() {
       )}
 
       <div className="mx-auto max-w-[297mm] px-6 py-6 print:p-0 print:max-w-none">
-        <div className="stab-doc bg-white shadow-lg print:shadow-none" style={{ width: "297mm", minHeight: "210mm", display: "flex", fontFamily: "'DM Sans', sans-serif", color: "#3B3F3F" }}>
-          <aside style={{ width: "72mm", backgroundColor: "#2A4034", color: "#fff", padding: "10mm 7mm", display: "flex", flexDirection: "column", gap: "6mm", flexShrink: 0 }}>
+        <div className="stab-doc bg-white shadow-lg print:shadow-none" style={{ width: "297mm", minHeight: "210mm", display: "flex", fontFamily: "'DM Sans', sans-serif", color: "#334155" }}>
+          <aside style={{ width: "72mm", backgroundColor: "#1e293b", color: "#fff", padding: "10mm 7mm", display: "flex", flexDirection: "column", gap: "6mm", flexShrink: 0 }}>
             <div>
               <img src={pwLogoWhite} alt="ProsperWise" style={{ width: "48mm", height: "auto", display: "block", marginBottom: "3mm" }} />
               <div style={{ fontSize: "9pt", fontWeight: 300, color: "rgba(255,255,255,.5)", letterSpacing: ".08em", textTransform: "uppercase" }}>
@@ -436,52 +436,52 @@ export default function QuarterlySystemReview() {
 
           <main style={{ flex: 1, padding: "10mm 10mm 0 10mm", display: "flex", flexDirection: "column", gap: "5mm" }}>
             <div>
-              <div style={{ fontSize: "7.5pt", letterSpacing: ".1em", textTransform: "uppercase", color: "#7a8a8a", marginBottom: "1.5mm" }}>
+              <div style={{ fontSize: "7.5pt", letterSpacing: ".1em", textTransform: "uppercase", color: "#94a3b8", marginBottom: "1.5mm" }}>
                 Quarterly System Review &nbsp;·&nbsp; Prepared for <strong>{fullName}</strong>
                 {reviewDateLabel && <> &nbsp;·&nbsp; {reviewDateLabel}</>}
               </div>
-              <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "26pt", fontWeight: 300, color: "#3B3F3F", lineHeight: 1.1, letterSpacing: "-0.005em" }}>
+              <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "26pt", fontWeight: 300, color: "#334155", lineHeight: 1.1, letterSpacing: "-0.005em" }}>
                 Charter · Vineyard · Storehouse Alignment
               </div>
-              <hr style={{ width: "18mm", height: "3px", background: "#A98C5A", border: "none", marginTop: "2.5mm" }} />
+              <hr style={{ width: "18mm", height: "3px", background: "#a37c58", border: "none", marginTop: "2.5mm" }} />
             </div>
 
-            <div style={{ background: "#F8F6F2", borderLeft: "3px solid #A98C5A", padding: "3mm 5mm", display: "flex", flexDirection: "column", gap: "1.5mm", minHeight: "18mm" }}>
+            <div style={{ background: "#fafafa", borderLeft: "3px solid #a37c58", padding: "3mm 5mm", display: "flex", flexDirection: "column", gap: "1.5mm", minHeight: "18mm" }}>
               {!!review.purpose_statement && (
-                <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "11pt", fontWeight: 400, fontStyle: "italic", color: "#3B3F3F", lineHeight: 1.5 }}>
+                <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "11pt", fontWeight: 400, fontStyle: "italic", color: "#334155", lineHeight: 1.5 }}>
                   {review.purpose_statement}
                 </div>
               )}
               {!review.purpose_statement && !!review.review_summary && (
-                <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "7.5pt", fontWeight: 400, fontStyle: "italic", color: "#3B3F3F", lineHeight: 1.55 }}>
+                <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "7.5pt", fontWeight: 400, fontStyle: "italic", color: "#334155", lineHeight: 1.55 }}>
                   {review.review_summary}
                 </div>
               )}
               {!review.purpose_statement && !!review.alignment_overview && (
-                <div style={{ fontSize: "7.5pt", color: "#3B3F3F" }}>{review.alignment_overview}</div>
+                <div style={{ fontSize: "7.5pt", color: "#334155" }}>{review.alignment_overview}</div>
               )}
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "3mm" }}>
-              <div style={{ background: "#FFFFFF", border: "1px solid #D3C5B7", padding: "3mm 4mm" }}>
-                <div style={{ fontSize: "6.5pt", letterSpacing: ".1em", textTransform: "uppercase", color: "#A98C5A", marginBottom: "1.5mm", fontWeight: 600 }}>
+              <div style={{ background: "#FFFFFF", border: "1px solid #e2e8f0", padding: "3mm 4mm" }}>
+                <div style={{ fontSize: "6.5pt", letterSpacing: ".1em", textTransform: "uppercase", color: "#a37c58", marginBottom: "1.5mm", fontWeight: 600 }}>
                   Primary Goal
                 </div>
-                <p style={{ fontSize: "8pt", color: "#3B3F3F", lineHeight: 1.5 }}>
+                <p style={{ fontSize: "8pt", color: "#334155", lineHeight: 1.5 }}>
                   {review.primary_goal || ""}
                 </p>
               </div>
-              <div style={{ background: "#FFFFFF", border: "1px solid #D3C5B7", padding: "3mm 4mm" }}>
-                <div style={{ fontSize: "6.5pt", letterSpacing: ".1em", textTransform: "uppercase", color: "#A98C5A", marginBottom: "1.5mm", fontWeight: 600 }}>
+              <div style={{ background: "#FFFFFF", border: "1px solid #e2e8f0", padding: "3mm 4mm" }}>
+                <div style={{ fontSize: "6.5pt", letterSpacing: ".1em", textTransform: "uppercase", color: "#a37c58", marginBottom: "1.5mm", fontWeight: 600 }}>
                   Long-Term Vision
                 </div>
-                <p style={{ fontSize: "8pt", color: "#3B3F3F", lineHeight: 1.5 }}>
+                <p style={{ fontSize: "8pt", color: "#334155", lineHeight: 1.5 }}>
                   {review.long_term_vision || ""}
                 </p>
               </div>
             </div>
 
-            <hr style={{ border: "none", borderTop: "1px solid #D3C5B7", margin: "0" }} />
+            <hr style={{ border: "none", borderTop: "1px solid #e2e8f0", margin: "0" }} />
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "3mm" }}>
               <StatusCard label="Sovereignty Charter" status={review.charter_status} detail={review.charter_detail} />
@@ -511,14 +511,14 @@ export default function QuarterlySystemReview() {
               </div>
             </div>
 
-            <div style={{ background: "#A98C5A", color: "#fff", margin: "auto -10mm 0 -10mm", padding: "3mm 10mm", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ background: "#a37c58", color: "#fff", margin: "auto -10mm 0 -10mm", padding: "3mm 10mm", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div style={{ fontSize: "8.5pt", fontWeight: 500, maxWidth: "60%" }}>{review.footer_note || ""}</div>
             </div>
           </main>
         </div>
 
-        <div className="stab-doc print-page-break bg-white shadow-lg print:shadow-none" style={{ width: "297mm", minHeight: "210mm", display: "flex", fontFamily: "'DM Sans', sans-serif", color: "#3B3F3F", marginTop: "6mm" }}>
-          <aside style={{ width: "72mm", backgroundColor: "#2A4034", color: "#fff", padding: "10mm 7mm", display: "flex", flexDirection: "column", gap: "6mm", flexShrink: 0 }}>
+        <div className="stab-doc print-page-break bg-white shadow-lg print:shadow-none" style={{ width: "297mm", minHeight: "210mm", display: "flex", fontFamily: "'DM Sans', sans-serif", color: "#334155", marginTop: "6mm" }}>
+          <aside style={{ width: "72mm", backgroundColor: "#1e293b", color: "#fff", padding: "10mm 7mm", display: "flex", flexDirection: "column", gap: "6mm", flexShrink: 0 }}>
             <div>
               <img src={pwLogoWhite} alt="ProsperWise" style={{ width: "48mm", height: "auto", display: "block", marginBottom: "3mm" }} />
               <div style={{ fontSize: "9pt", fontWeight: 300, color: "rgba(255,255,255,.5)", letterSpacing: ".08em", textTransform: "uppercase" }}>
@@ -549,17 +549,17 @@ export default function QuarterlySystemReview() {
 
           <main style={{ flex: 1, padding: "10mm", display: "flex", flexDirection: "column", gap: "5mm" }}>
             <div>
-              <div style={{ fontSize: "7.5pt", letterSpacing: ".1em", textTransform: "uppercase", color: "#7a8a8a", marginBottom: "1.5mm" }}>
+              <div style={{ fontSize: "7.5pt", letterSpacing: ".1em", textTransform: "uppercase", color: "#94a3b8", marginBottom: "1.5mm" }}>
                 Quarterly System Review &nbsp;·&nbsp; Vineyard Harvest - Storehouse Detail for <strong>{fullName}</strong>
                 {reviewDateLabel && <> &nbsp;·&nbsp; {reviewDateLabel}</>}
               </div>
-              <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "24pt", fontWeight: 300, color: "#3B3F3F", lineHeight: 1.1 }}>
+              <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "24pt", fontWeight: 300, color: "#334155", lineHeight: 1.1 }}>
                 Vineyard Harvest - Storehouse Detail
               </div>
-              <hr style={{ width: "18mm", height: "3px", background: "#A98C5A", border: "none", marginTop: "2.5mm" }} />
+              <hr style={{ width: "18mm", height: "3px", background: "#a37c58", border: "none", marginTop: "2.5mm" }} />
             </div>
 
-            <div style={{ background: "#F8F6F2", borderLeft: "3px solid #A98C5A", padding: "3mm 5mm", fontFamily: "'DM Sans', sans-serif", fontSize: "7.5pt", fontWeight: 400, fontStyle: "italic", color: "#3B3F3F", lineHeight: 1.65 }}>
+            <div style={{ background: "#fafafa", borderLeft: "3px solid #a37c58", padding: "3mm 5mm", fontFamily: "'DM Sans', sans-serif", fontSize: "7.5pt", fontWeight: 400, fontStyle: "italic", color: "#334155", lineHeight: 1.65 }}>
               This page summarizes the latest harvest snapshot for each Vineyard and Storehouse account included in the quarterly review.
             </div>
 
@@ -569,8 +569,8 @@ export default function QuarterlySystemReview() {
         </div>
 
         {review.logic_trace && !editing && (
-          <div className="mt-6 rounded-lg border border-[#D3C5B7] bg-white p-4 text-xs text-[#6B7070] print:hidden">
-            <div className="mb-1 font-semibold uppercase tracking-wider text-[#A98C5A]">Review Logic Trace (staff only)</div>
+          <div className="mt-6 rounded-lg border border-[#e2e8f0] bg-white p-4 text-xs text-[#64748b] print:hidden">
+            <div className="mb-1 font-semibold uppercase tracking-wider text-[#a37c58]">Review Logic Trace (staff only)</div>
             <p className="whitespace-pre-wrap">{review.logic_trace}</p>
           </div>
         )}
@@ -589,27 +589,27 @@ export default function QuarterlySystemReview() {
   );
 }
 
-const colLabel: React.CSSProperties = { fontSize: "6.5pt", letterSpacing: ".1em", textTransform: "uppercase", color: "#7a8a8a", marginBottom: "2mm", paddingBottom: "1.5mm", borderBottom: "1px solid #dde0dc" };
+const colLabel: React.CSSProperties = { fontSize: "6.5pt", letterSpacing: ".1em", textTransform: "uppercase", color: "#94a3b8", marginBottom: "2mm", paddingBottom: "1.5mm", borderBottom: "1px solid #e2e8f0" };
 const colItem: React.CSSProperties = { display: "flex", alignItems: "flex-start", gap: "3mm", marginBottom: "2.5mm" };
-const colText: React.CSSProperties = { fontSize: "8.5pt", color: "#3B3F3F", lineHeight: 1.4 };
-const dot: React.CSSProperties = { width: "6px", height: "6px", borderRadius: "50%", background: "#A98C5A", flexShrink: 0, marginTop: "2pt" };
-const sq: React.CSSProperties = { width: "6px", height: "6px", background: "#A98C5A", flexShrink: 0, marginTop: "2pt" };
-const tableHeadCellWide: React.CSSProperties = { padding: "2.5mm 2mm", width: "30%", borderBottom: "1px solid #D3C5B7", fontWeight: 600 };
-const tableHeadCell: React.CSSProperties = { padding: "2.5mm 2mm", borderBottom: "1px solid #D3C5B7", fontWeight: 600 };
-const tableBodyCellWide: React.CSSProperties = { padding: "2.5mm 2mm", width: "30%", verticalAlign: "top", color: "#3B3F3F" };
-const tableBodyCell: React.CSSProperties = { padding: "2.5mm 2mm", verticalAlign: "top", color: "#3B3F3F" };
+const colText: React.CSSProperties = { fontSize: "8.5pt", color: "#334155", lineHeight: 1.4 };
+const dot: React.CSSProperties = { width: "6px", height: "6px", borderRadius: "50%", background: "#a37c58", flexShrink: 0, marginTop: "2pt" };
+const sq: React.CSSProperties = { width: "6px", height: "6px", background: "#a37c58", flexShrink: 0, marginTop: "2pt" };
+const tableHeadCellWide: React.CSSProperties = { padding: "2.5mm 2mm", width: "30%", borderBottom: "1px solid #e2e8f0", fontWeight: 600 };
+const tableHeadCell: React.CSSProperties = { padding: "2.5mm 2mm", borderBottom: "1px solid #e2e8f0", fontWeight: 600 };
+const tableBodyCellWide: React.CSSProperties = { padding: "2.5mm 2mm", width: "30%", verticalAlign: "top", color: "#334155" };
+const tableBodyCell: React.CSSProperties = { padding: "2.5mm 2mm", verticalAlign: "top", color: "#334155" };
 
 function StatusCard({ label, status, detail }: { label: string; status: string; detail: string }) {
   const kind = STATUS_KIND[status] || "amber";
   return (
-    <div style={{ background: "#FFFFFF", border: "1px solid #D3C5B7", padding: "3mm 4mm" }}>
-      <strong style={{ display: "block", fontSize: "8.5pt", fontWeight: 600, color: "#3B3F3F", marginBottom: "1mm" }}>
+    <div style={{ background: "#FFFFFF", border: "1px solid #e2e8f0", padding: "3mm 4mm" }}>
+      <strong style={{ display: "block", fontSize: "8.5pt", fontWeight: 600, color: "#334155", marginBottom: "1mm" }}>
         {label}&nbsp;
         <span style={{ color: STATUS_COLOR[kind], fontSize: "7pt", letterSpacing: ".08em", textTransform: "uppercase" }}>
           {status}
         </span>
       </strong>
-      <p style={{ fontSize: "7.5pt", color: "#3B3F3F", lineHeight: 1.5 }}>{detail || ""}</p>
+      <p style={{ fontSize: "7.5pt", color: "#334155", lineHeight: 1.5 }}>{detail || ""}</p>
     </div>
   );
 }
@@ -632,11 +632,11 @@ function HarvestTable({
     <div style={{ display: "flex", flexDirection: "column", gap: "2mm" }}>
       <div style={colLabel}>{title}</div>
       {rows.length === 0 ? (
-        <div style={{ background: "#F8F6F2", padding: "4mm", fontSize: "8pt", color: "#6B7070" }}>{emptyLabel}</div>
+        <div style={{ background: "#fafafa", padding: "4mm", fontSize: "8pt", color: "#64748b" }}>{emptyLabel}</div>
       ) : (
         <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed", fontSize: "7.5pt" }}>
           <thead>
-            <tr style={{ background: "#F8F6F2", textAlign: "left", color: "#6B7070" }}>
+            <tr style={{ background: "#fafafa", textAlign: "left", color: "#64748b" }}>
               <th style={tableHeadCellWide}>Account</th>
               <th style={tableHeadCell}>Type</th>
               <th style={tableHeadCell}>Snapshot</th>
@@ -647,7 +647,7 @@ function HarvestTable({
           </thead>
           <tbody>
             {rows.map((row) => (
-              <tr key={row.id} style={{ borderBottom: "1px solid #E5DDD3" }}>
+              <tr key={row.id} style={{ borderBottom: "1px solid #e2e8f0" }}>
                 <td style={tableBodyCellWide}>{row.label}</td>
                 <td style={tableBodyCell}>{row.kindLabel}</td>
                 <td style={tableBodyCell}>{row.snapshot?.snapshot_date || "—"}</td>
@@ -686,7 +686,7 @@ function EditorForm({ review, onChange }: { review: QuarterlyReview; onChange: (
   );
 
   return (
-    <div className="space-y-4 rounded-lg border border-[#D3C5B7] bg-white p-5">
+    <div className="space-y-4 rounded-lg border border-[#e2e8f0] bg-white p-5">
       <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
         {F("client_first_name", "First Name")}
         {F("client_last_name", "Last Name")}
@@ -704,11 +704,11 @@ function EditorForm({ review, onChange }: { review: QuarterlyReview; onChange: (
       </div>
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
         <div className="space-y-2">
-          <div className="text-xs font-semibold uppercase tracking-wider text-[#A98C5A]">Alignment Gaps</div>
+          <div className="text-xs font-semibold uppercase tracking-wider text-[#a37c58]">Alignment Gaps</div>
           {[1, 2, 3, 4, 5].map((n) => F(`gap_${n}` as keyof QuarterlyReview, `Gap ${n}`))}
         </div>
         <div className="space-y-2">
-          <div className="text-xs font-semibold uppercase tracking-wider text-[#A98C5A]">Next 90 Days</div>
+          <div className="text-xs font-semibold uppercase tracking-wider text-[#a37c58]">Next 90 Days</div>
           {[1, 2, 3, 4, 5].map((n) => F(`priority_${n}` as keyof QuarterlyReview, `Priority ${n}`))}
         </div>
       </div>
