@@ -360,17 +360,17 @@ export default function StabilizationMap() {
     : [];
 
   return (
-    <div className="min-h-screen bg-[#F8F6F2]">
+    <div className="min-h-screen bg-[#fafafa]">
       {/* Toolbar — hidden in print */}
-      <div className="print:hidden sticky top-0 z-20 border-b border-[#D3C5B7] bg-[#F8F6F2]/95 backdrop-blur">
+      <div className="print:hidden sticky top-0 z-20 border-b border-[#e2e8f0] bg-[#fafafa]/95 backdrop-blur">
         <div className="mx-auto flex max-w-[1100px] items-center justify-between px-6 py-3">
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
               <ArrowLeft className="mr-1 h-4 w-4" /> Back
             </Button>
-            <div className="text-sm text-[#3B3F3F]">
+            <div className="text-sm text-[#334155]">
               <span className="font-semibold">Stabilization Map</span>
-              <span className="ml-2 text-xs uppercase tracking-wider text-[#A98C5A]">
+              <span className="ml-2 text-xs uppercase tracking-wider text-[#a37c58]">
                 {map.generation_status.replace(/_/g, " ")}
               </span>
             </div>
@@ -431,9 +431,9 @@ export default function StabilizationMap() {
 
       {/* Document — A4 landscape preview */}
       <div className="mx-auto max-w-[297mm] px-6 py-6 print:p-0 print:max-w-none">
-        <div className="stab-doc bg-white shadow-lg print:shadow-none" style={{ width: "297mm", minHeight: "210mm", display: "flex", fontFamily: "'DM Sans', sans-serif", color: "#3B3F3F" }}>
+        <div className="stab-doc bg-white shadow-lg print:shadow-none" style={{ width: "297mm", minHeight: "210mm", display: "flex", fontFamily: "'DM Sans', sans-serif", color: "#334155" }}>
           {/* Sidebar */}
-          <aside style={{ width: "72mm", backgroundColor: "#2A4034", color: "#fff", padding: "10mm 7mm", display: "flex", flexDirection: "column", gap: "6mm", flexShrink: 0 }}>
+          <aside style={{ width: "72mm", backgroundColor: "#1e293b", color: "#fff", padding: "10mm 7mm", display: "flex", flexDirection: "column", gap: "6mm", flexShrink: 0 }}>
             <div>
               <img
                 src={pwLogoWhite}
@@ -480,11 +480,11 @@ export default function StabilizationMap() {
           {/* Main */}
           <main style={{ flex: 1, padding: "10mm 10mm 0 10mm", display: "flex", flexDirection: "column", gap: "5mm" }}>
             <div>
-              <div style={{ fontSize: "7.5pt", letterSpacing: ".1em", textTransform: "uppercase", color: "#7a8a8a", marginBottom: "1.5mm" }}>
+              <div style={{ fontSize: "7.5pt", letterSpacing: ".1em", textTransform: "uppercase", color: "#94a3b8", marginBottom: "1.5mm" }}>
                 Stabilization Map &nbsp;·&nbsp; Prepared for <strong>{fullName}</strong>
                 {sessionDateLabel && <> &nbsp;·&nbsp; {sessionDateLabel}</>}
               </div>
-              <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: isHouseholdMap ? "22pt" : "26pt", fontWeight: 300, color: "#3B3F3F", lineHeight: 1.1, letterSpacing: "-0.005em" }}>
+              <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: isHouseholdMap ? "22pt" : "26pt", fontWeight: 300, color: "#334155", lineHeight: 1.1, letterSpacing: "-0.005em" }}>
                 {isHouseholdMap ? (
                   <>
                     {map.track_type === "corporate" ? "Corporate" : "Personal"} Track &nbsp;·&nbsp; {map.event_type || "Sovereignty Survey"}<br />
@@ -497,15 +497,15 @@ export default function StabilizationMap() {
                   </>
                 )}
               </div>
-              <hr style={{ width: "18mm", height: "3px", background: "#A98C5A", border: "none", marginTop: "2.5mm" }} />
+              <hr style={{ width: "18mm", height: "3px", background: "#a37c58", border: "none", marginTop: "2.5mm" }} />
             </div>
 
             {/* Insight */}
-            <div style={{ background: "#F8F6F2", borderLeft: "3px solid #A98C5A", padding: "3mm 5mm", display: "flex", flexDirection: "column", gap: "1mm" }}>
-              <div style={{ fontFamily: "'DM Sans', sans-serif", fontStyle: "italic", fontSize: "7.5pt", fontWeight: 400, color: "#3B3F3F", lineHeight: 1.55 }}>
+            <div style={{ background: "#fafafa", borderLeft: "3px solid #a37c58", padding: "3mm 5mm", display: "flex", flexDirection: "column", gap: "1mm" }}>
+              <div style={{ fontFamily: "'DM Sans', sans-serif", fontStyle: "italic", fontSize: "7.5pt", fontWeight: 400, color: "#334155", lineHeight: 1.55 }}>
                 {map.situation_summary || "—"}
               </div>
-              <div style={{ fontSize: "7.5pt", color: "#3B3F3F" }}>{map.urgency_flag || "—"}</div>
+              <div style={{ fontSize: "7.5pt", color: "#334155" }}>{map.urgency_flag || "—"}</div>
             </div>
 
             {isHouseholdMap ? (
@@ -552,16 +552,16 @@ export default function StabilizationMap() {
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "4mm" }}>
                     {ACTION_PHASES.map((phase) => (
                       <div key={phase.key}>
-                        <div style={{ fontSize: "7pt", fontWeight: 600, color: "#3B3F3F", marginBottom: "1mm" }}>
-                          {phase.label} <span style={{ color: "#7a8a8a", fontWeight: 400 }}>· {phase.window}</span>
+                        <div style={{ fontSize: "7pt", fontWeight: 600, color: "#334155", marginBottom: "1mm" }}>
+                          {phase.label} <span style={{ color: "#94a3b8", fontWeight: 400 }}>· {phase.window}</span>
                         </div>
                         {(map.action_plan?.[phase.key] ?? []).length === 0 ? (
-                          <p style={{ ...colText, color: "#7a8a8a" }}>—</p>
+                          <p style={{ ...colText, color: "#94a3b8" }}>—</p>
                         ) : (
                           map.action_plan[phase.key].map((item, i) => (
                             <div key={i} style={{ marginBottom: "1.5mm" }}>
                               <p style={{ ...colText, fontWeight: 600 }}>{item.title || "—"}</p>
-                              {item.detail && <p style={{ ...colText, color: "#6B7070" }}>{item.detail}</p>}
+                              {item.detail && <p style={{ ...colText, color: "#64748b" }}>{item.detail}</p>}
                             </div>
                           ))
                         )}
@@ -605,15 +605,15 @@ export default function StabilizationMap() {
             )}
 
             {/* Footer */}
-            <div style={{ background: "#A98C5A", color: "#fff", margin: "auto -10mm 0 -10mm", padding: "3mm 10mm", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ background: "#a37c58", color: "#fff", margin: "auto -10mm 0 -10mm", padding: "3mm 10mm", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div style={{ fontSize: "8.5pt", fontWeight: 500, maxWidth: "60%" }}>{map.footer_note}</div>
             </div>
           </main>
         </div>
 
         {map.logic_trace && !editing && (
-          <div className="mt-6 rounded-lg border border-[#D3C5B7] bg-white p-4 text-xs text-[#6B7070] print:hidden">
-            <div className="mb-1 font-semibold uppercase tracking-wider text-[#A98C5A]">AI Logic Trace (staff only)</div>
+          <div className="mt-6 rounded-lg border border-[#e2e8f0] bg-white p-4 text-xs text-[#64748b] print:hidden">
+            <div className="mb-1 font-semibold uppercase tracking-wider text-[#a37c58]">AI Logic Trace (staff only)</div>
             <p className="whitespace-pre-wrap">{map.logic_trace}</p>
           </div>
         )}
@@ -632,23 +632,23 @@ export default function StabilizationMap() {
   );
 }
 
-const colLabel: React.CSSProperties = { fontSize: "6.5pt", letterSpacing: ".1em", textTransform: "uppercase", color: "#7a8a8a", marginBottom: "2mm", paddingBottom: "1.5mm", borderBottom: "1px solid #dde0dc" };
+const colLabel: React.CSSProperties = { fontSize: "6.5pt", letterSpacing: ".1em", textTransform: "uppercase", color: "#94a3b8", marginBottom: "2mm", paddingBottom: "1.5mm", borderBottom: "1px solid #e2e8f0" };
 const colItem: React.CSSProperties = { display: "flex", alignItems: "flex-start", gap: "3mm", marginBottom: "2.5mm" };
-const colText: React.CSSProperties = { fontSize: "8.5pt", color: "#3B3F3F", lineHeight: 1.4 };
-const dot: React.CSSProperties = { width: "6px", height: "6px", borderRadius: "50%", background: "#A98C5A", flexShrink: 0, marginTop: "2pt" };
-const sq: React.CSSProperties = { width: "6px", height: "6px", background: "#A98C5A", flexShrink: 0, marginTop: "2pt" };
+const colText: React.CSSProperties = { fontSize: "8.5pt", color: "#334155", lineHeight: 1.4 };
+const dot: React.CSSProperties = { width: "6px", height: "6px", borderRadius: "50%", background: "#a37c58", flexShrink: 0, marginTop: "2pt" };
+const sq: React.CSSProperties = { width: "6px", height: "6px", background: "#a37c58", flexShrink: 0, marginTop: "2pt" };
 
 function StatusCard({ label, status, detail }: { label: string; status: string; detail: string }) {
   const kind = STATUS_KIND[status] || "amber";
   return (
-    <div style={{ background: "#F8F6F2", borderLeft: "3px solid #A98C5A", padding: "3mm 4mm" }}>
-      <strong style={{ display: "block", fontSize: "8.5pt", fontWeight: 600, color: "#3B3F3F", marginBottom: "1mm" }}>
+    <div style={{ background: "#fafafa", borderLeft: "3px solid #a37c58", padding: "3mm 4mm" }}>
+      <strong style={{ display: "block", fontSize: "8.5pt", fontWeight: 600, color: "#334155", marginBottom: "1mm" }}>
         {label}&nbsp;
         <span style={{ color: STATUS_COLOR[kind], fontSize: "7pt", letterSpacing: ".08em", textTransform: "uppercase" }}>
           {status}
         </span>
       </strong>
-      <p style={{ fontSize: "7.5pt", color: "#3B3F3F", lineHeight: 1.5 }}>{detail || "—"}</p>
+      <p style={{ fontSize: "7.5pt", color: "#334155", lineHeight: 1.5 }}>{detail || "—"}</p>
     </div>
   );
 }
@@ -735,7 +735,7 @@ function EditorForm({
   );
 
   return (
-    <div className="space-y-4 rounded-lg border border-[#D3C5B7] bg-white p-5">
+    <div className="space-y-4 rounded-lg border border-[#e2e8f0] bg-white p-5">
       <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
         {F("client_first_name", "First Name")}
         {F("client_last_name", "Last Name")}
@@ -761,8 +761,8 @@ function EditorForm({
           {F("situation_summary", "Situation Summary", true)}
           {F("urgency_flag", "Urgency Flag", true)}
 
-          <div className="space-y-2 rounded-md border border-[#D3C5B7] p-3">
-            <div className="text-xs font-semibold uppercase tracking-wider text-[#A98C5A]">Diagnostic Inputs</div>
+          <div className="space-y-2 rounded-md border border-[#e2e8f0] p-3">
+            <div className="text-xs font-semibold uppercase tracking-wider text-[#a37c58]">Diagnostic Inputs</div>
             <p className="text-[11px] text-muted-foreground">
               These come from documents on file (fee disclosures, T2 financials, the USA) — type in what the
               advisor reads, the system computes the figures.
@@ -794,16 +794,16 @@ function EditorForm({
             )}
           </div>
 
-          <div className="space-y-2 rounded-md border border-[#D3C5B7] p-3">
-            <div className="text-xs font-semibold uppercase tracking-wider text-[#A98C5A]">90-Day Action Plan</div>
+          <div className="space-y-2 rounded-md border border-[#e2e8f0] p-3">
+            <div className="text-xs font-semibold uppercase tracking-wider text-[#a37c58]">90-Day Action Plan</div>
             <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
               {ACTION_PHASES.map((phase) => (
                 <div key={phase.key} className="space-y-2">
-                  <div className="text-xs font-medium text-[#3B3F3F]">
+                  <div className="text-xs font-medium text-[#334155]">
                     {phase.label} <span className="text-muted-foreground">· {phase.window}</span>
                   </div>
                   {(map.action_plan?.[phase.key] ?? []).map((item, i) => (
-                    <div key={i} className="space-y-1 rounded border border-[#D3C5B7] p-2">
+                    <div key={i} className="space-y-1 rounded border border-[#e2e8f0] p-2">
                       <div className="flex items-center gap-1">
                         <Input
                           className="text-xs"
@@ -866,11 +866,11 @@ function EditorForm({
           {F("urgency_flag", "Urgency Flag", true)}
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             <div className="space-y-2">
-              <div className="text-xs font-semibold uppercase tracking-wider text-[#A98C5A]">Risks</div>
+              <div className="text-xs font-semibold uppercase tracking-wider text-[#a37c58]">Risks</div>
               {[1, 2, 3, 4, 5].map((n) => F(`risk_${n}` as keyof SMap, `Risk ${n}`))}
             </div>
             <div className="space-y-2">
-              <div className="text-xs font-semibold uppercase tracking-wider text-[#A98C5A]">Next Steps</div>
+              <div className="text-xs font-semibold uppercase tracking-wider text-[#a37c58]">Next Steps</div>
               {[1, 2, 3, 4, 5].map((n) => F(`next_step_${n}` as keyof SMap, `Next Step ${n}`))}
             </div>
           </div>
