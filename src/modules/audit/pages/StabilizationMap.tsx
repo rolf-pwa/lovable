@@ -36,6 +36,8 @@ type Diagnostics = {
   aum?: number;
   storehouse_reserves?: { liquidity: number; strategic: number; philanthropic: number; legacy: number };
   insurance_coverage_total?: number;
+  vineyard_total?: number;
+  holding_tank_total?: number;
 };
 
 type DiagnosticInputs = {
@@ -560,6 +562,20 @@ export default function StabilizationMap() {
                       <span style={{ fontSize: "8.5pt", fontWeight: 600, color: "#334155" }}>{fmtCurrency(diag.aum)}</span>
                     </div>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1mm 6mm", marginTop: "1.5mm", paddingLeft: "3mm" }}>
+                      {(
+                        [
+                          ["Holding Tank", diag.holding_tank_total],
+                          ["Vineyard", diag.vineyard_total],
+                        ] as const
+                      ).map(([label, value]) => (
+                        <div key={label} style={{ display: "flex", justifyContent: "space-between", fontSize: "7.5pt", color: "#64748b" }}>
+                          <span>{label}</span>
+                          <span>{fmtCurrency(value ?? 0)}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <hr style={{ border: "none", borderTop: "1px solid #e2e8f0", margin: "1.5mm 0 1.5mm 3mm" }} />
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1mm 6mm", paddingLeft: "3mm" }}>
                       {(
                         [
                           ["Liquidity Reserve", diag.storehouse_reserves?.liquidity],
