@@ -40,7 +40,7 @@ import { Progress } from "@/shared/components/ui/progress";
 import { HouseholdTaskRollup } from "@/modules/crm/components/HouseholdTaskRollup";
 import { HoldingTank } from "@/modules/crm/components/HoldingTank";
 import { VaultView } from "@/modules/crm/pages/Vault";
-import { CharterRatificationTile } from "@/modules/audit";
+import { CharterRatificationTile, StabilizationMapButton } from "@/modules/audit";
 import EngagementsPanel from "@/modules/crm/components/EngagementsPanel";
 import { ProsPanel } from "@/modules/crm/components/ProsPanel";
 import { AddCompanyDialog } from "@/modules/crm/components/AddCompanyDialog";
@@ -235,11 +235,13 @@ const HouseholdDetail = () => {
             ? await (error as any).context.text()
             : error.message;
         console.error("crm-intake-push failed:", details);
-        toast.error("Vault push failed — see console for details");
+        toast.error("Vault provisioning failed — see console for details");
         return;
       }
       toast.success(
-        `Pushed to Audit Agent — ${data?.members ?? 0} members, ${data?.itemsSent ?? 0} known items`,
+        data?.vaultRootFolderId
+          ? "Vault provisioned — Drive folders created and linked"
+          : "Vault already provisioned",
       );
       fetchData();
     } finally {
@@ -783,6 +785,14 @@ const HouseholdDetail = () => {
 
               {/* Right rail: AUM Stats */}
               <div className="space-y-4">
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base">AI Workbench</CardTitle>
+                  </CardHeader>
+                  <CardContent className="flex flex-wrap gap-2">
+                    <StabilizationMapButton householdId={id} />
+                  </CardContent>
+                </Card>
                 <CharterRatificationTile householdId={id} />
                 <Card className="border-sanctuary-bronze/30">
                   <CardHeader className="pb-3">
@@ -967,7 +977,7 @@ const HouseholdDetail = () => {
                   ) : (
                     <ShieldCheck className="h-3.5 w-3.5 mr-1.5" />
                   )}
-                  Push to Audit Agent
+                  Provision Vault
                 </Button>
                 {household.vault_root_folder_id ? (
                   <Button

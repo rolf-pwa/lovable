@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { Button } from "@/shared/components/ui/button";
-import { Loader2, Printer, RefreshCw, ArrowLeft, Save } from "lucide-react";
+import { Loader2, Printer, RefreshCw, ArrowLeft, Save, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/shared/components/ui/input";
 import { Textarea } from "@/shared/components/ui/textarea";
@@ -14,10 +14,49 @@ import pwLogoWhite from "@/assets/prosperwise-logo-white.png";
 
 type StatusKind = "red" | "amber" | "green";
 
+type ActionItem = { title: string; detail: string };
+type ActionPlan = { phase_1: ActionItem[]; phase_2: ActionItem[]; phase_3: ActionItem[] };
+
+type DocumentReadiness = {
+  percent: number;
+  criticalTotal: number;
+  criticalSatisfied: number;
+  missingCritical: string[];
+  missingRecommended: string[];
+};
+
+type Diagnostics = {
+  track_type?: "personal" | "corporate";
+  document_readiness?: DocumentReadiness;
+  fee_drag?: { year5: number; year10: number; year20: number; fee_drag_pct: number };
+  sbd_clawback?: number;
+  active_asset_ratio?: { ratio: number; belowLcgeThreshold: boolean };
+  usa_staleness?: { onFile: boolean; isStale: boolean; ageYears: number | null };
+  estate_hygiene?: { will_status: string | null; poa_status: string | null; beneficiary_coordination_status: string | null };
+  aum?: number;
+};
+
+type DiagnosticInputs = {
+  assumed_return_rate_pct?: number;
+  advisor_fee_rate_pct?: number;
+  benchmark_fee_rate_pct?: number;
+  corporate_passive_income_annual?: number;
+  active_operational_assets_value?: number;
+  usa_last_reviewed_date?: string | null;
+  will_status?: "missing" | "outdated" | "current" | null;
+  poa_status?: "missing" | "current" | null;
+  beneficiary_coordination_status?: "uncoordinated" | "coordinated" | null;
+};
+
 type SMap = {
   id: string;
   lead_id: string | null;
   contact_id: string | null;
+  household_id: string | null;
+  track_type: "personal" | "corporate";
+  diagnostics: Diagnostics;
+  diagnostic_inputs: DiagnosticInputs;
+  action_plan: ActionPlan;
   client_first_name: string;
   client_last_name: string;
   session_date: string | null;
@@ -36,6 +75,15 @@ type SMap = {
   generation_error: string | null;
   logic_trace: string | null;
 };
+
+const ACTION_PHASES: { key: keyof ActionPlan; label: string; window: string }[] = [
+  { key: "phase_1", label: "Immediate", window: "Days 1–30" },
+  { key: "phase_2", label: "Structural Purification", window: "Days 31–60" },
+  { key: "phase_3", label: "Governance Ratification", window: "Days 61–90" },
+];
+
+const fmtCurrency = (n: number | undefined | null) =>
+  `$${Math.round(n ?? 0).toLocaleString()}`;
 
 const STATUS_KIND: Record<string, StatusKind> = {
   "Not Established": "red",
@@ -73,7 +121,7 @@ export default function StabilizationMap() {
     data: map,
     enabled: editing,
     onSave: async (current) => {
-      const { id: _, lead_id: __, contact_id: ___, generation_error: ____, ...rest } = current;
+      const { id: _, lead_id: __, contact_id: ___, household_id: ____, generation_error: _____, ...rest } = current;
       const { error } = await supabase
         .from("stabilization_maps" as any)
         .update({ ...rest, generation_status: "manually_edited" } as any)
@@ -138,6 +186,39 @@ export default function StabilizationMap() {
     autoSave.markDirty();
   };
 
+  const updateDiagnosticInput = (key: keyof DiagnosticInputs, value: unknown) => {
+    setMap((m) => (m ? { ...m, diagnostic_inputs: { ...m.diagnostic_inputs, [key]: value } } : m));
+    autoSave.markDirty();
+  };
+
+  const updateActionPlanItem = (phase: keyof ActionPlan, index: number, field: keyof ActionItem, value: string) => {
+    setMap((m) => {
+      if (!m) return m;
+      const items = [...(m.action_plan?.[phase] ?? [])];
+      items[index] = { ...items[index], [field]: value };
+      return { ...m, action_plan: { ...m.action_plan, [phase]: items } };
+    });
+    autoSave.markDirty();
+  };
+
+  const addActionPlanItem = (phase: keyof ActionPlan) => {
+    setMap((m) => {
+      if (!m) return m;
+      const items = [...(m.action_plan?.[phase] ?? []), { title: "", detail: "" }];
+      return { ...m, action_plan: { ...m.action_plan, [phase]: items } };
+    });
+    autoSave.markDirty();
+  };
+
+  const removeActionPlanItem = (phase: keyof ActionPlan, index: number) => {
+    setMap((m) => {
+      if (!m) return m;
+      const items = (m.action_plan?.[phase] ?? []).filter((_, i) => i !== index);
+      return { ...m, action_plan: { ...m.action_plan, [phase]: items } };
+    });
+    autoSave.markDirty();
+  };
+
   const save = async () => {
     const ok = await autoSave.flush();
     if (ok) {
@@ -193,6 +274,90 @@ export default function StabilizationMap() {
   }
 
   const isGenerating = map.generation_status === "generating" || map.generation_status === "pending";
+  const isHouseholdMap = Boolean(map.household_id);
+  const diag: Diagnostics = map.diagnostics ?? {};
+
+  const governanceCards: { label: string; status: string; detail: string }[] = isHouseholdMap
+    ? map.track_type === "corporate"
+      ? [
+          {
+            label: "Document Readiness",
+            status: !diag.document_readiness
+              ? "Not Started"
+              : diag.document_readiness.percent >= 100
+                ? "Complete"
+                : diag.document_readiness.percent > 0
+                  ? "In Progress"
+                  : "Not Started",
+            detail: diag.document_readiness
+              ? `${diag.document_readiness.criticalSatisfied}/${diag.document_readiness.criticalTotal} required documents filed`
+              : "—",
+          },
+          {
+            label: "USA Status",
+            status: !diag.usa_staleness?.onFile ? "Not Assessed" : diag.usa_staleness.isStale ? "In Progress" : "Assessed",
+            detail: diag.usa_staleness?.onFile
+              ? `Last reviewed ${diag.usa_staleness.ageYears} years ago${diag.usa_staleness.isStale ? " — stale" : ""}`
+              : "No Unanimous Shareholder Agreement on file",
+          },
+          {
+            label: "Active Asset Ratio (LCGE)",
+            status: !diag.active_asset_ratio
+              ? "Not Established"
+              : diag.active_asset_ratio.ratio >= 0.9
+                ? "Established"
+                : diag.active_asset_ratio.ratio >= 0.75
+                  ? "Partial"
+                  : "Not Established",
+            detail: diag.active_asset_ratio
+              ? `${Math.round(diag.active_asset_ratio.ratio * 100)}% active — 90% threshold for LCGE eligibility`
+              : "Not yet assessed",
+          },
+          {
+            label: "Passive Income Exposure",
+            status: !diag.sbd_clawback ? "Established" : "Not Established",
+            detail:
+              diag.sbd_clawback && diag.sbd_clawback > 0
+                ? `${fmtCurrency(diag.sbd_clawback)} SBD room at risk of clawback`
+                : "No SBD clawback exposure",
+          },
+        ]
+      : [
+          {
+            label: "Document Readiness",
+            status: !diag.document_readiness
+              ? "Not Started"
+              : diag.document_readiness.percent >= 100
+                ? "Complete"
+                : diag.document_readiness.percent > 0
+                  ? "In Progress"
+                  : "Not Started",
+            detail: diag.document_readiness
+              ? `${diag.document_readiness.criticalSatisfied}/${diag.document_readiness.criticalTotal} required documents filed`
+              : "—",
+          },
+          {
+            label: "Will",
+            status:
+              diag.estate_hygiene?.will_status === "current"
+                ? "Assessed"
+                : diag.estate_hygiene?.will_status === "outdated"
+                  ? "In Progress"
+                  : "Not Assessed",
+            detail: diag.estate_hygiene?.will_status || "Not yet reviewed",
+          },
+          {
+            label: "Power of Attorney",
+            status: diag.estate_hygiene?.poa_status === "current" ? "Established" : "Not Established",
+            detail: diag.estate_hygiene?.poa_status || "Not yet reviewed",
+          },
+          {
+            label: "Beneficiary Coordination",
+            status: diag.estate_hygiene?.beneficiary_coordination_status === "coordinated" ? "Complete" : "Not Started",
+            detail: diag.estate_hygiene?.beneficiary_coordination_status || "Not yet reviewed",
+          },
+        ]
+    : [];
 
   return (
     <div className="min-h-screen bg-[#F8F6F2]">
@@ -253,7 +418,14 @@ export default function StabilizationMap() {
       {/* Editor pane */}
       {editing && (
         <div className="mx-auto max-w-[1100px] px-6 py-6 print:hidden">
-          <EditorForm map={map} onChange={updateField} />
+          <EditorForm
+            map={map}
+            onChange={updateField}
+            onUpdateDiagnosticInput={updateDiagnosticInput}
+            onUpdateActionPlanItem={updateActionPlanItem}
+            onAddActionPlanItem={addActionPlanItem}
+            onRemoveActionPlanItem={removeActionPlanItem}
+          />
         </div>
       )}
 
@@ -312,9 +484,18 @@ export default function StabilizationMap() {
                 Stabilization Map &nbsp;·&nbsp; Prepared for <strong>{fullName}</strong>
                 {sessionDateLabel && <> &nbsp;·&nbsp; {sessionDateLabel}</>}
               </div>
-              <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "26pt", fontWeight: 300, color: "#3B3F3F", lineHeight: 1.1, letterSpacing: "-0.005em" }}>
-                {map.event_type} &nbsp;·&nbsp; {map.event_context || "Post-Close Governance"}<br />
-                Your Sovereignty OS — Session One Findings
+              <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: isHouseholdMap ? "22pt" : "26pt", fontWeight: 300, color: "#3B3F3F", lineHeight: 1.1, letterSpacing: "-0.005em" }}>
+                {isHouseholdMap ? (
+                  <>
+                    {map.track_type === "corporate" ? "Corporate" : "Personal"} Track &nbsp;·&nbsp; {map.event_type || "Sovereignty Survey"}<br />
+                    Sovereignty Survey — Stabilization Findings
+                  </>
+                ) : (
+                  <>
+                    {map.event_type} &nbsp;·&nbsp; {map.event_context || "Post-Close Governance"}<br />
+                    Your Sovereignty OS — Session One Findings
+                  </>
+                )}
               </div>
               <hr style={{ width: "18mm", height: "3px", background: "#A98C5A", border: "none", marginTop: "2.5mm" }} />
             </div>
@@ -327,35 +508,101 @@ export default function StabilizationMap() {
               <div style={{ fontSize: "7.5pt", color: "#3B3F3F" }}>{map.urgency_flag || "—"}</div>
             </div>
 
-            {/* Two col */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6mm" }}>
-              <div>
-                <div style={colLabel}>What You're Currently Exposed To</div>
-                {[map.risk_1, map.risk_2, map.risk_3, map.risk_4, map.risk_5].map((r, i) => (
-                  <div key={i} style={colItem}>
-                    <div style={dot} />
-                    <p style={colText}>{r || "—"}</p>
+            {isHouseholdMap ? (
+              <>
+                {/* Capital & Tax Drag Diagnostic */}
+                <div>
+                  <div style={colLabel}>Capital &amp; Tax Drag Diagnostic</div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "4mm" }}>
+                    {diag.fee_drag && (
+                      <StatRow
+                        label="Fee Drag (20yr)"
+                        value={`${diag.fee_drag.fee_drag_pct}% above benchmark — ${fmtCurrency(diag.fee_drag.year20)}`}
+                      />
+                    )}
+                    {typeof diag.sbd_clawback === "number" && map.track_type === "corporate" && (
+                      <StatRow label="SBD Clawback" value={fmtCurrency(diag.sbd_clawback)} />
+                    )}
+                    {diag.active_asset_ratio && map.track_type === "corporate" && (
+                      <StatRow
+                        label="Active Asset Ratio"
+                        value={`${Math.round(diag.active_asset_ratio.ratio * 100)}%${diag.active_asset_ratio.belowLcgeThreshold ? " (below 90% LCGE)" : " (meets 90% LCGE)"}`}
+                      />
+                    )}
+                    <StatRow label="Total Assets (AUM)" value={fmtCurrency(diag.aum)} />
+                    {diag.document_readiness && (
+                      <StatRow
+                        label="Document Readiness"
+                        value={`${diag.document_readiness.criticalSatisfied}/${diag.document_readiness.criticalTotal} required (${diag.document_readiness.percent}%)`}
+                      />
+                    )}
                   </div>
-                ))}
-              </div>
-              <div>
-                <div style={colLabel}>Your Immediate Next Steps</div>
-                {[map.next_step_1, map.next_step_2, map.next_step_3, map.next_step_4, map.next_step_5].map((s, i) => (
-                  <div key={i} style={colItem}>
-                    <div style={sq} />
-                    <p style={colText}>{s || "—"}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
+                </div>
 
-            {/* Cards */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "3mm" }}>
-              <StatusCard label="Storehouse" status={map.storehouse_status} detail={map.storehouse_detail} />
-              <StatusCard label="Solicitation Protocol" status={map.solicitation_status} detail={map.solicitation_detail} />
-              <StatusCard label="Sovereignty Charter" status={map.sovereignty_charter_status} detail={map.sovereignty_charter_detail} />
-              <StatusCard label="Tax Assessment" status={map.tax_status} detail={map.tax_detail} />
-            </div>
+                {/* Governance & Deceleration Risk Vectors */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(60mm, 1fr))", gap: "3mm" }}>
+                  {governanceCards.map((c) => (
+                    <StatusCard key={c.label} label={c.label} status={c.status} detail={c.detail} />
+                  ))}
+                </div>
+
+                {/* 90-Day Stabilization Action Plan */}
+                <div>
+                  <div style={colLabel}>90-Day Stabilization Action Plan</div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "4mm" }}>
+                    {ACTION_PHASES.map((phase) => (
+                      <div key={phase.key}>
+                        <div style={{ fontSize: "7pt", fontWeight: 600, color: "#3B3F3F", marginBottom: "1mm" }}>
+                          {phase.label} <span style={{ color: "#7a8a8a", fontWeight: 400 }}>· {phase.window}</span>
+                        </div>
+                        {(map.action_plan?.[phase.key] ?? []).length === 0 ? (
+                          <p style={{ ...colText, color: "#a3a3a3" }}>—</p>
+                        ) : (
+                          map.action_plan[phase.key].map((item, i) => (
+                            <div key={i} style={{ marginBottom: "1.5mm" }}>
+                              <p style={{ ...colText, fontWeight: 600 }}>{item.title || "—"}</p>
+                              {item.detail && <p style={{ ...colText, color: "#6B7070" }}>{item.detail}</p>}
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Two col */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6mm" }}>
+                  <div>
+                    <div style={colLabel}>What You're Currently Exposed To</div>
+                    {[map.risk_1, map.risk_2, map.risk_3, map.risk_4, map.risk_5].map((r, i) => (
+                      <div key={i} style={colItem}>
+                        <div style={dot} />
+                        <p style={colText}>{r || "—"}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <div>
+                    <div style={colLabel}>Your Immediate Next Steps</div>
+                    {[map.next_step_1, map.next_step_2, map.next_step_3, map.next_step_4, map.next_step_5].map((s, i) => (
+                      <div key={i} style={colItem}>
+                        <div style={sq} />
+                        <p style={colText}>{s || "—"}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Cards */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "3mm" }}>
+                  <StatusCard label="Storehouse" status={map.storehouse_status} detail={map.storehouse_detail} />
+                  <StatusCard label="Solicitation Protocol" status={map.solicitation_status} detail={map.solicitation_detail} />
+                  <StatusCard label="Sovereignty Charter" status={map.sovereignty_charter_status} detail={map.sovereignty_charter_detail} />
+                  <StatusCard label="Tax Assessment" status={map.tax_status} detail={map.tax_detail} />
+                </div>
+              </>
+            )}
 
             {/* Footer */}
             <div style={{ background: "#A98C5A", color: "#fff", margin: "auto -10mm 0 -10mm", padding: "3mm 10mm", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -406,7 +653,41 @@ function StatusCard({ label, status, detail }: { label: string; status: string; 
   );
 }
 
-function EditorForm({ map, onChange }: { map: SMap; onChange: (k: keyof SMap, v: string) => void }) {
+function StatRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div style={colItem}>
+      <div style={dot} />
+      <p style={colText}>
+        <strong>{label}:</strong> {value}
+      </p>
+    </div>
+  );
+}
+
+interface EditorFormProps {
+  map: SMap;
+  onChange: (k: keyof SMap, v: string) => void;
+  onUpdateDiagnosticInput: (k: keyof DiagnosticInputs, v: unknown) => void;
+  onUpdateActionPlanItem: (phase: keyof ActionPlan, index: number, field: keyof ActionItem, value: string) => void;
+  onAddActionPlanItem: (phase: keyof ActionPlan) => void;
+  onRemoveActionPlanItem: (phase: keyof ActionPlan, index: number) => void;
+}
+
+const WILL_OPTS = ["missing", "outdated", "current"] as const;
+const POA_OPTS = ["missing", "current"] as const;
+const BENEFICIARY_OPTS = ["uncoordinated", "coordinated"] as const;
+
+function EditorForm({
+  map,
+  onChange,
+  onUpdateDiagnosticInput,
+  onUpdateActionPlanItem,
+  onAddActionPlanItem,
+  onRemoveActionPlanItem,
+}: EditorFormProps) {
+  const isHouseholdMap = Boolean(map.household_id);
+  const inputs = map.diagnostic_inputs ?? {};
+
   const F = (key: keyof SMap, label: string, multiline = false) => (
     <div className="space-y-1">
       <Label className="text-xs">{label}</Label>
@@ -426,6 +707,33 @@ function EditorForm({ map, onChange }: { map: SMap; onChange: (k: keyof SMap, v:
       </Select>
     </div>
   );
+  const N = (key: keyof DiagnosticInputs, label: string, placeholder?: string) => (
+    <div className="space-y-1">
+      <Label className="text-xs">{label}</Label>
+      <Input
+        type="number"
+        placeholder={placeholder}
+        value={(inputs[key] as number | undefined) ?? ""}
+        onChange={(e) => onUpdateDiagnosticInput(key, e.target.value === "" ? undefined : Number(e.target.value))}
+      />
+    </div>
+  );
+  const IS = (key: keyof DiagnosticInputs, label: string, opts: readonly string[]) => (
+    <div className="space-y-1">
+      <Label className="text-xs">{label}</Label>
+      <Select
+        value={(inputs[key] as string) ?? "__unset__"}
+        onValueChange={(v) => onUpdateDiagnosticInput(key, v === "__unset__" ? null : v)}
+      >
+        <SelectTrigger><SelectValue /></SelectTrigger>
+        <SelectContent>
+          <SelectItem value="__unset__">Not set</SelectItem>
+          {opts.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+
   return (
     <div className="space-y-4 rounded-lg border border-[#D3C5B7] bg-white p-5">
       <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
@@ -436,50 +744,148 @@ function EditorForm({ map, onChange }: { map: SMap; onChange: (k: keyof SMap, v:
           <Input type="date" value={map.session_date || ""} onChange={(e) => onChange("session_date", e.target.value)} />
         </div>
       </div>
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-        {S("event_type", "Event Type", EVENT_TYPES)}
-        <div className="space-y-1">
-          <Label className="text-xs">Event Context (subtitle)</Label>
-          <Select
-            value={EVENT_CONTEXTS.includes(map.event_context) ? map.event_context : "__custom__"}
-            onValueChange={(v) => onChange("event_context", v === "__custom__" ? (map.event_context || "") : v)}
-          >
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {EVENT_CONTEXTS.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
-              <SelectItem value="__custom__">Custom…</SelectItem>
-            </SelectContent>
-          </Select>
-          <Input
-            className="mt-1"
-            placeholder="Custom subtitle (overrides preset)"
-            value={map.event_context || ""}
-            onChange={(e) => onChange("event_context", e.target.value)}
-          />
-        </div>
-      </div>
-      {F("situation_summary", "Situation Summary", true)}
-      {F("urgency_flag", "Urgency Flag", true)}
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-        <div className="space-y-2">
-          <div className="text-xs font-semibold uppercase tracking-wider text-[#A98C5A]">Risks</div>
-          {[1, 2, 3, 4, 5].map((n) => F(`risk_${n}` as keyof SMap, `Risk ${n}`))}
-        </div>
-        <div className="space-y-2">
-          <div className="text-xs font-semibold uppercase tracking-wider text-[#A98C5A]">Next Steps</div>
-          {[1, 2, 3, 4, 5].map((n) => F(`next_step_${n}` as keyof SMap, `Next Step ${n}`))}
-        </div>
-      </div>
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-        {S("storehouse_status", "Storehouse Status", STOREHOUSE_OPTS)}
-        {F("storehouse_detail", "Storehouse Detail")}
-        {S("solicitation_status", "Solicitation Status", SOLICITATION_OPTS)}
-        {F("solicitation_detail", "Solicitation Detail")}
-        {S("sovereignty_charter_status", "Sovereignty Charter Status", CHARTER_OPTS)}
-        {F("sovereignty_charter_detail", "Sovereignty Charter Detail")}
-        {S("tax_status", "Tax Status", TAX_OPTS)}
-        {F("tax_detail", "Tax Detail")}
-      </div>
+
+      {isHouseholdMap ? (
+        <>
+          <div className="space-y-1">
+            <Label className="text-xs">Track</Label>
+            <Select value={map.track_type || "personal"} onValueChange={(v) => onChange("track_type", v)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="personal">Personal</SelectItem>
+                <SelectItem value="corporate">Corporate</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {F("situation_summary", "Situation Summary", true)}
+          {F("urgency_flag", "Urgency Flag", true)}
+
+          <div className="space-y-2 rounded-md border border-[#EFE7DA] p-3">
+            <div className="text-xs font-semibold uppercase tracking-wider text-[#A98C5A]">Diagnostic Inputs</div>
+            <p className="text-[11px] text-muted-foreground">
+              These come from documents on file (fee disclosures, T2 financials, the USA) — type in what the
+              advisor reads, the system computes the figures.
+            </p>
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+              {N("assumed_return_rate_pct", "Assumed Return Rate (%)", "6")}
+              {N("advisor_fee_rate_pct", "Current Advisor Fee Rate (%)")}
+              {N("benchmark_fee_rate_pct", "Benchmark Fee Rate (%)", "0")}
+            </div>
+            {map.track_type === "corporate" ? (
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                {N("corporate_passive_income_annual", "Corporate Passive Income (annual $)")}
+                {N("active_operational_assets_value", "Active Operational Assets ($)")}
+                <div className="space-y-1">
+                  <Label className="text-xs">USA Last Reviewed</Label>
+                  <Input
+                    type="date"
+                    value={(inputs.usa_last_reviewed_date as string) || ""}
+                    onChange={(e) => onUpdateDiagnosticInput("usa_last_reviewed_date", e.target.value || null)}
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                {IS("will_status", "Will Status", WILL_OPTS)}
+                {IS("poa_status", "Power of Attorney", POA_OPTS)}
+                {IS("beneficiary_coordination_status", "Beneficiary Coordination", BENEFICIARY_OPTS)}
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-2 rounded-md border border-[#EFE7DA] p-3">
+            <div className="text-xs font-semibold uppercase tracking-wider text-[#A98C5A]">90-Day Action Plan</div>
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+              {ACTION_PHASES.map((phase) => (
+                <div key={phase.key} className="space-y-2">
+                  <div className="text-xs font-medium text-[#3B3F3F]">
+                    {phase.label} <span className="text-muted-foreground">· {phase.window}</span>
+                  </div>
+                  {(map.action_plan?.[phase.key] ?? []).map((item, i) => (
+                    <div key={i} className="space-y-1 rounded border border-[#EFE7DA] p-2">
+                      <div className="flex items-center gap-1">
+                        <Input
+                          className="text-xs"
+                          placeholder="Title"
+                          value={item.title}
+                          onChange={(e) => onUpdateActionPlanItem(phase.key, i, "title", e.target.value)}
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 shrink-0"
+                          onClick={() => onRemoveActionPlanItem(phase.key, i)}
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                      <Textarea
+                        className="text-xs"
+                        placeholder="Detail"
+                        rows={2}
+                        value={item.detail}
+                        onChange={(e) => onUpdateActionPlanItem(phase.key, i, "detail", e.target.value)}
+                      />
+                    </div>
+                  ))}
+                  <Button type="button" variant="outline" size="sm" onClick={() => onAddActionPlanItem(phase.key)}>
+                    <Plus className="mr-1 h-3.5 w-3.5" /> Add item
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            {S("event_type", "Event Type", EVENT_TYPES)}
+            <div className="space-y-1">
+              <Label className="text-xs">Event Context (subtitle)</Label>
+              <Select
+                value={EVENT_CONTEXTS.includes(map.event_context) ? map.event_context : "__custom__"}
+                onValueChange={(v) => onChange("event_context", v === "__custom__" ? (map.event_context || "") : v)}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {EVENT_CONTEXTS.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                  <SelectItem value="__custom__">Custom…</SelectItem>
+                </SelectContent>
+              </Select>
+              <Input
+                className="mt-1"
+                placeholder="Custom subtitle (overrides preset)"
+                value={map.event_context || ""}
+                onChange={(e) => onChange("event_context", e.target.value)}
+              />
+            </div>
+          </div>
+          {F("situation_summary", "Situation Summary", true)}
+          {F("urgency_flag", "Urgency Flag", true)}
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            <div className="space-y-2">
+              <div className="text-xs font-semibold uppercase tracking-wider text-[#A98C5A]">Risks</div>
+              {[1, 2, 3, 4, 5].map((n) => F(`risk_${n}` as keyof SMap, `Risk ${n}`))}
+            </div>
+            <div className="space-y-2">
+              <div className="text-xs font-semibold uppercase tracking-wider text-[#A98C5A]">Next Steps</div>
+              {[1, 2, 3, 4, 5].map((n) => F(`next_step_${n}` as keyof SMap, `Next Step ${n}`))}
+            </div>
+          </div>
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            {S("storehouse_status", "Storehouse Status", STOREHOUSE_OPTS)}
+            {F("storehouse_detail", "Storehouse Detail")}
+            {S("solicitation_status", "Solicitation Status", SOLICITATION_OPTS)}
+            {F("solicitation_detail", "Solicitation Detail")}
+            {S("sovereignty_charter_status", "Sovereignty Charter Status", CHARTER_OPTS)}
+            {F("sovereignty_charter_detail", "Sovereignty Charter Detail")}
+            {S("tax_status", "Tax Status", TAX_OPTS)}
+            {F("tax_detail", "Tax Detail")}
+          </div>
+        </>
+      )}
       {F("footer_note", "Footer Note", true)}
     </div>
   );
