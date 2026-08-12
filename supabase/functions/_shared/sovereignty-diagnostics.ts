@@ -275,6 +275,7 @@ export interface HouseholdFinancials {
   members: { id: string; first_name: string; last_name: string; family_role: string | null }[];
   totalAum: number;
   vineyardAccounts: any[];
+  totalVineyard: number;
   storehouses: any[];
   corporations: any[];
   shareholders: any[];
@@ -318,6 +319,7 @@ export async function gatherHouseholdFinancials(
       members: [],
       totalAum: 0,
       vineyardAccounts: [],
+      totalVineyard: 0,
       storehouses: [],
       corporations: [],
       shareholders: [],
@@ -400,11 +402,9 @@ export async function gatherHouseholdFinancials(
     0,
   );
 
-  const totalAum =
-    vineyardAccounts.reduce((sum: number, a: any) => sum + (Number(a.current_value) || 0), 0) +
-    totalStorehouses +
-    totalCorpAssets +
-    totalHoldingTank;
+  const totalVineyard = vineyardAccounts.reduce((sum: number, a: any) => sum + (Number(a.current_value) || 0), 0);
+
+  const totalAum = totalVineyard + totalStorehouses + totalCorpAssets + totalHoldingTank;
 
   return {
     householdLabel: household?.label ?? "Household",
@@ -412,6 +412,7 @@ export async function gatherHouseholdFinancials(
     members,
     totalAum,
     vineyardAccounts,
+    totalVineyard,
     storehouses,
     corporations,
     shareholders: shareholderRows,
@@ -443,6 +444,8 @@ export interface SovereigntyDiagnostics {
   family_name: string;
   storehouse_reserves: StorehouseReserves;
   insurance_coverage_total: number;
+  vineyard_total: number;
+  holding_tank_total: number;
 }
 
 /** Orchestrator: gathers real data, infers track type, computes the applicable formulas. */
@@ -466,6 +469,8 @@ export async function computeSovereigntyDiagnostics(
     family_name: financials.familyName,
     storehouse_reserves: financials.storehouseReserves,
     insurance_coverage_total: financials.totalInsuranceCoverage,
+    vineyard_total: financials.totalVineyard,
+    holding_tank_total: financials.totalHoldingTank,
   };
 
   // Fee drag is paused (not just hidden) until CRM3's fee-disclosure data feeds
