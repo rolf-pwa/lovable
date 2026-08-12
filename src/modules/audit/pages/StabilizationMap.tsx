@@ -564,8 +564,8 @@ export default function StabilizationMap() {
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1mm 6mm", marginTop: "1.5mm", paddingLeft: "3mm" }}>
                       {(
                         [
-                          ["Vineyard", diag.vineyard_total],
                           ["Holding Tank", diag.holding_tank_total],
+                          ["Vineyard", diag.vineyard_total],
                         ] as const
                       ).map(([label, value]) => (
                         <div key={label} style={{ display: "flex", justifyContent: "space-between", fontSize: "7.5pt", color: "#64748b" }}>
