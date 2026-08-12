@@ -552,12 +552,6 @@ export default function StabilizationMap() {
                 <div>
                   <div style={colLabel}>Capital &amp; Tax Drag Diagnostic</div>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "4mm" }}>
-                    {diag.fee_drag && (
-                      <StatRow
-                        label="Fee Drag (20yr)"
-                        value={`${diag.fee_drag.fee_drag_pct}% above benchmark — ${fmtCurrency(diag.fee_drag.year20)}`}
-                      />
-                    )}
                     {typeof diag.sbd_clawback === "number" && map.track_type === "corporate" && (
                       <StatRow label="SBD Clawback" value={fmtCurrency(diag.sbd_clawback)} />
                     )}
@@ -834,14 +828,9 @@ function EditorForm({
           <div className="space-y-2 rounded-md border border-[#e2e8f0] p-3">
             <div className="text-xs font-semibold uppercase tracking-wider text-[#a37c58]">Diagnostic Inputs</div>
             <p className="text-[11px] text-muted-foreground">
-              These come from documents on file (fee disclosures, T2 financials, the USA) — type in what the
-              advisor reads, the system computes the figures.
+              These come from documents on file (T2 financials, the USA) — type in what the advisor reads, the
+              system computes the figures. Fee drag is paused until CRM3's fee-disclosure data is live.
             </p>
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-              {N("assumed_return_rate_pct", "Assumed Return Rate (%)", "6")}
-              {N("advisor_fee_rate_pct", "Current Advisor Fee Rate (%)")}
-              {N("benchmark_fee_rate_pct", "Benchmark Fee Rate (%)", "0")}
-            </div>
             {map.track_type === "corporate" ? (
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                 {N("corporate_passive_income_annual", "Corporate Passive Income (annual $)")}

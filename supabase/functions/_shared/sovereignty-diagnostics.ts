@@ -419,8 +419,11 @@ export async function computeSovereigntyDiagnostics(
     family_name: financials.familyName,
   };
 
+  // Fee drag is paused (not just hidden) until CRM3's fee-disclosure data feeds
+  // advisor_fee_rate_pct/benchmark_fee_rate_pct — without it computeFeeDrag always
+  // returns a meaningless 0%/$0, not a real diagnostic. computeFeeDrag itself stays
+  // defined and ready to re-enable once that data exists.
   if (trackType === "corporate") {
-    diagnostics.fee_drag = computeFeeDrag(financials.totalAum, inputs);
     diagnostics.sbd_clawback = computeSbdClawback(inputs.corporate_passive_income_annual ?? 0);
     diagnostics.active_asset_ratio = computeActiveAssetRatio(
       inputs.active_operational_assets_value ?? 0,
@@ -428,7 +431,6 @@ export async function computeSovereigntyDiagnostics(
     );
     diagnostics.usa_staleness = computeUsaStaleness(inputs.usa_last_reviewed_date);
   } else {
-    diagnostics.fee_drag = computeFeeDrag(financials.totalAum, inputs);
     diagnostics.estate_hygiene = {
       will_status: inputs.will_status ?? null,
       poa_status: inputs.poa_status ?? null,
