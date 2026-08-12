@@ -465,26 +465,8 @@ export default function StabilizationMap() {
               <div style={{ fontSize: "9pt", fontWeight: 300, color: "rgba(255,255,255,.5)", letterSpacing: ".08em", textTransform: "uppercase" }}>
                 Sovereignty Operating System™
               </div>
-              {isHouseholdMap && (
-                <div style={{ marginTop: "3mm" }}>
-                  <div style={{ fontSize: "7pt", letterSpacing: ".08em", textTransform: "uppercase", color: "rgba(255,255,255,.4)", marginBottom: "1mm" }}>
-                    Stabilization Map
-                  </div>
-                  <div style={{ fontSize: "7.5pt", color: "rgba(255,255,255,.6)" }}>Prepared for {fullName}</div>
-                  {sessionDateLabel && <div style={{ fontSize: "7.5pt", color: "rgba(255,255,255,.6)" }}>{sessionDateLabel}</div>}
-                </div>
-              )}
             </div>
             <hr style={{ border: "none", borderTop: "1px solid rgba(255,255,255,.18)" }} />
-            {isHouseholdMap && (
-              <>
-                <div>
-                  <strong style={{ display: "block", fontSize: "8.5pt", fontWeight: 600 }}>Prepared By: Rolf Issler, BMgt, CLU</strong>
-                  <p style={{ fontSize: "7.5pt", color: "rgba(255,255,255,.5)", marginTop: "1pt" }}>Sudden Wealth Specialist, Family CFO</p>
-                </div>
-                <hr style={{ border: "none", borderTop: "1px solid rgba(255,255,255,.18)" }} />
-              </>
-            )}
             <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "16pt", fontWeight: 300, lineHeight: 1.3 }}>
               Don't Invest. <em style={{ fontStyle: "italic", color: "rgba(255,255,255,.7)" }}>Integrate.</em>
             </div>
@@ -506,8 +488,17 @@ export default function StabilizationMap() {
             </div>
             <hr style={{ border: "none", borderTop: "1px solid rgba(255,255,255,.18)" }} />
             <div>
-              <strong style={{ display: "block", fontSize: "8.5pt", fontWeight: 600 }}>Rolf Issler</strong>
-              <p style={{ fontSize: "7.5pt", color: "rgba(255,255,255,.5)", marginTop: "1pt" }}>Founder · Sudden Wealth Specialist · Fee-Only · Canada</p>
+              {isHouseholdMap ? (
+                <>
+                  <strong style={{ display: "block", fontSize: "8.5pt", fontWeight: 600 }}>Prepared By: Rolf Issler, BMgt, CLU</strong>
+                  <p style={{ fontSize: "7.5pt", color: "rgba(255,255,255,.5)", marginTop: "1pt" }}>Sudden Wealth Specialist, Family CFO</p>
+                </>
+              ) : (
+                <>
+                  <strong style={{ display: "block", fontSize: "8.5pt", fontWeight: 600 }}>Rolf Issler</strong>
+                  <p style={{ fontSize: "7.5pt", color: "rgba(255,255,255,.5)", marginTop: "1pt" }}>Founder · Sudden Wealth Specialist · Fee-Only · Canada</p>
+                </>
+              )}
             </div>
             <div style={{ marginTop: "auto", paddingTop: "4mm" }}>
               <div style={{ fontSize: "6.5pt", color: "rgba(255,255,255,.4)", lineHeight: 1.5 }}>
@@ -520,12 +511,10 @@ export default function StabilizationMap() {
           {/* Main */}
           <main style={{ flex: 1, padding: "10mm 10mm 0 10mm", display: "flex", flexDirection: "column", gap: "5mm" }}>
             <div>
-              {!isHouseholdMap && (
-                <div style={{ fontSize: "7.5pt", letterSpacing: ".1em", textTransform: "uppercase", color: "#94a3b8", marginBottom: "1.5mm" }}>
-                  Stabilization Map &nbsp;·&nbsp; Prepared for <strong>{fullName}</strong>
-                  {sessionDateLabel && <> &nbsp;·&nbsp; {sessionDateLabel}</>}
-                </div>
-              )}
+              <div style={{ fontSize: "7.5pt", letterSpacing: ".1em", textTransform: "uppercase", color: "#94a3b8", marginBottom: "1.5mm" }}>
+                Stabilization Map &nbsp;·&nbsp; Prepared for <strong>{fullName}</strong>
+                {sessionDateLabel && <> &nbsp;·&nbsp; {sessionDateLabel}</>}
+              </div>
               <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: isHouseholdMap ? "22pt" : "26pt", fontWeight: 300, color: "#334155", lineHeight: 1.1, letterSpacing: "-0.005em" }}>
                 {isHouseholdMap ? (
                   "Sovereignty Survey — Stabilization Map"
