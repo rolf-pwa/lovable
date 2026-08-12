@@ -185,8 +185,13 @@ Guidelines:
     const aiResult = await aiResponse.json();
     const rawContent = aiResult.candidates?.[0]?.content?.parts?.[0]?.text || "";
 
-    // Clean any markdown fences
-    const jsonStr = rawContent.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+    // Clean any markdown fences, and strip trailing commas before a closing } or ] —
+    // models routinely emit them despite instructions not to, and strict JSON.parse rejects them.
+    const jsonStr = rawContent
+      .replace(/```json\n?/g, "")
+      .replace(/```\n?/g, "")
+      .trim()
+      .replace(/,(\s*[}\]])/g, "$1");
     let parsed: any;
     try {
       parsed = JSON.parse(jsonStr);
