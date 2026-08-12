@@ -827,7 +827,8 @@ const HouseholdDetail = () => {
                             toast.success(`Vault scan complete: ${parts.join("; ")}.`);
                           }
                           if (data.errors?.length) {
-                            toast.warning(`${data.errors.length} file(s) couldn't be parsed — see review queue for details.`);
+                            console.error("vault-statement-scan file errors:", data.errors);
+                            toast.warning(`${data.errors.length} file(s) couldn't be parsed: ${data.errors.slice(0, 3).join("; ")}${data.errors.length > 3 ? ` (+${data.errors.length - 3} more, see console)` : ""}`, { duration: 15000 });
                           }
                           fetchData();
                         } catch (e: any) {
