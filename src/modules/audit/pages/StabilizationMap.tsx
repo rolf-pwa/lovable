@@ -556,7 +556,7 @@ export default function StabilizationMap() {
                           {phase.label} <span style={{ color: "#7a8a8a", fontWeight: 400 }}>· {phase.window}</span>
                         </div>
                         {(map.action_plan?.[phase.key] ?? []).length === 0 ? (
-                          <p style={{ ...colText, color: "#a3a3a3" }}>—</p>
+                          <p style={{ ...colText, color: "#7a8a8a" }}>—</p>
                         ) : (
                           map.action_plan[phase.key].map((item, i) => (
                             <div key={i} style={{ marginBottom: "1.5mm" }}>
@@ -761,7 +761,7 @@ function EditorForm({
           {F("situation_summary", "Situation Summary", true)}
           {F("urgency_flag", "Urgency Flag", true)}
 
-          <div className="space-y-2 rounded-md border border-[#EFE7DA] p-3">
+          <div className="space-y-2 rounded-md border border-[#D3C5B7] p-3">
             <div className="text-xs font-semibold uppercase tracking-wider text-[#A98C5A]">Diagnostic Inputs</div>
             <p className="text-[11px] text-muted-foreground">
               These come from documents on file (fee disclosures, T2 financials, the USA) — type in what the
@@ -794,7 +794,7 @@ function EditorForm({
             )}
           </div>
 
-          <div className="space-y-2 rounded-md border border-[#EFE7DA] p-3">
+          <div className="space-y-2 rounded-md border border-[#D3C5B7] p-3">
             <div className="text-xs font-semibold uppercase tracking-wider text-[#A98C5A]">90-Day Action Plan</div>
             <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
               {ACTION_PHASES.map((phase) => (
@@ -803,7 +803,7 @@ function EditorForm({
                     {phase.label} <span className="text-muted-foreground">· {phase.window}</span>
                   </div>
                   {(map.action_plan?.[phase.key] ?? []).map((item, i) => (
-                    <div key={i} className="space-y-1 rounded border border-[#EFE7DA] p-2">
+                    <div key={i} className="space-y-1 rounded border border-[#D3C5B7] p-2">
                       <div className="flex items-center gap-1">
                         <Input
                           className="text-xs"
