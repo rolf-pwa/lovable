@@ -429,9 +429,20 @@ export default function StabilizationMap() {
         </div>
       )}
 
-      {/* Document — A4 landscape preview */}
-      <div className="mx-auto max-w-[297mm] px-6 py-6 print:p-0 print:max-w-none">
-        <div className="stab-doc bg-white shadow-lg print:shadow-none" style={{ width: "297mm", minHeight: "210mm", display: "flex", fontFamily: "'DM Sans', sans-serif", color: "#334155" }}>
+      {/* Document — A4 preview (landscape for legacy maps, portrait + 2 pages for household maps) */}
+      <div
+        className={`mx-auto ${isHouseholdMap ? "max-w-[210mm]" : "max-w-[297mm]"} px-6 py-6 print:p-0 print:max-w-none`}
+      >
+        <div
+          className="stab-doc bg-white shadow-lg print:shadow-none"
+          style={{
+            width: isHouseholdMap ? "210mm" : "297mm",
+            minHeight: isHouseholdMap ? "297mm" : "210mm",
+            display: "flex",
+            fontFamily: "'DM Sans', sans-serif",
+            color: "#334155",
+          }}
+        >
           {/* Sidebar */}
           <aside style={{ width: "72mm", backgroundColor: "#1e293b", color: "#fff", padding: "10mm 7mm", display: "flex", flexDirection: "column", gap: "6mm", flexShrink: 0 }}>
             <div>
@@ -545,30 +556,6 @@ export default function StabilizationMap() {
                     <StatusCard key={c.label} label={c.label} status={c.status} detail={c.detail} />
                   ))}
                 </div>
-
-                {/* 90-Day Stabilization Action Plan */}
-                <div>
-                  <div style={colLabel}>90-Day Stabilization Action Plan</div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "4mm" }}>
-                    {ACTION_PHASES.map((phase) => (
-                      <div key={phase.key}>
-                        <div style={{ fontSize: "7pt", fontWeight: 600, color: "#334155", marginBottom: "1mm" }}>
-                          {phase.label} <span style={{ color: "#94a3b8", fontWeight: 400 }}>· {phase.window}</span>
-                        </div>
-                        {(map.action_plan?.[phase.key] ?? []).length === 0 ? (
-                          <p style={{ ...colText, color: "#94a3b8" }}>—</p>
-                        ) : (
-                          map.action_plan[phase.key].map((item, i) => (
-                            <div key={i} style={{ marginBottom: "1.5mm" }}>
-                              <p style={{ ...colText, fontWeight: 600 }}>{item.title || "—"}</p>
-                              {item.detail && <p style={{ ...colText, color: "#64748b" }}>{item.detail}</p>}
-                            </div>
-                          ))
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
               </>
             ) : (
               <>
@@ -604,12 +591,68 @@ export default function StabilizationMap() {
               </>
             )}
 
-            {/* Footer */}
-            <div style={{ background: "#a37c58", color: "#fff", margin: "auto -10mm 0 -10mm", padding: "3mm 10mm", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div style={{ fontSize: "8.5pt", fontWeight: 500, maxWidth: "60%" }}>{map.footer_note}</div>
-            </div>
+            {/* Footer — household maps carry the footer to page 2, after the action plan */}
+            {!isHouseholdMap && (
+              <div style={{ background: "#a37c58", color: "#fff", margin: "auto -10mm 0 -10mm", padding: "3mm 10mm", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ fontSize: "8.5pt", fontWeight: 500, maxWidth: "60%" }}>{map.footer_note}</div>
+              </div>
+            )}
           </main>
         </div>
+
+        {/* Page 2 — 90-Day Stabilization Action Plan (household maps only) */}
+        {isHouseholdMap && (
+          <div
+            className="stab-doc-page2 bg-white shadow-lg print:shadow-none mt-6 print:mt-0"
+            style={{
+              width: "210mm",
+              minHeight: "297mm",
+              padding: "12mm",
+              display: "flex",
+              flexDirection: "column",
+              gap: "5mm",
+              fontFamily: "'DM Sans', sans-serif",
+              color: "#334155",
+              pageBreakBefore: "always",
+              breakBefore: "page",
+            }}
+          >
+            <div>
+              <div style={{ fontSize: "7.5pt", letterSpacing: ".1em", textTransform: "uppercase", color: "#94a3b8", marginBottom: "1.5mm" }}>
+                Stabilization Map &nbsp;·&nbsp; Prepared for <strong>{fullName}</strong>
+              </div>
+              <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "18pt", fontWeight: 300, color: "#334155", lineHeight: 1.1 }}>
+                90-Day Stabilization Action Plan
+              </div>
+              <hr style={{ width: "18mm", height: "3px", background: "#a37c58", border: "none", marginTop: "2.5mm" }} />
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8mm", flex: 1 }}>
+              {ACTION_PHASES.map((phase) => (
+                <div key={phase.key}>
+                  <div style={{ fontSize: "8pt", fontWeight: 600, color: "#334155", marginBottom: "2mm" }}>
+                    {phase.label} <span style={{ color: "#94a3b8", fontWeight: 400 }}>· {phase.window}</span>
+                  </div>
+                  {(map.action_plan?.[phase.key] ?? []).length === 0 ? (
+                    <p style={{ ...colText, color: "#94a3b8" }}>—</p>
+                  ) : (
+                    map.action_plan[phase.key].map((item, i) => (
+                      <div key={i} style={{ marginBottom: "3mm" }}>
+                        <p style={{ ...colText, fontWeight: 600 }}>{item.title || "—"}</p>
+                        {item.detail && <p style={{ ...colText, color: "#64748b" }}>{item.detail}</p>}
+                      </div>
+                    ))
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Footer */}
+            <div style={{ background: "#a37c58", color: "#fff", margin: "auto -12mm 0 -12mm", padding: "3mm 12mm", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ fontSize: "8.5pt", fontWeight: 500 }}>{map.footer_note}</div>
+            </div>
+          </div>
+        )}
 
         {map.logic_trace && !editing && (
           <div className="mt-6 rounded-lg border border-[#e2e8f0] bg-white p-4 text-xs text-[#64748b] print:hidden">
@@ -622,9 +665,9 @@ export default function StabilizationMap() {
       {/* Print styles */}
       <style>{`
         @media print {
-          @page { size: A4 landscape; margin: 0; }
+          @page { size: A4 ${isHouseholdMap ? "portrait" : "landscape"}; margin: 0; }
           body { background: white !important; }
-          .stab-doc { box-shadow: none !important; }
+          .stab-doc, .stab-doc-page2 { box-shadow: none !important; }
         }
         @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500;1,600&family=DM+Sans:wght@300;400;500;600&display=swap');
       `}</style>
