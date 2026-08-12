@@ -7,6 +7,9 @@
 // function hands these figures to Vertex as read-only facts and only asks it
 // to draft narrative text around them (situation summary, action plan prose).
 
+import { getServiceGoogleAccessToken } from "./google-token.ts";
+import { driveListChildren } from "./vault-provisioning.ts";
+
 // deno-lint-ignore no-explicit-any
 type SupabaseClient = any;
 
@@ -158,6 +161,99 @@ export async function computeDocumentReadiness(
   };
 }
 
+/** Vault folder categories that count toward readiness for legacy/existing clients. */
+const VAULT_READINESS_SLUGS = ["identity-legal", "estate", "tax", "insurance", "investments"];
+
+/**
+ * Document readiness for legacy/existing clients, sourced live from the household's
+ * Vault (Drive) folder tree instead of the intake-portal pipeline used by
+ * computeDocumentReadiness above (which only the newer onboarding funnel populates,
+ * and is structurally empty — always 0% — for any client who predates it).
+ *
+ * Checks the same folder categories staff already see in the CRM's Vault tab
+ * (vault_folder_templates), so this can never drift stale the way a cached or
+ * advisor-re-typed signal would.
+ */
+export async function computeVaultReadiness(
+  admin: SupabaseClient,
+  vaultRootFolderId: string | null,
+): Promise<DocumentReadiness> {
+  const unavailable = (categories: { display_name: string }[]): DocumentReadiness => ({
+    percent: 0,
+    criticalTotal: categories.length,
+    criticalSatisfied: 0,
+    missingCritical: categories.map((c) => `${c.display_name} (Vault not yet assessed — advisor to confirm)`),
+    missingRecommended: [],
+  });
+
+  if (!vaultRootFolderId) {
+    return {
+      percent: 0,
+      criticalTotal: 0,
+      criticalSatisfied: 0,
+      missingCritical: ["Vault not yet provisioned — advisor to confirm manually"],
+      missingRecommended: [],
+    };
+  }
+
+  const { data: templates } = await admin
+    .from("vault_folder_templates")
+    .select("display_name, slug")
+    .eq("is_active", true)
+    .in("slug", VAULT_READINESS_SLUGS);
+  const categories = (templates ?? []) as { display_name: string; slug: string }[];
+  if (categories.length === 0) {
+    return { percent: 0, criticalTotal: 0, criticalSatisfied: 0, missingCritical: [], missingRecommended: [] };
+  }
+
+  let accessToken: string;
+  let rootChildren: { id: string; name: string; mimeType: string }[];
+  try {
+    accessToken = await getServiceGoogleAccessToken(admin);
+    rootChildren = await driveListChildren(vaultRootFolderId, accessToken);
+  } catch {
+    return unavailable(categories);
+  }
+
+  const satisfied: string[] = [];
+  const missing: string[] = [];
+
+  for (const cat of categories) {
+    const keywords = cat.display_name
+      .replace(/^\d+\s*/, "")
+      .replace(/\(.*?\)/g, "")
+      .trim()
+      .split(/\s+/)
+      .filter((w) => w.length > 2 && w !== "&");
+
+    const folder = rootChildren.find((f) => {
+      if (f.mimeType !== "application/vnd.google-apps.folder") return false;
+      if (f.name.trim() === cat.display_name.trim()) return true;
+      const lower = f.name.toLowerCase();
+      return keywords.some((k) => lower.includes(k.toLowerCase()));
+    });
+
+    if (!folder) {
+      missing.push(cat.display_name);
+      continue;
+    }
+
+    try {
+      const contents = await driveListChildren(folder.id, accessToken);
+      if (contents.length > 0) satisfied.push(cat.display_name);
+      else missing.push(cat.display_name);
+    } catch {
+      missing.push(`${cat.display_name} (Vault check unavailable — advisor to confirm manually)`);
+    }
+  }
+
+  const criticalTotal = categories.length;
+  const criticalSatisfied = satisfied.length;
+  const percent = criticalTotal > 0 ? Math.round((criticalSatisfied / criticalTotal) * 100) : 0;
+
+  return { percent, criticalTotal, criticalSatisfied, missingCritical: missing, missingRecommended: [] };
+}
+
 export interface HouseholdFinancials {
   householdLabel: string;
   familyName: string;
@@ -169,6 +265,10 @@ export interface HouseholdFinancials {
   shareholders: any[];
   insurancePolicies: any[];
   totalCorpAssets: number;
+  holdingTank: any[];
+  totalHoldingTank: number;
+  onboardingEnabled: boolean;
+  vaultRootFolderId: string | null;
 }
 
 /** Mirrors the financial-data gathering in HouseholdDetail.tsx's fetchData(). */
@@ -178,7 +278,7 @@ export async function gatherHouseholdFinancials(
 ): Promise<HouseholdFinancials> {
   const { data: household } = await admin
     .from("households")
-    .select("id, label, family_id")
+    .select("id, label, family_id, onboarding_enabled, vault_root_folder_id")
     .eq("id", householdId)
     .maybeSingle();
 
@@ -206,10 +306,14 @@ export async function gatherHouseholdFinancials(
       shareholders: [],
       insurancePolicies: [],
       totalCorpAssets: 0,
+      holdingTank: [],
+      totalHoldingTank: 0,
+      onboardingEnabled: household?.onboarding_enabled !== false,
+      vaultRootFolderId: household?.vault_root_folder_id ?? null,
     };
   }
 
-  const [{ data: vine }, { data: store }, { data: shareholders }] = await Promise.all([
+  const [{ data: vine }, { data: store }, { data: shareholders }, { data: tank }] = await Promise.all([
     admin.from("vineyard_accounts").select("*").in("contact_id", memberIds),
     admin.from("storehouses").select("*").in("contact_id", memberIds),
     admin
@@ -217,11 +321,13 @@ export async function gatherHouseholdFinancials(
       .select("contact_id, corporation_id, ownership_percentage, share_class, role_title")
       .in("contact_id", memberIds)
       .eq("is_active", true),
+    admin.from("holding_tank").select("contact_id, current_value").in("contact_id", memberIds).neq("status", "moved"),
   ]);
 
   const vineyardAccounts = vine ?? [];
   const storehouses = store ?? [];
   const shareholderRows = shareholders ?? [];
+  const holdingTank = tank ?? [];
 
   let corporations: any[] = [];
   let totalCorpAssets = 0;
@@ -249,9 +355,13 @@ export async function gatherHouseholdFinancials(
     .select("*")
     .or(`contact_id.in.(${memberIds.join(",")})${corpIds.length ? `,corporation_id.in.(${corpIds.join(",")})` : ""}`);
 
+  const totalHoldingTank = holdingTank.reduce((sum: number, h: any) => sum + (Number(h.current_value) || 0), 0);
+
   const totalAum =
     vineyardAccounts.reduce((sum: number, a: any) => sum + (Number(a.current_value) || 0), 0) +
-    storehouses.reduce((sum: number, s: any) => sum + (Number(s.current_value) || 0), 0);
+    storehouses.reduce((sum: number, s: any) => sum + (Number(s.current_value) || 0), 0) +
+    totalCorpAssets +
+    totalHoldingTank;
 
   return {
     householdLabel: household?.label ?? "Household",
@@ -264,6 +374,10 @@ export async function gatherHouseholdFinancials(
     shareholders: shareholderRows,
     insurancePolicies: ins ?? [],
     totalCorpAssets,
+    holdingTank,
+    totalHoldingTank,
+    onboardingEnabled: household?.onboarding_enabled !== false,
+    vaultRootFolderId: household?.vault_root_folder_id ?? null,
   };
 }
 
@@ -290,10 +404,10 @@ export async function computeSovereigntyDiagnostics(
   householdId: string,
   inputs: DiagnosticInputs,
 ): Promise<{ track_type: TrackType; diagnostics: SovereigntyDiagnostics; financials: HouseholdFinancials }> {
-  const [financials, documentReadiness] = await Promise.all([
-    gatherHouseholdFinancials(admin, householdId),
-    computeDocumentReadiness(admin, householdId),
-  ]);
+  const financials = await gatherHouseholdFinancials(admin, householdId);
+  const documentReadiness = financials.onboardingEnabled
+    ? await computeDocumentReadiness(admin, householdId)
+    : await computeVaultReadiness(admin, financials.vaultRootFolderId);
 
   const trackType = inferTrackType(financials.shareholders);
 

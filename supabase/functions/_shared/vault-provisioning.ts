@@ -29,6 +29,21 @@ async function driveCreateFolder(name: string, parentId: string, accessToken: st
   return r.json();
 }
 
+/** Lists the direct, non-trashed children of a Drive folder. Mirrors vault-service's private helper of the same name. */
+export async function driveListChildren(
+  folderId: string,
+  accessToken: string,
+): Promise<{ id: string; name: string; mimeType: string }[]> {
+  const q = encodeURIComponent(`'${folderId}' in parents and trashed=false`);
+  const fields = encodeURIComponent("files(id,name,mimeType,size,modifiedTime,parents)");
+  const r = await fetch(
+    `https://www.googleapis.com/drive/v3/files?q=${q}&fields=${fields}&pageSize=200&orderBy=folder,name`,
+    { headers: { Authorization: `Bearer ${accessToken}` } },
+  );
+  if (!r.ok) throw new Error(`drive_list_failed: ${await r.text()}`);
+  return (await r.json()).files ?? [];
+}
+
 export interface ProvisionResult {
   ok: boolean;
   vaultRootFolderId?: string;

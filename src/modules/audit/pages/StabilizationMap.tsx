@@ -348,12 +348,22 @@ export default function StabilizationMap() {
           },
           {
             label: "Power of Attorney",
-            status: diag.estate_hygiene?.poa_status === "current" ? "Established" : "Not Established",
+            status:
+              diag.estate_hygiene?.poa_status === "current"
+                ? "Established"
+                : diag.estate_hygiene?.poa_status === "missing"
+                  ? "Not Established"
+                  : "Not Assessed",
             detail: diag.estate_hygiene?.poa_status || "Not yet reviewed",
           },
           {
             label: "Beneficiary Coordination",
-            status: diag.estate_hygiene?.beneficiary_coordination_status === "coordinated" ? "Complete" : "Not Started",
+            status:
+              diag.estate_hygiene?.beneficiary_coordination_status === "coordinated"
+                ? "Complete"
+                : diag.estate_hygiene?.beneficiary_coordination_status === "uncoordinated"
+                  ? "Not Started"
+                  : "Not Assessed",
             detail: diag.estate_hygiene?.beneficiary_coordination_status || "Not yet reviewed",
           },
         ]
