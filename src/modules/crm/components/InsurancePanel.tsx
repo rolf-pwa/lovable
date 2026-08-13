@@ -17,6 +17,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Badge } from "@/shared/components/ui/badge";
 import { Shield, Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { POLICY_TYPES } from "@/shared/lib/insurance";
 
 type OwnerScope =
   | { kind: "contact"; contactId: string }
@@ -50,16 +51,6 @@ interface Policy {
   vault_folder_id: string | null;
   notes: string | null;
 }
-
-const POLICY_TYPES = [
-  { value: "term", label: "Term Life" },
-  { value: "whole_life", label: "Whole Life" },
-  { value: "universal_life", label: "Universal Life" },
-  { value: "critical_illness", label: "Critical Illness" },
-  { value: "disability", label: "Disability" },
-  { value: "long_term_care", label: "Long-Term Care" },
-  { value: "other", label: "Other" },
-];
 
 const FREQUENCIES = [
   { value: "monthly", label: "Monthly" },

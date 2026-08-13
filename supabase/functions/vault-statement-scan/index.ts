@@ -190,7 +190,7 @@ Return a JSON object with this exact structure:
     {
       "carrier": "Name of the insurance company",
       "policy_number": "string or null",
-      "policy_type": "life|critical_illness|disability|other",
+      "policy_type": "term|whole_life|universal_life|critical_illness|disability|long_term_care|other",
       "insured_name": "Full name of the insured person, or the corporation name if this is a corporate-owned policy",
       "coverage_amount": number or null,
       "cash_value": number or null,
@@ -206,6 +206,7 @@ Return a JSON object with this exact structure:
 Guidelines:
 - "coverage_amount" is the face amount / death benefit / sum insured
 - "cash_value" is the policy's current cash surrender value, if shown (often absent on term policies — use null)
+- For life insurance, pick the most specific policy_type the document supports: "term" if it names a level term period (10/20/T100), "whole_life" or "universal_life" if the document says so explicitly, otherwise "whole_life" as the more common default for a permanent policy — never invent a type the document doesn't support
 - Use null for any values you cannot confidently extract
 - Return ONLY the JSON, no markdown`;
 
