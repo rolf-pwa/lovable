@@ -134,12 +134,13 @@ async function callVertex(accessToken: string, projectId: string, systemPrompt: 
           parts: [{ text: systemPrompt + "\n\n" + instruction }, { inlineData: { mimeType, data: base64 } }],
         },
       ],
-      generationConfig: { temperature: 0.1, maxOutputTokens: 4000 },
+      generationConfig: { temperature: 0.1, maxOutputTokens: 8000 },
     }),
   });
   if (!res.ok) throw new Error(`AI parsing failed: ${await res.text()}`);
   const result = await res.json();
   const raw = result.candidates?.[0]?.content?.parts?.[0]?.text || "";
+  const finishReason = result.candidates?.[0]?.finishReason;
   // Models routinely emit a trailing comma before a closing } or ] despite instructions
   // not to — strict JSON.parse rejects that, so strip it before parsing.
   const jsonStr = raw
@@ -150,7 +151,8 @@ async function callVertex(accessToken: string, projectId: string, systemPrompt: 
   try {
     return JSON.parse(jsonStr);
   } catch {
-    throw new Error(`Failed to parse AI response as JSON: ${jsonStr.slice(0, 300)}`);
+    const truncated = finishReason === "MAX_TOKENS" ? " (response was truncated — hit the output token limit)" : "";
+    throw new Error(`Failed to parse AI response as JSON${truncated}: ${jsonStr.slice(0, 300)}`);
   }
 }
 
