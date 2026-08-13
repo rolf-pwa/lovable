@@ -807,11 +807,12 @@ const HouseholdDetail = () => {
                           if (error) throw error;
                           if (data?.error) throw new Error(data.error);
                           const parts: string[] = [];
-                          if (data.investmentFilesParsed || data.investmentAccountsUnmatched) {
-                            parts.push(
-                              `${data.investmentAccountsMatched} account${data.investmentAccountsMatched === 1 ? "" : "s"} updated` +
-                                (data.investmentAccountsUnmatched ? `, ${data.investmentAccountsUnmatched} unmatched → Holding Tank` : ""),
-                            );
+                          if (data.investmentFilesParsed) {
+                            const bits = [];
+                            if (data.investmentAccountsMatched) bits.push(`${data.investmentAccountsMatched} account${data.investmentAccountsMatched === 1 ? "" : "s"} updated`);
+                            if (data.investmentHoldingTankUpdated) bits.push(`${data.investmentHoldingTankUpdated} Holding Tank entr${data.investmentHoldingTankUpdated === 1 ? "y" : "ies"} updated`);
+                            if (data.investmentAccountsUnmatched) bits.push(`${data.investmentAccountsUnmatched} new → Holding Tank`);
+                            parts.push(bits.length ? bits.join(", ") : "no changes");
                           }
                           if (data.insuranceFilesParsed) {
                             parts.push(
