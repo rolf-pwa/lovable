@@ -36,6 +36,7 @@ import {
 } from "@/shared/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { PageBreadcrumbs } from "@/shared/components/PageBreadcrumbs";
+import { policyTypeLabel } from "@/shared/lib/insurance";
 import { Progress } from "@/shared/components/ui/progress";
 import { HouseholdTaskRollup } from "@/modules/crm/components/HouseholdTaskRollup";
 import { HoldingTank } from "@/modules/crm/components/HoldingTank";
@@ -921,6 +922,42 @@ const HouseholdDetail = () => {
                     </div>
                   </CardContent>
                 </Card>
+
+                {insurancePolicies.length > 0 && (() => {
+                  const totalCoverage = insurancePolicies.reduce((s: number, p: any) => s + (Number(p.coverage_amount) || 0), 0);
+                  const memberById = new Map(members.map((m: any) => [m.id, m]));
+                  const corpById = new Map(corporations.map((c: any) => [c.id, c]));
+                  const ownerName = (p: any) => {
+                    if (p.corporation_id) return corpById.get(p.corporation_id)?.name ?? "Corporation";
+                    const m = memberById.get(p.contact_id);
+                    return m ? `${m.first_name} ${m.last_name}` : "Household";
+                  };
+                  return (
+                    <Card className="border-sanctuary-bronze/30">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-sm uppercase tracking-widest text-sanctuary-bronze">
+                          Insurance
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div>
+                          <p className="text-xs text-muted-foreground">Total Coverage</p>
+                          <p className="text-3xl font-bold text-foreground">{formatCurrency(totalCoverage)}</p>
+                        </div>
+                        <div className="space-y-2 pt-2 border-t border-border">
+                          {insurancePolicies.map((p: any) => (
+                            <div key={p.id} className="flex items-center justify-between text-sm">
+                              <span className="flex items-center gap-2 text-muted-foreground">
+                                <Shield className="h-3.5 w-3.5" /> {policyTypeLabel(p.policy_type)} — {ownerName(p)}
+                              </span>
+                              <span className="font-semibold text-foreground">{formatCurrency(p.coverage_amount)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })()}
 
                 <Card>
                   <CardContent className="py-4">
