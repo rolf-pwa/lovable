@@ -89,12 +89,38 @@ function bytesToBase64(bytes: Uint8Array): string {
   return btoa(binary);
 }
 
+const FOLDER_MIME = "application/vnd.google-apps.folder";
 const GOOGLE_NATIVE_MIME = new Set([
   "application/vnd.google-apps.document",
   "application/vnd.google-apps.spreadsheet",
   "application/vnd.google-apps.presentation",
-  "application/vnd.google-apps.folder",
 ]);
+const MAX_SCAN_DEPTH = 6;
+const MAX_SCAN_FILES = 100;
+
+/**
+ * Walks a Vault category folder's full subtree, not just its direct children —
+ * staff commonly organize into subfolders (e.g. "Insurance/Life Insurance/Statements"),
+ * and a flat listing would silently miss everything nested under them.
+ */
+async function collectFilesRecursive(
+  folderId: string,
+  accessToken: string,
+  depth = 0,
+): Promise<{ id: string; name: string; mimeType: string }[]> {
+  if (depth >= MAX_SCAN_DEPTH) return [];
+  const children = await driveListChildren(folderId, accessToken);
+  const files: { id: string; name: string; mimeType: string }[] = [];
+  for (const child of children) {
+    if (files.length >= MAX_SCAN_FILES) break;
+    if (child.mimeType === FOLDER_MIME) {
+      files.push(...(await collectFilesRecursive(child.id, accessToken, depth + 1)));
+    } else if (!GOOGLE_NATIVE_MIME.has(child.mimeType)) {
+      files.push(child);
+    }
+  }
+  return files.slice(0, MAX_SCAN_FILES);
+}
 
 async function callVertex(accessToken: string, projectId: string, systemPrompt: string, instruction: string, base64: string, mimeType: string) {
   const vertexUrl = `https://${REGION}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${REGION}/publishers/google/models/${MODEL}:generateContent`;
@@ -269,8 +295,7 @@ Deno.serve(async (req) => {
 
     const filesToParse = async (folder: { id: string; name: string } | null) => {
       if (!folder) return [];
-      const children = await driveListChildren(folder.id, driveAccessToken);
-      return children.filter((f) => !GOOGLE_NATIVE_MIME.has(f.mimeType));
+      return collectFilesRecursive(folder.id, driveAccessToken);
     };
 
     // ---------- Investment Statements ----------
