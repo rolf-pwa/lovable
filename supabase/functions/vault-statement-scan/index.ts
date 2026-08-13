@@ -281,6 +281,12 @@ Deno.serve(async (req) => {
     const { data: existingStorehouses } = memberIds.length
       ? await admin.from("storehouses").select("id, contact_id, label, asset_type").in("contact_id", memberIds)
       : { data: [] };
+    // A household's real accounts often sit here, not yet formally "moved" into
+    // vineyard_accounts/storehouses — must be a matchable target too, or every
+    // re-scan treats the same statement as brand new and duplicates it.
+    const { data: existingHoldingTank } = memberIds.length
+      ? await admin.from("holding_tank").select("id, contact_id, account_name, account_number").in("contact_id", memberIds).neq("status", "moved")
+      : { data: [] };
 
     const vineyardByNumber = new Map(
       (existingVineyard ?? []).filter((a: any) => a.account_number).map((a: any) => [normalizeToken(a.account_number), a]),
@@ -291,10 +297,15 @@ Deno.serve(async (req) => {
         [s.label, s.asset_type].filter(Boolean).map((v: string) => [normalizeToken(v), s] as const),
       ),
     );
+    const holdingTankByNumber = new Map(
+      (existingHoldingTank ?? []).filter((h: any) => h.account_number).map((h: any) => [normalizeToken(h.account_number), h]),
+    );
+    const holdingTankByName = new Map((existingHoldingTank ?? []).map((h: any) => [normalizeToken(h.account_name), h]));
     const memberByName = new Map(members.map((m: any) => [normalizeToken(`${m.first_name} ${m.last_name}`), m]));
 
     let investmentAccountsExtracted = 0;
     let investmentAccountsMatched = 0;
+    let investmentHoldingTankUpdated = 0;
     const investmentUnmatched: string[] = [];
     const investmentFilesParsed: string[] = [];
     const investmentErrors: string[] = [];
@@ -332,22 +343,45 @@ Deno.serve(async (req) => {
             continue;
           }
 
+          // Not yet moved into Vineyard/Storehouses — check Holding Tank before
+          // creating a new row, or every re-scan of the same statement duplicates it.
+          const matchedHoldingTank =
+            (normalizedNumber && holdingTankByNumber.get(normalizedNumber)) || holdingTankByName.get(normalizedName);
+          if (matchedHoldingTank) {
+            await admin
+              .from("holding_tank")
+              .update({ book_value: account.book_value, current_value: account.current_value })
+              .eq("id", (matchedHoldingTank as any).id);
+            investmentHoldingTankUpdated += 1;
+            continue;
+          }
+
           investmentUnmatched.push(account.account_name);
           const owner = memberByName.get(normalizeToken(account.account_owner)) || headOfHousehold;
-          await admin.from("holding_tank").insert({
-            contact_id: owner?.id,
-            household_id: householdId,
-            account_name: account.account_name,
-            account_number: account.account_number,
-            account_type: account.account_type || "Portfolio",
-            account_owner: account.account_owner,
-            custodian: account.custodian,
-            book_value: account.book_value,
-            current_value: account.current_value,
-            notes: account.notes,
-            source_file: `vault:${file.id}:${file.name}`,
-            status: "holding",
-          });
+          const { data: newHoldingTankRow } = await admin
+            .from("holding_tank")
+            .insert({
+              contact_id: owner?.id,
+              household_id: householdId,
+              account_name: account.account_name,
+              account_number: account.account_number,
+              account_type: account.account_type || "Portfolio",
+              account_owner: account.account_owner,
+              custodian: account.custodian,
+              book_value: account.book_value,
+              current_value: account.current_value,
+              notes: account.notes,
+              source_file: `vault:${file.id}:${file.name}`,
+              status: "holding",
+            })
+            .select("id, account_name, account_number")
+            .single();
+          // Register it so a second account extracted from the SAME statement (or a
+          // later file in this same run) matches it too, instead of also duplicating.
+          if (newHoldingTankRow) {
+            if (newHoldingTankRow.account_number) holdingTankByNumber.set(normalizeToken(newHoldingTankRow.account_number), newHoldingTankRow);
+            holdingTankByName.set(normalizeToken(newHoldingTankRow.account_name), newHoldingTankRow);
+          }
         }
       } catch (e) {
         const message = e instanceof Error ? e.message : String(e);
@@ -450,6 +484,7 @@ Deno.serve(async (req) => {
       proposed_data: {
         investment_files: investmentFilesParsed,
         investment_accounts_matched: investmentAccountsMatched,
+        investment_holding_tank_updated: investmentHoldingTankUpdated,
         investment_accounts_unmatched: investmentUnmatched,
         insurance_files: insuranceFilesParsed,
         insurance_policies_matched: insurancePoliciesMatched,
@@ -468,6 +503,7 @@ Deno.serve(async (req) => {
         investmentFilesParsed: investmentFilesParsed.length,
         investmentAccountsExtracted,
         investmentAccountsMatched,
+        investmentHoldingTankUpdated,
         investmentAccountsUnmatched: investmentUnmatched.length,
         insuranceFilesParsed: insuranceFilesParsed.length,
         insurancePoliciesExtracted,
