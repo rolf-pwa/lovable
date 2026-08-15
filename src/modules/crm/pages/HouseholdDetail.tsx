@@ -852,58 +852,113 @@ const HouseholdDetail = () => {
                 <Card>
                   <CardHeader className="pb-3">
                     <CardTitle className="text-base">AI Workbench</CardTitle>
+                    <p className="text-xs text-muted-foreground">
+                      The household workflow, in order.
+                    </p>
                   </CardHeader>
-                  <CardContent className="flex flex-wrap gap-2">
-                    <StabilizationMapButton householdId={id} />
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={vaultScanning}
-                      onClick={async () => {
-                        if (!id) return;
-                        setVaultScanning(true);
-                        try {
-                          const { data, error } = await supabase.functions.invoke("vault-statement-scan", {
-                            body: { householdId: id },
-                          });
-                          if (error) throw error;
-                          if (data?.error) throw new Error(data.error);
-                          const parts: string[] = [];
-                          if (data.investmentFilesParsed) {
-                            const bits = [];
-                            if (data.investmentAccountsMatched) bits.push(`${data.investmentAccountsMatched} account${data.investmentAccountsMatched === 1 ? "" : "s"} updated`);
-                            if (data.investmentHoldingTankUpdated) bits.push(`${data.investmentHoldingTankUpdated} Holding Tank entr${data.investmentHoldingTankUpdated === 1 ? "y" : "ies"} updated`);
-                            if (data.investmentAccountsUnmatched) bits.push(`${data.investmentAccountsUnmatched} new → Holding Tank`);
-                            parts.push(bits.length ? bits.join(", ") : "no changes");
-                          }
-                          if (data.insuranceFilesParsed) {
-                            parts.push(
-                              `${data.insurancePoliciesMatched} polic${data.insurancePoliciesMatched === 1 ? "y" : "ies"} updated` +
-                                (data.insurancePoliciesCreated ? `, ${data.insurancePoliciesCreated} new` : ""),
-                            );
-                          }
-                          if (!data.investmentsFolderFound && !data.insuranceFolderFound) {
-                            toast.error("Couldn't find the Investment Statements or Insurance Vault folders for this household.");
-                          } else if (parts.length === 0) {
-                            toast.info("Scanned the Vault — no statement or policy files found to parse.");
-                          } else {
-                            toast.success(`Vault scan complete: ${parts.join("; ")}.`);
-                          }
-                          if (data.errors?.length) {
-                            console.error("vault-statement-scan file errors:", data.errors);
-                            toast.warning(`${data.errors.length} file(s) couldn't be parsed: ${data.errors.slice(0, 3).join("; ")}${data.errors.length > 3 ? ` (+${data.errors.length - 3} more, see console)` : ""}`, { duration: 15000 });
-                          }
-                          fetchData();
-                        } catch (e: any) {
-                          toast.error(`Vault scan failed: ${e.message || "Unknown error"}`);
-                        } finally {
-                          setVaultScanning(false);
-                        }
-                      }}
-                    >
-                      {vaultScanning ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <ScanSearch className="h-4 w-4 mr-1.5" />}
-                      Scan Vault for Updates
-                    </Button>
+                  <CardContent className="space-y-4">
+                    {/* Step 1 — Scan for Update */}
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-border text-xs font-semibold text-muted-foreground">
+                        1
+                      </div>
+                      <div className="flex-1 space-y-1.5">
+                        <p className="text-sm font-medium text-foreground">Scan for updates</p>
+                        <p className="text-xs text-muted-foreground">
+                          Parse new investment statements and insurance policies filed in the Vault.
+                        </p>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={vaultScanning}
+                          onClick={async () => {
+                            if (!id) return;
+                            setVaultScanning(true);
+                            try {
+                              const { data, error } = await supabase.functions.invoke("vault-statement-scan", {
+                                body: { householdId: id },
+                              });
+                              if (error) throw error;
+                              if (data?.error) throw new Error(data.error);
+                              const parts: string[] = [];
+                              if (data.investmentFilesParsed) {
+                                const bits = [];
+                                if (data.investmentAccountsMatched) bits.push(`${data.investmentAccountsMatched} account${data.investmentAccountsMatched === 1 ? "" : "s"} updated`);
+                                if (data.investmentHoldingTankUpdated) bits.push(`${data.investmentHoldingTankUpdated} Holding Tank entr${data.investmentHoldingTankUpdated === 1 ? "y" : "ies"} updated`);
+                                if (data.investmentAccountsUnmatched) bits.push(`${data.investmentAccountsUnmatched} new → Holding Tank`);
+                                parts.push(bits.length ? bits.join(", ") : "no changes");
+                              }
+                              if (data.insuranceFilesParsed) {
+                                parts.push(
+                                  `${data.insurancePoliciesMatched} polic${data.insurancePoliciesMatched === 1 ? "y" : "ies"} updated` +
+                                    (data.insurancePoliciesCreated ? `, ${data.insurancePoliciesCreated} new` : ""),
+                                );
+                              }
+                              if (!data.investmentsFolderFound && !data.insuranceFolderFound) {
+                                toast.error("Couldn't find the Investment Statements or Insurance Vault folders for this household.");
+                              } else if (parts.length === 0) {
+                                toast.info("Scanned the Vault — no statement or policy files found to parse.");
+                              } else {
+                                toast.success(`Vault scan complete: ${parts.join("; ")}.`);
+                              }
+                              if (data.errors?.length) {
+                                console.error("vault-statement-scan file errors:", data.errors);
+                                toast.warning(`${data.errors.length} file(s) couldn't be parsed: ${data.errors.slice(0, 3).join("; ")}${data.errors.length > 3 ? ` (+${data.errors.length - 3} more, see console)` : ""}`, { duration: 15000 });
+                              }
+                              fetchData();
+                            } catch (e: any) {
+                              toast.error(`Vault scan failed: ${e.message || "Unknown error"}`);
+                            } finally {
+                              setVaultScanning(false);
+                            }
+                          }}
+                        >
+                          {vaultScanning ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <ScanSearch className="h-4 w-4 mr-1.5" />}
+                          Scan Vault for Updates
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Step 2 — Stabilization Map */}
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-border text-xs font-semibold text-muted-foreground">
+                        2
+                      </div>
+                      <div className="flex-1 space-y-1.5">
+                        <p className="text-sm font-medium text-foreground">Stabilization Map</p>
+                        <p className="text-xs text-muted-foreground">
+                          Generate or review the household's one-page Sovereignty Survey.
+                        </p>
+                        <StabilizationMapButton householdId={id} />
+                      </div>
+                    </div>
+
+                    {/* Step 3 — Enroll in Guided Intake */}
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-border text-xs font-semibold text-muted-foreground">
+                        3
+                      </div>
+                      <div className="flex-1 space-y-1.5">
+                        <p className="text-sm font-medium text-foreground">Enroll in guided intake</p>
+                        <p className="text-xs text-muted-foreground">
+                          Send an existing client through the same guided wizard as a new client — no
+                          payment required.
+                        </p>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={enrollExistingClientInIntake}
+                          disabled={enrollingIntake || members.length === 0}
+                        >
+                          {enrollingIntake ? (
+                            <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                          ) : (
+                            <UserCheck className="h-3.5 w-3.5 mr-1.5" />
+                          )}
+                          Enroll in Guided Intake
+                        </Button>
+                      </div>
+                    </div>
                   </CardContent>
                 </Card>
                 <CharterRatificationTile householdId={id} />
@@ -1119,21 +1174,6 @@ const HouseholdDetail = () => {
                     Audit onboarding
                   </Label>
                 </div>
-
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={enrollExistingClientInIntake}
-                  disabled={enrollingIntake || members.length === 0}
-                  title="For an existing client who wants to go through the guided Sovereignty Survey — no payment required."
-                >
-                  {enrollingIntake ? (
-                    <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                  ) : (
-                    <UserCheck className="h-3.5 w-3.5 mr-1.5" />
-                  )}
-                  Enroll in Guided Intake
-                </Button>
 
                 <Button size="sm" variant="outline" onClick={pushToIntakeAgent} disabled={pushingIntake}>
                   {pushingIntake ? (
