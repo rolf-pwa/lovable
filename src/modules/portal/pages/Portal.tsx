@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { signInWithGoogle } from "@/shared/lib/auth";
 import { PortalTerritory } from "@/modules/portal/components/PortalTerritory";
 import { PortalHoldingTank } from "@/modules/portal/components/PortalHoldingTank";
+import { PortalInsurance } from "@/modules/portal/components/PortalInsurance";
 import { PortalRequests } from "@/modules/portal/components/PortalRequests";
 import { PortalMeetings } from "@/modules/portal/components/PortalMeetings";
 import { PortalCharter } from "@/modules/portal/components/PortalCharter";
@@ -1052,6 +1053,7 @@ const Portal = ({ intakeRoute = false }: { intakeRoute?: boolean }) => {
         role: currentMember.family_role,
         vineyardAccounts: currentMember.vineyard_accounts || [],
         memberStorehouses: currentMember.storehouses || [],
+        insurancePolicies: (insurance_policies || []).filter((p: any) => p.contact_id === currentMember.id),
       };
     }
 
@@ -1062,6 +1064,7 @@ const Portal = ({ intakeRoute = false }: { intakeRoute?: boolean }) => {
       role: contact.family_role,
       vineyardAccounts: vineyard_accounts,
       memberStorehouses: storehouses,
+      insurancePolicies: (insurance_policies || []).filter((p: any) => p.contact_id === contact.id),
     };
   };
 
@@ -1071,7 +1074,8 @@ const Portal = ({ intakeRoute = false }: { intakeRoute?: boolean }) => {
     const ind = getIndividualData();
     const isSelf = !currentMember;
     const hasTerritory = (ind.vineyardAccounts?.length || 0) > 0 || (ind.memberStorehouses?.length || 0) > 0;
-    const hasFinancials = hasTerritory || (isSelf && holding_tank.length > 0);
+    const hasInsurance = (ind.insurancePolicies?.length || 0) > 0;
+    const hasFinancials = hasTerritory || hasInsurance || (isSelf && holding_tank.length > 0);
     const effectiveTab = !hasFinancials && activeTab === "financials" ? "tasks" : activeTab;
 
 
@@ -1226,7 +1230,7 @@ const Portal = ({ intakeRoute = false }: { intakeRoute?: boolean }) => {
               )}
             </TabsContent>
 
-            {/* Financials Tab — Holding Tank, Vineyard, Storehouses */}
+            {/* Financials Tab — Holding Tank, Vineyard, Storehouses, Insurance */}
             {hasFinancials && (
               <TabsContent value="financials" className="mt-4 space-y-6">
                 {isSelf && holding_tank.length > 0 && (
@@ -1236,7 +1240,7 @@ const Portal = ({ intakeRoute = false }: { intakeRoute?: boolean }) => {
                   <PortalTerritory
                     vineyardAccounts={ind.vineyardAccounts}
                     storehouses={ind.memberStorehouses}
-                    insurancePolicies={insurance_policies}
+                    insurancePolicies={ind.insurancePolicies}
                     contact={isSelf ? contact : currentMember}
                     family={family}
                     household={household}
@@ -1248,6 +1252,9 @@ const Portal = ({ intakeRoute = false }: { intakeRoute?: boolean }) => {
                     section="all"
                     defaultCollapsed
                   />
+                )}
+                {hasInsurance && (
+                  <PortalInsurance policies={ind.insurancePolicies} defaultCollapsed />
                 )}
               </TabsContent>
             )}

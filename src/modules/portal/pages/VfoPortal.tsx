@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { PortalTerritory } from "@/modules/portal/components/PortalTerritory";
 import { PortalHoldingTank } from "@/modules/portal/components/PortalHoldingTank";
+import { PortalInsurance } from "@/modules/portal/components/PortalInsurance";
 import { PortalRequests } from "@/modules/portal/components/PortalRequests";
 import { PortalMeetings } from "@/modules/portal/components/PortalMeetings";
 import { PortalCharter } from "@/modules/portal/components/PortalCharter";
@@ -541,21 +542,25 @@ const VfoPortal = () => {
     // client is fully accessible to this viewer.
     let indVineyard: any[] = [];
     let indStorehouses: any[] = [];
+    let indInsurance: any[] = [];
     let indName = "";
     if (isSelf) {
       indVineyard = vineyard_accounts;
       indStorehouses = storehouses;
+      indInsurance = (insurance_policies || []).filter((p: any) => p.contact_id === contact.id);
       indName = `${contact.first_name || ""} ${contact.last_name || ""}`.trim();
     } else {
       indVineyard = currentMember.vineyard_accounts || [];
       indStorehouses = currentMember.storehouses || [];
+      indInsurance = (insurance_policies || []).filter((p: any) => p.contact_id === currentMember.id);
       indName = `${currentMember.first_name || ""} ${currentMember.last_name || ""}`.trim();
     }
 
-    const ind = { vineyardAccounts: indVineyard, memberStorehouses: indStorehouses, name: indName };
+    const ind = { vineyardAccounts: indVineyard, memberStorehouses: indStorehouses, insurancePolicies: indInsurance, name: indName };
     const hasHolding = isSelf && holding_tank.length > 0;
     const hasTerritory = (ind.vineyardAccounts.length + ind.memberStorehouses.length) > 0;
-    const hasFinancials = hasHolding || hasTerritory;
+    const hasInsurance = ind.insurancePolicies.length > 0;
+    const hasFinancials = hasHolding || hasTerritory || hasInsurance;
 
 
     return (
@@ -610,7 +615,7 @@ const VfoPortal = () => {
                   <PortalTerritory
                     vineyardAccounts={ind.vineyardAccounts}
                     storehouses={ind.memberStorehouses}
-                    insurancePolicies={insurance_policies}
+                    insurancePolicies={ind.insurancePolicies}
                     contact={isSelf ? contact : currentMember}
                     family={family}
                     household={household}
@@ -622,6 +627,9 @@ const VfoPortal = () => {
                     section="all"
                     defaultCollapsed
                   />
+                )}
+                {hasInsurance && (
+                  <PortalInsurance policies={ind.insurancePolicies} defaultCollapsed />
                 )}
               </TabsContent>
             )}
