@@ -1022,7 +1022,7 @@ const Portal = ({ intakeRoute = false }: { intakeRoute?: boolean }) => {
         <div className="space-y-4">
           {/* Household Holding Tank — private to household members only */}
           {viewingOwnHousehold && household_holding_tank.length > 0 && (
-            <PortalHoldingTank accounts={household_holding_tank} />
+            <PortalHoldingTank accounts={household_holding_tank} defaultCollapsed />
           )}
 
           <PortalTerritory
@@ -1037,7 +1037,11 @@ const Portal = ({ intakeRoute = false }: { intakeRoute?: boolean }) => {
             portalToken={portalToken}
             onScopeChange={() => refreshData(portalToken)}
             corporations={viewingOwnHousehold ? corporations : []}
+            defaultCollapsed
           />
+          {visibleInsurance.length > 0 && (
+            <PortalInsurance policies={visibleInsurance} defaultCollapsed />
+          )}
         </div>
       </div>
     );

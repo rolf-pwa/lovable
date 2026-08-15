@@ -515,7 +515,7 @@ const VfoPortal = () => {
         </div>
 
         <aside className="space-y-4">
-          {household_holding_tank.length > 0 && <PortalHoldingTank accounts={household_holding_tank} />}
+          {household_holding_tank.length > 0 && <PortalHoldingTank accounts={household_holding_tank} defaultCollapsed />}
           <PortalTerritory
             vineyardAccounts={hhAssets.vineyard}
             storehouses={hhAssets.storehouses}
@@ -528,7 +528,11 @@ const VfoPortal = () => {
             portalToken={portalToken}
             onScopeChange={refreshData}
             corporations={corporations}
+            defaultCollapsed
           />
+          {(insurance_policies || []).length > 0 && (
+            <PortalInsurance policies={insurance_policies} defaultCollapsed />
+          )}
           <PortalYourTeam professionals={professionals} engagements={engagements} />
         </aside>
       </div>

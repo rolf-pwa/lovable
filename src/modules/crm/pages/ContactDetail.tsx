@@ -14,7 +14,7 @@ import { Label } from "@/shared/components/ui/label";
 import {
   ArrowLeft, Bell, BellOff, Trash2, Clock, AlertCircle, Shield,
   ExternalLink, Bot, Grape, FileUp, Loader2, Building2, Users, Plus, X,
-  Folder, FolderOpen, CheckSquare, ShieldCheck, Landmark, ChevronDown, ListChecks,
+  Folder, FolderOpen, CheckSquare, ShieldCheck, Landmark, ChevronDown, ChevronRight, ListChecks,
   Mail, Phone, MapPin, Home, Calendar, Pencil, Eye, Merge, Link2, BarChart3, Anchor
 } from "lucide-react";
 import { ContactAnalytics } from "@/modules/crm/components/ContactAnalytics";
@@ -149,6 +149,7 @@ const getHarvestKey = (kind: "vineyard" | "storehouse", id: string) => `${kind}:
 const ContactDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [corpHoldingsCollapsed, setCorpHoldingsCollapsed] = useState(true);
   const [contact, setContact] = useState<any>(null);
   const [storehouses, setStorehouses] = useState<Storehouse[]>([]);
   const [householdMembers, setHouseholdMembers] = useState<HouseholdMember[]>([]);
@@ -998,18 +999,29 @@ const ContactDetail = () => {
                 {/* Corporate Stakes */}
                 {corporateStakes.length > 0 && (
                   <div className="rounded-lg border border-border bg-card">
-                    <div className="flex items-center justify-between px-3 py-2 border-b border-border/50">
+                    <div
+                      className="flex items-center justify-between px-3 py-2 border-b border-border/50 cursor-pointer select-none"
+                      onClick={() => setCorpHoldingsCollapsed((c) => !c)}
+                    >
                       <div className="flex items-center gap-2">
                         <Building2 className="h-3.5 w-3.5 text-sanctuary-bronze" />
                         <h4 className="text-xs font-semibold uppercase tracking-wider">Corporate Holdings</h4>
                       </div>
-                      <span className="text-sm font-semibold tabular-nums">
-                        ${corporateStakes.reduce((sum, s) => {
-                          const indirect = s.subsidiaries.reduce((si: any, sub: any) => si + sub.indirect_pro_rata, 0);
-                          return sum + s.pro_rata + indirect;
-                        }, 0).toLocaleString()}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold tabular-nums">
+                          ${corporateStakes.reduce((sum, s) => {
+                            const indirect = s.subsidiaries.reduce((si: any, sub: any) => si + sub.indirect_pro_rata, 0);
+                            return sum + s.pro_rata + indirect;
+                          }, 0).toLocaleString()}
+                        </span>
+                        {corpHoldingsCollapsed ? (
+                          <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+                        ) : (
+                          <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                        )}
+                      </div>
                     </div>
+                    {!corpHoldingsCollapsed && (
                     <div className="p-2 space-y-1">
                       {corporateStakes.map((stake) => {
                         const totalIndirect = stake.subsidiaries.reduce((s: any, sub: any) => s + sub.indirect_pro_rata, 0);
@@ -1043,6 +1055,7 @@ const ContactDetail = () => {
                         );
                       })}
                     </div>
+                    )}
                   </div>
                 )}
 
@@ -1086,32 +1099,6 @@ const ContactDetail = () => {
                       extraTotal={
                         cashValuePolicies.reduce((s, p) => s + (Number(p.cash_value) || 0), 0)
                         + coveragePolicies.reduce((s, p) => s + (Number(p.coverage_amount) || 0), 0)
-                      }
-                      footerContent={
-                        (coveragePolicies.length > 0 || cashValuePolicies.length > 0) ? (
-                          <div className="rounded-md border border-accent/30 bg-accent/5 p-1.5 space-y-0.5">
-                            {coveragePolicies.map((p) => (
-                              <div key={`cov-${p.id}`} className="flex items-center justify-between px-2 py-1">
-                                <span className="text-xs text-foreground/80">
-                                  🛡️ {p.carrier} — Coverage{p.policy_number ? ` #${p.policy_number}` : ""}
-                                </span>
-                                <span className="text-xs font-medium tabular-nums">
-                                  ${(Number(p.coverage_amount) || 0).toLocaleString()}
-                                </span>
-                              </div>
-                            ))}
-                            {cashValuePolicies.map((p) => (
-                              <div key={`cv-${p.id}`} className="flex items-center justify-between px-2 py-1">
-                                <span className="text-xs text-foreground/80">
-                                  🛡️ {p.carrier} — Cash Value{p.policy_number ? ` #${p.policy_number}` : ""}
-                                </span>
-                                <span className="text-xs font-medium tabular-nums">
-                                  ${(Number(p.cash_value) || 0).toLocaleString()}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        ) : null
                       }
                       moveTargets={otherTargets}
                       onMoveAccount={async (account, targetKey) => {
