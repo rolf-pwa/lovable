@@ -17,6 +17,8 @@ import {
   generateVertexContent,
   parseServiceAccountKey,
 } from "../_shared/vertex-ai.ts";
+import { getServiceGoogleAccessToken } from "../_shared/google-token.ts";
+import { driveListChildren, matchVaultCategoryFolder } from "../_shared/vault-provisioning.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -681,6 +683,62 @@ async function handleInhouseUpload(
   );
 }
 
+/**
+ * Maps intake_checklist_templates.category values to the Vault folder template
+ * slug that would already hold a matching document if it was filed directly
+ * into the Vault (by staff, or by an existing client from before this
+ * checklist pipeline existed) instead of uploaded through this wizard.
+ */
+const CHECKLIST_CATEGORY_TO_VAULT_SLUG: Record<string, string> = {
+  "01_Identities": "identity-legal",
+  "02_Financial": "investments",
+  "05_Income_Tax": "tax",
+  "06_Insurance": "insurance",
+  "07_Estate_Planning": "estate",
+  "10_Corporate_Entities": "business",
+  "04_Asset_Specific": "real-estate",
+};
+
+/**
+ * Best-effort supplement to the classification-based checklist: for each
+ * checklist category, checks whether the household's real Vault folder
+ * already has files in the matching category folder. Existing clients often
+ * have documents staff filed directly into the Vault long before this wizard
+ * existed, which intake_classifications has no rows for — without this check
+ * every one of those items would show as missing despite already being on file.
+ * Fails soft (returns an empty set) on any error — Vault access is a bonus
+ * signal, never a hard requirement for the manifest to render.
+ */
+async function computeVaultSatisfiedCategories(
+  vaultRootFolderId: string | null,
+  neededSlugs: string[],
+): Promise<Set<string>> {
+  const satisfied = new Set<string>();
+  if (!vaultRootFolderId || neededSlugs.length === 0) return satisfied;
+
+  const { data: templates } = await admin
+    .from("vault_folder_templates")
+    .select("slug, display_name")
+    .eq("is_active", true)
+    .in("slug", neededSlugs);
+  const categories = (templates ?? []) as { slug: string; display_name: string }[];
+  if (categories.length === 0) return satisfied;
+
+  try {
+    const accessToken = await getServiceGoogleAccessToken(admin);
+    const rootChildren = await driveListChildren(vaultRootFolderId, accessToken);
+    for (const cat of categories) {
+      const folder = matchVaultCategoryFolder(rootChildren, cat.display_name);
+      if (!folder) continue;
+      const contents = await driveListChildren(folder.id, accessToken);
+      if (contents.length > 0) satisfied.add(cat.slug);
+    }
+  } catch {
+    // Best-effort — classification-based status still applies.
+  }
+  return satisfied;
+}
+
 async function handleInhouseManifest(
   req: Request,
   cors: Record<string, string>,
@@ -688,7 +746,7 @@ async function handleInhouseManifest(
 ): Promise<Response> {
   const { data: household } = await admin
     .from("households")
-    .select("id, label, family_id, families(name)")
+    .select("id, label, family_id, vault_root_folder_id, families(name)")
     .eq("id", resolved.householdId)
     .maybeSingle();
   const familyName = (household as any)?.families?.name ?? "Family";
@@ -736,14 +794,28 @@ async function handleInhouseManifest(
     }
   }
 
+  const neededVaultSlugs = [
+    ...new Set(
+      activeTemplates
+        .map((t) => (t.category ? CHECKLIST_CATEGORY_TO_VAULT_SLUG[t.category] : null))
+        .filter((slug): slug is string => Boolean(slug)),
+    ),
+  ];
+  const vaultSatisfiedSlugs = await computeVaultSatisfiedCategories(
+    (household as any)?.vault_root_folder_id ?? null,
+    neededVaultSlugs,
+  );
+
   const checklist = activeTemplates.map((t) => {
     const matches = matchedByTemplate.get(t.id) ?? [];
     const filed = matches.filter((c) => c.status === "filed").length;
     const pending = matches.filter((c) => c.status === "pending").length;
     const needsReview = matches.filter((c) => c.status === "needs_review").length;
+    const vaultSlug = t.category ? CHECKLIST_CATEGORY_TO_VAULT_SLUG[t.category] : null;
+    const foundInVault = Boolean(vaultSlug && vaultSatisfiedSlugs.has(vaultSlug));
 
     let status = "waiting";
-    if (filed > 0) status = "filed";
+    if (filed > 0 || foundInVault) status = "filed";
     else if (needsReview > 0) status = "needs_review";
     else if (pending > 0) status = "pending";
 

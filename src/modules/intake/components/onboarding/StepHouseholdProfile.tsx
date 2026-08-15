@@ -21,6 +21,17 @@ const RELATIONSHIPS: { value: OnboardingMemberInput["relationship"]; label: stri
   { value: "other", label: "Other member" },
 ];
 
+const ROLE_LABELS: Record<string, string> = {
+  head_of_family: "Head of household",
+  head_of_household: "Head of household",
+  spouse: "Spouse / partner",
+  child: "Child",
+  dependant: "Dependant",
+  beneficiary: "Beneficiary",
+  minor: "Minor",
+  other: "Household member",
+};
+
 interface Props {
   state: OnboardingState;
   saving: boolean;
@@ -150,8 +161,20 @@ export const StepHouseholdProfile = ({ state, saving, onSave }: Props) => {
           </div>
 
           {state.members.length > 0 && (
-            <div className="rounded-lg border border-border bg-muted/20 p-3 text-xs text-muted-foreground">
-              Already on file: {state.members.map((m) => m.fullName).join(", ")}
+            <div className="space-y-1.5 rounded-lg border border-border bg-muted/20 p-3">
+              <p className="text-xs font-medium text-muted-foreground">
+                Already on file — no need to re-add these:
+              </p>
+              <ul className="space-y-1">
+                {state.members.map((m) => (
+                  <li key={m.id} className="flex items-center justify-between gap-3 text-sm">
+                    <span className="text-foreground">{m.fullName}</span>
+                    <span className="shrink-0 text-xs text-muted-foreground">
+                      {(m.role && ROLE_LABELS[m.role]) ?? m.role ?? "Household member"}
+                    </span>
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
 
