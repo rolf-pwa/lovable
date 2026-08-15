@@ -260,8 +260,14 @@ function factsBlock(
     lines.push(
       "Engagement stage: Existing managed client formalizing their Sovereignty Operating System — NOT a new-lead onboarding. Do not frame this as an initial/Day-1 engagement.",
     );
-    if (wealthEventType) lines.push(`Wealth event: ${wealthEventType}`);
-    if (wealthEventNotes) lines.push(`Wealth event notes: ${wealthEventNotes}`);
+    // Existing clients don't have a triggering "wealth event" — Step 3 of their
+    // guided intake instead asks about vision, values, and purpose for their
+    // capital (stored under the same field with a "vision_values" sentinel).
+    if (wealthEventType === "vision_values" && wealthEventNotes) {
+      lines.push(`Client's stated vision, values & purpose for their capital: ${wealthEventNotes}`);
+    } else if (wealthEventNotes) {
+      lines.push(`Additional context from the client: ${wealthEventNotes}`);
+    }
   } else {
     lines.push(`Wealth event: ${wealthEventType || "(not specified)"}`);
     lines.push(`Wealth event notes: ${wealthEventNotes || "(none provided)"}`);
@@ -313,11 +319,10 @@ async function handleHouseholdGeneration(
 
   const { data: household, error: hhErr } = await supabase
     .from("households")
-    .select("id, wealth_event_type, wealth_event_notes, onboarding_enabled")
+    .select("id, wealth_event_type, wealth_event_notes")
     .eq("id", householdId)
     .maybeSingle();
   if (hhErr || !household) return json({ error: "Household not found" }, 404);
-  const isLegacyClient = household.onboarding_enabled === false;
 
   const { data: contacts } = await supabase
     .from("contacts")
@@ -385,7 +390,12 @@ async function handleHouseholdGeneration(
   }
 
   try {
-    const { track_type, diagnostics } = await computeSovereigntyDiagnostics(supabase, householdId, existingInputs);
+    const { track_type, diagnostics, financials } = await computeSovereigntyDiagnostics(
+      supabase,
+      householdId,
+      existingInputs,
+    );
+    const isLegacyClient = financials.isLegacyClient;
 
     const gcpKeyRaw = Deno.env.get("GCP_SERVICE_ACCOUNT_KEY");
     if (!gcpKeyRaw) throw new Error("GCP_SERVICE_ACCOUNT_KEY not configured");

@@ -272,6 +272,11 @@ export interface HouseholdFinancials {
   holdingTank: any[];
   totalHoldingTank: number;
   onboardingEnabled: boolean;
+  /** True for a never-onboarded legacy household, OR one staff enrolled via
+   *  "Enroll in Guided Intake" (legacy_intake_upgrade) — flips onboardingEnabled
+   *  true but the household is still fundamentally a legacy client whose real
+   *  document trail lives in the Vault, not the newer intake pipeline. */
+  isLegacyClient: boolean;
   vaultRootFolderId: string | null;
   storehouseReserves: StorehouseReserves;
   totalInsuranceCoverage: number;
@@ -284,9 +289,10 @@ export async function gatherHouseholdFinancials(
 ): Promise<HouseholdFinancials> {
   const { data: household } = await admin
     .from("households")
-    .select("id, label, family_id, onboarding_enabled, vault_root_folder_id")
+    .select("id, label, family_id, onboarding_enabled, legacy_intake_upgrade, vault_root_folder_id")
     .eq("id", householdId)
     .maybeSingle();
+  const isLegacyClient = household?.legacy_intake_upgrade === true || household?.onboarding_enabled === false;
 
   const { data: family } = household?.family_id
     ? await admin.from("families").select("name").eq("id", household.family_id).maybeSingle()
@@ -316,6 +322,7 @@ export async function gatherHouseholdFinancials(
       holdingTank: [],
       totalHoldingTank: 0,
       onboardingEnabled: household?.onboarding_enabled !== false,
+      isLegacyClient,
       vaultRootFolderId: household?.vault_root_folder_id ?? null,
       storehouseReserves: { liquidity: 0, strategic: 0, philanthropic: 0, legacy: 0 },
       totalInsuranceCoverage: 0,
@@ -443,9 +450,9 @@ export async function computeSovereigntyDiagnostics(
   inputs: DiagnosticInputs,
 ): Promise<{ track_type: TrackType; diagnostics: SovereigntyDiagnostics; financials: HouseholdFinancials }> {
   const financials = await gatherHouseholdFinancials(admin, householdId);
-  const documentReadiness = financials.onboardingEnabled
-    ? await computeDocumentReadiness(admin, householdId)
-    : await computeVaultReadiness(admin, financials.vaultRootFolderId);
+  const documentReadiness = financials.isLegacyClient
+    ? await computeVaultReadiness(admin, financials.vaultRootFolderId)
+    : await computeDocumentReadiness(admin, householdId);
 
   const trackType = inferTrackType(financials.shareholders);
 
