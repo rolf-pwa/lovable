@@ -19,12 +19,13 @@ interface Props {
   furthest: number;
   onSelect: (step: number) => void;
   busy?: boolean;
+  steps?: OnboardingStepMeta[];
 }
 
 /** Horizontal stepper for the guided survey onboarding. */
-export const OnboardingStepper = ({ current, furthest, onSelect, busy }: Props) => (
+export const OnboardingStepper = ({ current, furthest, onSelect, busy, steps = ONBOARDING_STEPS }: Props) => (
   <ol className="flex flex-col gap-2 sm:flex-row sm:items-stretch sm:gap-3">
-    {ONBOARDING_STEPS.map((step) => {
+    {steps.map((step) => {
       const done = step.id < furthest;
       const active = step.id === current;
       const unlocked = step.id <= furthest;

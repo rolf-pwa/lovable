@@ -25,10 +25,13 @@ export interface OnboardingState {
     step: number;
     auditBookedAt: string | null;
     profileCompletedAt: string | null;
-    wealthEventType: WealthEventType | null;
+    wealthEventType: WealthEventType | "vision_values" | null;
     wealthEventNotes: string;
     wealthEventCompletedAt: string | null;
     onboardingCompletedAt: string | null;
+    /** Staff enrolled an existing client — Step 3 asks about vision/values/
+     *  purpose instead of a triggering wealth event. */
+    legacyUpgrade: boolean;
     vaultReady: boolean;
   };
   contact: {
@@ -144,7 +147,7 @@ export function useOnboarding(portalToken?: string) {
       members: OnboardingMemberInput[];
     }) => mutate({ action: "onboarding_profile", ...input }),
 
-    saveWealthEvent: (wealthEventType: WealthEventType, notes: string) =>
+    saveWealthEvent: (wealthEventType: WealthEventType | "vision_values", notes: string) =>
       mutate({ action: "onboarding_wealth_event", wealthEventType, notes }),
     markDocumentsComplete: () => mutate({ action: "onboarding_documents_complete" }),
   };

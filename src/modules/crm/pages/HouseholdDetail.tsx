@@ -267,17 +267,17 @@ const HouseholdDetail = () => {
         }
       }
 
-      if (household.onboarding_enabled === false) {
-        const { error: flagError } = await supabase
-          .from("households")
-          .update({ onboarding_enabled: true })
-          .eq("id", id);
-        if (flagError) {
-          toast.error("Booking recorded, but couldn't enable Audit onboarding — flip the switch above manually.");
-          return;
-        }
-        setHousehold((prev: any) => ({ ...prev, onboarding_enabled: true }));
+      // Always mark this as a legacy upgrade — even on a repeat click, so a
+      // household that got flagged onboarding_enabled some other way still
+      // gets the vision/values Step 3 framing instead of the wealth-event one.
+      const flagPatch: Record<string, boolean> = { legacy_intake_upgrade: true };
+      if (household.onboarding_enabled === false) flagPatch.onboarding_enabled = true;
+      const { error: flagError } = await supabase.from("households").update(flagPatch).eq("id", id);
+      if (flagError) {
+        toast.error("Booking recorded, but couldn't update this household's onboarding settings — check the switch above manually.");
+        return;
       }
+      setHousehold((prev: any) => ({ ...prev, ...flagPatch }));
 
       toast.success("Enrolled — the Sovereignty Survey intake will now appear in this household's portal.");
     } finally {

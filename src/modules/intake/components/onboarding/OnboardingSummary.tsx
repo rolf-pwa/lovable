@@ -104,19 +104,31 @@ export const OnboardingSummary = ({ portalToken, state, open, onOpenChange }: Pr
             </SummarySection>
           )}
 
-          {household.wealthEventType && (
-            <SummarySection icon={<Sprout className="h-3.5 w-3.5" />} title="Wealth event">
-              <div className="space-y-1 rounded-lg border border-border p-3">
-                <p className="font-medium text-foreground">
-                  {WEALTH_EVENT_LABELS[household.wealthEventType] ?? household.wealthEventType}
-                </p>
-                {household.wealthEventNotes && (
+          {household.wealthEventType && household.wealthEventType === "vision_values" ? (
+            <SummarySection icon={<Sprout className="h-3.5 w-3.5" />} title="Vision & values">
+              {household.wealthEventNotes && (
+                <div className="rounded-lg border border-border p-3">
                   <p className="whitespace-pre-wrap text-muted-foreground">
                     {household.wealthEventNotes}
                   </p>
-                )}
-              </div>
+                </div>
+              )}
             </SummarySection>
+          ) : (
+            household.wealthEventType && (
+              <SummarySection icon={<Sprout className="h-3.5 w-3.5" />} title="Wealth event">
+                <div className="space-y-1 rounded-lg border border-border p-3">
+                  <p className="font-medium text-foreground">
+                    {WEALTH_EVENT_LABELS[household.wealthEventType] ?? household.wealthEventType}
+                  </p>
+                  {household.wealthEventNotes && (
+                    <p className="whitespace-pre-wrap text-muted-foreground">
+                      {household.wealthEventNotes}
+                    </p>
+                  )}
+                </div>
+              </SummarySection>
+            )
           )}
 
           <SummarySection icon={<FileCheck2 className="h-3.5 w-3.5" />} title="Documents">
