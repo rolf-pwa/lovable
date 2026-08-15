@@ -214,7 +214,12 @@ export const OnboardingShell = ({ portalToken, onBack, onAskForHelp }: Props) =>
       {current === 4 &&
         (isLegacy ? (
           <div className="space-y-4">
-            <StepBookMeeting saving={saving} onConfirm={() => void confirmMeetingBooked()} />
+            <StepBookMeeting
+              fullName={state.contact.fullName}
+              email={state.contact.email}
+              saving={saving}
+              onConfirm={() => void confirmMeetingBooked()}
+            />
             {completionBanner}
           </div>
         ) : (
