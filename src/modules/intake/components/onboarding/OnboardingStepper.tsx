@@ -14,6 +14,16 @@ export const ONBOARDING_STEPS: OnboardingStepMeta[] = [
   { id: 4, title: "Your documents", hint: "Upload what you have" },
 ];
 
+/** Legacy upgrades (existing clients staff enrolled) skip the payment-track
+ *  audit booking and wealth-event framing entirely — different order, different
+ *  steps. */
+export const LEGACY_ONBOARDING_STEPS: OnboardingStepMeta[] = [
+  { id: 1, title: "Household info", hint: "Confirm what's on file" },
+  { id: 2, title: "Vision & values", hint: "What matters most to you" },
+  { id: 3, title: "Your documents", hint: "Upload what you have" },
+  { id: 4, title: "Book your meeting", hint: "Schedule your session" },
+];
+
 interface Props {
   current: number;
   furthest: number;

@@ -932,7 +932,7 @@ async function loadOnboarding(resolved: Resolved) {
       admin
         .from("households")
         .select(
-          "id, label, address, onboarding_step, onboarding_completed_at, audit_booked_at, profile_completed_at, wealth_event_type, wealth_event_notes, wealth_event_completed_at, intake_share_token, vault_root_folder_id",
+          "id, label, address, onboarding_step, onboarding_completed_at, audit_booked_at, profile_completed_at, wealth_event_type, wealth_event_notes, wealth_event_completed_at, vision_notes, values_notes, purpose_notes, intake_share_token, vault_root_folder_id",
         )
         .eq("id", resolved.householdId)
         .maybeSingle(),
@@ -970,6 +970,9 @@ async function loadOnboarding(resolved: Resolved) {
       wealthEventType: household?.wealth_event_type ?? null,
       wealthEventNotes: household?.wealth_event_notes ?? "",
       wealthEventCompletedAt: household?.wealth_event_completed_at ?? null,
+      visionNotes: household?.vision_notes ?? "",
+      valuesNotes: household?.values_notes ?? "",
+      purposeNotes: household?.purpose_notes ?? "",
       onboardingCompletedAt: household?.onboarding_completed_at ?? null,
       legacyUpgrade: resolved.legacyUpgrade,
       vaultReady,
@@ -1162,31 +1165,24 @@ async function handleOnboardingAction(
       seenNames.add(fullName.toLowerCase());
     }
 
-    await advanceStep(resolved.householdId, 3, { profile_completed_at: new Date().toISOString() });
+    // Legacy upgrades run Household info first (Step 1) and unlock Vision &
+    // values (Step 2) next; new clients run Book Audit first, so completing
+    // Household info here (their Step 2) unlocks Wealth event (Step 3).
+    await advanceStep(resolved.householdId, resolved.legacyUpgrade ? 2 : 3, {
+      profile_completed_at: new Date().toISOString(),
+    });
     const state = await loadOnboarding(resolved);
     return json({ ...state, createdMembers });
   }
 
   if (action === "onboarding_wealth_event") {
-    const notes = str(payload?.notes, 4000);
-
-    // Legacy upgrades (existing clients staff enrolled) never had a triggering
-    // wealth event — Step 3 asks about vision, values, and purpose instead.
-    // Store it under the same fields with a fixed sentinel type so downstream
-    // readers (Stabilization Survey narrative, this summary screen) can tell
-    // the two apart without a schema change.
+    // Legacy upgrades never had a triggering wealth event — they use the
+    // dedicated onboarding_vision_values action (Step 2) instead.
     if (resolved.legacyUpgrade) {
-      if (!notes) {
-        return json({ error: "Please share a little about your vision and values" }, 400);
-      }
-      await advanceStep(resolved.householdId, 4, {
-        wealth_event_type: "vision_values",
-        wealth_event_notes: notes,
-        wealth_event_completed_at: new Date().toISOString(),
-      });
-      return json(await loadOnboarding(resolved));
+      return json({ error: "This household uses the vision & values step instead" }, 400);
     }
 
+    const notes = str(payload?.notes, 4000);
     const type = str(payload?.wealthEventType, 40).toLowerCase();
     if (!WEALTH_EVENTS.includes(type as (typeof WEALTH_EVENTS)[number])) {
       return json({ error: "Please choose a wealth event" }, 400);
@@ -1199,10 +1195,47 @@ async function handleOnboardingAction(
     return json(await loadOnboarding(resolved));
   }
 
-  if (action === "onboarding_documents_complete") {
-    await advanceStep(resolved.householdId, 4, {
-      onboarding_completed_at: new Date().toISOString(),
+  // Legacy upgrades' Step 2 — vision, values, and purpose for their capital,
+  // captured as 3 separate fields so each can be read/quoted independently
+  // elsewhere (Sovereignty Charter, Stabilization Survey) rather than one blob.
+  if (action === "onboarding_vision_values") {
+    if (!resolved.legacyUpgrade) {
+      return json({ error: "This household uses the wealth event step instead" }, 400);
+    }
+    const vision = str(payload?.vision, 2000);
+    const values = str(payload?.values, 2000);
+    const purpose = str(payload?.purpose, 2000);
+    if (!vision && !values && !purpose) {
+      return json({ error: "Please share at least one of your vision, values, or purpose" }, 400);
+    }
+    await advanceStep(resolved.householdId, 3, {
+      vision_notes: vision || null,
+      values_notes: values || null,
+      purpose_notes: purpose || null,
+      wealth_event_completed_at: new Date().toISOString(),
     });
+    return json(await loadOnboarding(resolved));
+  }
+
+  if (action === "onboarding_documents_complete") {
+    // Legacy upgrades still have a Step 4 (Book Meeting) after documents —
+    // advance without finishing. New clients finish here (Step 4 is last).
+    await advanceStep(
+      resolved.householdId,
+      4,
+      resolved.legacyUpgrade ? {} : { onboarding_completed_at: new Date().toISOString() },
+    );
+    return json(await loadOnboarding(resolved));
+  }
+
+  // Legacy upgrades' Step 4 — client confirms they've booked their session via
+  // the external Google Calendar link. No calendar-verification like the
+  // audit-booking flow has; this is the last step, so it finishes onboarding.
+  if (action === "onboarding_meeting_booked") {
+    if (!resolved.legacyUpgrade) {
+      return json({ error: "Not applicable for this household" }, 400);
+    }
+    await advanceStep(resolved.householdId, 4, { onboarding_completed_at: new Date().toISOString() });
     return json(await loadOnboarding(resolved));
   }
 
@@ -1215,7 +1248,9 @@ const ONBOARDING_ACTIONS = new Set([
   "onboarding_check_booking",
   "onboarding_profile",
   "onboarding_wealth_event",
+  "onboarding_vision_values",
   "onboarding_documents_complete",
+  "onboarding_meeting_booked",
 ]);
 
 // ═════════════════════════════════════════════════════════════════════════════

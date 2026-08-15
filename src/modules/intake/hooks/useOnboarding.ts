@@ -25,12 +25,17 @@ export interface OnboardingState {
     step: number;
     auditBookedAt: string | null;
     profileCompletedAt: string | null;
-    wealthEventType: WealthEventType | "vision_values" | null;
+    wealthEventType: WealthEventType | null;
     wealthEventNotes: string;
     wealthEventCompletedAt: string | null;
+    /** Legacy-upgrade Step 2 fields — captured separately so each can be
+     *  read/quoted independently elsewhere, rather than one combined note. */
+    visionNotes: string;
+    valuesNotes: string;
+    purposeNotes: string;
     onboardingCompletedAt: string | null;
-    /** Staff enrolled an existing client — Step 3 asks about vision/values/
-     *  purpose instead of a triggering wealth event. */
+    /** Staff enrolled an existing client — steps are reordered (household info
+     *  first, vision/values instead of a wealth event, meeting booked last). */
     legacyUpgrade: boolean;
     vaultReady: boolean;
   };
@@ -147,8 +152,11 @@ export function useOnboarding(portalToken?: string) {
       members: OnboardingMemberInput[];
     }) => mutate({ action: "onboarding_profile", ...input }),
 
-    saveWealthEvent: (wealthEventType: WealthEventType | "vision_values", notes: string) =>
+    saveWealthEvent: (wealthEventType: WealthEventType, notes: string) =>
       mutate({ action: "onboarding_wealth_event", wealthEventType, notes }),
+    saveVisionValues: (vision: string, values: string, purpose: string) =>
+      mutate({ action: "onboarding_vision_values", vision, values, purpose }),
     markDocumentsComplete: () => mutate({ action: "onboarding_documents_complete" }),
+    confirmMeetingBooked: () => mutate({ action: "onboarding_meeting_booked" }),
   };
 }

@@ -3,10 +3,12 @@ import { AlertCircle, FileText, HelpCircle, Loader2, PartyPopper } from "lucide-
 import { Button } from "@/shared/components/ui/button";
 import { Card, CardContent } from "@/shared/components/ui/card";
 import { useOnboarding } from "../../hooks/useOnboarding";
-import { ONBOARDING_STEPS, OnboardingStepper } from "./OnboardingStepper";
+import { LEGACY_ONBOARDING_STEPS, ONBOARDING_STEPS, OnboardingStepper } from "./OnboardingStepper";
 import { OnboardingSummary } from "./OnboardingSummary";
 import { StepBookAudit } from "./StepBookAudit";
+import { StepBookMeeting } from "./StepBookMeeting";
 import { StepHouseholdProfile } from "./StepHouseholdProfile";
+import { StepVisionValues } from "./StepVisionValues";
 import { StepWealthEvent } from "./StepWealthEvent";
 import { PortalIntakePage } from "../PortalIntakePage";
 
@@ -17,9 +19,11 @@ interface Props {
 }
 
 /**
- * Guided Sovereignty Survey onboarding — Georgia walks a brand-new client
- * through booking, household details, their wealth event, and finally their
- * documents (which reuses the existing Survey checklist).
+ * Guided Sovereignty Survey onboarding. New clients: Book Audit → Household →
+ * Wealth event → Documents. Legacy upgrades (existing clients staff enrolled,
+ * no payment): Household info → Vision & values → Documents → Book meeting —
+ * same 4 steps, different order and content, since nothing "brought them here"
+ * and there's no payment-track audit to book.
  */
 export const OnboardingShell = ({ portalToken, onBack, onAskForHelp }: Props) => {
   const {
@@ -32,7 +36,9 @@ export const OnboardingShell = ({ portalToken, onBack, onAskForHelp }: Props) =>
     checkAuditBooking,
     saveProfile,
     saveWealthEvent,
+    saveVisionValues,
     markDocumentsComplete,
+    confirmMeetingBooked,
   } = useOnboarding(portalToken);
 
   const furthest = state?.household.step ?? 1;
@@ -82,15 +88,22 @@ export const OnboardingShell = ({ portalToken, onBack, onAskForHelp }: Props) =>
     );
   }
 
-
   const firstName = state.contact.firstName || state.contact.fullName || "there";
-  const steps = state.household.legacyUpgrade
-    ? ONBOARDING_STEPS.map((step) =>
-        step.id === 3
-          ? { ...step, title: "Vision & values", hint: "What matters most to you" }
-          : step,
-      )
-    : ONBOARDING_STEPS;
+  const isLegacy = state.household.legacyUpgrade;
+  const steps = isLegacy ? LEGACY_ONBOARDING_STEPS : ONBOARDING_STEPS;
+
+  const completionBanner = state.household.onboardingCompletedAt && (
+    <div className="flex flex-col gap-3 rounded-lg border border-primary/30 bg-primary/10 p-3 text-sm text-foreground sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex items-center gap-2">
+        <PartyPopper className="h-4 w-4 shrink-0 text-primary" />
+        Your onboarding is complete — thank you. We'll take it from here.
+      </div>
+      <Button variant="outline" size="sm" className="shrink-0" onClick={() => setSummaryOpen(true)}>
+        <FileText className="h-4 w-4" />
+        View summary
+      </Button>
+    </div>
+  );
 
   return (
     <div className="space-y-6">
@@ -128,77 +141,95 @@ export const OnboardingShell = ({ portalToken, onBack, onAskForHelp }: Props) =>
         </div>
       )}
 
-      {current === 1 && (
-        <StepBookAudit
-          fullName={state.contact.fullName}
-          email={state.contact.email}
-          serviceName={state.booking?.serviceName ?? null}
-          schedulingUrl={state.booking?.schedulingUrl ?? null}
-          bookedAt={state.household.auditBookedAt}
-          onCheckBooking={async () => {
-            const found = await checkAuditBooking();
-            if (found) setCurrent(2);
-            return found;
-          }}
-          saving={saving}
-          onConfirm={async () => {
-            const ok = await confirmAuditBooked();
-            if (ok) setCurrent(2);
-          }}
-        />
-      )}
+      {current === 1 &&
+        (isLegacy ? (
+          <StepHouseholdProfile
+            state={state}
+            saving={saving}
+            onSave={async (input) => {
+              const ok = await saveProfile(input);
+              if (ok) setCurrent(2);
+            }}
+          />
+        ) : (
+          <StepBookAudit
+            fullName={state.contact.fullName}
+            email={state.contact.email}
+            serviceName={state.booking?.serviceName ?? null}
+            schedulingUrl={state.booking?.schedulingUrl ?? null}
+            bookedAt={state.household.auditBookedAt}
+            onCheckBooking={async () => {
+              const found = await checkAuditBooking();
+              if (found) setCurrent(2);
+              return found;
+            }}
+            saving={saving}
+            onConfirm={async () => {
+              const ok = await confirmAuditBooked();
+              if (ok) setCurrent(2);
+            }}
+          />
+        ))}
 
-      {current === 2 && (
-        <StepHouseholdProfile
-          state={state}
-          saving={saving}
-          onSave={async (input) => {
-            const ok = await saveProfile(input);
-            if (ok) setCurrent(3);
-          }}
-        />
-      )}
+      {current === 2 &&
+        (isLegacy ? (
+          <StepVisionValues
+            state={state}
+            saving={saving}
+            onSave={async (vision, values, purpose) => {
+              const ok = await saveVisionValues(vision, values, purpose);
+              if (ok) setCurrent(3);
+            }}
+          />
+        ) : (
+          <StepHouseholdProfile
+            state={state}
+            saving={saving}
+            onSave={async (input) => {
+              const ok = await saveProfile(input);
+              if (ok) setCurrent(3);
+            }}
+          />
+        ))}
 
-      {current === 3 && (
-        <StepWealthEvent
-          state={state}
-          saving={saving}
-          onSave={async (type, notes) => {
-            const ok = await saveWealthEvent(type, notes);
-            if (ok) setCurrent(4);
-          }}
-        />
-      )}
-
-      {current === 4 && (
-        <div className="space-y-4">
+      {current === 3 &&
+        (isLegacy ? (
           <PortalIntakePage
             portalToken={portalToken}
             onBack={onBack}
             onAskForHelp={onAskForHelp}
-            onComplete={
-              state.household.onboardingCompletedAt ? undefined : () => void markDocumentsComplete()
-            }
+            onComplete={state.household.step < 4 ? () => void markDocumentsComplete() : undefined}
           />
-          {state.household.onboardingCompletedAt && (
-            <div className="flex flex-col gap-3 rounded-lg border border-primary/30 bg-primary/10 p-3 text-sm text-foreground sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-2">
-                <PartyPopper className="h-4 w-4 shrink-0 text-primary" />
-                Your onboarding is complete — thank you. We'll take it from here.
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                className="shrink-0"
-                onClick={() => setSummaryOpen(true)}
-              >
-                <FileText className="h-4 w-4" />
-                View summary
-              </Button>
-            </div>
-          )}
-        </div>
-      )}
+        ) : (
+          <StepWealthEvent
+            state={state}
+            saving={saving}
+            onSave={async (type, notes) => {
+              const ok = await saveWealthEvent(type, notes);
+              if (ok) setCurrent(4);
+            }}
+          />
+        ))}
+
+      {current === 4 &&
+        (isLegacy ? (
+          <div className="space-y-4">
+            <StepBookMeeting saving={saving} onConfirm={() => void confirmMeetingBooked()} />
+            {completionBanner}
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <PortalIntakePage
+              portalToken={portalToken}
+              onBack={onBack}
+              onAskForHelp={onAskForHelp}
+              onComplete={
+                state.household.onboardingCompletedAt ? undefined : () => void markDocumentsComplete()
+              }
+            />
+            {completionBanner}
+          </div>
+        ))}
 
       {state.household.onboardingCompletedAt && (
         <OnboardingSummary

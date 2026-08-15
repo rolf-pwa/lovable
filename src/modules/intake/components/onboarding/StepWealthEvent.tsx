@@ -25,63 +25,17 @@ export const WEALTH_EVENT_LABELS: Record<WealthEventType, string> = {
 interface Props {
   state: OnboardingState;
   saving: boolean;
-  onSave: (type: WealthEventType | "vision_values", notes: string) => void;
+  onSave: (type: WealthEventType, notes: string) => void;
 }
 
 /** Step 3 — the wealth event that brought the client to us. */
 export const StepWealthEvent = ({ state, saving, onSave }: Props) => {
-  const legacyUpgrade = state.household.legacyUpgrade;
-  const [type, setType] = useState<WealthEventType | "">(
-    state.household.wealthEventType && state.household.wealthEventType !== "vision_values"
-      ? state.household.wealthEventType
-      : "",
-  );
+  const [type, setType] = useState<WealthEventType | "">(state.household.wealthEventType ?? "");
   const [notes, setNotes] = useState(state.household.wealthEventNotes ?? "");
 
   const options = state.wealthEventOptions?.length
     ? state.wealthEventOptions
     : (Object.keys(WEALTH_EVENT_LABELS) as WealthEventType[]);
-
-  if (legacyUpgrade) {
-    return (
-      <Card>
-        <CardContent className="space-y-6 p-6">
-          <div className="space-y-1.5">
-            <h2 className="font-serif text-lg font-semibold text-foreground">
-              Your vision, values &amp; purpose
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              You're already part of the ProsperWise family — this Survey is about formalizing what
-              we build together, not starting from scratch. Tell us what matters most: your vision
-              for your family's future, the values that guide your decisions, and what you want this
-              capital to accomplish.
-            </p>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="ob-vision">What's your vision, values, and purpose for your capital?</Label>
-            <Textarea
-              id="ob-vision"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              rows={7}
-              maxLength={4000}
-              placeholder="What's your vision for your family's future? What values matter most in how you make decisions? What do you want this capital to accomplish, beyond the numbers?"
-            />
-            <p className="text-xs text-muted-foreground">
-              Please leave out account numbers, SIN or health details — we'll gather anything
-              sensitive securely during your Survey.
-            </p>
-          </div>
-
-          <Button disabled={!notes.trim() || saving} onClick={() => onSave("vision_values", notes)}>
-            <Sprout className="h-4 w-4" />
-            Save and continue
-          </Button>
-        </CardContent>
-      </Card>
-    );
-  }
 
   return (
     <Card>
