@@ -746,7 +746,7 @@ async function handleInhouseManifest(
 ): Promise<Response> {
   const { data: household } = await admin
     .from("households")
-    .select("id, label, family_id, vault_root_folder_id, families(name)")
+    .select("id, label, family_id, vault_root_folder_id, onboarding_completed_at, families(name)")
     .eq("id", resolved.householdId)
     .maybeSingle();
   const familyName = (household as any)?.families?.name ?? "Family";
@@ -859,6 +859,7 @@ async function handleInhouseManifest(
       enabled: true,
       familyName,
       householdName,
+      onboardingCompletedAt: (household as any)?.onboarding_completed_at ?? null,
       status: complete ? "complete" : "in_progress",
       ready: true,
       completion: {

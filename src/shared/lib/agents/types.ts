@@ -47,6 +47,10 @@ export interface IntakeManifest {
   status?: string;
   familyName?: string;
   householdName?: string;
+  /** Set once the client has explicitly finished all 4 onboarding steps — not
+   *  just the document checklist, which can read "complete" for an existing
+   *  client whose Vault was already stocked before they even started step 1. */
+  onboardingCompletedAt?: string | null;
   completion?: {
     status?: "not_started" | "in_progress" | "complete";
     expectedItems?: number;
