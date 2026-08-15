@@ -58,6 +58,9 @@ interface Resolved {
   onboardingEnabled: boolean;
   /** Why onboarding is hidden, when it is. */
   disabledReason: "legacy_client" | "audit_unpaid" | null;
+  /** Staff enrolled an existing client (not a new wealth-event lead) — Step 3 asks
+   *  about vision/values/purpose instead of a triggering wealth event. */
+  legacyUpgrade: boolean;
 }
 
 async function resolveHousehold(req: Request): Promise<Resolved | null> {
@@ -79,7 +82,9 @@ async function resolveHousehold(req: Request): Promise<Resolved | null> {
 
   const { data: hh } = await admin
     .from("households")
-    .select("id, intake_share_token, intake_manifest_url, intake_upload_url, onboarding_enabled")
+    .select(
+      "id, intake_share_token, intake_manifest_url, intake_upload_url, onboarding_enabled, legacy_intake_upgrade",
+    )
     .eq("id", contact.household_id)
     .maybeSingle();
   if (!hh) return null;
@@ -116,6 +121,7 @@ async function resolveHousehold(req: Request): Promise<Resolved | null> {
     uploadUrl: hh.intake_upload_url ?? null,
     onboardingEnabled: flagOn && auditPaid,
     disabledReason: !flagOn ? "legacy_client" : auditPaid ? null : "audit_unpaid",
+    legacyUpgrade: Boolean(hh.legacy_intake_upgrade),
   };
 }
 
@@ -965,6 +971,7 @@ async function loadOnboarding(resolved: Resolved) {
       wealthEventNotes: household?.wealth_event_notes ?? "",
       wealthEventCompletedAt: household?.wealth_event_completed_at ?? null,
       onboardingCompletedAt: household?.onboarding_completed_at ?? null,
+      legacyUpgrade: resolved.legacyUpgrade,
       vaultReady,
     },
     contact: {
@@ -1161,8 +1168,26 @@ async function handleOnboardingAction(
   }
 
   if (action === "onboarding_wealth_event") {
-    const type = str(payload?.wealthEventType, 40).toLowerCase();
     const notes = str(payload?.notes, 4000);
+
+    // Legacy upgrades (existing clients staff enrolled) never had a triggering
+    // wealth event — Step 3 asks about vision, values, and purpose instead.
+    // Store it under the same fields with a fixed sentinel type so downstream
+    // readers (Stabilization Survey narrative, this summary screen) can tell
+    // the two apart without a schema change.
+    if (resolved.legacyUpgrade) {
+      if (!notes) {
+        return json({ error: "Please share a little about your vision and values" }, 400);
+      }
+      await advanceStep(resolved.householdId, 4, {
+        wealth_event_type: "vision_values",
+        wealth_event_notes: notes,
+        wealth_event_completed_at: new Date().toISOString(),
+      });
+      return json(await loadOnboarding(resolved));
+    }
+
+    const type = str(payload?.wealthEventType, 40).toLowerCase();
     if (!WEALTH_EVENTS.includes(type as (typeof WEALTH_EVENTS)[number])) {
       return json({ error: "Please choose a wealth event" }, 400);
     }

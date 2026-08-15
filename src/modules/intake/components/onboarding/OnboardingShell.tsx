@@ -3,7 +3,7 @@ import { AlertCircle, FileText, HelpCircle, Loader2, PartyPopper } from "lucide-
 import { Button } from "@/shared/components/ui/button";
 import { Card, CardContent } from "@/shared/components/ui/card";
 import { useOnboarding } from "../../hooks/useOnboarding";
-import { OnboardingStepper } from "./OnboardingStepper";
+import { ONBOARDING_STEPS, OnboardingStepper } from "./OnboardingStepper";
 import { OnboardingSummary } from "./OnboardingSummary";
 import { StepBookAudit } from "./StepBookAudit";
 import { StepHouseholdProfile } from "./StepHouseholdProfile";
@@ -84,6 +84,13 @@ export const OnboardingShell = ({ portalToken, onBack, onAskForHelp }: Props) =>
 
 
   const firstName = state.contact.firstName || state.contact.fullName || "there";
+  const steps = state.household.legacyUpgrade
+    ? ONBOARDING_STEPS.map((step) =>
+        step.id === 3
+          ? { ...step, title: "Vision & values", hint: "What matters most to you" }
+          : step,
+      )
+    : ONBOARDING_STEPS;
 
   return (
     <div className="space-y-6">
@@ -111,6 +118,7 @@ export const OnboardingShell = ({ portalToken, onBack, onAskForHelp }: Props) =>
         furthest={furthest}
         onSelect={setCurrent}
         busy={saving}
+        steps={steps}
       />
 
       {error && (
