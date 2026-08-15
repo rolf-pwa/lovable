@@ -15,6 +15,24 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getServiceGoogleAccessToken } from "../_shared/google-token.ts";
 import { driveListChildren, driveDownloadFile, matchVaultCategoryFolder } from "../_shared/vault-provisioning.ts";
 
+// Keep in sync with src/shared/lib/custodians.ts (a Deno edge function can't
+// import a frontend module directly). Normalizes AI-extracted custodian text
+// before it's stored — found real production rows where the exact same
+// custodian came back as "iA Financial Group", "IA Financial", "IAG
+// Financial Group", etc. across different statement PDFs.
+function normalizeCustodian(raw: string | null | undefined): string | null {
+  const value = (raw ?? "").trim();
+  if (!value) return null;
+  const lower = value.toLowerCase();
+  if (lower.includes("ia financial") || lower.includes("iag financial")) return "iA Financial Group";
+  if (lower.includes("justwealth") || lower.includes("just wealth")) return "JustWealth";
+  // A statement's custodian text is never purely digits — the AI extraction
+  // occasionally grabs a policy/account number instead of the issuer name.
+  // Store nothing rather than a garbage value in that case.
+  if (/^[a-z]?\d{6,}$/i.test(value)) return null;
+  return value;
+}
+
 const ALLOWED_ORIGINS = [
   "https://prosperwise-portal.web.app",
   "https://prosperwise.lovable.app",
@@ -415,7 +433,7 @@ Deno.serve(async (req) => {
               account_number: account.account_number,
               account_type: account.account_type || "Portfolio",
               account_owner: account.account_owner,
-              custodian: account.custodian,
+              custodian: normalizeCustodian(account.custodian),
               book_value: account.book_value,
               current_value: account.current_value,
               notes: account.notes,

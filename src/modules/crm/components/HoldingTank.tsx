@@ -24,6 +24,7 @@ import { Anchor, Grape, Castle, Sword, Wheat, Lock, ArrowRight, Loader2, Trash2,
 import { format } from "date-fns";
 import { Input } from "@/shared/components/ui/input";
 import { toast } from "sonner";
+import { CUSTODIAN_OPTIONS } from "@/shared/lib/custodians";
 
 interface HoldingTankAccount {
   id: string;
@@ -79,6 +80,11 @@ export function HoldingTank({ contactId, householdId, onAccountMoved }: HoldingT
   const [showAddForm, setShowAddForm] = useState(false);
   const [collapsed, setCollapsed] = useState(true);
   const [addForm, setAddForm] = useState({ account_name: "", account_type: "Portfolio", current_value: "", expected_deposit_date: "", custodian: "" });
+  // Custodian input is constrained to the canonical list to prevent the
+  // "iA Financial Group" / "IA Financial" / "IAG Financial Group" casing
+  // drift found in production — "Other" reveals free text for genuinely
+  // different custodians (TD Bank, Royal Bank, etc.).
+  const [custodianMode, setCustodianMode] = useState<string>("");
   const [adding, setAdding] = useState(false);
 
   const fetchAccounts = useCallback(async () => {
@@ -131,6 +137,7 @@ export function HoldingTank({ contactId, householdId, onAccountMoved }: HoldingT
           book_value: account.book_value,
           notes: account.notes,
           visibility_scope: scope,
+          custodian: account.custodian,
         } as any).select("id").single();
         if (error) throw error;
         newRowId = (inserted as any).id;
@@ -273,6 +280,7 @@ export function HoldingTank({ contactId, householdId, onAccountMoved }: HoldingT
 
       toast.success("Account added to Holding Tank");
       setAddForm({ account_name: "", account_type: "Portfolio", current_value: "", expected_deposit_date: "", custodian: "" });
+      setCustodianMode("");
       setShowAddForm(false);
       fetchAccounts();
       onAccountMoved?.();
@@ -355,12 +363,30 @@ export function HoldingTank({ contactId, householdId, onAccountMoved }: HoldingT
                   value={addForm.account_name}
                   onChange={(e) => setAddForm(f => ({ ...f, account_name: e.target.value }))}
                 />
-                <Input
-                  placeholder="Custodian"
-                  className="h-8 text-xs"
-                  value={addForm.custodian}
-                  onChange={(e) => setAddForm(f => ({ ...f, custodian: e.target.value }))}
-                />
+                <Select
+                  value={custodianMode}
+                  onValueChange={(val) => {
+                    setCustodianMode(val);
+                    setAddForm(f => ({ ...f, custodian: val === "Other" ? "" : val }));
+                  }}
+                >
+                  <SelectTrigger className="h-8 text-xs">
+                    <SelectValue placeholder="Custodian" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CUSTODIAN_OPTIONS.map((c) => (
+                      <SelectItem key={c} value={c}>{c}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {custodianMode === "Other" && (
+                  <Input
+                    placeholder="Custodian name"
+                    className="h-8 text-xs col-span-2"
+                    value={addForm.custodian}
+                    onChange={(e) => setAddForm(f => ({ ...f, custodian: e.target.value }))}
+                  />
+                )}
                 <Input
                   placeholder="Expected amount"
                   type="number"
