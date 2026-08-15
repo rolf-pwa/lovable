@@ -129,9 +129,18 @@ export function useOnboardingManifest(portalToken: string, options: Options = {}
 
   const completion = manifest?.completion ?? null;
   const audit = completion?.audit ?? null;
-  const visible = Boolean(
-    manifest?.enabled && manifest.ready !== false && completion?.status !== "complete",
-  );
+  // The document checklist can read "complete" on day one for an existing
+  // client whose Vault was already stocked before they ever opened the
+  // wizard — that alone shouldn't hide the entry point to steps 1-3. Prefer
+  // the household's real "finished all 4 steps" signal when the manifest
+  // provides one (in-house mode always does); fall back to the document
+  // checklist's own completion for the external-agent proxy path, which
+  // doesn't know about the wizard's other steps.
+  const hasOverallSignal = manifest != null && "onboardingCompletedAt" in manifest;
+  const overallDone = hasOverallSignal
+    ? Boolean(manifest!.onboardingCompletedAt)
+    : completion?.status === "complete";
+  const visible = Boolean(manifest?.enabled && manifest.ready !== false && !overallDone);
   const isComplete = completion?.status === "complete";
   // Prefer the agent's audit completeness (AI-verified documents) over raw
   // upload counts — it is what the client actually needs to finish.
