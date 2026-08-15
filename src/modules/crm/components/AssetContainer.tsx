@@ -9,7 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/shared/components/ui/dropdown-menu";
-import { Plus, X, ArrowRightLeft, ChevronDown } from "lucide-react";
+import { Plus, X, ArrowRightLeft, ChevronDown, ChevronRight } from "lucide-react";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -62,8 +62,6 @@ interface AssetContainerProps {
   onConfigurePlaceholder?: () => void;
   /** Extra amount (e.g. insurance cash value) to include in the header total */
   extraTotal?: number;
-  /** Additional rows to render inside the container (e.g. insurance policy cards) */
-  footerContent?: React.ReactNode;
 }
 
 export function AssetContainer({
@@ -81,8 +79,8 @@ export function AssetContainer({
   onAddAccount,
   onConfigurePlaceholder,
   extraTotal = 0,
-  footerContent,
 }: AssetContainerProps) {
+  const [collapsed, setCollapsed] = useState(true);
   const accountsTotal = accounts.reduce((sum, a) => sum + (Number(a.currentValue) || 0), 0);
   const total = accountsTotal + (Number(extraTotal) || 0);
   const totalTarget = accounts.reduce((sum, a) => sum + (Number(a.targetValue) || 0), 0);
@@ -118,16 +116,28 @@ export function AssetContainer({
   return (
     <div className={`rounded-lg border ${isPlaceholder ? "border-dashed border-muted-foreground/20 bg-muted/20" : "border-border bg-card"}`}>
       {/* Container Header */}
-      <div className="flex items-center justify-between px-3 py-2 border-b border-border/50">
+      <div
+        className="flex items-center justify-between px-3 py-2 border-b border-border/50 cursor-pointer select-none"
+        onClick={() => setCollapsed((c) => !c)}
+      >
         <div className="flex items-center gap-2">
           {icon}
           <h4 className="text-xs font-semibold uppercase tracking-wider">{title}</h4>
         </div>
-        <span className="text-sm font-semibold tabular-nums">
-          ${total.toLocaleString()}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-semibold tabular-nums">
+            ${total.toLocaleString()}
+          </span>
+          {collapsed ? (
+            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+          ) : (
+            <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+          )}
+        </div>
       </div>
 
+      {!collapsed && (
+      <>
       {/* Container total progress (if targets exist) */}
       {totalTarget > 0 && (
         <div className="px-3 pt-2 space-y-1">
@@ -171,11 +181,6 @@ export function AssetContainer({
           </>
         )}
 
-        {footerContent}
-
-
-
-
         {/* Add form / button */}
         {showAddForm && addFormContent}
         {!showAddForm && !isPlaceholder && onAddAccount && (
@@ -189,6 +194,8 @@ export function AssetContainer({
           </Button>
         )}
       </div>
+      </>
+      )}
     </div>
   );
 }

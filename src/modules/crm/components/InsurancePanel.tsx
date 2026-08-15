@@ -15,7 +15,7 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/shared/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/shared/components/ui/alert-dialog";
 import { Badge } from "@/shared/components/ui/badge";
-import { Shield, Plus, Pencil, Trash2 } from "lucide-react";
+import { Shield, Plus, Pencil, Trash2, ChevronDown, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { POLICY_TYPES } from "@/shared/lib/insurance";
 
@@ -91,6 +91,7 @@ export function InsurancePanel({ scope, storehouses, onStorehousesChanged }: { s
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Partial<Policy> | null>(null);
   const [open, setOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -198,19 +199,28 @@ export function InsurancePanel({ scope, storehouses, onStorehousesChanged }: { s
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0">
+      <CardHeader
+        className="flex flex-row items-center justify-between space-y-0 cursor-pointer select-none"
+        onClick={() => setCollapsed((c) => !c)}
+      >
         <div className="flex items-center gap-2">
           <Shield className="h-4 w-4 text-primary" />
           <CardTitle className="text-base">Insurance</CardTitle>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4" onClick={(e) => e.stopPropagation()}>
           <div className="text-right text-xs text-muted-foreground">
             <div>Coverage <span className="font-semibold text-foreground">{currency(totalCoverage)}</span></div>
             <div>Cash Value <span className="font-semibold text-foreground">{currency(totalCash)}</span></div>
           </div>
           <Button size="sm" onClick={startNew}><Plus className="h-4 w-4 mr-1" /> Add Policy</Button>
+          {collapsed ? (
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          ) : (
+            <ChevronDown className="h-4 w-4 text-muted-foreground" />
+          )}
         </div>
       </CardHeader>
+      {!collapsed && (
       <CardContent>
         {loading ? (
           <p className="text-sm text-muted-foreground">Loading…</p>
@@ -268,6 +278,8 @@ export function InsurancePanel({ scope, storehouses, onStorehousesChanged }: { s
             ))}
           </div>
         )}
+      </CardContent>
+      )}
 
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogContent className="max-w-2xl">
@@ -406,7 +418,6 @@ export function InsurancePanel({ scope, storehouses, onStorehousesChanged }: { s
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      </CardContent>
     </Card>
   );
 }

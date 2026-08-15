@@ -37,6 +37,7 @@ import {
 import { toast } from "sonner";
 import { PageBreadcrumbs } from "@/shared/components/PageBreadcrumbs";
 import { policyTypeLabel } from "@/shared/lib/insurance";
+import { CollapsibleCard } from "@/shared/components/CollapsibleCard";
 import { Progress } from "@/shared/components/ui/progress";
 import { HouseholdTaskRollup } from "@/modules/crm/components/HouseholdTaskRollup";
 import { HoldingTank } from "@/modules/crm/components/HoldingTank";
@@ -1108,22 +1109,14 @@ const HouseholdDetail = () => {
             <HoldingTank householdId={id!} onAccountMoved={() => fetchData()} />
 
             {/* The Vineyard */}
-            <Card>
-              <CardHeader>
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                    <Grape className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-lg font-serif">The Vineyard</CardTitle>
-                    <p className="text-xs text-muted-foreground">Total Asset Portfolio</p>
-                  </div>
-                  <div className="ml-auto text-right">
-                    <p className="text-2xl font-bold text-primary">{formatCurrency(totalVineyard)}</p>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
+            <CollapsibleCard
+              icon={Grape}
+              iconBgClassName="bg-primary/10"
+              iconColorClassName="text-primary"
+              title="The Vineyard"
+              subtitle="Total Asset Portfolio"
+              headerRight={<p className="text-2xl font-bold text-primary">{formatCurrency(totalVineyard)}</p>}
+            >
                 {Object.entries(byType).length > 0 ? (
                   Object.entries(byType).map(([type, { accounts, total }]) => (
                     <div key={type} className="space-y-2">
@@ -1149,38 +1142,31 @@ const HouseholdDetail = () => {
                 ) : (
                   <p className="text-sm text-muted-foreground">No vineyard accounts configured.</p>
                 )}
-              </CardContent>
-            </Card>
+            </CollapsibleCard>
 
             {/* Corporate Holdings */}
-            <Card>
-              <CardHeader>
+            <CollapsibleCard
+              icon={Building2}
+              iconBgClassName="bg-primary/10"
+              iconColorClassName="text-primary"
+              title="Corporate Holdings"
+              subtitle={`${corporations.length} entit${corporations.length === 1 ? "y" : "ies"}`}
+              headerRight={
                 <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                    <Building2 className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-lg font-serif">Corporate Holdings</CardTitle>
-                    <p className="text-xs text-muted-foreground">
-                      {corporations.length} entit{corporations.length === 1 ? "y" : "ies"}
-                    </p>
-                  </div>
-                  <div className="ml-auto flex items-center gap-3">
-                    <p className="text-2xl font-bold text-foreground">{formatCurrency(totalCorpAssets)}</p>
-                    <AddCompanyDialog
-                      members={members
-                        .filter((m: any) => !m.is_minor)
-                        .map((m: any) => ({
-                          id: m.id,
-                          name: `${m.first_name} ${m.last_name || ""}`.trim(),
-                        }))}
-                      existingCorpIds={corporations.map((c: any) => c.id)}
-                      onCreated={fetchData}
-                    />
-                  </div>
+                  <p className="text-2xl font-bold text-foreground">{formatCurrency(totalCorpAssets)}</p>
+                  <AddCompanyDialog
+                    members={members
+                      .filter((m: any) => !m.is_minor)
+                      .map((m: any) => ({
+                        id: m.id,
+                        name: `${m.first_name} ${m.last_name || ""}`.trim(),
+                      }))}
+                    existingCorpIds={corporations.map((c: any) => c.id)}
+                    onCreated={fetchData}
+                  />
                 </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
+              }
+            >
                 {corporations.length === 0 && (
                   <p className="text-sm text-muted-foreground text-center py-4">
                     No corporate entities linked to this household yet.
@@ -1237,26 +1223,17 @@ const HouseholdDetail = () => {
                       )}
                     </div>
                   ))}
-              </CardContent>
-            </Card>
+            </CollapsibleCard>
 
             {/* The Storehouses */}
-            <Card>
-              <CardHeader>
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent/10">
-                    <Landmark className="h-5 w-5 text-accent" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-lg font-serif">The Storehouses</CardTitle>
-                    <p className="text-xs text-muted-foreground">Strategic Asset Allocation</p>
-                  </div>
-                  <div className="ml-auto text-right">
-                    <p className="text-2xl font-bold text-accent">{formatCurrency(totalStorehouses)}</p>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
+            <CollapsibleCard
+              icon={Landmark}
+              iconBgClassName="bg-accent/10"
+              iconColorClassName="text-accent"
+              title="The Storehouses"
+              subtitle="Strategic Asset Allocation"
+              headerRight={<p className="text-2xl font-bold text-accent">{formatCurrency(totalStorehouses)}</p>}
+            >
                 {STOREHOUSE_CONFIG.map(({ num, name, icon: Icon }) => {
                   const accounts = storehouses.filter((s) => s.storehouse_number === num);
                   const insuranceHere = accounts.reduce((sum, s) => sum + insuranceForStorehouse(s.id), 0);
@@ -1299,42 +1276,6 @@ const HouseholdDetail = () => {
                               </div>
                             </div>
                           ))}
-                          {insurancePolicies
-                            .filter((p) => accounts.some((a) => a.id === p.coverage_storehouse_id))
-                            .map((p) => (
-                              <div
-                                key={`cov-${p.id}`}
-                                className="rounded-lg bg-accent/5 px-4 py-2.5 border border-accent/30"
-                              >
-                                <div className="flex items-center justify-between">
-                                  <span className="text-sm text-foreground/80">
-                                    🛡️ {p.carrier} — Coverage
-                                    {p.policy_number ? ` #${p.policy_number}` : ""}
-                                  </span>
-                                  <span className="text-sm font-medium text-foreground">
-                                    {formatCurrency(Number(p.coverage_amount) || 0)}
-                                  </span>
-                                </div>
-                              </div>
-                            ))}
-                          {insurancePolicies
-                            .filter((p) => accounts.some((a) => a.id === p.cash_value_storehouse_id))
-                            .map((p) => (
-                              <div
-                                key={`cv-${p.id}`}
-                                className="rounded-lg bg-accent/5 px-4 py-2.5 border border-accent/30"
-                              >
-                                <div className="flex items-center justify-between">
-                                  <span className="text-sm text-foreground/80">
-                                    🛡️ {p.carrier} — Cash Value
-                                    {p.policy_number ? ` #${p.policy_number}` : ""}
-                                  </span>
-                                  <span className="text-sm font-medium text-foreground">
-                                    {formatCurrency(Number(p.cash_value) || 0)}
-                                  </span>
-                                </div>
-                              </div>
-                            ))}
                         </>
                       ) : (
                         <p className="text-xs text-muted-foreground pl-6">No accounts configured</p>
@@ -1342,8 +1283,47 @@ const HouseholdDetail = () => {
                     </div>
                   );
                 })}
-              </CardContent>
-            </Card>
+            </CollapsibleCard>
+
+            {/* Insurance */}
+            {insurancePolicies.length > 0 && (() => {
+              const totalCoverage = insurancePolicies.reduce((sum: number, p: any) => sum + (Number(p.coverage_amount) || 0), 0);
+              const memberById = new Map(members.map((m: any) => [m.id, m]));
+              const corpById = new Map(corporations.map((c: any) => [c.id, c]));
+              const ownerName = (p: any) => {
+                if (p.corporation_id) return corpById.get(p.corporation_id)?.name ?? "Corporation";
+                const m = memberById.get(p.contact_id);
+                return m ? `${m.first_name} ${m.last_name || ""}`.trim() : "Household";
+              };
+              return (
+                <CollapsibleCard
+                  icon={Shield}
+                  iconBgClassName="bg-accent/10"
+                  iconColorClassName="text-accent"
+                  title="Insurance"
+                  subtitle="Asset Protection"
+                  headerRight={<p className="text-2xl font-bold text-accent">{formatCurrency(totalCoverage)}</p>}
+                >
+                  {insurancePolicies.map((p: any) => (
+                    <div key={p.id} className="rounded-lg bg-muted/50 px-4 py-2.5 border border-border">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-foreground/80">
+                          {policyTypeLabel(p.policy_type)} — {p.carrier} — {ownerName(p)}
+                        </span>
+                        <span className="text-sm font-medium text-foreground">
+                          {formatCurrency(Number(p.coverage_amount) || 0)}
+                        </span>
+                      </div>
+                      {p.cash_value > 0 && (
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Cash Value: {formatCurrency(Number(p.cash_value) || 0)}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </CollapsibleCard>
+              );
+            })()}
           </TabsContent>
 
           {/* Analytics */}

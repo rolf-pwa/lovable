@@ -20,7 +20,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/shared/components/ui/alert-dialog";
-import { Anchor, Grape, Castle, Sword, Wheat, Lock, ArrowRight, Loader2, Trash2, Eye, Users, Home, CalendarDays, Plus, X } from "lucide-react";
+import { Anchor, Grape, Castle, Sword, Wheat, Lock, ArrowRight, Loader2, Trash2, Eye, Users, Home, CalendarDays, Plus, X, ChevronDown, ChevronRight } from "lucide-react";
 import { format } from "date-fns";
 import { Input } from "@/shared/components/ui/input";
 import { toast } from "sonner";
@@ -77,6 +77,7 @@ export function HoldingTank({ contactId, householdId, onAccountMoved }: HoldingT
   const [moveTarget, setMoveTarget] = useState<{ id: string; destination: string; storehouseNum?: number } | null>(null);
   const [moving, setMoving] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
   const [addForm, setAddForm] = useState({ account_name: "", account_type: "Portfolio", current_value: "", expected_deposit_date: "", custodian: "" });
   const [adding, setAdding] = useState(false);
 
@@ -302,11 +303,11 @@ export function HoldingTank({ contactId, householdId, onAccountMoved }: HoldingT
   return (
     <>
       <Card className="border-amber-500/30 bg-amber-50/5">
-        <CardHeader className="pb-2">
+        <CardHeader className="pb-2 cursor-pointer select-none" onClick={() => setCollapsed((c) => !c)}>
           <CardTitle className="flex items-center gap-2 text-lg">
             <Anchor className="h-5 w-5 text-amber-600" />
             The Holding Tank
-            <div className="ml-auto flex items-center gap-2">
+            <div className="ml-auto flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
               {accounts.length > 0 && (
                 <Badge variant="secondary" className="text-xs bg-amber-100 text-amber-800">
                   {accounts.length} account{accounts.length !== 1 ? "s" : ""}
@@ -323,6 +324,11 @@ export function HoldingTank({ contactId, householdId, onAccountMoved }: HoldingT
                   {showAddForm ? "Cancel" : "Add Account"}
                 </Button>
               )}
+              {collapsed ? (
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              ) : (
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              )}
             </div>
           </CardTitle>
           <p className="text-xs text-muted-foreground">
@@ -337,6 +343,7 @@ export function HoldingTank({ contactId, householdId, onAccountMoved }: HoldingT
             </div>
           )}
         </CardHeader>
+        {(!collapsed || showAddForm) && (
         <CardContent className="space-y-2">
           {showAddForm && (
             <div className="rounded-md border border-dashed border-amber-500/40 bg-amber-50/10 p-3 space-y-2">
@@ -414,6 +421,7 @@ export function HoldingTank({ contactId, householdId, onAccountMoved }: HoldingT
             <p className="text-xs text-muted-foreground text-center py-4">No staged accounts. Click "Add Account" to manually enter a deposit.</p>
           )}
         </CardContent>
+        )}
       </Card>
 
       <AlertDialog open={!!moveTarget} onOpenChange={(open) => !open && setMoveTarget(null)}>
