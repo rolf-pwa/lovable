@@ -84,7 +84,10 @@ async function resolveHousehold(req: Request): Promise<Resolved | null> {
 
   const flagOn = hh.onboarding_enabled !== false;
 
-  // The Audit card only appears once the Audit fee is actually paid.
+  // The Audit card only appears once the Audit fee is actually paid — or,
+  // for an existing client staff enrolls without a new charge, once a
+  // booking is marked "not_required" (see HouseholdDetail.tsx's "Enroll in
+  // Guided Intake" action).
   let auditPaid = false;
   if (flagOn) {
     const { data: members } = await admin
@@ -97,7 +100,7 @@ async function resolveHousehold(req: Request): Promise<Resolved | null> {
         .from("service_bookings")
         .select("id")
         .in("contact_id", ids)
-        .eq("payment_status", "paid")
+        .in("payment_status", ["paid", "not_required"])
         .limit(1);
       auditPaid = Boolean(paid?.length);
     }
@@ -868,8 +871,8 @@ async function loadOnboarding(resolved: Resolved) {
         .from("service_bookings")
         .select("id, scheduling_url, starts_at, payment_status, paid_at, services(name)")
         .eq("contact_id", resolved.contactId)
-        .eq("payment_status", "paid")
-        .order("paid_at", { ascending: false })
+        .in("payment_status", ["paid", "not_required"])
+        .order("paid_at", { ascending: false, nullsFirst: false })
         .limit(1)
         .maybeSingle(),
     ]);

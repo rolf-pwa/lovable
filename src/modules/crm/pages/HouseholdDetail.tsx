@@ -72,6 +72,7 @@ import {
   Briefcase,
   CalendarOff,
   RotateCcw,
+  UserCheck,
   ScanSearch,
 } from "lucide-react";
 import { ContactAnalytics } from "@/modules/crm/components/ContactAnalytics";
@@ -224,6 +225,65 @@ const HouseholdDetail = () => {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  const [enrollingIntake, setEnrollingIntake] = useState(false);
+  const enrollExistingClientInIntake = useCallback(async () => {
+    if (!id || members.length === 0) return;
+    setEnrollingIntake(true);
+    try {
+      const memberIds = members.map((m: any) => m.id);
+
+      // Already enrolled? (a qualifying booking already exists for someone in this household)
+      const { data: existing } = await supabase
+        .from("service_bookings")
+        .select("id")
+        .in("contact_id", memberIds)
+        .in("payment_status", ["paid", "not_required"])
+        .limit(1);
+
+      if (!existing?.length) {
+        // Best-effort link to the real "Sovereignty Audit" service catalog entry, if one exists.
+        const { data: service } = await supabase
+          .from("services")
+          .select("id")
+          .ilike("name", "%sovereignty%audit%")
+          .limit(1)
+          .maybeSingle();
+
+        const { error: bookingError } = await supabase.from("service_bookings").insert({
+          contact_id: members[0].id,
+          service_id: (service as any)?.id ?? null,
+          status: "confirmed",
+          payment_status: "not_required",
+          amount: 0,
+          total: 0,
+          currency: "CAD",
+          paid_at: new Date().toISOString(),
+          notes: "Enrolled by staff — existing client formalizing their Sovereignty Operating System. No payment required.",
+        });
+        if (bookingError) {
+          toast.error("Couldn't enroll this household in guided intake.");
+          return;
+        }
+      }
+
+      if (household.onboarding_enabled === false) {
+        const { error: flagError } = await supabase
+          .from("households")
+          .update({ onboarding_enabled: true })
+          .eq("id", id);
+        if (flagError) {
+          toast.error("Booking recorded, but couldn't enable Audit onboarding — flip the switch above manually.");
+          return;
+        }
+        setHousehold((prev: any) => ({ ...prev, onboarding_enabled: true }));
+      }
+
+      toast.success("Enrolled — the Sovereignty Survey intake will now appear in this household's portal.");
+    } finally {
+      setEnrollingIntake(false);
+    }
+  }, [id, members, household]);
 
   const [pushingIntake, setPushingIntake] = useState(false);
   const pushToIntakeAgent = useCallback(async () => {
@@ -1059,6 +1119,21 @@ const HouseholdDetail = () => {
                     Audit onboarding
                   </Label>
                 </div>
+
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={enrollExistingClientInIntake}
+                  disabled={enrollingIntake || members.length === 0}
+                  title="For an existing client who wants to go through the guided Sovereignty Survey — no payment required."
+                >
+                  {enrollingIntake ? (
+                    <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                  ) : (
+                    <UserCheck className="h-3.5 w-3.5 mr-1.5" />
+                  )}
+                  Enroll in Guided Intake
+                </Button>
 
                 <Button size="sm" variant="outline" onClick={pushToIntakeAgent} disabled={pushingIntake}>
                   {pushingIntake ? (
