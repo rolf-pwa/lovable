@@ -254,20 +254,19 @@ function factsBlock(
   wealthEventNotes: string,
   diagnostics: any,
   isLegacyClient: boolean,
+  visionValues?: { vision: string; values: string; purpose: string },
 ): string {
   const lines = [`Household: ${householdLabel} (${familyName})`];
   if (isLegacyClient) {
     lines.push(
       "Engagement stage: Existing managed client formalizing their Sovereignty Operating System — NOT a new-lead onboarding. Do not frame this as an initial/Day-1 engagement.",
     );
-    // Existing clients don't have a triggering "wealth event" — Step 3 of their
-    // guided intake instead asks about vision, values, and purpose for their
-    // capital (stored under the same field with a "vision_values" sentinel).
-    if (wealthEventType === "vision_values" && wealthEventNotes) {
-      lines.push(`Client's stated vision, values & purpose for their capital: ${wealthEventNotes}`);
-    } else if (wealthEventNotes) {
-      lines.push(`Additional context from the client: ${wealthEventNotes}`);
-    }
+    // Existing clients don't have a triggering "wealth event" — their guided
+    // intake instead captures vision, values, and purpose for their capital
+    // as 3 separate fields.
+    if (visionValues?.vision) lines.push(`Client's stated vision for their family's future: ${visionValues.vision}`);
+    if (visionValues?.values) lines.push(`Client's stated values guiding their decisions: ${visionValues.values}`);
+    if (visionValues?.purpose) lines.push(`Client's stated purpose for their capital: ${visionValues.purpose}`);
   } else {
     lines.push(`Wealth event: ${wealthEventType || "(not specified)"}`);
     lines.push(`Wealth event notes: ${wealthEventNotes || "(none provided)"}`);
@@ -319,7 +318,7 @@ async function handleHouseholdGeneration(
 
   const { data: household, error: hhErr } = await supabase
     .from("households")
-    .select("id, wealth_event_type, wealth_event_notes")
+    .select("id, wealth_event_type, wealth_event_notes, vision_notes, values_notes, purpose_notes")
     .eq("id", householdId)
     .maybeSingle();
   if (hhErr || !household) return json({ error: "Household not found" }, 404);
@@ -411,6 +410,11 @@ async function handleHouseholdGeneration(
       household.wealth_event_notes || "",
       diagnostics,
       isLegacyClient,
+      {
+        vision: household.vision_notes || "",
+        values: household.values_notes || "",
+        purpose: household.purpose_notes || "",
+      },
     );
 
     const aiRes = await fetch(vertexUrl, {

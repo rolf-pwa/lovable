@@ -104,32 +104,45 @@ export const OnboardingSummary = ({ portalToken, state, open, onOpenChange }: Pr
             </SummarySection>
           )}
 
-          {household.wealthEventType && household.wealthEventType === "vision_values" ? (
-            <SummarySection icon={<Sprout className="h-3.5 w-3.5" />} title="Vision & values">
-              {household.wealthEventNotes && (
-                <div className="rounded-lg border border-border p-3">
-                  <p className="whitespace-pre-wrap text-muted-foreground">
-                    {household.wealthEventNotes}
-                  </p>
-                </div>
-              )}
-            </SummarySection>
-          ) : (
-            household.wealthEventType && (
-              <SummarySection icon={<Sprout className="h-3.5 w-3.5" />} title="Wealth event">
-                <div className="space-y-1 rounded-lg border border-border p-3">
-                  <p className="font-medium text-foreground">
-                    {WEALTH_EVENT_LABELS[household.wealthEventType] ?? household.wealthEventType}
-                  </p>
-                  {household.wealthEventNotes && (
-                    <p className="whitespace-pre-wrap text-muted-foreground">
-                      {household.wealthEventNotes}
+          {household.legacyUpgrade
+            ? (household.visionNotes || household.valuesNotes || household.purposeNotes) && (
+                <SummarySection icon={<Sprout className="h-3.5 w-3.5" />} title="Vision, values & purpose">
+                  <div className="space-y-2 rounded-lg border border-border p-3">
+                    {household.visionNotes && (
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground">Vision</p>
+                        <p className="whitespace-pre-wrap text-foreground">{household.visionNotes}</p>
+                      </div>
+                    )}
+                    {household.valuesNotes && (
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground">Values</p>
+                        <p className="whitespace-pre-wrap text-foreground">{household.valuesNotes}</p>
+                      </div>
+                    )}
+                    {household.purposeNotes && (
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground">Purpose for capital</p>
+                        <p className="whitespace-pre-wrap text-foreground">{household.purposeNotes}</p>
+                      </div>
+                    )}
+                  </div>
+                </SummarySection>
+              )
+            : household.wealthEventType && (
+                <SummarySection icon={<Sprout className="h-3.5 w-3.5" />} title="Wealth event">
+                  <div className="space-y-1 rounded-lg border border-border p-3">
+                    <p className="font-medium text-foreground">
+                      {WEALTH_EVENT_LABELS[household.wealthEventType] ?? household.wealthEventType}
                     </p>
-                  )}
-                </div>
-              </SummarySection>
-            )
-          )}
+                    {household.wealthEventNotes && (
+                      <p className="whitespace-pre-wrap text-muted-foreground">
+                        {household.wealthEventNotes}
+                      </p>
+                    )}
+                  </div>
+                </SummarySection>
+              )}
 
           <SummarySection icon={<FileCheck2 className="h-3.5 w-3.5" />} title="Documents">
             {manifest?.checklist?.length ? (

@@ -32,6 +32,16 @@ const ROLE_LABELS: Record<string, string> = {
   other: "Household member",
 };
 
+// Display order for the "already on file" list: HOF, HOH, Minor, Beneficiary,
+// then anything else in whatever order it arrived.
+const ROLE_SORT_ORDER: Record<string, number> = {
+  head_of_family: 0,
+  head_of_household: 1,
+  minor: 2,
+  beneficiary: 3,
+};
+const roleSortRank = (role: string | null) => ROLE_SORT_ORDER[role ?? ""] ?? 99;
+
 interface Props {
   state: OnboardingState;
   saving: boolean;
@@ -47,8 +57,10 @@ interface Props {
 
 const PLACEHOLDER_NAMES = ["new client", "client", ""];
 
-/** Step 2 — household details and members (each becomes a contact record). */
+/** Household info — details and members (each becomes a contact record).
+ *  Step 1 for legacy upgrades, Step 2 for new clients. */
 export const StepHouseholdProfile = ({ state, saving, onSave }: Props) => {
+  const legacyUpgrade = state.household.legacyUpgrade;
   const knownName = PLACEHOLDER_NAMES.includes(state.contact.fullName.trim().toLowerCase())
     ? ""
     : state.contact.fullName;
@@ -64,6 +76,10 @@ export const StepHouseholdProfile = ({ state, saving, onSave }: Props) => {
   const [email, setEmail] = useState(state.contact.email);
   const [members, setMembers] = useState<OnboardingMemberInput[]>([]);
 
+  const sortedExistingMembers = [...state.members].sort(
+    (a, b) => roleSortRank(a.role) - roleSortRank(b.role),
+  );
+
   const updateMember = (index: number, patch: Partial<OnboardingMemberInput>) =>
     setMembers((prev) => prev.map((m, i) => (i === index ? { ...m, ...patch } : m)));
 
@@ -78,9 +94,13 @@ export const StepHouseholdProfile = ({ state, saving, onSave }: Props) => {
     <Card>
       <CardContent className="space-y-6 p-6">
         <div className="space-y-1.5">
-          <h2 className="font-serif text-lg font-semibold text-foreground">Your household</h2>
+          <h2 className="font-serif text-lg font-semibold text-foreground">
+            {legacyUpgrade ? "Household info" : "Your household"}
+          </h2>
           <p className="text-sm text-muted-foreground">
-            Add your spouse, children or other dependants. You can always add more later.
+            {legacyUpgrade
+              ? "Confirm what's already on file, and add anyone genuinely missing."
+              : "Add your spouse, children or other dependants. You can always add more later."}
           </p>
         </div>
 
@@ -93,7 +113,14 @@ export const StepHouseholdProfile = ({ state, saving, onSave }: Props) => {
               onChange={(e) => setPrimaryName(e.target.value)}
               placeholder="e.g. Jane Smith"
               maxLength={120}
+              disabled={legacyUpgrade}
+              className={legacyUpgrade ? "disabled:opacity-100 bg-muted/50 text-muted-foreground" : undefined}
             />
+            {legacyUpgrade && (
+              <p className="text-xs text-muted-foreground">
+                On file — let us know if this needs to change.
+              </p>
+            )}
           </div>
           <div className="space-y-1.5 sm:col-span-2">
             <Label htmlFor="ob-household">Household name</Label>
@@ -103,7 +130,14 @@ export const StepHouseholdProfile = ({ state, saving, onSave }: Props) => {
               onChange={(e) => setHouseholdName(e.target.value)}
               placeholder="e.g. The Smith Household"
               maxLength={120}
+              disabled={legacyUpgrade}
+              className={legacyUpgrade ? "disabled:opacity-100 bg-muted/50 text-muted-foreground" : undefined}
             />
+            {legacyUpgrade && (
+              <p className="text-xs text-muted-foreground">
+                On file — let us know if this needs to change.
+              </p>
+            )}
           </div>
 
           <div className="space-y-1.5 sm:col-span-2">
@@ -160,13 +194,13 @@ export const StepHouseholdProfile = ({ state, saving, onSave }: Props) => {
             </Button>
           </div>
 
-          {state.members.length > 0 && (
+          {sortedExistingMembers.length > 0 && (
             <div className="space-y-1.5 rounded-lg border border-border bg-muted/20 p-3">
               <p className="text-xs font-medium text-muted-foreground">
                 Already on file — no need to re-add these:
               </p>
               <ul className="space-y-1">
-                {state.members.map((m) => (
+                {sortedExistingMembers.map((m) => (
                   <li key={m.id} className="flex items-center justify-between gap-3 text-sm">
                     <span className="text-foreground">{m.fullName}</span>
                     <span className="shrink-0 text-xs text-muted-foreground">
