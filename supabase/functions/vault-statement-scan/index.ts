@@ -77,6 +77,25 @@ function normalizeToken(value: string | null | undefined) {
   return (value || "").toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
+/**
+ * Matches an extracted name (often a legal name with a middle initial —
+ * "ADRIAN E SCILLATO" — that won't exact-match a plain "Adrian Scillato"
+ * contact record) by checking whether both the first and last name appear
+ * anywhere in the extracted string, instead of requiring an exact match.
+ */
+function findMemberByLooseName(
+  members: { id: string; first_name: string; last_name: string }[],
+  name: string | null | undefined,
+) {
+  const normalized = normalizeToken(name);
+  if (!normalized) return null;
+  return members.find((m) => {
+    const first = normalizeToken(m.first_name);
+    const last = normalizeToken(m.last_name);
+    return Boolean(first) && Boolean(last) && normalized.includes(first) && normalized.includes(last);
+  }) ?? null;
+}
+
 // Chunked, unlike ingest-statement's spread-based btoa(String.fromCharCode(...bytes)) —
 // insurance policy contracts run larger than typical statements and can exceed the
 // JS engine's max call-stack argument count if spread all at once.
@@ -207,6 +226,8 @@ Guidelines:
 - "coverage_amount" is the face amount / death benefit / sum insured
 - "cash_value" is the policy's current cash surrender value, if shown (often absent on term policies — use null)
 - For life insurance, pick the most specific policy_type the document supports: "term" if it names a level term period (10/20/T100), "whole_life" or "universal_life" if the document says so explicitly, otherwise "whole_life" as the more common default for a permanent policy — never invent a type the document doesn't support
+- IMPORTANT — joint/multi-life policies: a single policy number can cover more than one insured life (e.g. "Insured No. 01" and "Insured No. 02" on a joint spousal term policy), each with their own coverage amount and premium. When you see this, emit ONE entry per insured life, each with that same policy_number/carrier but that person's own individual insured_name and coverage_amount/premium_amount — never combine multiple people into a single insured_name like "Adrian and Luciana" or use the policy owner's joint name as insured_name
+- "insured_name" must always be exactly one person's full name (or one corporation's name) — never a policyowner field that lists multiple people
 - Use null for any values you cannot confidently extract
 - Return ONLY the JSON, no markdown`;
 
@@ -329,7 +350,6 @@ Deno.serve(async (req) => {
       (existingHoldingTank ?? []).filter((h: any) => h.account_number).map((h: any) => [normalizeToken(h.account_number), h]),
     );
     const holdingTankByName = new Map((existingHoldingTank ?? []).map((h: any) => [normalizeToken(h.account_name), h]));
-    const memberByName = new Map(members.map((m: any) => [normalizeToken(`${m.first_name} ${m.last_name}`), m]));
 
     let investmentAccountsExtracted = 0;
     let investmentAccountsMatched = 0;
@@ -385,7 +405,7 @@ Deno.serve(async (req) => {
           }
 
           investmentUnmatched.push(account.account_name);
-          const owner = memberByName.get(normalizeToken(account.account_owner)) || headOfHousehold;
+          const owner = findMemberByLooseName(members, account.account_owner) || headOfHousehold;
           const { data: newHoldingTankRow } = await admin
             .from("holding_tank")
             .insert({
@@ -425,8 +445,13 @@ Deno.serve(async (req) => {
       .select("id, contact_id, corporation_id, carrier, policy_number, insured_name")
       .or(`contact_id.in.(${memberIds.length ? memberIds.join(",") : "00000000-0000-0000-0000-000000000000"})${corpIds.length ? `,corporation_id.in.(${corpIds.join(",")})` : ""}`);
 
-    const policyByNumber = new Map(
-      (existingPolicies ?? []).filter((p: any) => p.policy_number).map((p: any) => [normalizeToken(p.policy_number), p]),
+    // Keyed on policy_number + insured_name together, not policy_number alone — a
+    // joint policy (e.g. a spousal term policy) can list two different insured
+    // lives under the SAME policy number, each needing its own row.
+    const policyByNumberAndInsured = new Map(
+      (existingPolicies ?? [])
+        .filter((p: any) => p.policy_number)
+        .map((p: any) => [normalizeToken(`${p.policy_number}${p.insured_name}`), p]),
     );
     const policyByCarrierInsured = new Map(
       (existingPolicies ?? []).map((p: any) => [normalizeToken(`${p.carrier}${p.insured_name}`), p]),
@@ -455,9 +480,11 @@ Deno.serve(async (req) => {
 
         for (const policy of parsed.policies || []) {
           insurancePoliciesExtracted += 1;
-          const normalizedNumber = normalizeToken(policy.policy_number);
+          const normalizedNumberInsured = normalizeToken(`${policy.policy_number}${policy.insured_name}`);
           const normalizedCarrierInsured = normalizeToken(`${policy.carrier}${policy.insured_name}`);
-          const matched = (normalizedNumber && policyByNumber.get(normalizedNumber)) || policyByCarrierInsured.get(normalizedCarrierInsured);
+          const matched =
+            (policy.policy_number && policyByNumberAndInsured.get(normalizedNumberInsured)) ||
+            policyByCarrierInsured.get(normalizedCarrierInsured);
 
           const update: Record<string, unknown> = {};
           if (typeof policy.coverage_amount === "number") update.coverage_amount = policy.coverage_amount;
@@ -475,24 +502,36 @@ Deno.serve(async (req) => {
             continue;
           }
 
-          const matchedMember = memberByName.get(normalizeToken(policy.insured_name));
+          const matchedMember = findMemberByLooseName(members, policy.insured_name);
           const matchedCorp = !matchedMember ? corpByName.get(normalizeToken(policy.insured_name)) : null;
-          await admin.from("insurance_policies").insert({
-            contact_id: matchedCorp ? null : (matchedMember?.id ?? headOfHousehold?.id ?? null),
-            corporation_id: matchedCorp ? (matchedCorp as any).id : null,
-            carrier: policy.carrier,
-            policy_number: policy.policy_number,
-            policy_type: policy.policy_type || "other",
-            insured_name: policy.insured_name,
-            coverage_amount: policy.coverage_amount ?? 0,
-            cash_value: policy.cash_value ?? 0,
-            premium_amount: policy.premium_amount ?? null,
-            premium_frequency: policy.premium_frequency ?? null,
-            issue_date: policy.issue_date ?? null,
-            renewal_date: policy.renewal_date ?? null,
-            notes: `Created from Vault scan of "${file.name}".`,
-            vault_folder_id: insuranceFolder?.id ?? null,
-          });
+          const { data: newPolicyRow } = await admin
+            .from("insurance_policies")
+            .insert({
+              contact_id: matchedCorp ? null : (matchedMember?.id ?? headOfHousehold?.id ?? null),
+              corporation_id: matchedCorp ? (matchedCorp as any).id : null,
+              carrier: policy.carrier,
+              policy_number: policy.policy_number,
+              policy_type: policy.policy_type || "other",
+              insured_name: policy.insured_name,
+              coverage_amount: policy.coverage_amount ?? 0,
+              cash_value: policy.cash_value ?? 0,
+              premium_amount: policy.premium_amount ?? null,
+              premium_frequency: policy.premium_frequency ?? null,
+              issue_date: policy.issue_date ?? null,
+              renewal_date: policy.renewal_date ?? null,
+              notes: `Created from Vault scan of "${file.name}".`,
+              vault_folder_id: insuranceFolder?.id ?? null,
+            })
+            .select("id, carrier, policy_number, insured_name")
+            .single();
+          // Register it so a second entry for the SAME joint policy (or a later
+          // file in this run) matches it instead of also duplicating.
+          if (newPolicyRow) {
+            if (newPolicyRow.policy_number) {
+              policyByNumberAndInsured.set(normalizeToken(`${newPolicyRow.policy_number}${newPolicyRow.insured_name}`), newPolicyRow);
+            }
+            policyByCarrierInsured.set(normalizeToken(`${newPolicyRow.carrier}${newPolicyRow.insured_name}`), newPolicyRow);
+          }
           insurancePoliciesCreated += 1;
         }
       } catch (e) {
