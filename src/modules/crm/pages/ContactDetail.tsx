@@ -54,6 +54,7 @@ import { AuditTrail } from "@/modules/audit";
 import { StatementUpload } from "@/modules/crm";
 import { HoldingTank } from "@/modules/crm/components/HoldingTank";
 import { AssetContainer, type MoveTarget } from "@/modules/crm/components/AssetContainer";
+import type { WebFormRecord } from "@/modules/crm/components/WebFormEditorDialog";
 import { InsurancePanel } from "@/modules/crm/components/InsurancePanel";
 import { ProfessionalLinker } from "@/modules/crm/components/ProfessionalLinker";
 import EngagementsPanel from "@/modules/crm/components/EngagementsPanel";
@@ -83,6 +84,8 @@ interface Storehouse {
   current_value: number | null;
   target_value: number | null;
   book_value: number | null;
+  account_number?: string | null;
+  custodian?: string | null;
 }
 
 interface HouseholdMember {
@@ -101,6 +104,7 @@ interface VineyardAccount {
   current_value: number | null;
   notes: string | null;
   visibility_scope: string;
+  custodian?: string | null;
 }
 
 interface HarvestSnapshot {
@@ -188,6 +192,14 @@ const ContactDetail = () => {
   }>>([]);
   const [holdingTankAccounts, setHoldingTankAccounts] = useState<any[]>([]);
   const [insurancePolicies, setInsurancePolicies] = useState<any[]>([]);
+  const [webforms, setWebforms] = useState<WebFormRecord[]>([]);
+
+  useEffect(() => {
+    (supabase.from("adobe_webforms" as any) as any)
+      .select("*")
+      .eq("is_active", true)
+      .then(({ data }: any) => setWebforms((data as WebFormRecord[]) || []));
+  }, []);
 
   const { user } = useAuth();
   const [viewPortalLoading, setViewPortalLoading] = useState(false);
@@ -902,6 +914,7 @@ const ContactDetail = () => {
                   icon={<Grape className="h-3.5 w-3.5 text-sanctuary-green" />}
                   containerKey="vineyard"
                   contactId={id!}
+                  webforms={webforms}
                   accounts={vineyardAccounts.map((acc) => ({
                     id: acc.id,
                     name: acc.account_name,
@@ -909,6 +922,8 @@ const ContactDetail = () => {
                     currentValue: acc.current_value,
                     notes: acc.notes,
                     visibilityScope: acc.visibility_scope,
+                    accountNumber: acc.account_number,
+                    custodian: acc.custodian,
                     sourceTable: "vineyard_accounts" as const,
                   }))}
                   moveTargets={[
@@ -926,6 +941,8 @@ const ContactDetail = () => {
                       current_value: account.currentValue,
                       notes: account.notes,
                       visibility_scope: account.visibilityScope,
+                      account_number: account.accountNumber,
+                      custodian: account.custodian,
                     } as any);
                     if (insertErr) { toast.error("Failed to move account."); return; }
                     await supabase.from("vineyard_accounts" as any).delete().eq("id", account.id);
@@ -1084,6 +1101,7 @@ const ContactDetail = () => {
                       }
                       containerKey={`storehouse-${num}`}
                       contactId={id!}
+                      webforms={webforms}
                       isPlaceholder={isPlaceholder}
                       accounts={accounts.map((sh) => ({
                         id: sh.id,
@@ -1094,6 +1112,8 @@ const ContactDetail = () => {
                         notes: sh.notes,
                         visibilityScope: sh.visibility_scope,
                         charterAlignment: sh.charter_alignment,
+                        accountNumber: sh.account_number,
+                        custodian: sh.custodian,
                         sourceTable: "storehouses" as const,
                       }))}
                       extraTotal={
@@ -1110,6 +1130,8 @@ const ContactDetail = () => {
                             current_value: account.currentValue,
                             notes: account.notes,
                             visibility_scope: account.visibilityScope,
+                            account_number: account.accountNumber,
+                            custodian: account.custodian,
                           } as any);
                           if (insertErr) { toast.error("Failed to move account."); return; }
                           await supabase.from("storehouses").delete().eq("id", account.id);
