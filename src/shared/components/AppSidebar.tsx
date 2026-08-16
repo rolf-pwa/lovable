@@ -30,6 +30,7 @@ import {
   Briefcase,
   Upload,
   Brain,
+  FileSignature,
 } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 import { Separator } from "@/shared/components/ui/separator";
@@ -99,6 +100,7 @@ const adminItems = [
   { to: "/workbench", label: "Workbench", icon: Cpu },
   { to: "/admin/vfo", label: "VFO Roster", icon: Crown },
   { to: "/professionals", label: "Professionals", icon: Briefcase },
+  { to: "/webforms", label: "Web Forms", icon: FileSignature },
 ];
 
 const externalLinks = [

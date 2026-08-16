@@ -51,6 +51,7 @@ const HoldingTankPage = lazy(() => import("@/modules/crm/pages/HoldingTankPage")
 const Onboarding = lazy(() => import("@/modules/intake/pages/Onboarding"));
 const BulkOnboarding = lazy(() => import("@/modules/intake/pages/BulkOnboarding"));
 const BulkImporters = lazy(() => import("@/modules/intake/pages/BulkImporters"));
+const WebForms = lazy(() => import("@/modules/crm/pages/WebForms"));
 const BillingServices = lazy(() => import("@/modules/billing/pages/Services"));
 const BillingInvoices = lazy(() => import("@/modules/billing/pages/Invoices"));
 const BookService = lazy(() => import("@/modules/billing/pages/BookService"));
@@ -118,6 +119,7 @@ const App = () => (
               <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
               <Route path="/onboarding/bulk" element={<ProtectedRoute><BulkOnboarding /></ProtectedRoute>} />
               <Route path="/importers" element={<ProtectedRoute><BulkImporters /></ProtectedRoute>} />
+              <Route path="/webforms" element={<ProtectedRoute><WebForms /></ProtectedRoute>} />
 
               <Route path="/families" element={<ProtectedRoute><Families /></ProtectedRoute>} />
               <Route path="/families/:id" element={<ProtectedRoute><FamilyDetail /></ProtectedRoute>} />
