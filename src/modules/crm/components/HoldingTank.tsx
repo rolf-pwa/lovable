@@ -20,11 +20,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/shared/components/ui/alert-dialog";
-import { Anchor, Grape, Castle, Sword, Wheat, Lock, ArrowRight, Loader2, Trash2, Eye, Users, Home, CalendarDays, Plus, X, ChevronDown, ChevronRight } from "lucide-react";
+import { Anchor, Grape, Castle, Sword, Wheat, Lock, ArrowRight, Loader2, Trash2, Eye, Users, Home, CalendarDays, Plus, X, ChevronDown, ChevronRight, FileSignature } from "lucide-react";
 import { format } from "date-fns";
 import { Input } from "@/shared/components/ui/input";
 import { toast } from "sonner";
-import { CUSTODIAN_OPTIONS } from "@/shared/lib/custodians";
+import { CUSTODIAN_OPTIONS, IA_FINANCIAL_GROUP } from "@/shared/lib/custodians";
+import { IaWithdrawalDialog } from "./IaWithdrawalDialog";
 
 interface HoldingTankAccount {
   id: string;
@@ -503,6 +504,7 @@ function HoldingTankRow({
   onDateChange: (id: string, date: string) => void;
 }) {
   const [destination, setDestination] = useState<string>("");
+  const [withdrawalOpen, setWithdrawalOpen] = useState(false);
   const [editingValue, setEditingValue] = useState(false);
   const [valueDraft, setValueDraft] = useState<string>("");
   const [savingValue, setSavingValue] = useState(false);
@@ -757,6 +759,26 @@ function HoldingTankRow({
           <Trash2 className="h-3.5 w-3.5" />
         </Button>
       </div>
+
+      {account.custodian === IA_FINANCIAL_GROUP && (
+        <>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8 text-xs w-full"
+            onClick={() => setWithdrawalOpen(true)}
+          >
+            <FileSignature className="h-3.5 w-3.5 mr-1.5" />
+            Request iA Withdrawal
+          </Button>
+          <IaWithdrawalDialog
+            open={withdrawalOpen}
+            onOpenChange={setWithdrawalOpen}
+            contactId={account.contact_id}
+            accountNumber={account.account_number}
+          />
+        </>
+      )}
     </div>
   );
 }
