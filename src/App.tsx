@@ -57,6 +57,8 @@ const BillingInvoices = lazy(() => import("@/modules/billing/pages/Invoices"));
 const BookService = lazy(() => import("@/modules/billing/pages/BookService"));
 const BookingConfirmation = lazy(() => import("@/modules/billing/pages/BookingConfirmation"));
 const QuickPay = lazy(() => import("@/modules/billing/pages/QuickPay"));
+const TermsOfEngagement = lazy(() => import("@/modules/billing/pages/TermsOfEngagement"));
+const TermsOfEngagementComplete = lazy(() => import("@/modules/billing/pages/TermsOfEngagementComplete"));
 
 const Brain = lazy(() => import("@/modules/brain/pages/Brain"));
 const BrainDocument = lazy(() => import("@/modules/brain/pages/BrainDocument"));
@@ -142,6 +144,8 @@ const App = () => (
               <Route path="/book/:slug/embed" element={<BookService embed />} />
               <Route path="/pay" element={<QuickPay />} />
               <Route path="/pay/:slug" element={<QuickPay />} />
+              <Route path="/toe/complete" element={<TermsOfEngagementComplete />} />
+              <Route path="/toe/:slug" element={<TermsOfEngagement />} />
 
 
               <Route path="/contacts" element={<ProtectedRoute><Contacts /></ProtectedRoute>} />

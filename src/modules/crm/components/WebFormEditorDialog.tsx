@@ -39,6 +39,7 @@ export interface WebFormRecord {
   custodian: string | null;
   fields: WebFormFieldDef[];
   is_active: boolean;
+  is_toe_gate: boolean;
 }
 
 const SOURCE_LABELS: Record<WebFormFieldSource, string> = {
@@ -71,6 +72,7 @@ export function WebFormEditorDialog({ open, onOpenChange, webform, onSaved }: Pr
   const [urlInput, setUrlInput] = useState("");
   const [custodian, setCustodian] = useState("");
   const [fields, setFields] = useState<WebFormFieldDef[]>([blankField()]);
+  const [isToeGate, setIsToeGate] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -79,6 +81,7 @@ export function WebFormEditorDialog({ open, onOpenChange, webform, onSaved }: Pr
     setUrlInput(webform?.widget_url ?? "");
     setCustodian(webform?.custodian ?? "");
     setFields(webform?.fields?.length ? webform.fields : [blankField()]);
+    setIsToeGate(webform?.is_toe_gate ?? false);
   }, [open, webform]);
 
   const updateField = (index: number, patch: Partial<WebFormFieldDef>) =>
@@ -109,6 +112,7 @@ export function WebFormEditorDialog({ open, onOpenChange, webform, onSaved }: Pr
       widget_url: widgetUrl,
       custodian: custodian.trim() || null,
       fields: cleanFields,
+      is_toe_gate: isToeGate,
     };
     const { error } = webform
       ? await supabase.from("adobe_webforms" as any).update(payload as any).eq("id", webform.id)
@@ -116,7 +120,11 @@ export function WebFormEditorDialog({ open, onOpenChange, webform, onSaved }: Pr
     setSaving(false);
 
     if (error) {
-      toast.error("Failed to save Web Form.");
+      if (error.code === "23505" && isToeGate) {
+        toast.error("Another form is already set as the Terms of Engagement gate — turn that one off first.");
+      } else {
+        toast.error("Failed to save Web Form.");
+      }
       return;
     }
     toast.success(webform ? "Web Form updated" : "Web Form added");
@@ -169,6 +177,17 @@ export function WebFormEditorDialog({ open, onOpenChange, webform, onSaved }: Pr
               that isn't tied to one custodian.
             </p>
           </div>
+
+          <label className="flex items-start gap-2 rounded-lg border border-border p-3 text-sm">
+            <Checkbox checked={isToeGate} onCheckedChange={(v) => setIsToeGate(!!v)} className="mt-0.5" />
+            <span>
+              <span className="font-medium">Use as the Terms of Engagement gate</span>
+              <span className="block text-xs text-muted-foreground">
+                Shown on the public /toe/:slug page before a prospect reaches payment. Only one form can be
+                the gate at a time.
+              </span>
+            </span>
+          </label>
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">

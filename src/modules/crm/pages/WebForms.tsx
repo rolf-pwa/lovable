@@ -110,6 +110,9 @@ export default function WebForms() {
                         <div className="flex items-center gap-2 font-medium">
                           <FileSignature className="h-4 w-4 text-muted-foreground" />
                           {form.name}
+                          {form.is_toe_gate && (
+                            <Badge variant="outline" className="text-[10px]">ToE Gate</Badge>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell className="text-muted-foreground">{form.custodian || "Any"}</TableCell>
