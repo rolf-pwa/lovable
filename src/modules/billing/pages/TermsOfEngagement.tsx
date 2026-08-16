@@ -7,7 +7,8 @@ const TOE_REDIRECT_SLUG_KEY = "toe_redirect_slug";
 
 /**
  * /toe/:slug — shown before payment: the visitor signs the Terms of
- * Engagement here, then Adobe's own "redirect after completion" setting
+ * Engagement matching this slug (e.g. a separate Personal vs Corporate
+ * engagement letter), then Adobe's own "redirect after completion" setting
  * (configured on the Web Form itself, not in this app) sends them to
  * /toe/complete, which reads the slug stashed here and forwards them on to
  * /pay/:slug. Nothing about /pay/:slug itself changes.
@@ -20,11 +21,16 @@ export default function TermsOfEngagement() {
 
   useEffect(() => {
     document.title = "Terms of Engagement | ProsperWise";
-    if (slug) sessionStorage.setItem(TOE_REDIRECT_SLUG_KEY, slug);
+    if (!slug) {
+      setNotConfigured(true);
+      setLoading(false);
+      return;
+    }
+    sessionStorage.setItem(TOE_REDIRECT_SLUG_KEY, slug);
 
     (supabase.from("adobe_webforms" as any) as any)
       .select("widget_url")
-      .eq("is_toe_gate", true)
+      .eq("toe_gate_slug", slug)
       .eq("is_active", true)
       .maybeSingle()
       .then(({ data }: any) => {

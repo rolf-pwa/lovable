@@ -39,7 +39,7 @@ export interface WebFormRecord {
   custodian: string | null;
   fields: WebFormFieldDef[];
   is_active: boolean;
-  is_toe_gate: boolean;
+  toe_gate_slug: string | null;
 }
 
 const SOURCE_LABELS: Record<WebFormFieldSource, string> = {
@@ -72,7 +72,7 @@ export function WebFormEditorDialog({ open, onOpenChange, webform, onSaved }: Pr
   const [urlInput, setUrlInput] = useState("");
   const [custodian, setCustodian] = useState("");
   const [fields, setFields] = useState<WebFormFieldDef[]>([blankField()]);
-  const [isToeGate, setIsToeGate] = useState(false);
+  const [toeGateSlug, setToeGateSlug] = useState("");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -81,7 +81,7 @@ export function WebFormEditorDialog({ open, onOpenChange, webform, onSaved }: Pr
     setUrlInput(webform?.widget_url ?? "");
     setCustodian(webform?.custodian ?? "");
     setFields(webform?.fields?.length ? webform.fields : [blankField()]);
-    setIsToeGate(webform?.is_toe_gate ?? false);
+    setToeGateSlug(webform?.toe_gate_slug ?? "");
   }, [open, webform]);
 
   const updateField = (index: number, patch: Partial<WebFormFieldDef>) =>
@@ -107,12 +107,13 @@ export function WebFormEditorDialog({ open, onOpenChange, webform, onSaved }: Pr
     }
 
     setSaving(true);
+    const trimmedToeSlug = toeGateSlug.trim() || null;
     const payload = {
       name: name.trim(),
       widget_url: widgetUrl,
       custodian: custodian.trim() || null,
       fields: cleanFields,
-      is_toe_gate: isToeGate,
+      toe_gate_slug: trimmedToeSlug,
     };
     const { error } = webform
       ? await supabase.from("adobe_webforms" as any).update(payload as any).eq("id", webform.id)
@@ -120,8 +121,8 @@ export function WebFormEditorDialog({ open, onOpenChange, webform, onSaved }: Pr
     setSaving(false);
 
     if (error) {
-      if (error.code === "23505" && isToeGate) {
-        toast.error("Another form is already set as the Terms of Engagement gate — turn that one off first.");
+      if (error.code === "23505" && trimmedToeSlug) {
+        toast.error(`Another form already gates "${trimmedToeSlug}" — that slug can only have one ToE.`);
       } else {
         toast.error("Failed to save Web Form.");
       }
@@ -178,16 +179,20 @@ export function WebFormEditorDialog({ open, onOpenChange, webform, onSaved }: Pr
             </p>
           </div>
 
-          <label className="flex items-start gap-2 rounded-lg border border-border p-3 text-sm">
-            <Checkbox checked={isToeGate} onCheckedChange={(v) => setIsToeGate(!!v)} className="mt-0.5" />
-            <span>
-              <span className="font-medium">Use as the Terms of Engagement gate</span>
-              <span className="block text-xs text-muted-foreground">
-                Shown on the public /toe/:slug page before a prospect reaches payment. Only one form can be
-                the gate at a time.
-              </span>
-            </span>
-          </label>
+          <div className="space-y-1.5">
+            <Label htmlFor="wf-toe-slug">Gates this /pay slug (optional)</Label>
+            <Input
+              id="wf-toe-slug"
+              value={toeGateSlug}
+              onChange={(e) => setToeGateSlug(e.target.value)}
+              placeholder="e.g. sovereignty-audit-personal"
+            />
+            <p className="text-xs text-muted-foreground">
+              If set, this form is shown at /toe/&lt;slug&gt; before the visitor reaches /pay/&lt;slug&gt; — must
+              match the service's pay slug exactly. Each slug can only be gated by one form. Leave blank for a
+              form that isn't a Terms of Engagement gate.
+            </p>
+          </div>
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
