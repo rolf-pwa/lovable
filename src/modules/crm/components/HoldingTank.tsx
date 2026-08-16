@@ -24,8 +24,9 @@ import { Anchor, Grape, Castle, Sword, Wheat, Lock, ArrowRight, Loader2, Trash2,
 import { format } from "date-fns";
 import { Input } from "@/shared/components/ui/input";
 import { toast } from "sonner";
-import { CUSTODIAN_OPTIONS, IA_FINANCIAL_GROUP } from "@/shared/lib/custodians";
-import { IaWithdrawalDialog } from "./IaWithdrawalDialog";
+import { CUSTODIAN_OPTIONS } from "@/shared/lib/custodians";
+import { WebFormDialog } from "./WebFormDialog";
+import type { WebFormRecord } from "./WebFormEditorDialog";
 
 interface HoldingTankAccount {
   id: string;
@@ -87,6 +88,14 @@ export function HoldingTank({ contactId, householdId, onAccountMoved }: HoldingT
   // different custodians (TD Bank, Royal Bank, etc.).
   const [custodianMode, setCustodianMode] = useState<string>("");
   const [adding, setAdding] = useState(false);
+  const [webforms, setWebforms] = useState<WebFormRecord[]>([]);
+
+  useEffect(() => {
+    (supabase.from("adobe_webforms" as any) as any)
+      .select("*")
+      .eq("is_active", true)
+      .then(({ data }: any) => setWebforms((data as WebFormRecord[]) || []));
+  }, []);
 
   const fetchAccounts = useCallback(async () => {
     setLoading(true);
@@ -436,6 +445,7 @@ export function HoldingTank({ contactId, householdId, onAccountMoved }: HoldingT
             <HoldingTankRow
               key={account.id}
               account={account}
+              webforms={webforms}
               onMove={(destination, storehouseNum) =>
                 setMoveTarget({ id: account.id, destination, storehouseNum })
               }
@@ -492,19 +502,21 @@ interface SnapshotSummary {
 
 function HoldingTankRow({
   account,
+  webforms,
   onMove,
   onDelete,
   onScopeChange,
   onDateChange,
 }: {
   account: HoldingTankAccount;
+  webforms: WebFormRecord[];
   onMove: (destination: string, storehouseNum?: number) => void;
   onDelete: () => void;
   onScopeChange: (id: string, scope: string) => void;
   onDateChange: (id: string, date: string) => void;
 }) {
   const [destination, setDestination] = useState<string>("");
-  const [withdrawalOpen, setWithdrawalOpen] = useState(false);
+  const [openWebformId, setOpenWebformId] = useState<string | null>(null);
   const [editingValue, setEditingValue] = useState(false);
   const [valueDraft, setValueDraft] = useState<string>("");
   const [savingValue, setSavingValue] = useState(false);
@@ -760,25 +772,27 @@ function HoldingTankRow({
         </Button>
       </div>
 
-      {account.custodian === IA_FINANCIAL_GROUP && (
-        <>
+      {webforms
+        .filter((f) => !f.custodian || f.custodian === account.custodian)
+        .map((form) => (
           <Button
+            key={form.id}
             size="sm"
             variant="outline"
             className="h-8 text-xs w-full"
-            onClick={() => setWithdrawalOpen(true)}
+            onClick={() => setOpenWebformId(form.id)}
           >
             <FileSignature className="h-3.5 w-3.5 mr-1.5" />
-            Request iA Withdrawal
+            {form.name}
           </Button>
-          <IaWithdrawalDialog
-            open={withdrawalOpen}
-            onOpenChange={setWithdrawalOpen}
-            contactId={account.contact_id}
-            accountNumber={account.account_number}
-          />
-        </>
-      )}
+        ))}
+      <WebFormDialog
+        open={!!openWebformId}
+        onOpenChange={(open) => !open && setOpenWebformId(null)}
+        webform={webforms.find((f) => f.id === openWebformId) || null}
+        contactId={account.contact_id}
+        accountNumber={account.account_number}
+      />
     </div>
   );
 }
