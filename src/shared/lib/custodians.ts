@@ -1,7 +1,10 @@
 // Canonical custodian values for holding_tank/vineyard_accounts — shared so
 // the Holding Tank form, Vault-scan normalization, and future AUM tiering
 // logic can't silently drift apart on what "directly managed" means.
-export const MANAGED_CUSTODIANS = ["iA Financial Group", "JustWealth"] as const;
+export const IA_FINANCIAL_GROUP = "iA Financial Group";
+export const JUSTWEALTH = "JustWealth";
+
+export const MANAGED_CUSTODIANS = [IA_FINANCIAL_GROUP, JUSTWEALTH] as const;
 
 export const CUSTODIAN_OPTIONS = [...MANAGED_CUSTODIANS, "Other"] as const;
 
