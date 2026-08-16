@@ -162,6 +162,8 @@ export function HoldingTank({ contactId, householdId, onAccountMoved }: HoldingT
           notes: account.notes,
           asset_type: account.account_type,
           visibility_scope: scope,
+          account_number: account.account_number,
+          custodian: account.custodian,
         } as any).select("id").single();
         if (error) throw error;
         newRowId = (inserted as any).id;

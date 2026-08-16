@@ -9,9 +9,19 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/shared/components/ui/dropdown-menu";
-import { Plus, X, ArrowRightLeft, ChevronDown, ChevronRight } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/shared/components/ui/select";
+import { Plus, X, ArrowRightLeft, ChevronDown, ChevronRight, FileSignature } from "lucide-react";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { toast } from "sonner";
+import { CUSTODIAN_OPTIONS } from "@/shared/lib/custodians";
+import { WebFormDialog } from "./WebFormDialog";
+import type { WebFormRecord } from "./WebFormEditorDialog";
 
 
 const SCOPE_LABELS: Record<string, string> = {
@@ -37,6 +47,8 @@ export interface AssetAccount {
   notes?: string | null;
   visibilityScope: string;
   charterAlignment?: string;
+  accountNumber?: string | null;
+  custodian?: string | null;
   /** Source table for move operations */
   sourceTable: "vineyard_accounts" | "storehouses";
 }
@@ -62,6 +74,8 @@ interface AssetContainerProps {
   onConfigurePlaceholder?: () => void;
   /** Extra amount (e.g. insurance cash value) to include in the header total */
   extraTotal?: number;
+  /** Active Web Forms — passed through to each row so its matching buttons can render */
+  webforms?: WebFormRecord[];
 }
 
 export function AssetContainer({
@@ -79,6 +93,7 @@ export function AssetContainer({
   onAddAccount,
   onConfigurePlaceholder,
   extraTotal = 0,
+  webforms = [],
 }: AssetContainerProps) {
   const [collapsed, setCollapsed] = useState(true);
   const accountsTotal = accounts.reduce((sum, a) => sum + (Number(a.currentValue) || 0), 0);
@@ -99,6 +114,18 @@ export function AssetContainer({
       toast.error("Failed to update visibility.");
     } else {
       toast.success(`Visibility set to ${SCOPE_LABELS[newScope]}.`);
+      onRefresh();
+    }
+  };
+
+  const updateCustodian = async (account: AssetAccount, custodian: string | null) => {
+    const { error } = await supabase
+      .from(account.sourceTable as any)
+      .update({ custodian } as any)
+      .eq("id", account.id);
+    if (error) {
+      toast.error("Failed to update custodian.");
+    } else {
       onRefresh();
     }
   };
@@ -171,9 +198,12 @@ export function AssetContainer({
               <AccountRow
                 key={acc.id}
                 acc={acc}
+                contactId={contactId}
+                webforms={webforms}
                 moveTargets={moveTargets}
                 onMoveAccount={onMoveAccount}
                 updateVisibilityScope={updateVisibilityScope}
+                updateCustodian={updateCustodian}
                 deleteAccount={deleteAccount}
                 onRefresh={onRefresh}
               />
@@ -220,9 +250,12 @@ interface SnapshotRow {
 
 interface AccountRowProps {
   acc: AssetAccount;
+  contactId: string;
+  webforms: WebFormRecord[];
   moveTargets: MoveTarget[];
   onMoveAccount?: (account: AssetAccount, targetKey: string) => Promise<void>;
   updateVisibilityScope: (table: "vineyard_accounts" | "storehouses", id: string, scope: string) => Promise<void>;
+  updateCustodian: (account: AssetAccount, custodian: string | null) => Promise<void>;
   deleteAccount: (account: AssetAccount) => Promise<void>;
   onRefresh: () => void;
 }
@@ -232,13 +265,16 @@ function fmt(n: number) {
   return `${sign}$${Math.abs(Math.round(n)).toLocaleString()}`;
 }
 
-function AccountRow({ acc, moveTargets, onMoveAccount, updateVisibilityScope, deleteAccount, onRefresh }: AccountRowProps) {
+function AccountRow({ acc, contactId, webforms, moveTargets, onMoveAccount, updateVisibilityScope, updateCustodian, deleteAccount, onRefresh }: AccountRowProps) {
   const [expanded, setExpanded] = useState(false);
   const [snapshots, setSnapshots] = useState<SnapshotRow[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [editingValue, setEditingValue] = useState(false);
   const [valueDraft, setValueDraft] = useState<string>("");
   const [savingValue, setSavingValue] = useState(false);
+  const [openWebformId, setOpenWebformId] = useState<string | null>(null);
+
+  const matchingWebforms = webforms.filter((f) => !f.custodian || f.custodian === acc.custodian);
 
   const current = Number(acc.currentValue) || 0;
   const target = Number(acc.targetValue) || 0;
@@ -382,6 +418,41 @@ function AccountRow({ acc, moveTargets, onMoveAccount, updateVisibilityScope, de
           <span className="text-[10px] text-muted-foreground">Target: ${target.toLocaleString()}</span>
         )}
 
+        <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+          <span className="text-[10px] text-muted-foreground">Custodian:</span>
+          <Select
+            value={acc.custodian || "__none"}
+            onValueChange={(v) => updateCustodian(acc, v === "__none" ? null : v)}
+          >
+            <SelectTrigger className="h-6 w-auto min-w-[110px] text-[10px] px-2 py-0.5 border-dashed">
+              <SelectValue placeholder="Set custodian" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__none">—</SelectItem>
+              {CUSTODIAN_OPTIONS.map((c) => (
+                <SelectItem key={c} value={c}>{c}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {matchingWebforms.length > 0 && (
+          <div className="flex flex-wrap gap-1" onClick={(e) => e.stopPropagation()}>
+            {matchingWebforms.map((form) => (
+              <Button
+                key={form.id}
+                size="sm"
+                variant="outline"
+                className="h-6 text-[10px] px-2"
+                onClick={() => setOpenWebformId(form.id)}
+              >
+                <FileSignature className="h-2.5 w-2.5 mr-1" />
+                {form.name}
+              </Button>
+            ))}
+          </div>
+        )}
+
         <div className="flex items-center justify-between mt-0.5">
           {acc.charterAlignment && (
             <div className="flex items-center gap-1.5">
@@ -507,6 +578,14 @@ function AccountRow({ acc, moveTargets, onMoveAccount, updateVisibilityScope, de
       >
         <X className="h-3.5 w-3.5" />
       </button>
+
+      <WebFormDialog
+        open={!!openWebformId}
+        onOpenChange={(open) => !open && setOpenWebformId(null)}
+        webform={matchingWebforms.find((f) => f.id === openWebformId) || null}
+        contactId={contactId}
+        accountNumber={acc.accountNumber ?? null}
+      />
     </div>
   );
 }
