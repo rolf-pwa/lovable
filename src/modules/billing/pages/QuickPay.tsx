@@ -113,18 +113,29 @@ export default function QuickPay() {
       return;
     }
     setSubmittingToe(true);
-    const { error: insertErr } = await supabase.from("toe_acceptances" as any).insert({
-      pay_slug: handle,
-      full_name: parsed.data.fullName,
-      email: parsed.data.email,
-      webform_id: toeForm?.id ?? null,
-    } as any);
-    setSubmittingToe(false);
-    if (insertErr) {
-      setToeError("Something went wrong. Please try again.");
-      return;
+    try {
+      const { error: insertErr } = await supabase.from("toe_acceptances" as any).insert({
+        pay_slug: handle,
+        full_name: parsed.data.fullName,
+        email: parsed.data.email,
+        webform_id: toeForm?.id ?? null,
+      } as any);
+      if (insertErr) {
+        console.error("toe_acceptances insert failed:", insertErr);
+        setToeError(
+          `Something went wrong (${insertErr.message || insertErr.code || "unknown error"}). Please try again.`,
+        );
+        return;
+      }
+      setToeAccepted(true);
+    } catch (err) {
+      console.error("toe_acceptances insert threw:", err);
+      setToeError(
+        `Something went wrong (${err instanceof Error ? err.message : "network error"}). Please try again.`,
+      );
+    } finally {
+      setSubmittingToe(false);
     }
-    setToeAccepted(true);
   };
 
   if (!gateChecked) {
