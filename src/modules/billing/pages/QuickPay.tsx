@@ -14,22 +14,14 @@ const ContactSchema = z.object({
   email: z.string().trim().email("Valid email required").max(255),
 });
 
-interface ToeForm {
-  id: string;
-  name: string;
-  widget_url: string;
-}
-
 /**
  * /pay/:slug — sends the visitor straight to Square's hosted checkout so they
  * only enter their details once (on Square). No login, no in-app form.
  *
- * If a Terms of Engagement form is registered (adobe_webforms.is_toe_gate),
- * a name/email/agree step is shown first — a first-party clickwrap, not an
- * embedded Adobe signature: Adobe's own redirect-after-completion setting
- * is account/group-wide, not per web form, so gating on a completed
- * signature wasn't reliable. If no ToE is registered, behavior is unchanged
- * from before — straight to checkout.
+ * Before that, a name/email/agree step: a first-party clickwrap, the sole
+ * acceptance mechanism (no Adobe signature — that was a redundant second
+ * "did you agree" check). The Terms of Engagement document itself is
+ * hosted on our own domain at /terms-of-engagement, not an Adobe Web Form.
  */
 export default function QuickPay() {
   const { slug } = useParams<{ slug?: string }>();
@@ -40,8 +32,6 @@ export default function QuickPay() {
 
   const handle = slug || searchParams.get("service") || "";
 
-  const [gateChecked, setGateChecked] = useState(false);
-  const [toeForm, setToeForm] = useState<ToeForm | null>(null);
   const [toeAccepted, setToeAccepted] = useState(false);
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -55,21 +45,7 @@ export default function QuickPay() {
   }, []);
 
   useEffect(() => {
-    (supabase.from("adobe_webforms" as any) as any)
-      .select("id, name, widget_url")
-      .eq("is_toe_gate", true)
-      .eq("is_active", true)
-      .maybeSingle()
-      .then(({ data }: any) => {
-        setToeForm(data ?? null);
-        setGateChecked(true);
-      });
-  }, []);
-
-  const proceedToCheckout = gateChecked && (!toeForm || toeAccepted);
-
-  useEffect(() => {
-    if (!proceedToCheckout || started.current) return;
+    if (!toeAccepted || started.current) return;
     started.current = true;
 
     (async () => {
@@ -93,7 +69,7 @@ export default function QuickPay() {
       setCheckoutUrl(result.checkoutUrl);
       window.location.replace(result.checkoutUrl);
     })();
-  }, [proceedToCheckout, handle]);
+  }, [toeAccepted, handle]);
 
   const submitToe = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -118,7 +94,6 @@ export default function QuickPay() {
         pay_slug: handle,
         full_name: parsed.data.fullName,
         email: parsed.data.email,
-        webform_id: toeForm?.id ?? null,
       } as any);
       if (insertErr) {
         console.error("toe_acceptances insert failed:", insertErr);
@@ -138,15 +113,7 @@ export default function QuickPay() {
     }
   };
 
-  if (!gateChecked) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-background px-4">
-        <Loader2 className="h-6 w-6 animate-spin text-accent" />
-      </main>
-    );
-  }
-
-  if (toeForm && !toeAccepted) {
+  if (!toeAccepted) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-background px-4 py-12">
         <Card className="w-full max-w-md">
@@ -181,12 +148,12 @@ export default function QuickPay() {
               </div>
 
               <a
-                href={toeForm.widget_url}
+                href="/terms-of-engagement"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-1.5 text-sm text-accent hover:underline"
               >
-                View {toeForm.name}
+                View Terms of Engagement
                 <ExternalLink className="h-3.5 w-3.5" />
               </a>
 

@@ -39,7 +39,6 @@ export interface WebFormRecord {
   custodian: string | null;
   fields: WebFormFieldDef[];
   is_active: boolean;
-  is_toe_gate: boolean;
 }
 
 const SOURCE_LABELS: Record<WebFormFieldSource, string> = {
@@ -72,7 +71,6 @@ export function WebFormEditorDialog({ open, onOpenChange, webform, onSaved }: Pr
   const [urlInput, setUrlInput] = useState("");
   const [custodian, setCustodian] = useState("");
   const [fields, setFields] = useState<WebFormFieldDef[]>([blankField()]);
-  const [isToeGate, setIsToeGate] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -81,18 +79,15 @@ export function WebFormEditorDialog({ open, onOpenChange, webform, onSaved }: Pr
     setUrlInput(webform?.widget_url ?? "");
     setCustodian(webform?.custodian ?? "");
     setFields(webform?.fields?.length ? webform.fields : [blankField()]);
-    setIsToeGate(webform?.is_toe_gate ?? false);
   }, [open, webform]);
 
   const updateField = (index: number, patch: Partial<WebFormFieldDef>) =>
     setFields((prev) => prev.map((f, i) => (i === index ? { ...f, ...patch } : f)));
 
-  // A ToE gate form is just a "view this document" link on /pay — it's
-  // never runtime-prefilled with account data, so it doesn't need fields.
   const canSave =
     name.trim().length > 0 &&
     !!extractWidgetUrl(urlInput) &&
-    (isToeGate || fields.some((f) => f.field_name.trim() && f.label.trim()));
+    fields.some((f) => f.field_name.trim() && f.label.trim());
 
   const save = async () => {
     const widgetUrl = extractWidgetUrl(urlInput);
@@ -103,7 +98,7 @@ export function WebFormEditorDialog({ open, onOpenChange, webform, onSaved }: Pr
     const cleanFields = fields
       .filter((f) => f.field_name.trim() && f.label.trim())
       .map((f) => ({ ...f, field_name: f.field_name.trim(), label: f.label.trim() }));
-    if (cleanFields.length === 0 && !isToeGate) {
+    if (cleanFields.length === 0) {
       toast.error("Add at least one field.");
       return;
     }
@@ -114,7 +109,6 @@ export function WebFormEditorDialog({ open, onOpenChange, webform, onSaved }: Pr
       widget_url: widgetUrl,
       custodian: custodian.trim() || null,
       fields: cleanFields,
-      is_toe_gate: isToeGate,
     };
     const { error } = webform
       ? await supabase.from("adobe_webforms" as any).update(payload as any).eq("id", webform.id)
@@ -122,11 +116,7 @@ export function WebFormEditorDialog({ open, onOpenChange, webform, onSaved }: Pr
     setSaving(false);
 
     if (error) {
-      if (error.code === "23505" && isToeGate) {
-        toast.error("Another form is already set as the Terms of Engagement — turn that one off first.");
-      } else {
-        toast.error("Failed to save Web Form.");
-      }
+      toast.error("Failed to save Web Form.");
       return;
     }
     toast.success(webform ? "Web Form updated" : "Web Form added");
@@ -180,32 +170,20 @@ export function WebFormEditorDialog({ open, onOpenChange, webform, onSaved }: Pr
             </p>
           </div>
 
-          <label className="flex items-start gap-2 rounded-lg border border-border p-3 text-sm">
-            <Checkbox checked={isToeGate} onCheckedChange={(v) => setIsToeGate(!!v)} className="mt-0.5" />
-            <span>
-              <span className="font-medium">Use as the Terms of Engagement</span>
-              <span className="block text-xs text-muted-foreground">
-                Shown as a "view" link on /pay before a prospect pays — only one form can be the ToE at a time.
-                No fields needed below; it's linked, not prefilled.
-              </span>
-            </span>
-          </label>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label>Fields</Label>
+              <Button type="button" size="sm" variant="outline" onClick={() => setFields((p) => [...p, blankField()])}>
+                <Plus className="h-3.5 w-3.5 mr-1" />
+                Add field
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              One row per field on the form that has "Default value may come from URL" enabled in Adobe's field
+              editor. Field name must match exactly, case-sensitive.
+            </p>
 
-          {!isToeGate && (
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label>Fields</Label>
-                <Button type="button" size="sm" variant="outline" onClick={() => setFields((p) => [...p, blankField()])}>
-                  <Plus className="h-3.5 w-3.5 mr-1" />
-                  Add field
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                One row per field on the form that has "Default value may come from URL" enabled in Adobe's field
-                editor. Field name must match exactly, case-sensitive.
-              </p>
-
-              <div className="space-y-2">
               {fields.map((field, index) => (
                 <div key={index} className="grid gap-2 rounded-lg border border-border p-3 sm:grid-cols-[1fr_1fr_1fr_auto]">
                   <div className="space-y-1">
@@ -274,9 +252,8 @@ export function WebFormEditorDialog({ open, onOpenChange, webform, onSaved }: Pr
                   </div>
                 </div>
               ))}
-              </div>
             </div>
-          )}
+          </div>
         </div>
 
         <DialogFooter>
