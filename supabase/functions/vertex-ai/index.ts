@@ -109,7 +109,6 @@ When appropriate, use these tools to propose structured actions:
 4. **draft_asana_task** — Draft a follow-up task description for Asana. This stays in DRAFT status.
 5. **create_contact** — Create a new contact record in the system with the provided details.
 6. **update_contact** — Update an existing contact's information (name, email, phone, address, professional links, etc.).
-7. **schedule_meeting** — Schedule a Google Calendar meeting with specified attendees, date/time, and details.
 
 ## Rules
 - ALWAYS label your outputs as "📋 Draft for CFO Review" when proposing actions.
@@ -119,7 +118,6 @@ When appropriate, use these tools to propose structured actions:
 - Be concise, professional, and action-oriented.
 - When you don't have enough context, ask clarifying questions before proposing actions.
 - For emails, always use the draft_stabilization_email tool so the email is saved as a Gmail draft.
-- For meetings, collect date, time, duration, attendees, and purpose before proposing.
 - When creating or updating contacts, confirm the details with the CFO before proposing.
 
 ## Charter Ingestion Capabilities
@@ -262,24 +260,6 @@ const TOOLS = [
             rationale: { type: "STRING", description: "Why these updates are being proposed" },
           },
           required: ["contact_id", "contact_name", "rationale"],
-        },
-      },
-      {
-        name: "schedule_meeting",
-        description: "Schedule a Google Calendar meeting. The meeting is created after CFO approval.",
-        parameters: {
-          type: "OBJECT",
-          properties: {
-            summary: { type: "STRING", description: "Meeting title" },
-            description: { type: "STRING", description: "Meeting description/agenda" },
-            start_datetime: { type: "STRING", description: "Start date and time in ISO 8601 format (e.g., 2026-02-20T10:00:00)" },
-            end_datetime: { type: "STRING", description: "End date and time in ISO 8601 format (e.g., 2026-02-20T11:00:00)" },
-            timezone: { type: "STRING", description: "Timezone (e.g., America/Toronto). Defaults to America/Toronto." },
-            attendees: { type: "STRING", description: "Comma-separated list of attendee email addresses" },
-            contact_name: { type: "STRING", description: "Related contact name for audit trail" },
-            rationale: { type: "STRING", description: "Purpose/context for this meeting" },
-          },
-          required: ["summary", "start_datetime", "end_datetime", "rationale"],
         },
       },
       {

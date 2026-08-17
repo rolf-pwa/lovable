@@ -82,24 +82,6 @@ export async function listCalendarEvents(timeMin?: string, timeMax?: string) {
   return data;
 }
 
-export async function createCalendarEvent(event: {
-  summary: string;
-  description?: string;
-  start: { dateTime: string; timeZone?: string };
-  end: { dateTime: string; timeZone?: string };
-  attendees?: { email: string }[];
-}) {
-  const headers = await getAuthHeaders();
-  const res = await fetch(`${FUNCTIONS_URL}/google-calendar?action=create`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify(event),
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || "Failed to create event");
-  return data;
-}
-
 // --- Gmail ---
 
 export async function listGmailMessages(query?: string) {
