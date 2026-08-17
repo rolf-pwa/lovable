@@ -6,7 +6,6 @@ import {
   disconnectGoogle,
   syncCharterDriveSources,
   listCalendarEvents,
-  createCalendarEvent,
   listGmailMessages,
   sendGmailMessage,
 } from "@/shared/lib/google-api";
@@ -61,14 +60,6 @@ export function useCalendarEvents(timeMin?: string, timeMax?: string, enabled = 
     queryFn: () => listCalendarEvents(timeMin, timeMax),
     enabled,
     staleTime: 60_000,
-  });
-}
-
-export function useCreateCalendarEvent() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: createCalendarEvent,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["calendar-events"] }),
   });
 }
 

@@ -120,32 +120,6 @@ if (req.method === "OPTIONS") {
       });
     }
 
-    if (action === "create") {
-      const event = await req.json();
-      const calRes = await fetch(
-        "https://www.googleapis.com/calendar/v3/calendars/primary/events",
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(event),
-        }
-      );
-
-      if (!calRes.ok) {
-        const err = await calRes.text();
-        console.error("Calendar create error:", err);
-        throw new Error(`Calendar create error: ${calRes.status}`);
-      }
-
-      const data = await calRes.json();
-      return new Response(JSON.stringify(data), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
     return new Response(JSON.stringify({ error: "Invalid action" }), {
       status: 400,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

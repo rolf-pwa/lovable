@@ -11,7 +11,6 @@ import {
   Loader2,
   UserPlus,
   UserCog,
-  CalendarPlus,
   Grape,
   Shield,
   ArrowDownUp,
@@ -21,7 +20,6 @@ import {
 import { supabase } from "@/shared/integrations/supabase/client";
 import { logAuditAction, type FunctionCall } from "@/shared/lib/vertex-ai";
 import { createGmailDraft } from "@/shared/lib/google-api";
-import { createCalendarEvent } from "@/shared/lib/google-api";
 import { toast } from "sonner";
 
 interface ProposedUpdateCardProps {
@@ -38,7 +36,6 @@ const CARD_CONFIG: Record<string, { icon: typeof Database; label: string; color:
   draft_asana_task: { icon: ListTodo, label: "Draft Task", color: "text-purple-500" },
   create_contact: { icon: UserPlus, label: "New Contact", color: "text-emerald-500" },
   update_contact: { icon: UserCog, label: "Update Contact", color: "text-amber-500" },
-  schedule_meeting: { icon: CalendarPlus, label: "Schedule Meeting", color: "text-indigo-500" },
   ingest_vineyard_accounts: { icon: Grape, label: "Charter → Vineyard Accounts", color: "text-sanctuary-green" },
   ingest_storehouse_rules: { icon: Shield, label: "Charter → Storehouse Rules", color: "text-sanctuary-bronze" },
   ingest_waterfall_priorities: { icon: ArrowDownUp, label: "Charter → Waterfall Priorities", color: "text-indigo-500" },
@@ -219,32 +216,6 @@ export function ProposedUpdateCard({ functionCall, contactId, isApproved, onAppr
             args
           );
           toast.success(`Contact "${args.contact_name}" updated.`);
-          break;
-        }
-
-        case "schedule_meeting": {
-          const tz = args.timezone || "America/Toronto";
-          const attendees = args.attendees
-            ? args.attendees.split(",").map((e: string) => ({ email: e.trim() }))
-            : [];
-
-          await createCalendarEvent({
-            summary: args.summary,
-            description: args.description || "",
-            start: { dateTime: args.start_datetime, timeZone: tz },
-            end: { dateTime: args.end_datetime, timeZone: tz },
-            attendees,
-          });
-
-          if (cid) {
-            await logAuditAction(
-              cid,
-              "schedule_meeting",
-              `AI Assistant scheduled meeting "${args.summary}" for ${args.contact_name || "N/A"}: ${args.rationale}`,
-              args
-            );
-          }
-          toast.success(`Meeting "${args.summary}" scheduled on Google Calendar.`);
           break;
         }
 

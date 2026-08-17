@@ -82,24 +82,6 @@ export async function listCalendarEvents(timeMin?: string, timeMax?: string) {
   return data;
 }
 
-export async function createCalendarEvent(event: {
-  summary: string;
-  description?: string;
-  start: { dateTime: string; timeZone?: string };
-  end: { dateTime: string; timeZone?: string };
-  attendees?: { email: string }[];
-}) {
-  const headers = await getAuthHeaders();
-  const res = await fetch(`${FUNCTIONS_URL}/google-calendar?action=create`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify(event),
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || "Failed to create event");
-  return data;
-}
-
 // --- Gmail ---
 
 export async function listGmailMessages(query?: string) {
@@ -187,24 +169,6 @@ export async function trashGmail(payload: { messageId?: string; threadId?: strin
   return data;
 }
 
-export async function untrashGmail(payload: { messageId?: string; threadId?: string }) {
-  const headers = await getAuthHeaders();
-  const res = await fetch(`${FUNCTIONS_URL}/google-gmail?action=untrash`, {
-    method: "POST", headers, body: JSON.stringify(payload),
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || "Failed to untrash");
-  return data;
-}
-
-export async function listGmailLabels() {
-  const headers = await getAuthHeaders();
-  const res = await fetch(`${FUNCTIONS_URL}/google-gmail?action=labels-list`, { headers });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || "Failed to list labels");
-  return data as { labels: any[] };
-}
-
 export async function getGmailProfile() {
   const headers = await getAuthHeaders();
   const res = await fetch(`${FUNCTIONS_URL}/google-gmail?action=profile`, { headers });
@@ -223,30 +187,5 @@ export async function createGmailDraft(to: string, subject: string, body: string
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || "Failed to create draft");
   return data;
-}
-
-// --- Google Docs ---
-
-export async function listGoogleDocs(query?: string) {
-  const headers = await getAuthHeaders();
-  const params = new URLSearchParams({ action: "list" });
-  if (query) params.set("q", query);
-  const res = await fetch(`${FUNCTIONS_URL}/google-docs?${params}`, { headers });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || "Failed to list docs");
-  return data.files as { id: string; name: string; modifiedTime: string; webViewLink: string }[];
-}
-
-export async function getGoogleDoc(docIdOrUrl: string) {
-  const headers = await getAuthHeaders();
-  const isUrl = docIdOrUrl.startsWith("http");
-  const params = new URLSearchParams({
-    action: "get",
-    ...(isUrl ? { url: docIdOrUrl } : { docId: docIdOrUrl }),
-  });
-  const res = await fetch(`${FUNCTIONS_URL}/google-docs?${params}`, { headers });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || "Failed to get doc");
-  return data as { id: string; name: string; modifiedTime: string; content: string };
 }
 
