@@ -81,3 +81,15 @@ export async function listCalendarEvents(timeMin?: string, timeMax?: string) {
   if (!res.ok) throw new Error(data.error || "Failed to list events");
   return data;
 }
+
+// --- Gmail (read-only history for the Contact Communications tab) ---
+
+export async function listGmailMessages(query?: string) {
+  const headers = await getAuthHeaders();
+  const params = new URLSearchParams({ action: "list" });
+  if (query) params.set("q", query);
+  const res = await fetch(`${FUNCTIONS_URL}/google-gmail?${params}`, { headers });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Failed to list messages");
+  return data;
+}

@@ -6,6 +6,7 @@ import {
   disconnectGoogle,
   syncCharterDriveSources,
   listCalendarEvents,
+  listGmailMessages,
 } from "@/shared/lib/google-api";
 
 export function useGoogleStatus() {
@@ -56,6 +57,15 @@ export function useCalendarEvents(timeMin?: string, timeMax?: string, enabled = 
   return useQuery({
     queryKey: ["calendar-events", timeMin, timeMax],
     queryFn: () => listCalendarEvents(timeMin, timeMax),
+    enabled,
+    staleTime: 60_000,
+  });
+}
+
+export function useGmailMessages(query?: string, enabled = true) {
+  return useQuery({
+    queryKey: ["gmail-messages", query],
+    queryFn: () => listGmailMessages(query),
     enabled,
     staleTime: 60_000,
   });

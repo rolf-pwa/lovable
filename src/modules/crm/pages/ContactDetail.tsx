@@ -48,6 +48,7 @@ import { ContactRequests } from "@/modules/crm/components/ContactRequests";
 import { ContactCalendar } from "@/modules/crm/components/ContactCalendar";
 import QuoCommunications from "@/modules/crm/components/QuoCommunications";
 import ManualActivityLog from "@/modules/crm/components/ManualActivityLog";
+import { ContactEmails } from "@/modules/crm/components/ContactEmails";
 import { SovereigntyAssistant } from "@/shared/components/SovereigntyAssistant";
 import { AuditTrail } from "@/modules/audit";
 import { StatementUpload } from "@/modules/crm";
@@ -767,6 +768,7 @@ const ContactDetail = () => {
                   contactId={contact.id}
                   contactName={`${contact.first_name} ${contact.last_name || ""}`.trim()}
                 />
+                <ContactEmails contactEmail={contact.email} />
               </TabsContent>
 
               {/* Vault Tab */}
