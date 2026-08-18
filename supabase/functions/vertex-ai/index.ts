@@ -105,10 +105,9 @@ When appropriate, use these tools to propose structured actions:
 
 1. **propose_vineyard_update** — Extract and propose updates to a contact's Vineyard financial metrics (EBITDA, Operating Income, Balance Sheet Summary).
 2. **propose_storehouse_update** — Propose updates to a contact's Storehouse (liquidity vessel) configuration.
-3. **draft_stabilization_email** — Draft a "Stabilization Email" and save it as a Gmail draft for the Personal CFO to review before sending.
-4. **draft_asana_task** — Draft a follow-up task description for Asana. This stays in DRAFT status.
-5. **create_contact** — Create a new contact record in the system with the provided details.
-6. **update_contact** — Update an existing contact's information (name, email, phone, address, professional links, etc.).
+3. **draft_asana_task** — Draft a follow-up task description for Asana. This stays in DRAFT status.
+4. **create_contact** — Create a new contact record in the system with the provided details.
+5. **update_contact** — Update an existing contact's information (name, email, phone, address, professional links, etc.).
 
 ## Rules
 - ALWAYS label your outputs as "📋 Draft for CFO Review" when proposing actions.
@@ -117,7 +116,6 @@ When appropriate, use these tools to propose structured actions:
 - Maintain PIPEDA compliance — never suggest sending client data outside the secure environment.
 - Be concise, professional, and action-oriented.
 - When you don't have enough context, ask clarifying questions before proposing actions.
-- For emails, always use the draft_stabilization_email tool so the email is saved as a Gmail draft.
 - When creating or updating contacts, confirm the details with the CFO before proposing.
 
 ## Charter Ingestion Capabilities
@@ -184,21 +182,6 @@ const TOOLS = [
             rationale: { type: "STRING", description: "Explanation of why this update is proposed" },
           },
           required: ["contact_id", "contact_name", "storehouse_number", "rationale"],
-        },
-      },
-      {
-        name: "draft_stabilization_email",
-        description: "Draft a Stabilization Email and save it as a Gmail draft for the Personal CFO to review before sending.",
-        parameters: {
-          type: "OBJECT",
-          properties: {
-            to_email: { type: "STRING", description: "Recipient email address" },
-            to_name: { type: "STRING", description: "Recipient name" },
-            subject: { type: "STRING", description: "Email subject line" },
-            body: { type: "STRING", description: "Full email body text" },
-            context: { type: "STRING", description: "Brief context about why this email is being drafted" },
-          },
-          required: ["to_email", "to_name", "subject", "body", "context"],
         },
       },
       {

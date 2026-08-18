@@ -26,7 +26,6 @@ import {
   useConnectGoogle,
   useDisconnectGoogle,
   useCalendarEvents,
-  useGmailMessages,
 } from "@/shared/hooks/useGoogle";
 
 
@@ -57,7 +56,7 @@ export function CommandCenter() {
           <div>
             <h3 className="text-base font-semibold text-foreground">Connect Google Workspace</h3>
             <p className="mt-1 text-sm text-muted-foreground">
-              Link your Google account to view Calendar events, Gmail, and enable task automation.
+              Link your Google account to view Calendar events and enable task automation.
             </p>
           </div>
           <Button
@@ -111,7 +110,6 @@ export function CommandCenter() {
         </div>
         <div className="space-y-6">
           <CalendarWidget />
-          <GmailWidget />
         </div>
       </div>
     </div>
@@ -184,68 +182,6 @@ function CalendarWidget() {
                        </p>
                      )}
                    </div>
-                 </a>
-              );
-            })}
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-function GmailWidget() {
-  const { data, isLoading, error } = useGmailMessages("is:unread");
-
-  return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between pb-3">
-        <CardTitle className="flex items-center gap-2 text-base">
-          <Mail className="h-4 w-4 text-sanctuary-bronze" />
-          Recent Emails
-        </CardTitle>
-        <a href="https://mail.google.com/mail/u/0/#inbox?compose=new" target="_blank" rel="noopener noreferrer">
-          <Button variant="ghost" size="sm">
-            <Send className="mr-1 h-3 w-3" />
-            Compose
-          </Button>
-        </a>
-      </CardHeader>
-      <CardContent>
-        {isLoading ? (
-          <div className="flex justify-center py-4">
-            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-          </div>
-        ) : error ? (
-          <p className="text-sm text-destructive">Failed to load emails</p>
-        ) : !data?.messages?.length ? (
-          <p className="text-sm text-muted-foreground">No recent emails.</p>
-        ) : (
-          <div className="space-y-2">
-            {data.messages.slice(0, 8).map((msg: any) => {
-              const fromName = msg.from?.replace(/<.*>/, "").trim() || "Unknown";
-              return (
-                 <a
-                    key={msg.id}
-                    href={`https://mail.google.com/mail/u/0/#all/${msg.id}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block rounded-md border border-border p-3 transition-colors hover:bg-muted/50"
-                  >
-                   <div className="flex items-start justify-between gap-2">
-                     <p className="text-sm font-medium truncate flex-1">
-                       {msg.subject || "(No subject)"}
-                     </p>
-                     {msg.labelIds?.includes("UNREAD") && (
-                       <Badge variant="secondary" className="text-[10px] shrink-0">
-                         New
-                       </Badge>
-                     )}
-                   </div>
-                   <p className="text-xs text-muted-foreground truncate">{fromName}</p>
-                   <p className="mt-1 text-xs text-muted-foreground line-clamp-2">
-                     {msg.snippet}
-                   </p>
                  </a>
               );
             })}

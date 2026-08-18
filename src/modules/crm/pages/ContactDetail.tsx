@@ -46,7 +46,6 @@ import { useAuth } from "@/shared/hooks/useAuth";
 import { ContactTaskList } from "@/modules/crm/components/ContactTaskList";
 import { ContactRequests } from "@/modules/crm/components/ContactRequests";
 import { ContactCalendar } from "@/modules/crm/components/ContactCalendar";
-import { ContactEmails } from "@/modules/crm/components/ContactEmails";
 import QuoCommunications from "@/modules/crm/components/QuoCommunications";
 import ManualActivityLog from "@/modules/crm/components/ManualActivityLog";
 import { SovereigntyAssistant } from "@/shared/components/SovereigntyAssistant";
@@ -768,7 +767,6 @@ const ContactDetail = () => {
                   contactId={contact.id}
                   contactName={`${contact.first_name} ${contact.last_name || ""}`.trim()}
                 />
-                <ContactEmails contactEmail={contact.email} />
               </TabsContent>
 
               {/* Vault Tab */}

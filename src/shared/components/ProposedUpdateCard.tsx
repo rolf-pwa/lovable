@@ -6,7 +6,6 @@ import { Badge } from "@/shared/components/ui/badge";
 import {
   CheckCircle2,
   Database,
-  Mail,
   ListTodo,
   Loader2,
   UserPlus,
@@ -19,7 +18,6 @@ import {
 } from "lucide-react";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { logAuditAction, type FunctionCall } from "@/shared/lib/vertex-ai";
-import { createGmailDraft } from "@/shared/lib/google-api";
 import { toast } from "sonner";
 
 interface ProposedUpdateCardProps {
@@ -32,7 +30,6 @@ interface ProposedUpdateCardProps {
 const CARD_CONFIG: Record<string, { icon: typeof Database; label: string; color: string }> = {
   propose_vineyard_update: { icon: Database, label: "Vineyard Update", color: "text-sanctuary-green" },
   propose_storehouse_update: { icon: Database, label: "Storehouse Update", color: "text-sanctuary-bronze" },
-  draft_stabilization_email: { icon: Mail, label: "Draft Email", color: "text-blue-500" },
   draft_asana_task: { icon: ListTodo, label: "Draft Task", color: "text-purple-500" },
   create_contact: { icon: UserPlus, label: "New Contact", color: "text-emerald-500" },
   update_contact: { icon: UserCog, label: "Update Contact", color: "text-amber-500" },
@@ -115,22 +112,6 @@ export function ProposedUpdateCard({ functionCall, contactId, isApproved, onAppr
             args
           );
           toast.success("Storehouse updated & logged to audit trail.");
-          break;
-        }
-
-        case "draft_stabilization_email": {
-          // Save as Gmail draft via API
-          await createGmailDraft(args.to_email, args.subject, args.body);
-
-          if (cid) {
-            await logAuditAction(
-              cid,
-              "draft_email",
-              `AI Assistant drafted email for ${args.to_name}: "${args.subject}" — saved to Gmail Drafts`,
-              args
-            );
-          }
-          toast.success("Email saved to Gmail Drafts. Open Gmail to review & send.");
           break;
         }
 
