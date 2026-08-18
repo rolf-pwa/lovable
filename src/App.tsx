@@ -71,7 +71,6 @@ const QuarterlyReview = lazy(() => import("@/modules/audit/pages/QuarterlyReview
 const GovernanceReview = lazy(() => import("@/modules/audit/pages/GovernanceReview"));
 const SovereigntyCharter = lazy(() => import("@/modules/audit/pages/SovereigntyCharter"));
 const Inbox = lazy(() => import("@/modules/crm/pages/Inbox"));
-const Mail = lazy(() => import("@/modules/crm/pages/Mail"));
 const Professionals = lazy(() => import("@/modules/crm/pages/Professionals"));
 const ProfessionalDetail = lazy(() => import("@/modules/crm/pages/ProfessionalDetail"));
 
@@ -115,7 +114,6 @@ const App = () => (
               <Route path="/google-callback" element={<ProtectedRoute><GoogleCallback /></ProtectedRoute>} />
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/inbox" element={<ProtectedRoute><Inbox /></ProtectedRoute>} />
-              <Route path="/mail" element={<ProtectedRoute><Mail /></ProtectedRoute>} />
               <Route path="/holding-tank" element={<ProtectedRoute><HoldingTankPage /></ProtectedRoute>} />
               <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
               <Route path="/onboarding/bulk" element={<ProtectedRoute><BulkOnboarding /></ProtectedRoute>} />
