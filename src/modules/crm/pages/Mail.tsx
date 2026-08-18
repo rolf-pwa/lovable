@@ -36,8 +36,14 @@ function stripName(addr: string) {
   return m ? { name: m[1].trim() || m[2], email: m[2] } : { name: addr, email: addr };
 }
 
+// Stable identity across renders — an inline arrow function here would be a
+// new component type every render, and React remounts the whole subtree
+// (including the composer's inputs) whenever the wrapper identity changes,
+// which is what was causing focus to drop after every keystroke.
+const EmbeddedPassthrough = ({ children }: { children: React.ReactNode }) => <>{children}</>;
+
 export default function Mail({ embedded = false }: { embedded?: boolean } = {}) {
-  const Wrapper: any = embedded ? (({ children }: any) => <>{children}</>) : AppLayout;
+  const Wrapper: any = embedded ? EmbeddedPassthrough : AppLayout;
   const { data: gStatus } = useGoogleStatus();
   const [searchParams, setSearchParams] = useSearchParams();
   const qc = useQueryClient();
