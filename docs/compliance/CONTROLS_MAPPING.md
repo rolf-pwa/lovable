@@ -117,7 +117,7 @@ Category-level summary (not exhaustive column list) — see `supabase/migrations
 
 | Provider | Data shared | Purpose | Notes |
 |---|---|---|---|
-| Google (Workspace) | Gmail (send-only, transactional system email), Calendar (read-only), Drive access | Vault document storage, system notifications (OTP delivery, digests, alerts) sent from the firm's shared inbox | Access via OAuth (`google-auth`), tokens stored in `google_tokens`. No staff inbox reading — the Mail client feature was removed |
+| Google (Workspace) | Gmail (send transactional system email; read-only message metadata for the per-contact email history panel), Calendar (read-only), Drive access | Vault document storage, system notifications (OTP delivery, digests, alerts) sent from the firm's shared inbox, and a read-only "Email History" view on each contact's Communications tab | Access via OAuth (`google-auth`), tokens stored in `google_tokens`. There is no staff inbox client — email history is read-only and there is no in-app compose/reply |
 | Square | Client name, email, invoice line items | Payment processing / invoicing | `square-service`, `square-webhook`. No card data touches ProsperWise's own systems — Square hosts the payment page |
 | Asana | Client names (in task titles/notes where staff include them) | Internal task/workflow tracking | `asana-service` — restricted to `@prosperwise.ca` users |
 | Quo (OpenPhone) | Contact name, phone number, call recordings, transcripts, SMS content | Dialer / client communication | `quo-service`, `quo-webhook`. US-hosted infrastructure — this is the integration the PII Shield (§11) was originally built to protect |
