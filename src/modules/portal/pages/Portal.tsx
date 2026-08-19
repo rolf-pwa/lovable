@@ -1045,14 +1045,17 @@ const Portal = ({ intakeRoute = false }: { intakeRoute?: boolean }) => {
   // ─── Individual View (tasks + meetings main, territory sidebar) ───
   const getIndividualData = () => {
     if (currentMember) {
-      // Backend gates households by hof_visible; any member reaching the
-      // client is fully accessible.
+      // Reachable only for a fellow member of the viewer's own household
+      // (gated by canDrill in the household view) — but that doesn't make
+      // their private-scoped assets visible to us. Same rule as everywhere
+      // else: household_shared/family_shared only, private stays private.
+      const allowed = new Set(["household_shared", "family_shared"]);
       return {
         name: `${currentMember.first_name} ${currentMember.last_name || ""}`.trim(),
         role: currentMember.family_role,
-        vineyardAccounts: currentMember.vineyard_accounts || [],
-        memberStorehouses: currentMember.storehouses || [],
-        insurancePolicies: (insurance_policies || []).filter((p: any) => p.contact_id === currentMember.id),
+        vineyardAccounts: (currentMember.vineyard_accounts || []).filter((a: any) => allowed.has(a.visibility_scope)),
+        memberStorehouses: (currentMember.storehouses || []).filter((a: any) => allowed.has(a.visibility_scope)),
+        insurancePolicies: (insurance_policies || []).filter((p: any) => p.contact_id === currentMember.id && allowed.has(p.visibility_scope)),
       };
     }
 

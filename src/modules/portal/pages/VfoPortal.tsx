@@ -24,7 +24,7 @@ import { PortalUpdates } from "@/modules/portal/components/PortalUpdates";
 import { PortalGeorgiaChat } from "@/modules/portal/components/PortalGeorgiaChat";
 import { PortalYourTeam } from "@/modules/portal/components/PortalYourTeam";
 import { PortalProfessionals } from "@/modules/portal/components/PortalProfessionals";
-import { insuranceCashForStorehouses, sumValues, isAumStorehouse } from "@/modules/portal/lib/portalAum";
+import { insuranceCashForStorehouses, sumValues, isAumStorehouse, formatCurrency } from "@/modules/portal/lib/portalAum";
 import { PortalDynamicLinks } from "@/modules/portal/components/PortalDynamicLinks";
 import prosperwiseLogo from "@/assets/prosperwise-logo.png";
 import prosperwiseIconPaper from "@/assets/prosperwise-icon-paper.png";
@@ -42,8 +42,7 @@ const ROLE_LABELS: Record<string, string> = {
 type ViewLevel = "family" | "household" | "individual";
 interface DrilldownState { level: ViewLevel; householdId?: string; memberId?: string; }
 
-const fmt = (n: number) =>
-  new Intl.NumberFormat("en-CA", { style: "currency", currency: "CAD", maximumFractionDigits: 0 }).format(n || 0);
+const fmt = (n: number) => formatCurrency(n || 0);
 
 const VfoPortal = () => {
   const { token } = useParams<{ token: string }>();
@@ -182,8 +181,11 @@ const VfoPortal = () => {
     ? hierarchy.households.reduce((s: number, hh: any) => s + (hh.members?.length || 0), 0)
     : household_members.length + 1;
 
-  // Backend already filters households by hof_visible for HoFs, so every
-  // household in `hierarchy` is fully accessible to this viewer.
+  // Backend hof_visible gating only decides which households reach the
+  // client at all — it says nothing about which assets within a visible
+  // household this viewer may see. This helper is scope-agnostic by design;
+  // callers must filter the returned arrays by visibility_scope themselves
+  // before summing or rendering, same as /portal's Portal.tsx.
   const aggregateAssetsAtLevel = (level: "family" | "household", householdId?: string) => {
     const v: any[] = [], s: any[] = [];
     if (level === "family") {
@@ -301,13 +303,23 @@ const VfoPortal = () => {
           <div className="grid gap-4 sm:grid-cols-2">
             {households.map((hh: any) => {
               const members = hh.members || [];
-              const hhV = members.flatMap((m: any) => m.vineyard_accounts || []);
-              const hhS = members.flatMap((m: any) =>
-                (m.storehouses || []).filter((a: any) => isAumStorehouse(a))
+              // Family view — every household card, including the viewer's own,
+              // shows only family_shared assets so its total is a component of
+              // the Family AUM total in the aside, and no private/household-only
+              // asset is exposed at the family level.
+              const hhV = members.flatMap((m: any) =>
+                (m.vineyard_accounts || []).filter((a: any) => a.visibility_scope === "family_shared")
               );
-              const hhT = (family_holding_tank || []).filter((t: any) => members.some((m: any) => m.id === t.contact_id));
+              const hhS = members.flatMap((m: any) =>
+                (m.storehouses || []).filter((a: any) => a.visibility_scope === "family_shared" && isAumStorehouse(a))
+              );
               const memberIds = new Set(members.map((m: any) => m.id));
-              const hhInsurance = (insurance_policies || []).filter((p: any) => memberIds.has(p.contact_id));
+              const hhT = (family_holding_tank || []).filter(
+                (t: any) => memberIds.has(t.contact_id) && t.visibility_scope === "family_shared"
+              );
+              const hhInsurance = (insurance_policies || []).filter(
+                (p: any) => memberIds.has(p.contact_id) && p.visibility_scope === "family_shared"
+              );
               const hhTotal = sumValues(hhV) + sumValues(hhS) + sumValues(hhT)
                 + insuranceCashForStorehouses(hhInsurance, hhS);
               return (
@@ -354,13 +366,26 @@ const VfoPortal = () => {
 
         <aside className="space-y-4">
           {(() => {
-            // Family AUM rolls up ALL scopes across every household — matches /portal & /contacts.
+            // Family AUM rolls up only family_shared-scoped assets across every
+            // household — matches /portal's renderFamilyView. Private and
+            // household-only assets never surface at the family level.
             const allMembers = households.flatMap((hh: any) => hh.members || []);
-            const allV = allMembers.flatMap((m: any) => m.vineyard_accounts || []);
-            const allS = allMembers.flatMap((m: any) => (m.storehouses || []).filter(isAumStorehouse));
+            const memberIdSet = new Set<string>(allMembers.map((m: any) => m.id));
+            const allV = allMembers.flatMap((m: any) =>
+              (m.vineyard_accounts || []).filter((a: any) => a.visibility_scope === "family_shared")
+            );
+            const allS = allMembers.flatMap((m: any) =>
+              (m.storehouses || []).filter((a: any) => a.visibility_scope === "family_shared" && isAumStorehouse(a))
+            );
+            const allT = (family_holding_tank || []).filter(
+              (t: any) => memberIdSet.has(t.contact_id) && t.visibility_scope === "family_shared"
+            );
+            const allIns = (insurance_policies || []).filter(
+              (p: any) => memberIdSet.has(p.contact_id) && p.visibility_scope === "family_shared"
+            );
             const familyAUM = sumValues(allV) + sumValues(allS)
-              + sumValues(family_holding_tank)
-              + insuranceCashForStorehouses(insurance_policies || [], allS);
+              + sumValues(allT)
+              + insuranceCashForStorehouses(allIns, allS);
             return (
               <Card className="border-accent/20 bg-gradient-to-b from-accent/5 to-transparent">
                 <CardContent className="p-5 space-y-2">
@@ -388,8 +413,20 @@ const VfoPortal = () => {
   const renderHouseholdView = () => {
     const members = currentHousehold?.members || hierarchy?.members || [];
     const hhLabel = currentHousehold?.label || household?.label || "Household";
-    const hhAssets = aggregateAssetsAtLevel("household", drilldown.householdId);
     const viewingOwnHousehold = members.some((m: any) => m.id === contact.id);
+    // Privacy firewall: viewing your own household surfaces anything shared
+    // at least within the household; viewing a sibling household (as HoF)
+    // only surfaces what's explicitly shared with the whole family.
+    const allowedScopes = viewingOwnHousehold
+      ? new Set(["household_shared", "family_shared"])
+      : new Set(["family_shared"]);
+    const rawHhAssets = aggregateAssetsAtLevel("household", drilldown.householdId);
+    const hhAssets = {
+      vineyard: rawHhAssets.vineyard.filter((a: any) => allowedScopes.has(a.visibility_scope)),
+      storehouses: rawHhAssets.storehouses.filter((a: any) => allowedScopes.has(a.visibility_scope)),
+    };
+    const visibleInsurance = (insurance_policies || []).filter((p: any) => allowedScopes.has(p.visibility_scope));
+    const visibleHouseholdTank = (household_holding_tank || []).filter((t: any) => allowedScopes.has(t.visibility_scope));
 
     const orderedMembers = (!viewingOwnHousehold
       ? members.map((m: any) => ({ ...m, _isSelf: false }))
@@ -422,13 +459,19 @@ const VfoPortal = () => {
           <div className="grid gap-3">
             {orderedMembers.map((m: any) => {
               const isSelf = m._isSelf;
-              const mVineyard = isSelf ? vineyard_accounts : (m.vineyard_accounts || []);
-              const mStoreAum = (isSelf ? storehouses : (m.storehouses || [])).filter(isAumStorehouse);
+              const canDrill = isSelf || viewingOwnHousehold;
+              const mVineyardRaw = isSelf ? vineyard_accounts : (m.vineyard_accounts || []);
+              const mStoreAumRaw = (isSelf ? storehouses : (m.storehouses || [])).filter(isAumStorehouse);
+              const mVineyard = mVineyardRaw.filter((a: any) => allowedScopes.has(a.visibility_scope));
+              const mStoreAum = mStoreAumRaw.filter((a: any) => allowedScopes.has(a.visibility_scope));
               const mTank = ((isSelf ? (holding_tank || []) : []) as any[])
                 .concat((household_holding_tank || []).filter((t: any) => t.contact_id === m.id))
                 .concat((family_holding_tank || []).filter((t: any) => t.contact_id === m.id));
-              const mTankDedup = Array.from(new Map(mTank.map((t: any) => [t.id, t])).values());
-              const mInsurance = insurance_policies.filter((p: any) => p.contact_id === m.id);
+              const mTankDedup = Array.from(new Map(mTank.map((t: any) => [t.id, t])).values())
+                .filter((t: any) => allowedScopes.has(t.visibility_scope));
+              const mInsurance = insurance_policies.filter(
+                (p: any) => p.contact_id === m.id && allowedScopes.has(p.visibility_scope)
+              );
               const mTotal = sumValues(mVineyard) + sumValues(mStoreAum) + sumValues(mTankDedup)
                 + insuranceCashForStorehouses(mInsurance, mStoreAum);
 
@@ -436,11 +479,17 @@ const VfoPortal = () => {
               return (
                 <button
                   key={m.id}
-                  onClick={() => setDrilldown({ level: "individual", householdId: drilldown.householdId, memberId: isSelf ? undefined : m.id })}
+                  disabled={!canDrill}
+                  onClick={() => {
+                    if (!canDrill) return;
+                    setDrilldown({ level: "individual", householdId: drilldown.householdId, memberId: isSelf ? undefined : m.id });
+                  }}
                   className={`text-left rounded-lg p-4 transition-colors group ${
                     isSelf
                       ? "border border-accent/40 bg-accent/[0.06] hover:bg-accent/[0.1]"
-                      : "border border-accent/15 bg-card hover:border-accent/40 hover:bg-accent/[0.03]"
+                      : canDrill
+                        ? "border border-accent/15 bg-card hover:border-accent/40 hover:bg-accent/[0.03]"
+                        : "border border-accent/15 bg-card cursor-default"
                   }`}
                 >
                   <div className="flex items-center justify-between">
@@ -457,7 +506,7 @@ const VfoPortal = () => {
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="font-serif text-foreground">{fmt(mTotal)}</span>
-                      <ArrowRight className="h-4 w-4 text-accent opacity-0 group-hover:opacity-100 transition-opacity" />
+                      {canDrill && <ArrowRight className="h-4 w-4 text-accent opacity-0 group-hover:opacity-100 transition-opacity" />}
                     </div>
                   </div>
                 </button>
@@ -515,23 +564,23 @@ const VfoPortal = () => {
         </div>
 
         <aside className="space-y-4">
-          {household_holding_tank.length > 0 && <PortalHoldingTank accounts={household_holding_tank} defaultCollapsed />}
+          {visibleHouseholdTank.length > 0 && <PortalHoldingTank accounts={visibleHouseholdTank} defaultCollapsed />}
           <PortalTerritory
             vineyardAccounts={hhAssets.vineyard}
             storehouses={hhAssets.storehouses}
-            insurancePolicies={insurance_policies}
+            insurancePolicies={visibleInsurance}
             contact={contact}
             family={family}
             household={currentHousehold || household}
             householdMembers={[]}
-            scopeLabel="Household Shared"
+            scopeLabel={viewingOwnHousehold ? "Household Shared" : "Family-Shared"}
             portalToken={portalToken}
             onScopeChange={refreshData}
-            corporations={corporations}
+            corporations={viewingOwnHousehold ? corporations : []}
             defaultCollapsed
           />
-          {(insurance_policies || []).length > 0 && (
-            <PortalInsurance policies={insurance_policies} defaultCollapsed />
+          {visibleInsurance.length > 0 && (
+            <PortalInsurance policies={visibleInsurance} defaultCollapsed />
           )}
           <PortalYourTeam professionals={professionals} engagements={engagements} />
         </aside>
@@ -542,8 +591,11 @@ const VfoPortal = () => {
   // ── Individual View ──
   const renderIndividualView = () => {
     const isSelf = !currentMember;
-    // hof_visible gating happens on the backend — any member reaching the
-    // client is fully accessible to this viewer.
+    // Reachable for another member only via the household view's drill-down,
+    // which is gated to the viewer's own household (canDrill). That makes
+    // them a housemate, not a stranger — but private-scoped assets are still
+    // private from housemates too, so filter the same as everywhere else.
+    const allowedScopes = new Set(["household_shared", "family_shared"]);
     let indVineyard: any[] = [];
     let indStorehouses: any[] = [];
     let indInsurance: any[] = [];
@@ -554,9 +606,11 @@ const VfoPortal = () => {
       indInsurance = (insurance_policies || []).filter((p: any) => p.contact_id === contact.id);
       indName = `${contact.first_name || ""} ${contact.last_name || ""}`.trim();
     } else {
-      indVineyard = currentMember.vineyard_accounts || [];
-      indStorehouses = currentMember.storehouses || [];
-      indInsurance = (insurance_policies || []).filter((p: any) => p.contact_id === currentMember.id);
+      indVineyard = (currentMember.vineyard_accounts || []).filter((a: any) => allowedScopes.has(a.visibility_scope));
+      indStorehouses = (currentMember.storehouses || []).filter((a: any) => allowedScopes.has(a.visibility_scope));
+      indInsurance = (insurance_policies || []).filter(
+        (p: any) => p.contact_id === currentMember.id && allowedScopes.has(p.visibility_scope)
+      );
       indName = `${currentMember.first_name || ""} ${currentMember.last_name || ""}`.trim();
     }
 
