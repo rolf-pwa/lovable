@@ -58,7 +58,6 @@ export function PortalVault({ portalToken, householdId }: Props) {
   const [uploading, setUploading] = useState(false);
   const [shoeboxId, setShoeboxId] = useState<string | null>(null);
   const [currentPerm, setCurrentPerm] = useState<"none" | "view" | "upload" | "manage">("view");
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const folderUploadRef = useRef<HTMLInputElement | null>(null);
 
   const callVault = useCallback(
@@ -198,7 +197,7 @@ export function PortalVault({ portalToken, householdId }: Props) {
 
   const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
 
-  const uploadToFolder = async (fileList: FileList | null, targetFolderId: string, isShoebox: boolean) => {
+  const uploadToFolder = async (fileList: FileList | null, targetFolderId: string) => {
     if (!fileList || fileList.length === 0) return;
     setUploading(true);
     let okCount = 0;
@@ -228,33 +227,21 @@ export function PortalVault({ portalToken, householdId }: Props) {
         okCount += 1;
       }
       if (okCount > 0) {
-        toast({
-          title: okCount === 1 ? (isShoebox ? "Sent to your Shoebox" : "File uploaded") : (isShoebox ? `${okCount} files sent to Shoebox` : `${okCount} files uploaded`),
-          description: isShoebox ? "Your Personal CFO will review and file it for you." : undefined,
-        });
+        toast({ title: okCount === 1 ? "File uploaded" : `${okCount} files uploaded` });
         await loadFolder(crumbs[crumbs.length - 1], crumbs);
       }
     } catch (e: any) {
       toast({ title: "Upload failed", description: e.message || "Please try again.", variant: "destructive" });
     } finally {
       setUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
       if (folderUploadRef.current) folderUploadRef.current.value = "";
     }
-  };
-
-  const handleFiles = (fileList: FileList | null) => {
-    if (!shoeboxId) {
-      toast({ title: "Upload unavailable", description: "Your Shoebox isn't ready yet.", variant: "destructive" });
-      return;
-    }
-    return uploadToFolder(fileList, shoeboxId, true);
   };
 
   const handleHereUpload = (fileList: FileList | null) => {
     const target = crumbs[crumbs.length - 1]?.id;
     if (!target) return;
-    return uploadToFolder(fileList, target, false);
+    return uploadToFolder(fileList, target);
   };
 
   const newSubfolder = async () => {
@@ -380,36 +367,6 @@ export function PortalVault({ portalToken, householdId }: Props) {
             ))}
             {loading && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground ml-auto" />}
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Upload bar — files always land in the household Shoebox for staff triage */}
-      <Card className="border-accent/40 bg-accent/5">
-        <CardContent className="p-4 flex items-center gap-3 flex-wrap">
-          <Inbox className="h-5 w-5 text-accent shrink-0" />
-          <div className="flex-1 min-w-0">
-            <div className="text-sm font-serif">Send a document to your Shoebox</div>
-            <div className="text-[11px] text-muted-foreground">
-              Anything you upload here is delivered to your Personal CFO for review and filing. PDF, images, Word, Excel — up to 25 MB each.
-            </div>
-          </div>
-          <input
-            ref={fileInputRef}
-            type="file"
-            multiple
-            className="hidden"
-            onChange={(e) => handleFiles(e.target.files)}
-            accept=".pdf,.jpg,.jpeg,.png,.webp,.heic,.doc,.docx,.xls,.xlsx,.txt,.csv"
-          />
-          <Button
-            size="sm"
-            disabled={uploading || !shoeboxId}
-            onClick={() => fileInputRef.current?.click()}
-            className="gap-1.5"
-          >
-            {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
-            {uploading ? "Uploading…" : "Upload"}
-          </Button>
         </CardContent>
       </Card>
 
