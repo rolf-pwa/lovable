@@ -20,7 +20,7 @@ import { PortalMeetings } from "@/modules/portal/components/PortalMeetings";
 import { PortalCharter } from "@/modules/portal/components/PortalCharter";
 import { PortalTasks } from "@/modules/portal/components/PortalTasks";
 import { PortalVault } from "@/modules/portal/components/PortalVault";
-import { PortalUpdates } from "@/modules/portal/components/PortalUpdates";
+import { PortalUpdates, useUnreadUpdateCount } from "@/modules/portal/components/PortalUpdates";
 import { PortalGeorgiaChat } from "@/modules/portal/components/PortalGeorgiaChat";
 import { PortalYourTeam } from "@/modules/portal/components/PortalYourTeam";
 import { PortalProfessionals } from "@/modules/portal/components/PortalProfessionals";
@@ -44,37 +44,44 @@ interface DrilldownState { level: ViewLevel; householdId?: string; memberId?: st
 
 const fmt = (n: number) => formatCurrency(n || 0);
 
-function FinancialCategoryCard({
+function DashboardCard({
   icon: Icon,
   label,
-  total,
-  available,
+  subtitle,
+  muted,
+  badge,
   onClick,
 }: {
   icon: typeof Anchor;
   label: string;
-  total: number;
-  available: boolean;
+  subtitle: string;
+  muted?: boolean;
+  badge?: number;
   onClick: () => void;
 }) {
   return (
     <button
       onClick={onClick}
       className={`text-left rounded-lg border p-4 transition-colors group ${
-        available
-          ? "border-accent/15 bg-card hover:border-accent/40 hover:bg-accent/[0.03]"
-          : "border-dashed border-accent/15 bg-card/50 hover:border-accent/30"
+        muted
+          ? "border-dashed border-accent/15 bg-card/50 hover:border-accent/30"
+          : "border-accent/15 bg-card hover:border-accent/40 hover:bg-accent/[0.03]"
       }`}
     >
       <div className="flex items-center justify-between">
         <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent/10">
           <Icon className="h-4 w-4 text-accent" />
         </div>
-        <ArrowRight className="h-4 w-4 text-accent opacity-0 group-hover:opacity-100 transition-opacity" />
+        <div className="flex items-center gap-2">
+          {!!badge && (
+            <Badge variant="secondary" className="bg-accent/15 text-accent border-accent/30">{badge}</Badge>
+          )}
+          <ArrowRight className="h-4 w-4 text-accent opacity-0 group-hover:opacity-100 transition-opacity" />
+        </div>
       </div>
       <p className="mt-3 text-sm font-medium text-foreground">{label}</p>
-      <p className={`font-serif text-lg ${available ? "text-foreground" : "text-muted-foreground"}`}>
-        {available ? fmt(total) : "No accounts yet"}
+      <p className={`font-serif text-lg ${muted ? "text-muted-foreground" : "text-foreground"}`}>
+        {subtitle}
       </p>
     </button>
   );
@@ -85,7 +92,7 @@ const VfoPortal = () => {
   const [data, setData] = useState<any | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState("tasks");
+  const [tab, setTab] = useState("dashboard");
   const [drilldown, setDrilldown] = useState<DrilldownState>({ level: "individual" });
   const [financialsFocus, setFinancialsFocus] = useState<"holding_tank" | "vineyard" | "storehouses" | null>(null);
   const [expandedCorps, setExpandedCorps] = useState<Set<string>>(new Set());
@@ -130,6 +137,25 @@ const VfoPortal = () => {
       if (!resp.error && !resp.data?.error) setData(resp.data);
     } catch {}
   };
+
+  // Called unconditionally, before any early return below — a hook call
+  // placed after a loading/error return would only fire once data is
+  // ready, violating the rules of hooks. Recomputes the viewed member
+  // directly off `data` (the destructured `contact`/`hierarchy` don't
+  // exist yet at this point in the component).
+  const earlyMember = drilldown.memberId
+    ? ((drilldown.householdId
+        ? data?.hierarchy?.households?.find((h: any) => h.id === drilldown.householdId)?.members
+        : data?.hierarchy?.members) || []
+      ).find((m: any) => m.id === drilldown.memberId)
+    : null;
+  const earlyViewedPerson = earlyMember || data?.contact;
+  const unreadUpdateCount = useUnreadUpdateCount(
+    earlyViewedPerson?.governance_status ?? "",
+    earlyViewedPerson?.id ?? "",
+    drilldown.householdId || data?.household?.id || null,
+    token || ""
+  );
 
   if (loading) {
     return (
@@ -673,6 +699,7 @@ const VfoPortal = () => {
       + insuranceCashForStorehouses(ind.insurancePolicies, indAumStorehouses);
     const hasVineyard = indVineyardAccounts.length > 0;
     const hasStorehouses = indAumStorehouses.length > 0;
+    const requestsOpenCount = (portal_requests || []).filter((r: any) => r.status !== "resolved").length;
 
 
     return (
@@ -680,6 +707,9 @@ const VfoPortal = () => {
         <div className="lg:col-span-2 space-y-4">
           <Tabs value={tab} onValueChange={setTab}>
             <TabsList className="w-full bg-muted/30 border border-accent/15 flex-wrap h-auto">
+              <TabsTrigger value="dashboard" className="flex-1 gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent">
+                <Home className="h-4 w-4" />Dashboard
+              </TabsTrigger>
               <TabsTrigger value="tasks" className="flex-1 gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent">
                 <CheckSquare className="h-4 w-4" />Action Items
               </TabsTrigger>
@@ -703,8 +733,60 @@ const VfoPortal = () => {
               )}
               <TabsTrigger value="updates" className="flex-1 gap-1.5 data-[state=active]:bg-accent/10 data-[state=active]:text-accent">
                 <Megaphone className="h-4 w-4" />Updates
+                {unreadUpdateCount > 0 && (
+                  <Badge variant="secondary" className="bg-accent/15 text-accent border-accent/30 h-4 px-1 text-[10px]">
+                    {unreadUpdateCount > 99 ? "99+" : unreadUpdateCount}
+                  </Badge>
+                )}
               </TabsTrigger>
             </TabsList>
+
+            <TabsContent value="dashboard" className="mt-4">
+              <div className="grid gap-3 grid-cols-2 lg:grid-cols-3">
+                <DashboardCard
+                  icon={CheckSquare}
+                  label="Action Items"
+                  subtitle={isSelf ? "View tasks" : "Self only"}
+                  muted={!isSelf}
+                  onClick={() => setTab("tasks")}
+                />
+                <DashboardCard
+                  icon={ClipboardList}
+                  label="Requests"
+                  subtitle={requestsOpenCount > 0 ? `${requestsOpenCount} open` : "None open"}
+                  muted={requestsOpenCount === 0}
+                  onClick={() => setRequestsOpen(true)}
+                />
+                <DashboardCard
+                  icon={Megaphone}
+                  label="Updates"
+                  subtitle={unreadUpdateCount > 0 ? `${unreadUpdateCount} unread` : "All caught up"}
+                  muted={unreadUpdateCount === 0}
+                  onClick={() => setTab("updates")}
+                />
+                <DashboardCard
+                  icon={Anchor}
+                  label="Holding Tank"
+                  subtitle={hasHolding ? fmt(holdingTankTotal) : "No accounts yet"}
+                  muted={!hasHolding}
+                  onClick={() => { setFinancialsFocus("holding_tank"); setTab("financials"); }}
+                />
+                <DashboardCard
+                  icon={Grape}
+                  label="Vineyard"
+                  subtitle={hasVineyard ? fmt(vineyardTotal) : "No accounts yet"}
+                  muted={!hasVineyard}
+                  onClick={() => { setFinancialsFocus("vineyard"); setTab("financials"); }}
+                />
+                <DashboardCard
+                  icon={Landmark}
+                  label="Storehouses"
+                  subtitle={hasStorehouses ? fmt(storehousesTotal) : "No accounts yet"}
+                  muted={!hasStorehouses}
+                  onClick={() => { setFinancialsFocus("storehouses"); setTab("financials"); }}
+                />
+              </div>
+            </TabsContent>
 
             <TabsContent value="tasks" className="mt-4">
               {isSelf ? (
@@ -724,25 +806,25 @@ const VfoPortal = () => {
               <TabsContent value="financials" className="mt-4 space-y-4">
                 {financialsFocus === null ? (
                   <div className="grid gap-3 sm:grid-cols-3">
-                    <FinancialCategoryCard
+                    <DashboardCard
                       icon={Anchor}
                       label="Holding Tank"
-                      total={holdingTankTotal}
-                      available={hasHolding}
+                      subtitle={hasHolding ? fmt(holdingTankTotal) : "No accounts yet"}
+                      muted={!hasHolding}
                       onClick={() => setFinancialsFocus("holding_tank")}
                     />
-                    <FinancialCategoryCard
+                    <DashboardCard
                       icon={Grape}
                       label="Vineyard"
-                      total={vineyardTotal}
-                      available={hasVineyard}
+                      subtitle={hasVineyard ? fmt(vineyardTotal) : "No accounts yet"}
+                      muted={!hasVineyard}
                       onClick={() => setFinancialsFocus("vineyard")}
                     />
-                    <FinancialCategoryCard
+                    <DashboardCard
                       icon={Landmark}
                       label="Storehouses"
-                      total={storehousesTotal}
-                      available={hasStorehouses}
+                      subtitle={hasStorehouses ? fmt(storehousesTotal) : "No accounts yet"}
+                      muted={!hasStorehouses}
                       onClick={() => setFinancialsFocus("storehouses")}
                     />
                   </div>
@@ -848,12 +930,9 @@ const VfoPortal = () => {
                   <ClipboardList className="h-4 w-4 mr-2" />
                   Requests
                 </span>
-                {(() => {
-                  const openCount = (portal_requests || []).filter((r: any) => r.status !== "resolved").length;
-                  return openCount > 0 ? (
-                    <Badge variant="secondary" className="bg-accent/15 text-accent border-accent/30">{openCount} open</Badge>
-                  ) : null;
-                })()}
+                {requestsOpenCount > 0 && (
+                  <Badge variant="secondary" className="bg-accent/15 text-accent border-accent/30">{requestsOpenCount} open</Badge>
+                )}
               </Button>
             </CardContent>
           </Card>
