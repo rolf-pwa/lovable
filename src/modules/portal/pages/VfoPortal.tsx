@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
-import { Card, CardContent } from "@/shared/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/shared/components/ui/dialog";
 import { Badge } from "@/shared/components/ui/badge";
 
@@ -86,6 +86,7 @@ function DashboardCard({
   bgClass = "bg-accent/10",
   muted,
   valueSize = "lg",
+  layout = "compact",
   onClick,
 }: {
   icon: typeof Anchor;
@@ -100,15 +101,47 @@ function DashboardCard({
   // status text like "2 New · 1 Ongoing" on Action Items/Requests/Updates,
   // which shouldn't compete visually with the dollar figures.
   valueSize?: "lg" | "sm";
+  // "row" matches PortalInsurance's "The Shield" exactly (single row,
+  // serif title) — only safe in the Financials tab's always-full-width
+  // single column. "compact" (two rows) is what the Dashboard tab's grid
+  // needs to avoid squeezing everything at narrow widths — see the
+  // truncation fix above this component.
+  layout?: "compact" | "row";
   onClick: () => void;
 }) {
+  const cardClassName = `cursor-pointer transition-colors ${
+    muted ? "border-dashed border-accent/15 bg-card/50 hover:border-accent/30" : "border-accent/20 hover:border-accent/40"
+  }`;
+
+  if (layout === "row") {
+    return (
+      <Card className={cardClassName} onClick={onClick}>
+        <CardHeader className="pb-2">
+          <div className="flex items-center gap-3">
+            <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${muted ? "bg-muted" : bgClass}`}>
+              <Icon className={`h-5 w-5 ${muted ? "text-muted-foreground" : colorClass}`} />
+            </div>
+            <div>
+              <CardTitle className="text-lg font-serif">{label}</CardTitle>
+              <p className="text-xs text-muted-foreground">{caption}</p>
+            </div>
+            <div className="ml-auto flex items-center gap-3">
+              <div className="text-right">
+                <p className={`${valueSize === "lg" ? "text-xl" : "text-base"} font-bold ${muted ? "text-muted-foreground" : colorClass}`}>
+                  {value}
+                </p>
+                {valueCaption && <p className="text-xs text-muted-foreground">{valueCaption}</p>}
+              </div>
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            </div>
+          </div>
+        </CardHeader>
+      </Card>
+    );
+  }
+
   return (
-    <Card
-      className={`cursor-pointer transition-colors ${
-        muted ? "border-dashed border-accent/15 bg-card/50 hover:border-accent/30" : "border-accent/20 hover:border-accent/40"
-      }`}
-      onClick={onClick}
-    >
+    <Card className={cardClassName} onClick={onClick}>
       <CardContent className="p-4">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2.5 min-w-0">
@@ -997,6 +1030,7 @@ const VfoPortal = () => {
                         caption="Awaiting Ratification"
                         value={fmt(holdingTankTotal)}
                         valueCaption="Total Value"
+                        layout="row"
                         onClick={() => setFinancialsFocus("holding_tank")}
                       />
                     )}
@@ -1009,6 +1043,7 @@ const VfoPortal = () => {
                       colorClass="text-primary"
                       bgClass="bg-primary/10"
                       muted={!hasVineyard}
+                      layout="row"
                       onClick={() => setFinancialsFocus("vineyard")}
                     />
                     <DashboardCard
@@ -1018,6 +1053,7 @@ const VfoPortal = () => {
                       value={hasStorehouses ? fmt(storehousesTotal) : "No accounts yet"}
                       valueCaption={hasStorehouses ? "Total Value" : undefined}
                       muted={!hasStorehouses}
+                      layout="row"
                       onClick={() => setFinancialsFocus("storehouses")}
                     />
                   </div>
