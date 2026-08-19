@@ -324,27 +324,96 @@ const VfoPortal = () => {
     ? (currentHousehold?.members || hierarchy?.members || []).find((m: any) => m.id === drilldown.memberId)
     : null;
 
-  // ── Family AUM (all assets across hierarchy) ──
-  let famVineyardArr: any[] = [];
-  let famStorehouseArr: any[] = [];
-  if (hierarchy?.households) {
-    hierarchy.households.forEach((hh: any) => {
-      (hh.members || []).forEach((m: any) => {
-        famVineyardArr.push(...(m.vineyard_accounts || []));
-        famStorehouseArr.push(...((m.storehouses || []).filter(isAumStorehouse)));
-      });
-    });
-  } else {
-    famVineyardArr = vineyard_accounts;
-    famStorehouseArr = storehouses.filter(isAumStorehouse);
-  }
-  const famHoldingArr = (family_holding_tank.length ? family_holding_tank
-    : household_holding_tank.length ? household_holding_tank : holding_tank);
-  const famVineyard = sumValues(famVineyardArr);
-  const famStorehouse = sumValues(famStorehouseArr);
-  const famHolding = sumValues(famHoldingArr);
-  const famInsuranceCash = insuranceCashForStorehouses(insurance_policies, famStorehouseArr);
-  const totalAum = famVineyard + famStorehouse + famHolding + famInsuranceCash;
+  // ── Header AUM figure — gated by the viewer's actual role (contact.family_role),
+  // not hierarchy.level: the backend gives head_of_household, spouse, and
+  // beneficiary the identical level ("household"), so level alone can't tell
+  // a household head apart from a regular member. Each branch also only
+  // includes assets the viewer is actually entitled to see — this used to
+  // sum every household's assets across every visibility scope regardless
+  // of who was looking, the same privacy gap already fixed elsewhere on
+  // this page.
+  const viewerRole = contact?.family_role;
+
+  // Head of Family: family_shared-scoped assets across every household —
+  // identical computation to renderFamilyView's aside card, hoisted here so
+  // both can share it instead of computing it twice.
+  const famAllMembers = (hierarchy?.households || []).flatMap((hh: any) => hh.members || []);
+  const famMemberIdSet = new Set<string>(famAllMembers.map((m: any) => m.id));
+  const familySharedVineyard = famAllMembers.flatMap((m: any) =>
+    (m.vineyard_accounts || []).filter((a: any) => a.visibility_scope === "family_shared")
+  );
+  const familySharedStore = famAllMembers.flatMap((m: any) =>
+    (m.storehouses || []).filter((a: any) => a.visibility_scope === "family_shared" && isAumStorehouse(a))
+  );
+  const familySharedTank = (family_holding_tank || []).filter(
+    (t: any) => famMemberIdSet.has(t.contact_id) && t.visibility_scope === "family_shared"
+  );
+  const familySharedIns = (insurance_policies || []).filter(
+    (p: any) => famMemberIdSet.has(p.contact_id) && p.visibility_scope === "family_shared"
+  );
+  const familySharedTotal = sumValues(familySharedVineyard) + sumValues(familySharedStore)
+    + sumValues(familySharedTank)
+    + insuranceCashForStorehouses(familySharedIns, familySharedStore);
+
+  // Head of Household: their own assets in full, plus other same-household
+  // members' assets that are actually marked shared with the household —
+  // private stays private even from the household head. hierarchy.members
+  // is the backend's list of the viewer's own household's other members
+  // (self excluded) when level is "household"; it carries vineyard_accounts
+  // /storehouses but not holding tank or insurance, which come from the
+  // separate top-level fields filtered by contact_id below.
+  const householdAllowedScopes = new Set(["household_shared", "family_shared"]);
+  const otherHouseholdMembers = hierarchy?.members || [];
+  const hhOtherIds = new Set(otherHouseholdMembers.map((m: any) => m.id));
+  const hhVineyard = [
+    ...vineyard_accounts,
+    ...otherHouseholdMembers.flatMap((m: any) =>
+      (m.vineyard_accounts || []).filter((a: any) => householdAllowedScopes.has(a.visibility_scope))
+    ),
+  ];
+  const hhStore = [
+    ...storehouses.filter(isAumStorehouse),
+    ...otherHouseholdMembers.flatMap((m: any) =>
+      (m.storehouses || []).filter((a: any) => isAumStorehouse(a) && householdAllowedScopes.has(a.visibility_scope))
+    ),
+  ];
+  const selfTankIds = new Set((holding_tank || []).map((t: any) => t.id));
+  const hhTankRaw = [
+    ...(holding_tank || []),
+    ...(household_holding_tank || []).filter(
+      (t: any) => hhOtherIds.has(t.contact_id) && !selfTankIds.has(t.id) && householdAllowedScopes.has(t.visibility_scope)
+    ),
+    ...(family_holding_tank || []).filter(
+      (t: any) => hhOtherIds.has(t.contact_id) && !selfTankIds.has(t.id) && householdAllowedScopes.has(t.visibility_scope)
+    ),
+  ];
+  const hhTank = Array.from(new Map(hhTankRaw.map((t: any) => [t.id, t])).values());
+  const hhIns = [
+    ...(insurance_policies || []).filter((p: any) => p.contact_id === contact.id),
+    ...(insurance_policies || []).filter(
+      (p: any) => hhOtherIds.has(p.contact_id) && householdAllowedScopes.has(p.visibility_scope)
+    ),
+  ];
+  const householdTotalForHoh = sumValues(hhVineyard) + sumValues(hhStore)
+    + sumValues(hhTank)
+    + insuranceCashForStorehouses(hhIns, hhStore);
+
+  // Everyone else (spouse, beneficiary, anyone without a head role): only
+  // their own assets, every scope — it's their own data, nothing to filter.
+  const selfStoreAum = storehouses.filter(isAumStorehouse);
+  const selfInsurance = (insurance_policies || []).filter((p: any) => p.contact_id === contact.id);
+  const individualTotal = sumValues(vineyard_accounts) + sumValues(selfStoreAum)
+    + sumValues(holding_tank)
+    + insuranceCashForStorehouses(selfInsurance, selfStoreAum);
+
+  const headerAumLabel =
+    viewerRole === "head_of_family" ? "Total Family AUM"
+    : viewerRole === "head_of_household" ? "Total Household AUM"
+    : "Your Total AUM";
+  const totalAum =
+    viewerRole === "head_of_family" ? familySharedTotal
+    : viewerRole === "head_of_household" ? householdTotalForHoh
+    : individualTotal;
 
   const householdCount = hierarchy?.households?.length ?? (household ? 1 : 0);
   const memberCount = hierarchy?.households
@@ -608,42 +677,20 @@ const VfoPortal = () => {
         </div>
 
         <aside className="space-y-4">
-          {(() => {
-            // Family AUM rolls up only family_shared-scoped assets across every
-            // household — matches /portal's renderFamilyView. Private and
-            // household-only assets never surface at the family level.
-            const allMembers = households.flatMap((hh: any) => hh.members || []);
-            const memberIdSet = new Set<string>(allMembers.map((m: any) => m.id));
-            const allV = allMembers.flatMap((m: any) =>
-              (m.vineyard_accounts || []).filter((a: any) => a.visibility_scope === "family_shared")
-            );
-            const allS = allMembers.flatMap((m: any) =>
-              (m.storehouses || []).filter((a: any) => a.visibility_scope === "family_shared" && isAumStorehouse(a))
-            );
-            const allT = (family_holding_tank || []).filter(
-              (t: any) => memberIdSet.has(t.contact_id) && t.visibility_scope === "family_shared"
-            );
-            const allIns = (insurance_policies || []).filter(
-              (p: any) => memberIdSet.has(p.contact_id) && p.visibility_scope === "family_shared"
-            );
-            const familyAUM = sumValues(allV) + sumValues(allS)
-              + sumValues(allT)
-              + insuranceCashForStorehouses(allIns, allS);
-            return (
-              <Card className="border-accent/20 bg-gradient-to-b from-accent/5 to-transparent">
-                <CardContent className="p-5 space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Crown className="h-4 w-4 text-accent" />
-                    <h3 className="text-[10px] uppercase tracking-wider text-muted-foreground">Family AUM</h3>
-                  </div>
-                  <p className="font-serif text-2xl text-accent">{fmt(familyAUM)}</p>
-                  <p className="text-[11px] text-muted-foreground leading-relaxed pt-2 border-t border-accent/10">
-                    Aggregate across {households.length} household{households.length !== 1 ? "s" : ""}. Individual account details remain private to each household.
-                  </p>
-                </CardContent>
-              </Card>
-            );
-          })()}
+          {/* Reuses the same family_shared-only total computed at the top
+              level for the header — one computation, not two. */}
+          <Card className="border-accent/20 bg-gradient-to-b from-accent/5 to-transparent">
+            <CardContent className="p-5 space-y-2">
+              <div className="flex items-center gap-2">
+                <Crown className="h-4 w-4 text-accent" />
+                <h3 className="text-[10px] uppercase tracking-wider text-muted-foreground">Family AUM</h3>
+              </div>
+              <p className="font-serif text-2xl text-accent">{fmt(familySharedTotal)}</p>
+              <p className="text-[11px] text-muted-foreground leading-relaxed pt-2 border-t border-accent/10">
+                Aggregate across {households.length} household{households.length !== 1 ? "s" : ""}. Individual account details remain private to each household.
+              </p>
+            </CardContent>
+          </Card>
 
           {/* Account details hidden in Family view — only AUM total shown above. */}
           {renderConciergeCard()}
@@ -1184,17 +1231,27 @@ const VfoPortal = () => {
             </div>
             <div className="flex items-center gap-6 border-l border-primary-foreground/15 pl-6">
               <div>
-                <p className="text-[10px] uppercase tracking-wider text-primary-foreground/60">Total Family AUM</p>
+                <p className="text-[10px] uppercase tracking-wider text-primary-foreground/60">{headerAumLabel}</p>
                 <p className="font-serif text-2xl text-primary-foreground">{fmt(totalAum)}</p>
               </div>
-              <div className="hidden sm:block">
-                <p className="text-[10px] uppercase tracking-wider text-primary-foreground/60">Households</p>
-                <p className="font-serif text-2xl text-primary-foreground">{householdCount}</p>
-              </div>
-              <div className="hidden md:block">
-                <p className="text-[10px] uppercase tracking-wider text-primary-foreground/60">Members</p>
-                <p className="font-serif text-2xl text-primary-foreground">{memberCount}</p>
-              </div>
+              {viewerRole === "head_of_family" && (
+                <>
+                  <div className="hidden sm:block">
+                    <p className="text-[10px] uppercase tracking-wider text-primary-foreground/60">Households</p>
+                    <p className="font-serif text-2xl text-primary-foreground">{householdCount}</p>
+                  </div>
+                  <div className="hidden md:block">
+                    <p className="text-[10px] uppercase tracking-wider text-primary-foreground/60">Members</p>
+                    <p className="font-serif text-2xl text-primary-foreground">{memberCount}</p>
+                  </div>
+                </>
+              )}
+              {viewerRole === "head_of_household" && (
+                <div className="hidden sm:block">
+                  <p className="text-[10px] uppercase tracking-wider text-primary-foreground/60">Members</p>
+                  <p className="font-serif text-2xl text-primary-foreground">{otherHouseholdMembers.length + 1}</p>
+                </div>
+              )}
             </div>
           </div>
           <div className="mt-6 h-px bg-gradient-to-r from-transparent via-primary-foreground/30 to-transparent" />
