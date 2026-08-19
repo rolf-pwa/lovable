@@ -85,6 +85,7 @@ function DashboardCard({
   colorClass = "text-accent",
   bgClass = "bg-accent/10",
   muted,
+  valueSize = "lg",
   onClick,
 }: {
   icon: typeof Anchor;
@@ -95,6 +96,10 @@ function DashboardCard({
   colorClass?: string;
   bgClass?: string;
   muted?: boolean;
+  // "lg" for financial totals (the primary numbers on this page); "sm" for
+  // status text like "2 New · 1 Ongoing" on Action Items/Requests/Updates,
+  // which shouldn't compete visually with the dollar figures.
+  valueSize?: "lg" | "sm";
   onClick: () => void;
 }) {
   return (
@@ -118,7 +123,9 @@ function DashboardCard({
           <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
         </div>
         <div className="mt-3 flex items-baseline justify-between gap-2">
-          <p className={`text-xl font-bold truncate ${muted ? "text-muted-foreground" : colorClass}`}>{value}</p>
+          <p className={`truncate ${valueSize === "lg" ? "text-xl font-bold" : "text-sm font-semibold"} ${muted ? "text-muted-foreground" : colorClass}`}>
+            {value}
+          </p>
           {valueCaption && <p className="text-[11px] text-muted-foreground shrink-0">{valueCaption}</p>}
         </div>
       </CardContent>
@@ -917,6 +924,7 @@ const VfoPortal = () => {
                   caption="Tasks & To-Dos"
                   value={isSelf ? `${taskNewCount} New · ${taskOngoingCount} Ongoing` : "Self only"}
                   muted={!isSelf || (taskNewCount === 0 && taskOngoingCount === 0)}
+                  valueSize="sm"
                   onClick={() => setTab("tasks")}
                 />
                 <DashboardCard
@@ -925,6 +933,7 @@ const VfoPortal = () => {
                   caption="Sent to Your Advisor"
                   value={requestsOpenCount > 0 ? `${requestsNewCount} New · ${requestsOngoingCount} Ongoing` : "None open"}
                   muted={requestsOpenCount === 0}
+                  valueSize="sm"
                   onClick={() => setRequestsOpen(true)}
                 />
                 <DashboardCard
@@ -933,6 +942,7 @@ const VfoPortal = () => {
                   caption="From Your Team"
                   value={unreadUpdateCount > 0 ? `${unreadUpdateCount} New` : "All caught up"}
                   muted={unreadUpdateCount === 0}
+                  valueSize="sm"
                   onClick={() => setTab("updates")}
                 />
               </div>
