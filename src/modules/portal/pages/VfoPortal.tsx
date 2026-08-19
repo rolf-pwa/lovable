@@ -66,11 +66,11 @@ const VfoPortal = () => {
         if (err) throw err;
         if (!res || (res as any).error) throw new Error((res as any)?.error || "Invalid link");
         setData(res);
-        // Default landing: family if available, otherwise household, otherwise individual
-        const lvl = (res as any).hierarchy?.level;
-        if (lvl === "family") setDrilldown({ level: "family" });
-        else if (lvl === "household") setDrilldown({ level: "household", householdId: (res as any).household?.id });
-        else setDrilldown({ level: "individual" });
+        // Land everyone on their own individual page first, regardless of
+        // hierarchy level — a HoF/HoH can step up to Household/Family via
+        // the breadcrumb or the up-level affordance, but shouldn't have to
+        // click through those screens just to reach their own page.
+        setDrilldown({ level: "individual", householdId: (res as any).household?.id });
       } catch (e: any) {
         if (cancelled) return;
         setError(e?.message || "Unable to load your Family Office.");
