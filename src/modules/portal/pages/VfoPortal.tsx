@@ -45,10 +45,30 @@ interface DrilldownState { level: ViewLevel; householdId?: string; memberId?: st
 
 const fmt = (n: number) => formatCurrency(n || 0);
 
+// `embedUrl` is the resolved Google Calendar appointment-schedule URL (the
+// short calendar.app.google links 302 to this, but redirects drop query
+// params, so ?gv=true must be appended to the resolved URL directly) —
+// gv=true is Google's own embed-mode flag; without it the page sets
+// X-Frame-Options: SAMEORIGIN and refuses to render in any other origin's
+// iframe. Verified live for the Admin Meeting and Quarterly Review (In
+// Person) schedules; the Video schedule follows the same URL pattern but
+// wasn't individually tested.
 const MEETING_BOOKING_LINKS = [
-  { label: "Admin Meeting", url: "https://calendar.app.google/eG6iJbayFnQ11fNY7" },
-  { label: "Quarterly Review (In Person)", url: "https://calendar.app.google/atvjMpeCKyDfkvgUA" },
-  { label: "Quarterly Review (Video)", url: "https://calendar.app.google/KpBjsrne5w7dFm22A" },
+  {
+    label: "Admin Meeting",
+    url: "https://calendar.app.google/eG6iJbayFnQ11fNY7",
+    embedUrl: "https://calendar.google.com/calendar/appointments/schedules/AcZssZ0K1gDPij7zWsSyPEwiG9BZ4VrKk3kzKC8p_O3TJcJHvJmmb7cj51h-AqOyeDWBEorIXbjeK0oa?gv=true",
+  },
+  {
+    label: "Quarterly Review (In Person)",
+    url: "https://calendar.app.google/atvjMpeCKyDfkvgUA",
+    embedUrl: "https://calendar.google.com/calendar/appointments/schedules/AcZssZ0cTZuvx-sJC7-U2dieS9IzrpSkJvICdJF8xp1aNAfnsiWZORWJl85cJiNFlblO8alWCbqNrvMj?gv=true",
+  },
+  {
+    label: "Quarterly Review (Video)",
+    url: "https://calendar.app.google/KpBjsrne5w7dFm22A",
+    embedUrl: "https://calendar.google.com/calendar/appointments/schedules/AcZssZ0szGL8FEh0_NKc2p1nlspTMjB04I_FbY6kT79edq_rODjTDWiD7SI107MiFJcZIamJXyY4QmTR?gv=true",
+  },
 ];
 
 function DashboardCard({
@@ -106,11 +126,14 @@ const VfoPortal = () => {
   const [georgiaOpen, setGeorgiaOpen] = useState(false);
   const [requestsOpen, setRequestsOpen] = useState(false);
   const [bookMeetingOpen, setBookMeetingOpen] = useState(false);
+  const [embeddedBooking, setEmbeddedBooking] = useState<{ label: string; embedUrl: string } | null>(null);
 
-  // Reset the financials dashboard focus whenever we navigate to a
-  // different person/household, so it doesn't carry over stale state.
+  // Reset the financials dashboard focus and any embedded booking widget
+  // whenever we navigate to a different person/household, so neither
+  // carries over stale state.
   useEffect(() => {
     setFinancialsFocus(null);
+    setEmbeddedBooking(null);
   }, [drilldown.level, drilldown.householdId, drilldown.memberId]);
 
   useEffect(() => {
@@ -814,7 +837,31 @@ const VfoPortal = () => {
             </TabsContent>
 
             <TabsContent value="meetings" className="mt-4">
-              <PortalMeetings meetings={meetings} />
+              {embeddedBooking ? (
+                <div className="space-y-3">
+                  <button
+                    onClick={() => setEmbeddedBooking(null)}
+                    className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-accent transition-colors"
+                  >
+                    <ChevronLeft className="h-3.5 w-3.5" />
+                    Back to Meetings
+                  </button>
+                  <div className="rounded-lg border border-accent/15 overflow-hidden bg-card">
+                    <div className="px-4 py-2.5 border-b border-accent/15 text-sm font-serif text-foreground">
+                      {embeddedBooking.label}
+                    </div>
+                    <iframe
+                      src={embeddedBooking.embedUrl}
+                      style={{ border: 0 }}
+                      width="100%"
+                      height={700}
+                      title={embeddedBooking.label}
+                    />
+                  </div>
+                </div>
+              ) : (
+                <PortalMeetings meetings={meetings} />
+              )}
             </TabsContent>
 
             {hasFinancials && (
@@ -964,16 +1011,18 @@ const VfoPortal = () => {
               {bookMeetingOpen && (
                 <div className="space-y-1.5 pl-1">
                   {MEETING_BOOKING_LINKS.map((link) => (
-                    <a
+                    <button
                       key={link.url}
-                      href={link.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center justify-between rounded-md border border-accent/15 bg-card px-3 py-2 text-xs text-foreground hover:border-accent/40 hover:bg-accent/[0.03] transition-colors"
+                      onClick={() => {
+                        setEmbeddedBooking(link);
+                        setBookMeetingOpen(false);
+                        setTab("meetings");
+                      }}
+                      className="w-full flex items-center justify-between rounded-md border border-accent/15 bg-card px-3 py-2 text-xs text-foreground hover:border-accent/40 hover:bg-accent/[0.03] transition-colors text-left"
                     >
                       {link.label}
                       <ArrowRight className="h-3.5 w-3.5 text-accent" />
-                    </a>
+                    </button>
                   ))}
                 </div>
               )}
