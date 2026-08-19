@@ -26,7 +26,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/shared/components/ui/input-otp";
 import { Grape, ScrollText, Clock, Calendar, FolderOpen, CheckSquare, ShieldCheck, ExternalLink, FileBarChart, Mail, MailX, Loader2, Home, Users, ChevronLeft, ChevronDown, ChevronRight, ArrowRight, Landmark, MessageCircle, Video, MapPin, ClipboardList, LogOut, Megaphone, Building2, FolderLock } from "lucide-react";
 import prosperwiseLogo from "@/assets/prosperwise-icon-paper.png";
-import { insuranceCashForStorehouses, sumValues, isAumStorehouse } from "@/modules/portal/lib/portalAum";
+import { insuranceCashForStorehouses, sumValues, isAumStorehouse, formatCurrency } from "@/modules/portal/lib/portalAum";
 
 interface PortalData {
   portal_token?: string;
@@ -725,7 +725,7 @@ const Portal = ({ intakeRoute = false }: { intakeRoute?: boolean }) => {
                 </p>
               </div>
               <div className="ml-auto text-right">
-                <p className="text-2xl font-bold text-accent">${familySharedTotal.toLocaleString()}</p>
+                <p className="text-2xl font-bold text-accent">{formatCurrency(familySharedTotal)}</p>
                 <p className="text-xs text-muted-foreground">Family Shared Assets</p>
               </div>
             </div>
@@ -739,10 +739,10 @@ const Portal = ({ intakeRoute = false }: { intakeRoute?: boolean }) => {
             const members = hh.members || [];
             const isOwnHousehold = hh.id === contact.household_id;
 
-            // Non-owners (HoFs viewing sibling households) only see
-            // family_shared assets and totals — private household assets are hidden.
-            const scopeFilter = (a: any) =>
-              isOwnHousehold ? true : a.visibility_scope === "family_shared";
+            // Every household card on the Family Overview — including the viewer's
+            // own — shows only family_shared assets, so each card's total is
+            // provably a component of the family-level total above (§ familySharedTotal).
+            const scopeFilter = (a: any) => a.visibility_scope === "family_shared";
 
             const hhVineyard = members.flatMap((m: any) =>
               (m.vineyard_accounts || []).filter(scopeFilter)
@@ -788,7 +788,7 @@ const Portal = ({ intakeRoute = false }: { intakeRoute?: boolean }) => {
                   </div>
                   {isOwnHousehold || hasSharedAssets ? (
                     <span className="text-sm font-semibold text-foreground">
-                      ${hhTotal.toLocaleString()}
+                      {formatCurrency(hhTotal)}
                     </span>
                   ) : (
                     <span className="text-xs italic text-muted-foreground">Private</span>
@@ -826,15 +826,11 @@ const Portal = ({ intakeRoute = false }: { intakeRoute?: boolean }) => {
       ? new Set(["household_shared", "family_shared"])
       : new Set(["family_shared"]);
     const rawHhAssets = aggregateAssetsAtLevel("household", drilldown.householdId);
-    const hhAssets = viewingOwnHousehold
-      ? rawHhAssets
-      : {
-          vineyard: rawHhAssets.vineyard.filter((a: any) => a.visibility_scope === "family_shared"),
-          storehouses: rawHhAssets.storehouses.filter((a: any) => a.visibility_scope === "family_shared"),
-        };
-    const visibleInsurance = viewingOwnHousehold
-      ? insurance_policies
-      : (insurance_policies || []).filter((p: any) => p.visibility_scope === "family_shared");
+    const hhAssets = {
+      vineyard: rawHhAssets.vineyard.filter((a: any) => allowedScopes.has(a.visibility_scope)),
+      storehouses: rawHhAssets.storehouses.filter((a: any) => allowedScopes.has(a.visibility_scope)),
+    };
+    const visibleInsurance = (insurance_policies || []).filter((p: any) => allowedScopes.has(p.visibility_scope));
 
 
     return (
@@ -879,13 +875,9 @@ const Portal = ({ intakeRoute = false }: { intakeRoute?: boolean }) => {
                   .concat((household_holding_tank || []).filter((t: any) => t.contact_id === m.id))
                   .concat((family_holding_tank || []).filter((t: any) => t.contact_id === m.id));
                 const mTankAll = Array.from(new Map(rawTank.map((t: any) => [t.id, t])).values());
-                const mTankDedup = viewingOwnHousehold
-                  ? mTankAll
-                  : mTankAll.filter((t: any) => t.visibility_scope === "family_shared");
+                const mTankDedup = mTankAll.filter((t: any) => allowedScopes.has(t.visibility_scope));
                 const mInsuranceAll = insurance_policies.filter((p: any) => p.contact_id === m.id);
-                const mInsurance = viewingOwnHousehold
-                  ? mInsuranceAll
-                  : mInsuranceAll.filter((p: any) => p.visibility_scope === "family_shared");
+                const mInsurance = mInsuranceAll.filter((p: any) => allowedScopes.has(p.visibility_scope));
                 const mTotal = sumValues(mVineyardShared) + sumValues(mStoreShared)
                   + sumValues(mTankDedup)
                   + insuranceCashForStorehouses(mInsurance, mStoreShared);
@@ -927,7 +919,7 @@ const Portal = ({ intakeRoute = false }: { intakeRoute?: boolean }) => {
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
-                        {<span className="text-sm font-semibold text-foreground">${mTotal.toLocaleString()}</span>}
+                        {<span className="text-sm font-semibold text-foreground">{formatCurrency(mTotal)}</span>}
                         {canDrill && <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />}
                       </div>
                     </div>
@@ -974,7 +966,7 @@ const Portal = ({ intakeRoute = false }: { intakeRoute?: boolean }) => {
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold text-foreground">${(corp.total_assets || 0).toLocaleString()}</span>
+                        <span className="text-sm font-semibold text-foreground">{formatCurrency(corp.total_assets || 0)}</span>
                         {isExpanded ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
                       </div>
                     </div>
@@ -1004,7 +996,7 @@ const Portal = ({ intakeRoute = false }: { intakeRoute?: boolean }) => {
                             {corp.vineyard_accounts.map((acc: any) => (
                               <div key={acc.id} className="flex items-center justify-between text-xs">
                                 <span className="text-foreground/80">{acc.account_name}</span>
-                                <span className="font-medium text-foreground">${(Number(acc.current_value) || 0).toLocaleString()}</span>
+                                <span className="font-medium text-foreground">{formatCurrency(Number(acc.current_value) || 0)}</span>
                               </div>
                             ))}
                           </div>
@@ -1021,9 +1013,12 @@ const Portal = ({ intakeRoute = false }: { intakeRoute?: boolean }) => {
         {/* Right Sidebar: Household-Shared Territory */}
         <div className="space-y-4">
           {/* Household Holding Tank — private to household members only */}
-          {viewingOwnHousehold && household_holding_tank.length > 0 && (
-            <PortalHoldingTank accounts={household_holding_tank} defaultCollapsed />
-          )}
+          {viewingOwnHousehold && (() => {
+            const visibleTank = household_holding_tank.filter((t: any) => allowedScopes.has(t.visibility_scope));
+            return visibleTank.length > 0 && (
+              <PortalHoldingTank accounts={visibleTank} defaultCollapsed />
+            );
+          })()}
 
           <PortalTerritory
             vineyardAccounts={hhAssets.vineyard}
