@@ -54,6 +54,38 @@ function isNewTask(task: AsanaTask) {
   return categoriseTask(task) === "new";
 }
 
+/** Returns { newCount, ongoingCount } of active (non-completed) tasks, for
+ * badge/dashboard use without rendering the full task list. Mirrors the
+ * same fetch + categorisation + interaction-override logic as the main
+ * component (a task the client has already opened moves to "ongoing"
+ * regardless of its Asana section). */
+export function useTaskCounts(portalToken: string, contactId?: string) {
+  const [counts, setCounts] = useState({ newCount: 0, ongoingCount: 0 });
+
+  useEffect(() => {
+    if (!contactId) return;
+    (async () => {
+      const [tasksRes, interactionsRes] = await Promise.all([
+        supabase.functions.invoke("asana-service", {
+          body: { action: "getTasksForProject", portal_token: portalToken },
+        }).then(r => ({ data: r.data?.data || [] })),
+        supabase.functions.invoke("portal-track", {
+          body: { action: "get_interactions", contact_id: contactId, portal_token: portalToken },
+        }).then(r => ({ data: r.data?.data || [] })),
+      ]);
+
+      const activeTasks = ((tasksRes.data as AsanaTask[]) || []).filter((t) => !t.completed);
+      const interactedGids = new Set(((interactionsRes.data as any[]) || []).map((r: any) => r.task_gid));
+      setCounts({
+        newCount: activeTasks.filter((t) => categoriseTask(t) === "new" && !interactedGids.has(t.gid)).length,
+        ongoingCount: activeTasks.filter((t) => categoriseTask(t) === "ongoing" || interactedGids.has(t.gid)).length,
+      });
+    })();
+  }, [portalToken, contactId]);
+
+  return counts;
+}
+
 function TaskCard({ task, onClick, isExpanded }: { task: AsanaTask; onClick: () => void; isExpanded?: boolean }) {
   const status = getTaskStatus(task);
   const isNew = isNewTask(task);
