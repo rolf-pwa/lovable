@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
@@ -127,13 +127,22 @@ const VfoPortal = () => {
   const [requestsOpen, setRequestsOpen] = useState(false);
   const [bookMeetingOpen, setBookMeetingOpen] = useState(false);
   const [embeddedBooking, setEmbeddedBooking] = useState<{ label: string; embedUrl: string } | null>(null);
+  // Set right before a "Book a Meeting" click also changes drilldown (e.g.
+  // navigating from Family/Household to the viewer's own individual page),
+  // so the reset effect below doesn't immediately wipe out the booking we
+  // just intentionally set in the same click.
+  const skipEmbedResetRef = useRef(false);
 
   // Reset the financials dashboard focus and any embedded booking widget
   // whenever we navigate to a different person/household, so neither
   // carries over stale state.
   useEffect(() => {
     setFinancialsFocus(null);
-    setEmbeddedBooking(null);
+    if (skipEmbedResetRef.current) {
+      skipEmbedResetRef.current = false;
+    } else {
+      setEmbeddedBooking(null);
+    }
   }, [drilldown.level, drilldown.householdId, drilldown.memberId]);
 
   useEffect(() => {
@@ -226,6 +235,12 @@ const VfoPortal = () => {
     portal_requests = [], meetings = [], charter, corporations = [], hierarchy,
     professionals = [], engagements = [], insurance_policies = [],
   } = data;
+
+  // Hoisted here (not just inside renderIndividualView) since the Concierge
+  // card's Requests badge is now shared across all three views.
+  const requestsNewCount = (portal_requests || []).filter((r: any) => r.status === "submitted").length;
+  const requestsOngoingCount = (portal_requests || []).filter((r: any) => r.status === "in_progress").length;
+  const requestsOpenCount = requestsNewCount + requestsOngoingCount;
 
   if (!family?.vfo_enabled) {
     return (
@@ -378,6 +393,79 @@ const VfoPortal = () => {
     );
   };
 
+  // ── Concierge card — shared across Family, Household, and Individual
+  // views. Every action here operates on the viewer themselves (Georgia,
+  // Requests, Shoebox, booking a meeting) regardless of which page is
+  // currently being browsed, so it's safe to show from any view level.
+  const renderConciergeCard = () => (
+    <Card className="border-accent/20 bg-gradient-to-b from-accent/5 to-transparent">
+      <CardContent className="p-5 space-y-3">
+        <div className="flex items-center gap-2">
+          <ShieldCheck className="h-4 w-4 text-accent" />
+          <h3 className="font-serif text-sm text-foreground">Your Concierge</h3>
+        </div>
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          Chat with Georgia for instant help, or open a private request for your advisory team.
+        </p>
+        <Button
+          className="w-full bg-accent text-accent-foreground hover:bg-accent/90"
+          onClick={() => setGeorgiaOpen(true)}
+        >
+          <MessageCircle className="h-4 w-4 mr-2" />
+          Ask Georgia
+        </Button>
+        <Button
+          variant="outline"
+          className="w-full border-accent/30 text-accent hover:bg-accent/10 justify-between"
+          onClick={() => setRequestsOpen(true)}
+        >
+          <span className="flex items-center">
+            <ClipboardList className="h-4 w-4 mr-2" />
+            Requests
+          </span>
+          {requestsOpenCount > 0 && (
+            <Badge variant="secondary" className="bg-accent/15 text-accent border-accent/30">{requestsOpenCount} open</Badge>
+          )}
+        </Button>
+        <Button
+          variant="outline"
+          className="w-full border-accent/30 text-accent hover:bg-accent/10 justify-between"
+          onClick={() => setBookMeetingOpen((o) => !o)}
+        >
+          <span className="flex items-center">
+            <Calendar className="h-4 w-4 mr-2" />
+            Book a Meeting
+          </span>
+          {bookMeetingOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+        </Button>
+        {bookMeetingOpen && (
+          <div className="space-y-1.5 pl-1">
+            {MEETING_BOOKING_LINKS.map((link) => (
+              <button
+                key={link.url}
+                onClick={() => {
+                  setEmbeddedBooking(link);
+                  setBookMeetingOpen(false);
+                  // Booking always concerns the viewer's own meetings, so
+                  // jump to their own individual page's Meetings tab even
+                  // if this was clicked from the Family or Household view.
+                  skipEmbedResetRef.current = true;
+                  setDrilldown({ level: "individual", householdId: household?.id });
+                  setTab("meetings");
+                }}
+                className="w-full flex items-center justify-between rounded-md border border-accent/15 bg-card px-3 py-2 text-xs text-foreground hover:border-accent/40 hover:bg-accent/[0.03] transition-colors text-left"
+              >
+                {link.label}
+                <ArrowRight className="h-3.5 w-3.5 text-accent" />
+              </button>
+            ))}
+          </div>
+        )}
+        <PortalShoeboxUpload portalToken={portalToken} householdId={household?.id} />
+      </CardContent>
+    </Card>
+  );
+
   // ── Family View ──
   const renderFamilyView = () => {
     const households = hierarchy?.households || [];
@@ -506,6 +594,8 @@ const VfoPortal = () => {
           })()}
 
           {/* Account details hidden in Family view — only AUM total shown above. */}
+          {renderConciergeCard()}
+
           <PortalYourTeam professionals={professionals} engagements={engagements} />
         </aside>
       </div>
@@ -688,6 +778,8 @@ const VfoPortal = () => {
           {visibleInsurance.length > 0 && (
             <PortalInsurance policies={visibleInsurance} defaultCollapsed />
           )}
+          {renderConciergeCard()}
+
           <PortalYourTeam professionals={professionals} engagements={engagements} />
         </aside>
       </div>
@@ -734,9 +826,6 @@ const VfoPortal = () => {
       + insuranceCashForStorehouses(ind.insurancePolicies, indAumStorehouses);
     const hasVineyard = indVineyardAccounts.length > 0;
     const hasStorehouses = indAumStorehouses.length > 0;
-    const requestsNewCount = (portal_requests || []).filter((r: any) => r.status === "submitted").length;
-    const requestsOngoingCount = (portal_requests || []).filter((r: any) => r.status === "in_progress").length;
-    const requestsOpenCount = requestsNewCount + requestsOngoingCount;
 
 
     return (
@@ -968,70 +1057,7 @@ const VfoPortal = () => {
         </div>
 
         <aside className="space-y-4">
-          <Card className="border-accent/20 bg-gradient-to-b from-accent/5 to-transparent">
-            <CardContent className="p-5 space-y-3">
-              <div className="flex items-center gap-2">
-                <ShieldCheck className="h-4 w-4 text-accent" />
-                <h3 className="font-serif text-sm text-foreground">Your Concierge</h3>
-              </div>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                Chat with Georgia for instant help, or open a private request for your advisory team.
-              </p>
-              <Button
-                className="w-full bg-accent text-accent-foreground hover:bg-accent/90"
-                onClick={() => setGeorgiaOpen(true)}
-              >
-                <MessageCircle className="h-4 w-4 mr-2" />
-                Ask Georgia
-              </Button>
-              <Button
-                variant="outline"
-                className="w-full border-accent/30 text-accent hover:bg-accent/10 justify-between"
-                onClick={() => setRequestsOpen(true)}
-              >
-                <span className="flex items-center">
-                  <ClipboardList className="h-4 w-4 mr-2" />
-                  Requests
-                </span>
-                {requestsOpenCount > 0 && (
-                  <Badge variant="secondary" className="bg-accent/15 text-accent border-accent/30">{requestsOpenCount} open</Badge>
-                )}
-              </Button>
-              <Button
-                variant="outline"
-                className="w-full border-accent/30 text-accent hover:bg-accent/10 justify-between"
-                onClick={() => setBookMeetingOpen((o) => !o)}
-              >
-                <span className="flex items-center">
-                  <Calendar className="h-4 w-4 mr-2" />
-                  Book a Meeting
-                </span>
-                {bookMeetingOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-              </Button>
-              {bookMeetingOpen && (
-                <div className="space-y-1.5 pl-1">
-                  {MEETING_BOOKING_LINKS.map((link) => (
-                    <button
-                      key={link.url}
-                      onClick={() => {
-                        setEmbeddedBooking(link);
-                        setBookMeetingOpen(false);
-                        setTab("meetings");
-                      }}
-                      className="w-full flex items-center justify-between rounded-md border border-accent/15 bg-card px-3 py-2 text-xs text-foreground hover:border-accent/40 hover:bg-accent/[0.03] transition-colors text-left"
-                    >
-                      {link.label}
-                      <ArrowRight className="h-3.5 w-3.5 text-accent" />
-                    </button>
-                  ))}
-                </div>
-              )}
-              {isSelf && (
-                <PortalShoeboxUpload portalToken={portalToken} householdId={household?.id} />
-              )}
-            </CardContent>
-          </Card>
-
+          {renderConciergeCard()}
 
           {isSelf && <PortalDynamicLinks />}
 
