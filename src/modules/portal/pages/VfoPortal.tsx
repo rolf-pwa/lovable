@@ -18,7 +18,7 @@ import { PortalInsurance } from "@/modules/portal/components/PortalInsurance";
 import { PortalRequests } from "@/modules/portal/components/PortalRequests";
 import { PortalMeetings } from "@/modules/portal/components/PortalMeetings";
 import { PortalCharter } from "@/modules/portal/components/PortalCharter";
-import { PortalTasks } from "@/modules/portal/components/PortalTasks";
+import { PortalTasks, useTaskCounts } from "@/modules/portal/components/PortalTasks";
 import { PortalVault } from "@/modules/portal/components/PortalVault";
 import { PortalUpdates, useUnreadUpdateCount } from "@/modules/portal/components/PortalUpdates";
 import { PortalGeorgiaChat } from "@/modules/portal/components/PortalGeorgiaChat";
@@ -156,6 +156,10 @@ const VfoPortal = () => {
     drilldown.householdId || data?.household?.id || null,
     token || ""
   );
+  // Action Items are always the logged-in user's own — never a housemate's
+  // (PortalTasks is only ever rendered when isSelf) — so this uses the
+  // logged-in contact specifically, not whichever page is being viewed.
+  const { newCount: taskNewCount, ongoingCount: taskOngoingCount } = useTaskCounts(token || "", data?.contact?.id);
 
   if (loading) {
     return (
@@ -699,7 +703,9 @@ const VfoPortal = () => {
       + insuranceCashForStorehouses(ind.insurancePolicies, indAumStorehouses);
     const hasVineyard = indVineyardAccounts.length > 0;
     const hasStorehouses = indAumStorehouses.length > 0;
-    const requestsOpenCount = (portal_requests || []).filter((r: any) => r.status !== "resolved").length;
+    const requestsNewCount = (portal_requests || []).filter((r: any) => r.status === "submitted").length;
+    const requestsOngoingCount = (portal_requests || []).filter((r: any) => r.status === "in_progress").length;
+    const requestsOpenCount = requestsNewCount + requestsOngoingCount;
 
 
     return (
@@ -743,34 +749,14 @@ const VfoPortal = () => {
 
             <TabsContent value="dashboard" className="mt-4">
               <div className="grid gap-3 grid-cols-2 lg:grid-cols-3">
-                <DashboardCard
-                  icon={CheckSquare}
-                  label="Action Items"
-                  subtitle={isSelf ? "View tasks" : "Self only"}
-                  muted={!isSelf}
-                  onClick={() => setTab("tasks")}
-                />
-                <DashboardCard
-                  icon={ClipboardList}
-                  label="Requests"
-                  subtitle={requestsOpenCount > 0 ? `${requestsOpenCount} open` : "None open"}
-                  muted={requestsOpenCount === 0}
-                  onClick={() => setRequestsOpen(true)}
-                />
-                <DashboardCard
-                  icon={Megaphone}
-                  label="Updates"
-                  subtitle={unreadUpdateCount > 0 ? `${unreadUpdateCount} unread` : "All caught up"}
-                  muted={unreadUpdateCount === 0}
-                  onClick={() => setTab("updates")}
-                />
-                <DashboardCard
-                  icon={Anchor}
-                  label="Holding Tank"
-                  subtitle={hasHolding ? fmt(holdingTankTotal) : "No accounts yet"}
-                  muted={!hasHolding}
-                  onClick={() => { setFinancialsFocus("holding_tank"); setTab("financials"); }}
-                />
+                {hasHolding && (
+                  <DashboardCard
+                    icon={Anchor}
+                    label="Holding Tank"
+                    subtitle={fmt(holdingTankTotal)}
+                    onClick={() => { setFinancialsFocus("holding_tank"); setTab("financials"); }}
+                  />
+                )}
                 <DashboardCard
                   icon={Grape}
                   label="Vineyard"
@@ -784,6 +770,27 @@ const VfoPortal = () => {
                   subtitle={hasStorehouses ? fmt(storehousesTotal) : "No accounts yet"}
                   muted={!hasStorehouses}
                   onClick={() => { setFinancialsFocus("storehouses"); setTab("financials"); }}
+                />
+                <DashboardCard
+                  icon={CheckSquare}
+                  label="Action Items"
+                  subtitle={isSelf ? `${taskNewCount} New · ${taskOngoingCount} Ongoing` : "Self only"}
+                  muted={!isSelf || (taskNewCount === 0 && taskOngoingCount === 0)}
+                  onClick={() => setTab("tasks")}
+                />
+                <DashboardCard
+                  icon={ClipboardList}
+                  label="Requests"
+                  subtitle={requestsOpenCount > 0 ? `${requestsNewCount} New · ${requestsOngoingCount} Ongoing` : "None open"}
+                  muted={requestsOpenCount === 0}
+                  onClick={() => setRequestsOpen(true)}
+                />
+                <DashboardCard
+                  icon={Megaphone}
+                  label="Updates"
+                  subtitle={unreadUpdateCount > 0 ? `${unreadUpdateCount} New` : "All caught up"}
+                  muted={unreadUpdateCount === 0}
+                  onClick={() => setTab("updates")}
                 />
               </div>
             </TabsContent>
@@ -806,13 +813,14 @@ const VfoPortal = () => {
               <TabsContent value="financials" className="mt-4 space-y-4">
                 {financialsFocus === null ? (
                   <div className="grid gap-3 sm:grid-cols-3">
-                    <DashboardCard
-                      icon={Anchor}
-                      label="Holding Tank"
-                      subtitle={hasHolding ? fmt(holdingTankTotal) : "No accounts yet"}
-                      muted={!hasHolding}
-                      onClick={() => setFinancialsFocus("holding_tank")}
-                    />
+                    {hasHolding && (
+                      <DashboardCard
+                        icon={Anchor}
+                        label="Holding Tank"
+                        subtitle={fmt(holdingTankTotal)}
+                        onClick={() => setFinancialsFocus("holding_tank")}
+                      />
+                    )}
                     <DashboardCard
                       icon={Grape}
                       label="Vineyard"
