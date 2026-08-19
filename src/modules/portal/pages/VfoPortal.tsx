@@ -514,7 +514,10 @@ const VfoPortal = () => {
             })}
           </div>
 
-          {corporations.length > 0 && (
+          {/* `corporations` is always the viewer's own shareholdings
+              (portal-validate scopes it to the viewer's own household, not
+              the household being viewed), so only show it on that page. */}
+          {viewingOwnHousehold && corporations.length > 0 && (
             <div className="space-y-3 pt-2">
               <div className="flex items-center gap-2">
                 <Building2 className="h-4 w-4 text-accent/70" />
