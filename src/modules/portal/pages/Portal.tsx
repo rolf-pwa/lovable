@@ -929,8 +929,11 @@ const Portal = ({ intakeRoute = false }: { intakeRoute?: boolean }) => {
             }
           </div>
 
-          {/* Corporation cards */}
-          {corporations.length > 0 && (
+          {/* Corporation cards — `corporations` is always the viewer's own
+              shareholdings (portal-validate scopes it to the viewer's own
+              household, not the household being viewed), so only show it
+              here when this page is actually the viewer's own household. */}
+          {viewingOwnHousehold && corporations.length > 0 && (
             <div className="space-y-3">
               <div className="flex items-center gap-2 mt-2">
                 <Building2 className="h-4 w-4 text-muted-foreground" />
