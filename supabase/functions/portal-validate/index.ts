@@ -61,7 +61,10 @@ async function getValidGoogleToken(supabase: any, userId: string): Promise<strin
 
 async function fetchCalendarEvents(accessToken: string, contactEmail: string): Promise<any[]> {
   try {
-    const timeMin = new Date().toISOString();
+    // 90 days back covers past meetings (e.g. the last few quarterly
+    // reviews) alongside the next 30 days of upcoming ones. The client
+    // splits this single chronological list into Upcoming/Past sections.
+    const timeMin = new Date(Date.now() - 90 * 86400000).toISOString();
     const timeMax = new Date(Date.now() + 30 * 86400000).toISOString();
 
     const calRes = await fetch(
@@ -69,7 +72,7 @@ async function fetchCalendarEvents(accessToken: string, contactEmail: string): P
       new URLSearchParams({
         timeMin,
         timeMax,
-        maxResults: "20",
+        maxResults: "40",
         singleEvents: "true",
         orderBy: "startTime",
         q: contactEmail,

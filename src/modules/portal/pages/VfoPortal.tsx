@@ -26,6 +26,7 @@ import { PortalYourTeam } from "@/modules/portal/components/PortalYourTeam";
 import { PortalProfessionals } from "@/modules/portal/components/PortalProfessionals";
 import { insuranceCashForStorehouses, sumValues, isAumStorehouse, formatCurrency } from "@/modules/portal/lib/portalAum";
 import { PortalDynamicLinks } from "@/modules/portal/components/PortalDynamicLinks";
+import { PortalShoeboxUpload } from "@/modules/portal/components/PortalShoeboxUpload";
 import prosperwiseLogo from "@/assets/prosperwise-logo.png";
 import prosperwiseIconPaper from "@/assets/prosperwise-icon-paper.png";
 
@@ -43,6 +44,12 @@ type ViewLevel = "family" | "household" | "individual";
 interface DrilldownState { level: ViewLevel; householdId?: string; memberId?: string; }
 
 const fmt = (n: number) => formatCurrency(n || 0);
+
+const MEETING_BOOKING_LINKS = [
+  { label: "Admin Meeting", url: "https://calendar.app.google/eG6iJbayFnQ11fNY7" },
+  { label: "Quarterly Review (In Person)", url: "https://calendar.app.google/atvjMpeCKyDfkvgUA" },
+  { label: "Quarterly Review (Video)", url: "https://calendar.app.google/KpBjsrne5w7dFm22A" },
+];
 
 function DashboardCard({
   icon: Icon,
@@ -98,6 +105,7 @@ const VfoPortal = () => {
   const [expandedCorps, setExpandedCorps] = useState<Set<string>>(new Set());
   const [georgiaOpen, setGeorgiaOpen] = useState(false);
   const [requestsOpen, setRequestsOpen] = useState(false);
+  const [bookMeetingOpen, setBookMeetingOpen] = useState(false);
 
   // Reset the financials dashboard focus whenever we navigate to a
   // different person/household, so it doesn't carry over stale state.
@@ -812,7 +820,7 @@ const VfoPortal = () => {
             {hasFinancials && (
               <TabsContent value="financials" className="mt-4 space-y-4">
                 {financialsFocus === null ? (
-                  <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="flex flex-col gap-3">
                     {hasHolding && (
                       <DashboardCard
                         icon={Anchor}
@@ -942,6 +950,36 @@ const VfoPortal = () => {
                   <Badge variant="secondary" className="bg-accent/15 text-accent border-accent/30">{requestsOpenCount} open</Badge>
                 )}
               </Button>
+              <Button
+                variant="outline"
+                className="w-full border-accent/30 text-accent hover:bg-accent/10 justify-between"
+                onClick={() => setBookMeetingOpen((o) => !o)}
+              >
+                <span className="flex items-center">
+                  <Calendar className="h-4 w-4 mr-2" />
+                  Book a Meeting
+                </span>
+                {bookMeetingOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+              </Button>
+              {bookMeetingOpen && (
+                <div className="space-y-1.5 pl-1">
+                  {MEETING_BOOKING_LINKS.map((link) => (
+                    <a
+                      key={link.url}
+                      href={link.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-between rounded-md border border-accent/15 bg-card px-3 py-2 text-xs text-foreground hover:border-accent/40 hover:bg-accent/[0.03] transition-colors"
+                    >
+                      {link.label}
+                      <ArrowRight className="h-3.5 w-3.5 text-accent" />
+                    </a>
+                  ))}
+                </div>
+              )}
+              {isSelf && (
+                <PortalShoeboxUpload portalToken={portalToken} householdId={household?.id} />
+              )}
             </CardContent>
           </Card>
 
