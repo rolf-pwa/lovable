@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
-import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
+import { Card, CardContent } from "@/shared/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/shared/components/ui/dialog";
 import { Badge } from "@/shared/components/ui/badge";
 
@@ -104,24 +104,24 @@ function DashboardCard({
       }`}
       onClick={onClick}
     >
-      <CardHeader className="pb-2">
-        <div className="flex items-center gap-3">
-          <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${muted ? "bg-muted" : bgClass}`}>
-            <Icon className={`h-5 w-5 ${muted ? "text-muted-foreground" : colorClass}`} />
-          </div>
-          <div className="min-w-0">
-            <CardTitle className="text-lg font-serif truncate">{label}</CardTitle>
-            <p className="text-xs text-muted-foreground truncate">{caption}</p>
-          </div>
-          <div className="ml-auto flex items-center gap-3 shrink-0">
-            <div className="text-right">
-              <p className={`text-xl font-bold ${muted ? "text-muted-foreground" : colorClass}`}>{value}</p>
-              {valueCaption && <p className="text-xs text-muted-foreground">{valueCaption}</p>}
+      <CardContent className="p-4">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${muted ? "bg-muted" : bgClass}`}>
+              <Icon className={`h-4 w-4 ${muted ? "text-muted-foreground" : colorClass}`} />
             </div>
-            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-foreground truncate">{label}</p>
+              <p className="text-[11px] text-muted-foreground truncate">{caption}</p>
+            </div>
           </div>
+          <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
         </div>
-      </CardHeader>
+        <div className="mt-3 flex items-baseline justify-between gap-2">
+          <p className={`text-xl font-bold truncate ${muted ? "text-muted-foreground" : colorClass}`}>{value}</p>
+          {valueCaption && <p className="text-[11px] text-muted-foreground shrink-0">{valueCaption}</p>}
+        </div>
+      </CardContent>
     </Card>
   );
 }
@@ -880,12 +880,12 @@ const VfoPortal = () => {
             </TabsList>
 
             <TabsContent value="dashboard" className="mt-4">
-              <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3">
                 {hasHolding && (
                   <DashboardCard
                     icon={Anchor}
                     label="Holding Tank"
-                    caption="Awaiting Charter Ratification"
+                    caption="Awaiting Ratification"
                     value={fmt(holdingTankTotal)}
                     valueCaption="Total Value"
                     onClick={() => { setFinancialsFocus("holding_tank"); setTab("financials"); }}
@@ -905,7 +905,7 @@ const VfoPortal = () => {
                 <DashboardCard
                   icon={Landmark}
                   label="Storehouses"
-                  caption="Strategic Asset Allocation"
+                  caption="Strategic Allocation"
                   value={hasStorehouses ? fmt(storehousesTotal) : "No accounts yet"}
                   valueCaption={hasStorehouses ? "Total Value" : undefined}
                   muted={!hasStorehouses}
@@ -930,7 +930,7 @@ const VfoPortal = () => {
                 <DashboardCard
                   icon={Megaphone}
                   label="Updates"
-                  caption="From Your Advisory Team"
+                  caption="From Your Team"
                   value={unreadUpdateCount > 0 ? `${unreadUpdateCount} New` : "All caught up"}
                   muted={unreadUpdateCount === 0}
                   onClick={() => setTab("updates")}
@@ -984,7 +984,7 @@ const VfoPortal = () => {
                       <DashboardCard
                         icon={Anchor}
                         label="Holding Tank"
-                        caption="Awaiting Charter Ratification"
+                        caption="Awaiting Ratification"
                         value={fmt(holdingTankTotal)}
                         valueCaption="Total Value"
                         onClick={() => setFinancialsFocus("holding_tank")}
@@ -1004,7 +1004,7 @@ const VfoPortal = () => {
                     <DashboardCard
                       icon={Landmark}
                       label="Storehouses"
-                      caption="Strategic Asset Allocation"
+                      caption="Strategic Allocation"
                       value={hasStorehouses ? fmt(storehousesTotal) : "No accounts yet"}
                       valueCaption={hasStorehouses ? "Total Value" : undefined}
                       muted={!hasStorehouses}
