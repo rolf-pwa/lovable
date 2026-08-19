@@ -10,7 +10,7 @@ import { Button } from "@/shared/components/ui/button";
 import {
   Loader2, Crown, ShieldCheck, Calendar, CheckSquare, Landmark, FolderLock,
   ClipboardList, MessageCircle, ScrollText, Megaphone, Home, Users, ChevronLeft,
-  ChevronDown, ChevronRight, ArrowRight, Building2, Briefcase,
+  ChevronDown, ChevronRight, ArrowRight, Building2, Briefcase, Anchor, Grape,
 } from "lucide-react";
 import { PortalTerritory } from "@/modules/portal/components/PortalTerritory";
 import { PortalHoldingTank } from "@/modules/portal/components/PortalHoldingTank";
@@ -44,6 +44,42 @@ interface DrilldownState { level: ViewLevel; householdId?: string; memberId?: st
 
 const fmt = (n: number) => formatCurrency(n || 0);
 
+function FinancialCategoryCard({
+  icon: Icon,
+  label,
+  total,
+  available,
+  onClick,
+}: {
+  icon: typeof Anchor;
+  label: string;
+  total: number;
+  available: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`text-left rounded-lg border p-4 transition-colors group ${
+        available
+          ? "border-accent/15 bg-card hover:border-accent/40 hover:bg-accent/[0.03]"
+          : "border-dashed border-accent/15 bg-card/50 hover:border-accent/30"
+      }`}
+    >
+      <div className="flex items-center justify-between">
+        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent/10">
+          <Icon className="h-4 w-4 text-accent" />
+        </div>
+        <ArrowRight className="h-4 w-4 text-accent opacity-0 group-hover:opacity-100 transition-opacity" />
+      </div>
+      <p className="mt-3 text-sm font-medium text-foreground">{label}</p>
+      <p className={`font-serif text-lg ${available ? "text-foreground" : "text-muted-foreground"}`}>
+        {available ? fmt(total) : "No accounts yet"}
+      </p>
+    </button>
+  );
+}
+
 const VfoPortal = () => {
   const { token } = useParams<{ token: string }>();
   const [data, setData] = useState<any | null>(null);
@@ -51,10 +87,16 @@ const VfoPortal = () => {
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState("tasks");
   const [drilldown, setDrilldown] = useState<DrilldownState>({ level: "individual" });
+  const [financialsFocus, setFinancialsFocus] = useState<"holding_tank" | "vineyard" | "storehouses" | null>(null);
   const [expandedCorps, setExpandedCorps] = useState<Set<string>>(new Set());
   const [georgiaOpen, setGeorgiaOpen] = useState(false);
   const [requestsOpen, setRequestsOpen] = useState(false);
 
+  // Reset the financials dashboard focus whenever we navigate to a
+  // different person/household, so it doesn't carry over stale state.
+  useEffect(() => {
+    setFinancialsFocus(null);
+  }, [drilldown.level, drilldown.householdId, drilldown.memberId]);
 
   useEffect(() => {
     if (!token) { setError("Missing access token."); setLoading(false); return; }
@@ -623,6 +665,15 @@ const VfoPortal = () => {
     const hasInsurance = ind.insurancePolicies.length > 0;
     const hasFinancials = hasHolding || hasTerritory || hasInsurance;
 
+    const indVineyardAccounts = ind.vineyardAccounts;
+    const indAumStorehouses = ind.memberStorehouses.filter(isAumStorehouse);
+    const holdingTankTotal = sumValues(holding_tank);
+    const vineyardTotal = sumValues(indVineyardAccounts);
+    const storehousesTotal = sumValues(indAumStorehouses)
+      + insuranceCashForStorehouses(ind.insurancePolicies, indAumStorehouses);
+    const hasVineyard = indVineyardAccounts.length > 0;
+    const hasStorehouses = indAumStorehouses.length > 0;
+
 
     return (
       <div className="grid gap-6 lg:grid-cols-3">
@@ -671,23 +722,75 @@ const VfoPortal = () => {
 
             {hasFinancials && (
               <TabsContent value="financials" className="mt-4 space-y-4">
-                {hasHolding && <PortalHoldingTank accounts={holding_tank} defaultCollapsed />}
-                {hasTerritory && (
-                  <PortalTerritory
-                    vineyardAccounts={ind.vineyardAccounts}
-                    storehouses={ind.memberStorehouses}
-                    insurancePolicies={ind.insurancePolicies}
-                    contact={isSelf ? contact : currentMember}
-                    family={family}
-                    household={household}
-                    householdMembers={household_members}
-                    scopeLabel={isSelf ? "My Territory" : `${currentMember?.first_name || ""}'s Territory`}
-                    portalToken={portalToken}
-                    onScopeChange={refreshData}
-                    corporations={corporations}
-                    section="all"
-                    defaultCollapsed
-                  />
+                {financialsFocus === null ? (
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <FinancialCategoryCard
+                      icon={Anchor}
+                      label="Holding Tank"
+                      total={holdingTankTotal}
+                      available={hasHolding}
+                      onClick={() => setFinancialsFocus("holding_tank")}
+                    />
+                    <FinancialCategoryCard
+                      icon={Grape}
+                      label="Vineyard"
+                      total={vineyardTotal}
+                      available={hasVineyard}
+                      onClick={() => setFinancialsFocus("vineyard")}
+                    />
+                    <FinancialCategoryCard
+                      icon={Landmark}
+                      label="Storehouses"
+                      total={storehousesTotal}
+                      available={hasStorehouses}
+                      onClick={() => setFinancialsFocus("storehouses")}
+                    />
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <button
+                      onClick={() => setFinancialsFocus(null)}
+                      className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-accent transition-colors"
+                    >
+                      <ChevronLeft className="h-3.5 w-3.5" />
+                      Back to Financials
+                    </button>
+                    {financialsFocus === "holding_tank" && (
+                      <PortalHoldingTank accounts={holding_tank} />
+                    )}
+                    {financialsFocus === "vineyard" && (
+                      <PortalTerritory
+                        vineyardAccounts={ind.vineyardAccounts}
+                        storehouses={ind.memberStorehouses}
+                        insurancePolicies={ind.insurancePolicies}
+                        contact={isSelf ? contact : currentMember}
+                        family={family}
+                        household={household}
+                        householdMembers={household_members}
+                        scopeLabel={isSelf ? "My Territory" : `${currentMember?.first_name || ""}'s Territory`}
+                        portalToken={portalToken}
+                        onScopeChange={refreshData}
+                        corporations={corporations}
+                        section="vineyard"
+                      />
+                    )}
+                    {financialsFocus === "storehouses" && (
+                      <PortalTerritory
+                        vineyardAccounts={ind.vineyardAccounts}
+                        storehouses={ind.memberStorehouses}
+                        insurancePolicies={ind.insurancePolicies}
+                        contact={isSelf ? contact : currentMember}
+                        family={family}
+                        household={household}
+                        householdMembers={household_members}
+                        scopeLabel={isSelf ? "My Territory" : `${currentMember?.first_name || ""}'s Territory`}
+                        portalToken={portalToken}
+                        onScopeChange={refreshData}
+                        corporations={corporations}
+                        section="storehouses"
+                      />
+                    )}
+                  </div>
                 )}
                 {hasInsurance && (
                   <PortalInsurance policies={ind.insurancePolicies} defaultCollapsed />
