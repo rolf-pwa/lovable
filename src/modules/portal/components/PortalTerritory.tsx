@@ -5,6 +5,7 @@ import { Grape, Landmark, Castle, Sword, Wheat, Lock, Users, Home, Eye, EyeOff, 
 import { supabase } from "@/shared/integrations/supabase/client";
 import { toast } from "sonner";
 import { PortalAccountSnapshot } from "./PortalAccountSnapshot";
+import { formatCurrency } from "@/modules/portal/lib/portalAum";
 
 const STOREHOUSE_CONFIG = [
   { num: 1, name: "Liquidity Reserve", icon: Castle },
@@ -200,7 +201,7 @@ export function PortalTerritory({ vineyardAccounts, storehouses, contact, family
             <div className="ml-auto flex items-center gap-3">
               <div className="text-right">
                 <p className="text-2xl font-bold text-primary">
-                  ${totalVineyard.toLocaleString()}
+                  {formatCurrency(totalVineyard)}
                 </p>
                 <p className="text-xs text-muted-foreground">Total Value</p>
               </div>
@@ -220,7 +221,7 @@ export function PortalTerritory({ vineyardAccounts, storehouses, contact, family
                 <div className="flex items-center justify-between">
                   <h4 className="text-sm font-medium text-foreground">{type}</h4>
                   <span className="text-sm font-semibold text-foreground">
-                    ${total.toLocaleString()}
+                    {formatCurrency(total)}
                   </span>
                 </div>
                 {accounts.map((acc: any) => (
@@ -231,7 +232,7 @@ export function PortalTerritory({ vineyardAccounts, storehouses, contact, family
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-foreground/80">{acc.account_name}</span>
                       <span className="text-sm font-medium text-foreground">
-                        ${(Number(acc.current_value) || 0).toLocaleString()}
+                        {formatCurrency(Number(acc.current_value) || 0)}
                       </span>
                     </div>
                     <PortalAccountSnapshot snapshot={acc.latest_snapshot} />
@@ -275,16 +276,16 @@ export function PortalTerritory({ vineyardAccounts, storehouses, contact, family
                           {TYPE_LABELS[corp.corporation_type] || corp.corporation_type}
                         </span>
                       </div>
-                      <span className="text-sm font-semibold text-foreground">${corpTotal.toLocaleString()}</span>
+                      <span className="text-sm font-semibold text-foreground">{formatCurrency(corpTotal)}</span>
                     </div>
                     {ownershipPct > 0 && (
-                      <p className="text-[10px] text-muted-foreground">Your stake: {ownershipPct}% · ${Math.round(corpTotal * ownershipPct / 100).toLocaleString()}</p>
+                      <p className="text-[10px] text-muted-foreground">Your stake: {ownershipPct}% · {formatCurrency(Math.round(corpTotal * ownershipPct / 100))}</p>
                     )}
                     {(corp.vineyard_accounts || []).map((acc: any) => (
                       <div key={acc.id} className="rounded-lg bg-muted/50 px-4 py-2.5 border border-border">
                         <div className="flex items-center justify-between">
                           <span className="text-sm text-foreground/80">{acc.account_name}</span>
-                          <span className="text-sm font-medium text-foreground">${(Number(acc.current_value) || 0).toLocaleString()}</span>
+                          <span className="text-sm font-medium text-foreground">{formatCurrency(Number(acc.current_value) || 0)}</span>
                         </div>
                       </div>
                     ))}
@@ -321,11 +322,11 @@ export function PortalTerritory({ vineyardAccounts, storehouses, contact, family
             <div className="ml-auto flex items-center gap-3">
               <div className="text-right">
                 <p className="text-2xl font-bold text-accent">
-                  ${(visibleStorehouses.reduce((sum: number, s: any) => sum + (Number(s.current_value) || 0), 0)
+                  {formatCurrency(visibleStorehouses.reduce((sum: number, s: any) => sum + (Number(s.current_value) || 0), 0)
                     + insurancePolicies
                         .filter((p: any) => visibleStorehouses.some((s: any) => s.id === p.cash_value_storehouse_id))
                         .reduce((sum: number, p: any) => sum + (Number(p.cash_value) || 0), 0)
-                  ).toLocaleString()}
+                  )}
                 </p>
                 <p className="text-xs text-muted-foreground">Total Value</p>
               </div>
@@ -357,7 +358,7 @@ export function PortalTerritory({ vineyardAccounts, storehouses, contact, family
                     <h4 className="text-sm font-medium text-foreground">{name}</h4>
                   </div>
                   <span className="text-sm font-semibold text-foreground">
-                    ${total.toLocaleString()}
+                    {formatCurrency(total)}
                   </span>
                 </div>
                 {accounts.length > 0 ? (
@@ -367,7 +368,7 @@ export function PortalTerritory({ vineyardAccounts, storehouses, contact, family
                         <Progress value={pct} className="h-1.5 bg-muted [&>div]:bg-accent" />
                         <div className="flex justify-between text-xs text-muted-foreground">
                           <span>{Math.round(pct)}% funded</span>
-                          <span>Target: ${targetTotal.toLocaleString()}</span>
+                          <span>Target: {formatCurrency(targetTotal)}</span>
                         </div>
                       </div>
                     )}
@@ -383,7 +384,7 @@ export function PortalTerritory({ vineyardAccounts, storehouses, contact, family
                               <span className="text-sm text-foreground/80">{acc.label || acc.asset_type || acc.notes || "Account"}</span>
                             </div>
                             <span className="text-sm font-medium text-foreground">
-                              ${accCurrent.toLocaleString()}
+                              {formatCurrency(accCurrent)}
                             </span>
                           </div>
                           <PortalAccountSnapshot snapshot={acc.latest_snapshot} />

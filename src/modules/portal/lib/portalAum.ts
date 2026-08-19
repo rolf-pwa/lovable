@@ -5,6 +5,14 @@
 
 const REAL_ESTATE = "Primary Residence & Protected Legacy Accounts";
 
+export const formatCurrency = (value: number) =>
+  new Intl.NumberFormat("en-CA", {
+    style: "currency",
+    currency: "CAD",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(value);
+
 export const isAumStorehouse = (s: any) => s?.asset_type !== REAL_ESTATE;
 
 export const sumValues = (rows: any[]) =>
