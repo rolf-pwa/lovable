@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
-import { Card, CardContent } from "@/shared/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/shared/components/ui/dialog";
 import { Badge } from "@/shared/components/ui/badge";
 
@@ -71,46 +71,58 @@ const MEETING_BOOKING_LINKS = [
   },
 ];
 
+// Matches the sidebar card style used everywhere else in the VFO
+// (PortalTerritory's "The Vineyard"/"The Storehouses", PortalInsurance's
+// "The Shield") — icon box, title + caption, big value + optional value
+// caption on the right, chevron. Clickable in place of the expand/collapse
+// those cards use, since these always navigate elsewhere.
 function DashboardCard({
   icon: Icon,
   label,
-  subtitle,
+  caption,
+  value,
+  valueCaption,
+  colorClass = "text-accent",
+  bgClass = "bg-accent/10",
   muted,
-  badge,
   onClick,
 }: {
   icon: typeof Anchor;
   label: string;
-  subtitle: string;
+  caption: string;
+  value: string;
+  valueCaption?: string;
+  colorClass?: string;
+  bgClass?: string;
   muted?: boolean;
-  badge?: number;
   onClick: () => void;
 }) {
   return (
-    <button
-      onClick={onClick}
-      className={`text-left rounded-lg border p-4 transition-colors group ${
-        muted
-          ? "border-dashed border-accent/15 bg-card/50 hover:border-accent/30"
-          : "border-accent/15 bg-card hover:border-accent/40 hover:bg-accent/[0.03]"
+    <Card
+      className={`cursor-pointer transition-colors ${
+        muted ? "border-dashed border-accent/15 bg-card/50 hover:border-accent/30" : "border-accent/20 hover:border-accent/40"
       }`}
+      onClick={onClick}
     >
-      <div className="flex items-center justify-between">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent/10">
-          <Icon className="h-4 w-4 text-accent" />
+      <CardHeader className="pb-2">
+        <div className="flex items-center gap-3">
+          <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${muted ? "bg-muted" : bgClass}`}>
+            <Icon className={`h-5 w-5 ${muted ? "text-muted-foreground" : colorClass}`} />
+          </div>
+          <div className="min-w-0">
+            <CardTitle className="text-lg font-serif truncate">{label}</CardTitle>
+            <p className="text-xs text-muted-foreground truncate">{caption}</p>
+          </div>
+          <div className="ml-auto flex items-center gap-3 shrink-0">
+            <div className="text-right">
+              <p className={`text-xl font-bold ${muted ? "text-muted-foreground" : colorClass}`}>{value}</p>
+              {valueCaption && <p className="text-xs text-muted-foreground">{valueCaption}</p>}
+            </div>
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          {!!badge && (
-            <Badge variant="secondary" className="bg-accent/15 text-accent border-accent/30">{badge}</Badge>
-          )}
-          <ArrowRight className="h-4 w-4 text-accent opacity-0 group-hover:opacity-100 transition-opacity" />
-        </div>
-      </div>
-      <p className="mt-3 text-sm font-medium text-foreground">{label}</p>
-      <p className={`font-serif text-lg ${muted ? "text-muted-foreground" : "text-foreground"}`}>
-        {subtitle}
-      </p>
-    </button>
+      </CardHeader>
+    </Card>
   );
 }
 
@@ -868,47 +880,58 @@ const VfoPortal = () => {
             </TabsList>
 
             <TabsContent value="dashboard" className="mt-4">
-              <div className="grid gap-3 grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                 {hasHolding && (
                   <DashboardCard
                     icon={Anchor}
                     label="Holding Tank"
-                    subtitle={fmt(holdingTankTotal)}
+                    caption="Awaiting Charter Ratification"
+                    value={fmt(holdingTankTotal)}
+                    valueCaption="Total Value"
                     onClick={() => { setFinancialsFocus("holding_tank"); setTab("financials"); }}
                   />
                 )}
                 <DashboardCard
                   icon={Grape}
                   label="Vineyard"
-                  subtitle={hasVineyard ? fmt(vineyardTotal) : "No accounts yet"}
+                  caption="Total Asset Portfolio"
+                  value={hasVineyard ? fmt(vineyardTotal) : "No accounts yet"}
+                  valueCaption={hasVineyard ? "Total Value" : undefined}
+                  colorClass="text-primary"
+                  bgClass="bg-primary/10"
                   muted={!hasVineyard}
                   onClick={() => { setFinancialsFocus("vineyard"); setTab("financials"); }}
                 />
                 <DashboardCard
                   icon={Landmark}
                   label="Storehouses"
-                  subtitle={hasStorehouses ? fmt(storehousesTotal) : "No accounts yet"}
+                  caption="Strategic Asset Allocation"
+                  value={hasStorehouses ? fmt(storehousesTotal) : "No accounts yet"}
+                  valueCaption={hasStorehouses ? "Total Value" : undefined}
                   muted={!hasStorehouses}
                   onClick={() => { setFinancialsFocus("storehouses"); setTab("financials"); }}
                 />
                 <DashboardCard
                   icon={CheckSquare}
                   label="Action Items"
-                  subtitle={isSelf ? `${taskNewCount} New · ${taskOngoingCount} Ongoing` : "Self only"}
+                  caption="Tasks & To-Dos"
+                  value={isSelf ? `${taskNewCount} New · ${taskOngoingCount} Ongoing` : "Self only"}
                   muted={!isSelf || (taskNewCount === 0 && taskOngoingCount === 0)}
                   onClick={() => setTab("tasks")}
                 />
                 <DashboardCard
                   icon={ClipboardList}
                   label="Requests"
-                  subtitle={requestsOpenCount > 0 ? `${requestsNewCount} New · ${requestsOngoingCount} Ongoing` : "None open"}
+                  caption="Sent to Your Advisor"
+                  value={requestsOpenCount > 0 ? `${requestsNewCount} New · ${requestsOngoingCount} Ongoing` : "None open"}
                   muted={requestsOpenCount === 0}
                   onClick={() => setRequestsOpen(true)}
                 />
                 <DashboardCard
                   icon={Megaphone}
                   label="Updates"
-                  subtitle={unreadUpdateCount > 0 ? `${unreadUpdateCount} New` : "All caught up"}
+                  caption="From Your Advisory Team"
+                  value={unreadUpdateCount > 0 ? `${unreadUpdateCount} New` : "All caught up"}
                   muted={unreadUpdateCount === 0}
                   onClick={() => setTab("updates")}
                 />
@@ -961,21 +984,29 @@ const VfoPortal = () => {
                       <DashboardCard
                         icon={Anchor}
                         label="Holding Tank"
-                        subtitle={fmt(holdingTankTotal)}
+                        caption="Awaiting Charter Ratification"
+                        value={fmt(holdingTankTotal)}
+                        valueCaption="Total Value"
                         onClick={() => setFinancialsFocus("holding_tank")}
                       />
                     )}
                     <DashboardCard
                       icon={Grape}
                       label="Vineyard"
-                      subtitle={hasVineyard ? fmt(vineyardTotal) : "No accounts yet"}
+                      caption="Total Asset Portfolio"
+                      value={hasVineyard ? fmt(vineyardTotal) : "No accounts yet"}
+                      valueCaption={hasVineyard ? "Total Value" : undefined}
+                      colorClass="text-primary"
+                      bgClass="bg-primary/10"
                       muted={!hasVineyard}
                       onClick={() => setFinancialsFocus("vineyard")}
                     />
                     <DashboardCard
                       icon={Landmark}
                       label="Storehouses"
-                      subtitle={hasStorehouses ? fmt(storehousesTotal) : "No accounts yet"}
+                      caption="Strategic Asset Allocation"
+                      value={hasStorehouses ? fmt(storehousesTotal) : "No accounts yet"}
+                      valueCaption={hasStorehouses ? "Total Value" : undefined}
                       muted={!hasStorehouses}
                       onClick={() => setFinancialsFocus("storehouses")}
                     />
