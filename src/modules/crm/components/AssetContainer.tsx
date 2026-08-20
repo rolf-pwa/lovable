@@ -65,13 +65,11 @@ interface AssetContainerProps {
   moveTargets: MoveTarget[];
   containerKey: string;
   contactId: string;
-  isPlaceholder?: boolean;
   onRefresh: () => void;
   onAddAccount?: () => void;
   onMoveAccount?: (account: AssetAccount, targetKey: string) => Promise<void>;
   showAddForm?: boolean;
   addFormContent?: React.ReactNode;
-  onConfigurePlaceholder?: () => void;
   /** Extra amount (e.g. insurance cash value) to include in the header total */
   extraTotal?: number;
   /** Active Web Forms — passed through to each row so its matching buttons can render */
@@ -85,13 +83,11 @@ export function AssetContainer({
   moveTargets,
   containerKey,
   contactId,
-  isPlaceholder = false,
   onRefresh,
   onMoveAccount,
   showAddForm,
   addFormContent,
   onAddAccount,
-  onConfigurePlaceholder,
   extraTotal = 0,
   webforms = [],
 }: AssetContainerProps) {
@@ -141,7 +137,7 @@ export function AssetContainer({
   };
 
   return (
-    <div className={`rounded-lg border ${isPlaceholder ? "border-dashed border-muted-foreground/20 bg-muted/20" : "border-border bg-card"}`}>
+    <div className="rounded-lg border border-border bg-card">
       {/* Container Header */}
       <div
         className="flex items-center justify-between px-3 py-2 border-b border-border/50 cursor-pointer select-none"
@@ -178,42 +174,24 @@ export function AssetContainer({
 
       {/* Account rows */}
       <div className="p-2 space-y-1">
-        {isPlaceholder && accounts.length === 0 ? (
-          <div className="flex items-center justify-between px-2 py-3">
-            <span className="text-xs text-muted-foreground/60 italic">Not configured in charter</span>
-            {onConfigurePlaceholder && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-5 px-2 text-[10px] text-muted-foreground"
-                onClick={onConfigurePlaceholder}
-              >
-                <Plus className="mr-0.5 h-2.5 w-2.5" /> Configure
-              </Button>
-            )}
-          </div>
-        ) : (
-          <>
-            {accounts.map((acc) => (
-              <AccountRow
-                key={acc.id}
-                acc={acc}
-                contactId={contactId}
-                webforms={webforms}
-                moveTargets={moveTargets}
-                onMoveAccount={onMoveAccount}
-                updateVisibilityScope={updateVisibilityScope}
-                updateCustodian={updateCustodian}
-                deleteAccount={deleteAccount}
-                onRefresh={onRefresh}
-              />
-            ))}
-          </>
-        )}
+        {accounts.map((acc) => (
+          <AccountRow
+            key={acc.id}
+            acc={acc}
+            contactId={contactId}
+            webforms={webforms}
+            moveTargets={moveTargets}
+            onMoveAccount={onMoveAccount}
+            updateVisibilityScope={updateVisibilityScope}
+            updateCustodian={updateCustodian}
+            deleteAccount={deleteAccount}
+            onRefresh={onRefresh}
+          />
+        ))}
 
         {/* Add form / button */}
         {showAddForm && addFormContent}
-        {!showAddForm && !isPlaceholder && onAddAccount && (
+        {!showAddForm && onAddAccount && (
           <Button
             variant="ghost"
             size="sm"

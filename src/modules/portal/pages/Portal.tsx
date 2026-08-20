@@ -707,7 +707,7 @@ const Portal = ({ intakeRoute = false }: { intakeRoute?: boolean }) => {
     );
     const familySharedTotal = sumValues(sharedVineyard) + sumValues(sharedStore)
       + sumValues(sharedTank)
-      + insuranceCashForStorehouses(sharedInsurance, sharedStore);
+      + insuranceCashForStorehouses(sharedInsurance);
 
     return (
       <div className="space-y-6">
@@ -759,7 +759,7 @@ const Portal = ({ intakeRoute = false }: { intakeRoute?: boolean }) => {
             );
             const hhTotal = sumValues(hhVineyard) + sumValues(hhStore)
               + sumValues(hhTank)
-              + insuranceCashForStorehouses(hhInsurance, hhStore);
+              + insuranceCashForStorehouses(hhInsurance);
 
             const hasSharedAssets = hhTotal > 0;
 
@@ -880,7 +880,7 @@ const Portal = ({ intakeRoute = false }: { intakeRoute?: boolean }) => {
                 const mInsurance = mInsuranceAll.filter((p: any) => allowedScopes.has(p.visibility_scope));
                 const mTotal = sumValues(mVineyardShared) + sumValues(mStoreShared)
                   + sumValues(mTankDedup)
-                  + insuranceCashForStorehouses(mInsurance, mStoreShared);
+                  + insuranceCashForStorehouses(mInsurance);
 
 
 

@@ -18,15 +18,11 @@ export const isAumStorehouse = (s: any) => s?.asset_type !== REAL_ESTATE;
 export const sumValues = (rows: any[]) =>
   (rows || []).reduce((s: number, r: any) => s + (Number(r?.current_value) || 0), 0);
 
-export const insuranceCashForStorehouses = (
-  policies: any[],
-  storehouses: any[]
-): number => {
-  const ids = new Set((storehouses || []).map((s: any) => s.id));
-  return (policies || [])
-    .filter((p: any) => p?.cash_value_storehouse_id && ids.has(p.cash_value_storehouse_id))
-    .reduce((s: number, p: any) => s + (Number(p.cash_value) || 0), 0);
-};
+// Cash value always belongs to Strategic Reserve, by policy — not linked to a specific
+// storehouse account row, so it can't be broken by deleting a manual account. `policies`
+// is expected to already be scoped (visibility/contact) by the caller.
+export const insuranceCashForStorehouses = (policies: any[]): number =>
+  (policies || []).reduce((s: number, p: any) => s + (Number(p.cash_value) || 0), 0);
 
 export const computeAum = (
   vineyard: any[],
@@ -39,6 +35,6 @@ export const computeAum = (
     sumValues(vineyard) +
     sumValues(store) +
     sumValues(holdingTank) +
-    insuranceCashForStorehouses(insurance, store)
+    insuranceCashForStorehouses(insurance)
   );
 };

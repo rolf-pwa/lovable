@@ -247,7 +247,7 @@ export function InsurancePanel({ scope, storehouses, onStorehousesChanged }: { s
                     <div>Coverage: <span className="text-foreground font-medium">{currency(p.coverage_amount)}</span></div>
                     <div>Cash Value: <span className="text-foreground font-medium">{currency(p.cash_value)}</span></div>
                     <div>Coverage → {shName(p.coverage_storehouse_id)}</div>
-                    <div>Cash → {shName(p.cash_value_storehouse_id)}</div>
+                    <div>Cash → Strategic Reserve</div>
                     {p.premium_amount ? (
                       <div>Premium: {currency(p.premium_amount)} {p.premium_frequency || ""}</div>
                     ) : null}
@@ -345,25 +345,7 @@ export function InsurancePanel({ scope, storehouses, onStorehousesChanged }: { s
                 </div>
                 <div>
                   <Label>Cash Value → Storehouse</Label>
-                  <Select
-                    value={editing.cash_value_storehouse_id || "none"}
-                    onValueChange={(v) => handleStorehouseSelect(v, "cash_value_storehouse_id")}
-                  >
-                    <SelectTrigger><SelectValue placeholder="Unassigned" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Unassigned</SelectItem>
-                      {storehouses.map((s) => (
-                        <SelectItem key={s.id} value={s.id}>
-                          {STOREHOUSE_NAMES[s.storehouse_number] || "Storehouse"} · {s.label}
-                        </SelectItem>
-                      ))}
-                      {missingCanonical.map((n) => (
-                        <SelectItem key={`create-${n}`} value={`create:${n}`}>
-                          + Create {STOREHOUSE_NAMES[n]}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Input value="Strategic Reserve" disabled className="text-muted-foreground" />
                 </div>
 
                 <div>

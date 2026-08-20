@@ -1079,11 +1079,12 @@ const ContactDetail = () => {
                 {/* Storehouse Containers */}
                 {[1, 2, 3, 4].map((num) => {
                   const accounts = storehouses.filter((s) => s.storehouse_number === num);
-                  const isPlaceholder = accounts.length === 0;
                   const storehouseName = STOREHOUSE_NAMES[num - 1];
                   const shIds = accounts.map((a) => a.id);
                   const coveragePolicies = insurancePolicies.filter((p) => shIds.includes(p.coverage_storehouse_id));
-                  const cashValuePolicies = insurancePolicies.filter((p) => shIds.includes(p.cash_value_storehouse_id));
+                  // Cash value always belongs to Strategic Reserve, by policy — not linked to a
+                  // specific account row, so it can't be broken by deleting a manual account.
+                  const cashValuePolicies = num === 2 ? insurancePolicies : [];
                   const otherTargets = [
                     { label: "The Vineyard", key: "vineyard" },
                     ...[1, 2, 3, 4]
@@ -1095,14 +1096,13 @@ const ContactDetail = () => {
                     <AssetContainer
                       title={storehouseName}
                       icon={
-                        <span className={`flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-bold ${isPlaceholder ? "bg-muted text-muted-foreground" : "bg-sanctuary-bronze/20 text-sanctuary-bronze"}`}>
+                        <span className="flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-bold bg-sanctuary-bronze/20 text-sanctuary-bronze">
                           {num}
                         </span>
                       }
                       containerKey={`storehouse-${num}`}
                       contactId={id!}
                       webforms={webforms}
-                      isPlaceholder={isPlaceholder}
                       accounts={accounts.map((sh) => ({
                         id: sh.id,
                         name: sh.asset_type || sh.label || "Account",
@@ -1161,19 +1161,6 @@ const ContactDetail = () => {
                           fetchData();
                         }
                       }}
-                      onConfigurePlaceholder={async () => {
-                        const { error } = await supabase.from("storehouses").insert({
-                          contact_id: id,
-                          storehouse_number: num,
-                          label: storehouseName,
-                        } as any);
-                        if (error) {
-                          toast.error("Failed to create storehouse.");
-                        } else {
-                          toast.success("Storehouse created.");
-                          fetchData();
-                        }
-                      }}
                     />
                     </div>
                   );
@@ -1192,9 +1179,8 @@ const ContactDetail = () => {
             {(() => {
               const totalVineyard = vineyardAccounts.reduce((s, a) => s + (Number(a.current_value) || 0), 0);
               const nonRealEstateStorehouses = storehouses.filter((s: any) => s.asset_type !== 'Primary Residence & Protected Legacy Accounts');
-              const storehouseIds = new Set(nonRealEstateStorehouses.map((s: any) => s.id));
+              // Cash value always belongs to Strategic Reserve, by policy.
               const insuranceCashInStorehouses = insurancePolicies
-                .filter((p: any) => p.cash_value_storehouse_id && storehouseIds.has(p.cash_value_storehouse_id))
                 .reduce((sum: number, p: any) => sum + (Number(p.cash_value) || 0), 0);
               const totalStorehouses = nonRealEstateStorehouses.reduce((s, a) => s + (Number(a.current_value) || 0), 0) + insuranceCashInStorehouses;
               const totalHoldingTank = holdingTankAccounts.reduce((s, a) => s + (Number(a.current_value) || 0), 0);
@@ -1241,9 +1227,9 @@ const ContactDetail = () => {
                         const shTotal = shForNum
                           .filter((s: any) => isLegacy || s.asset_type !== 'Primary Residence & Protected Legacy Accounts')
                           .reduce((sum: number, s: any) => sum + (Number(s.current_value) || 0), 0);
-                        const cashTotal = insurancePolicies
-                          .filter((p: any) => p.cash_value_storehouse_id && shIds.has(p.cash_value_storehouse_id))
-                          .reduce((sum: number, p: any) => sum + (Number(p.cash_value) || 0), 0);
+                        const cashTotal = num === 2
+                          ? insurancePolicies.reduce((sum: number, p: any) => sum + (Number(p.cash_value) || 0), 0)
+                          : 0;
                         const coverageTotal = isLegacy
                           ? insurancePolicies
                               .filter((p: any) => p.coverage_storehouse_id && shIds.has(p.coverage_storehouse_id))
