@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
+import { Card, CardContent } from "@/shared/components/ui/card";
 import { Badge } from "@/shared/components/ui/badge";
 import { Shield, ChevronDown, ChevronRight } from "lucide-react";
 import { policyTypeLabel } from "@/shared/lib/insurance";
@@ -31,36 +31,32 @@ export function PortalInsurance({ policies, defaultCollapsed = false }: PortalIn
   const totalCoverage = policies.reduce((sum, p) => sum + (p.coverage_amount || 0), 0);
 
   return (
-    <Card className="border-accent/20">
-      <CardHeader
-        className="pb-2 cursor-pointer select-none"
+    <Card className="border-accent/20 bg-gradient-to-b from-accent/5 to-transparent">
+      <CardContent
+        className="p-5 space-y-2 cursor-pointer select-none"
         onClick={() => setOpen((o) => !o)}
       >
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent/10">
-            <Shield className="h-5 w-5 text-accent" />
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Shield className="h-4 w-4 text-accent" />
+            <h3 className="text-[10px] uppercase tracking-wider text-muted-foreground">The Shield</h3>
           </div>
-          <div>
-            <CardTitle className="text-lg font-serif">The Shield</CardTitle>
-            <p className="text-xs text-muted-foreground">Asset Protection</p>
-          </div>
-          <div className="ml-auto flex items-center gap-3">
-            <div className="text-right">
-              <p className="text-xl font-bold text-accent">{formatCurrency(totalCoverage)}</p>
-              <Badge variant="secondary" className="text-[10px]">
-                {policies.length} polic{policies.length !== 1 ? "ies" : "y"}
-              </Badge>
-            </div>
-            {open ? (
-              <ChevronDown className="h-4 w-4 text-muted-foreground" />
-            ) : (
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
-            )}
-          </div>
+          {open ? (
+            <ChevronDown className="h-4 w-4 text-muted-foreground" />
+          ) : (
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          )}
         </div>
-      </CardHeader>
+        <p className="font-serif text-2xl text-accent">{formatCurrency(totalCoverage)}</p>
+        <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-2 border-t border-accent/10">
+          <span>Asset Protection</span>
+          <Badge variant="secondary" className="text-[10px]">
+            {policies.length} polic{policies.length !== 1 ? "ies" : "y"}
+          </Badge>
+        </div>
+      </CardContent>
       {open && (
-        <CardContent className="space-y-2">
+        <CardContent className="px-5 pb-5 pt-0 space-y-2">
           {policies.map((p) => (
             <div key={p.id} className="rounded-md border border-border bg-muted/30 px-3 py-2">
               <div className="flex items-center justify-between">
