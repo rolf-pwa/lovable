@@ -1,8 +1,12 @@
 // Pro Portal Asana task bridge. Reads/creates/comments/completes tasks in the
-// family's Asana project, filtered to a pro by a naming convention:
-//   Task or subtask names/notes that contain "[Pro: <full_name>]"
+// family's Asana project, filtered to a pro by either of two mechanisms:
+//   1. Task or subtask names/notes that contain "[Pro: <full_name>]" — set
+//      automatically on tasks the pro creates themselves via the portal.
+//   2. A task_collaborators row tagging this professional_id — set by staff
+//      from the CRM (ContactTaskList's "Tag a Professional" picker), the
+//      same mechanism already used to tag household members on a task.
 // New tasks created via the portal are auto-prefixed with the pro's marker so
-// they surface here on next load.
+// they surface here on next load; staff-created tasks surface via tagging.
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { validateProSession } from "../_shared/pro-portal-auth.ts";
@@ -135,6 +139,16 @@ serve(async (req) => {
       const scopeType = body.scope_type as "family" | "household" | "contact" | "portfolio";
       const scopeId = body.scope_id as string;
 
+      // Tasks staff explicitly tagged this pro on (task_collaborators), same
+      // mechanism as household-member tagging — these surface regardless of
+      // the [Pro: ...] marker or which section they're filed under, since
+      // they're an explicit staff decision rather than a heuristic.
+      const { data: taggedRows } = await supabase
+        .from("task_collaborators")
+        .select("task_gid")
+        .eq("professional_id", session.professional_id);
+      const taggedGids = new Set((taggedRows || []).map((r: any) => r.task_gid));
+
       // Portfolio: aggregate across every project the pro has an engagement in.
       if (scopeType === "portfolio") {
         const { data: engagements } = await supabase
@@ -154,7 +168,7 @@ serve(async (req) => {
               `/tasks?project=${pg}&opt_fields=name,notes,completed,due_on,memberships.section.name,num_subtasks,created_at,modified_at&limit=100`,
             );
             for (const t of r.data || []) {
-              if (matchesPro(t.name, marker) || matchesPro(t.notes, marker)) {
+              if (matchesPro(t.name, marker) || matchesPro(t.notes, marker) || taggedGids.has(t.gid)) {
                 allTasks.push({
                   gid: t.gid,
                   name: (t.name || "").replace(marker, "").trim() || t.name,
@@ -191,8 +205,9 @@ serve(async (req) => {
         `/tasks?project=${projectGid}&opt_fields=name,notes,completed,due_on,memberships.section.name,num_subtasks,created_at,modified_at&limit=100`,
       );
       const tasks = (result.data || [])
-        .filter((t: any) => matchesPro(t.name, marker) || matchesPro(t.notes, marker))
+        .filter((t: any) => matchesPro(t.name, marker) || matchesPro(t.notes, marker) || taggedGids.has(t.gid))
         .filter((t: any) => {
+          if (taggedGids.has(t.gid)) return true; // explicit staff tag bypasses the section heuristic
           if (scopeType !== "household" || !sectionHint) return true;
           return (t.memberships || []).some((m: any) => m.section?.name?.toLowerCase().includes(sectionHint.toLowerCase()));
         })
