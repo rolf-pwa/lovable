@@ -114,28 +114,31 @@ function DashboardCard({
   }`;
 
   if (layout === "row") {
+    // Same look as the Family/Household financial cards (FinancialSummaryCard
+    // below) — icon + label on top, big serif value, caption as a footer —
+    // so the individual page's Financials tab matches those pages exactly.
     return (
-      <Card className={cardClassName} onClick={onClick}>
-        <CardHeader className="pb-2">
-          <div className="flex items-center gap-3">
-            <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${muted ? "bg-muted" : bgClass}`}>
-              <Icon className={`h-5 w-5 ${muted ? "text-muted-foreground" : colorClass}`} />
+      <Card
+        className={`cursor-pointer transition-colors ${
+          muted
+            ? "border-dashed border-accent/15 bg-card/50 hover:border-accent/30"
+            : "border-accent/20 bg-gradient-to-b from-accent/5 to-transparent hover:border-accent/40"
+        }`}
+        onClick={onClick}
+      >
+        <CardContent className="p-5 space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Icon className={`h-4 w-4 ${muted ? "text-muted-foreground" : colorClass}`} />
+              <h3 className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</h3>
             </div>
-            <div>
-              <CardTitle className="text-lg font-serif">{label}</CardTitle>
-              <p className="text-xs text-muted-foreground">{caption}</p>
-            </div>
-            <div className="ml-auto flex items-center gap-3">
-              <div className="text-right">
-                <p className={`${valueSize === "lg" ? "text-xl" : "text-base"} font-bold ${muted ? "text-muted-foreground" : colorClass}`}>
-                  {value}
-                </p>
-                {valueCaption && <p className="text-xs text-muted-foreground">{valueCaption}</p>}
-              </div>
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
-            </div>
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
           </div>
-        </CardHeader>
+          <p className={`font-serif text-2xl ${muted ? "text-muted-foreground" : colorClass}`}>{value}</p>
+          {caption && (
+            <p className="text-[11px] text-muted-foreground leading-relaxed pt-2 border-t border-accent/10">{caption}</p>
+          )}
+        </CardContent>
       </Card>
     );
   }
@@ -161,6 +164,37 @@ function DashboardCard({
           </p>
           {valueCaption && <p className="text-[11px] text-muted-foreground shrink-0">{valueCaption}</p>}
         </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// Same visual treatment as the original "Family AUM" aside card, reused for
+// every Holding Tank/Vineyard/Storehouse breakout card on the Family and
+// Household pages so they read as one consistent family — non-interactive
+// (no onClick), unlike DashboardCard's clickable individual-page cards.
+function FinancialSummaryCard({
+  icon: Icon,
+  label,
+  value,
+  caption,
+}: {
+  icon: typeof Anchor;
+  label: string;
+  value: string;
+  caption?: string;
+}) {
+  return (
+    <Card className="border-accent/20 bg-gradient-to-b from-accent/5 to-transparent">
+      <CardContent className="p-5 space-y-2">
+        <div className="flex items-center gap-2">
+          <Icon className="h-4 w-4 text-accent" />
+          <h3 className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</h3>
+        </div>
+        <p className="font-serif text-2xl text-accent">{value}</p>
+        {caption && (
+          <p className="text-[11px] text-muted-foreground leading-relaxed pt-2 border-t border-accent/10">{caption}</p>
+        )}
       </CardContent>
     </Card>
   );
@@ -611,13 +645,21 @@ const VfoPortal = () => {
             </CardContent>
           </Card>
 
+          {/* Family-shared totals, broken out by category — same three
+              numbers that sum to familySharedTotal (the header's Total
+              Family AUM figure), so nothing here can drift from the header. */}
+          <div className="grid gap-3 sm:grid-cols-3">
+            <FinancialSummaryCard icon={Anchor} label="Holding Tank" value={fmt(sumValues(familySharedTank))} />
+            <FinancialSummaryCard icon={Grape} label="Vineyard" value={fmt(sumValues(familySharedVineyard))} />
+            <FinancialSummaryCard icon={Landmark} label="Storehouses" value={fmt(sumValues(familySharedStore) + insuranceCashForStorehouses(familySharedIns))} />
+          </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
             {households.map((hh: any) => {
               const members = hh.members || [];
               // Family view — every household card, including the viewer's own,
               // shows only family_shared assets so its total is a component of
-              // the Family AUM total in the aside, and no private/household-only
+              // the Family AUM total shown above, and no private/household-only
               // asset is exposed at the family level.
               const hhV = members.flatMap((m: any) =>
                 (m.vineyard_accounts || []).filter((a: any) => a.visibility_scope === "family_shared")
@@ -653,9 +695,11 @@ const VfoPortal = () => {
                       <Users className="h-3.5 w-3.5" />
                       {(hh.members || []).length} member{(hh.members || []).length !== 1 ? "s" : ""}
                     </span>
-                    <span className="font-serif text-foreground">
-                      {fmt(hhTotal)}
-                    </span>
+                    {hhTotal > 0 ? (
+                      <span className="font-serif text-foreground">{fmt(hhTotal)}</span>
+                    ) : (
+                      <span className="text-xs text-muted-foreground italic">Private</span>
+                    )}
                   </div>
 
                   <div className="mt-3 flex flex-wrap gap-1">
@@ -677,22 +721,6 @@ const VfoPortal = () => {
         </div>
 
         <aside className="space-y-4">
-          {/* Reuses the same family_shared-only total computed at the top
-              level for the header — one computation, not two. */}
-          <Card className="border-accent/20 bg-gradient-to-b from-accent/5 to-transparent">
-            <CardContent className="p-5 space-y-2">
-              <div className="flex items-center gap-2">
-                <Crown className="h-4 w-4 text-accent" />
-                <h3 className="text-[10px] uppercase tracking-wider text-muted-foreground">Family AUM</h3>
-              </div>
-              <p className="font-serif text-2xl text-accent">{fmt(familySharedTotal)}</p>
-              <p className="text-[11px] text-muted-foreground leading-relaxed pt-2 border-t border-accent/10">
-                Aggregate across {households.length} household{households.length !== 1 ? "s" : ""}. Individual account details remain private to each household.
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* Account details hidden in Family view — only AUM total shown above. */}
           {renderConciergeCard()}
 
           <PortalYourTeam professionals={professionals} engagements={engagements} />
@@ -747,6 +775,16 @@ const VfoPortal = () => {
               </div>
             </CardContent>
           </Card>
+
+          {/* Same three categories as the Family page, scoped to this
+              household (household_shared + family_shared for your own
+              household; family_shared only when a HoF is viewing a
+              sibling household). */}
+          <div className="grid gap-3 sm:grid-cols-3">
+            <FinancialSummaryCard icon={Anchor} label="Holding Tank" value={fmt(sumValues(visibleHouseholdTank))} />
+            <FinancialSummaryCard icon={Grape} label="Vineyard" value={fmt(sumValues(hhAssets.vineyard))} />
+            <FinancialSummaryCard icon={Landmark} label="Storehouses" value={fmt(sumValues(hhAssets.storehouses) + insuranceCashForStorehouses(visibleInsurance))} />
+          </div>
 
           <div className="grid gap-3">
             {orderedMembers.map((m: any) => {
@@ -859,24 +897,6 @@ const VfoPortal = () => {
         </div>
 
         <aside className="space-y-4">
-          {visibleHouseholdTank.length > 0 && <PortalHoldingTank accounts={visibleHouseholdTank} defaultCollapsed />}
-          <PortalTerritory
-            vineyardAccounts={hhAssets.vineyard}
-            storehouses={hhAssets.storehouses}
-            insurancePolicies={visibleInsurance}
-            contact={contact}
-            family={family}
-            household={currentHousehold || household}
-            householdMembers={[]}
-            scopeLabel={viewingOwnHousehold ? "Household Shared" : "Family-Shared"}
-            portalToken={portalToken}
-            onScopeChange={refreshData}
-            corporations={viewingOwnHousehold ? corporations : []}
-            defaultCollapsed
-          />
-          {visibleInsurance.length > 0 && (
-            <PortalInsurance policies={visibleInsurance} defaultCollapsed />
-          )}
           {renderConciergeCard()}
 
           <PortalYourTeam professionals={professionals} engagements={engagements} />
@@ -1082,7 +1102,6 @@ const VfoPortal = () => {
                         label="Holding Tank"
                         caption="Awaiting Ratification"
                         value={fmt(holdingTankTotal)}
-                        valueCaption="Total Value"
                         layout="row"
                         onClick={() => setFinancialsFocus("holding_tank")}
                       />
@@ -1092,7 +1111,6 @@ const VfoPortal = () => {
                       label="Vineyard"
                       caption="Total Asset Portfolio"
                       value={hasVineyard ? fmt(vineyardTotal) : "No accounts yet"}
-                      valueCaption={hasVineyard ? "Total Value" : undefined}
                       colorClass="text-primary"
                       bgClass="bg-primary/10"
                       muted={!hasVineyard}
@@ -1104,7 +1122,6 @@ const VfoPortal = () => {
                       label="Storehouses"
                       caption="Strategic Allocation"
                       value={hasStorehouses ? fmt(storehousesTotal) : "No accounts yet"}
-                      valueCaption={hasStorehouses ? "Total Value" : undefined}
                       muted={!hasStorehouses}
                       layout="row"
                       onClick={() => setFinancialsFocus("storehouses")}
