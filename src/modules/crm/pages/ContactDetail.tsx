@@ -11,11 +11,13 @@ import { Textarea } from "@/shared/components/ui/textarea";
 import { Progress } from "@/shared/components/ui/progress";
 import { Switch } from "@/shared/components/ui/switch";
 import { Label } from "@/shared/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/shared/components/ui/dialog";
 import {
   ArrowLeft, Bell, BellOff, Trash2, Clock, AlertCircle, Shield,
   ExternalLink, Bot, Grape, FileUp, Loader2, Building2, Users, Plus, X,
   Folder, FolderOpen, CheckSquare, ShieldCheck, Landmark, ChevronDown, ChevronRight, ListChecks,
-  Mail, Phone, MapPin, Home, Calendar, Pencil, Eye, Merge, Link2, BarChart3, Anchor
+  Mail, Phone, MapPin, Home, Calendar, Pencil, Eye, Merge, Link2, BarChart3, Anchor,
+  ArrowRight, ChevronLeft
 } from "lucide-react";
 import { ContactAnalytics } from "@/modules/crm/components/ContactAnalytics";
 import {
@@ -64,6 +66,7 @@ import { SovereigntyCharterButton } from "@/modules/audit";
 import { GenerateCharterDraftButton } from "@/modules/audit";
 import { VaultView } from "@/modules/crm/pages/Vault";
 import { dialViaQuo } from "@/shared/lib/quo-dial";
+import { MEETING_BOOKING_LINKS } from "@/shared/lib/meetingBookingLinks";
 import { 
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, 
@@ -205,6 +208,8 @@ const ContactDetail = () => {
   const [viewPortalLoading, setViewPortalLoading] = useState(false);
   const [copyLoading, setCopyLoading] = useState(false);
   const [mergeOpen, setMergeOpen] = useState(false);
+  const [bookMeetingOpen, setBookMeetingOpen] = useState(false);
+  const [embeddedBooking, setEmbeddedBooking] = useState<{ label: string; embedUrl: string } | null>(null);
 
   // Guard against setState after unmount when fetchData is triggered by
   // mutation callbacks or route changes racing with async Supabase queries.
@@ -632,6 +637,9 @@ const ContactDetail = () => {
                         <Phone className="mr-2 h-4 w-4" /> Call via Quo
                       </DropdownMenuItem>
                     )}
+                    <DropdownMenuItem onSelect={() => { setEmbeddedBooking(null); setBookMeetingOpen(true); }}>
+                      <Calendar className="mr-2 h-4 w-4" /> Book a Meeting
+                    </DropdownMenuItem>
                     <DropdownMenuItem onSelect={handleCopyPortalLink} disabled={copyLoading}>
                       {copyLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Link2 className="mr-2 h-4 w-4" />}
                       Copy Portal Link
@@ -699,6 +707,53 @@ const ContactDetail = () => {
           open={mergeOpen}
           onOpenChange={setMergeOpen}
         />
+
+        <Dialog
+          open={bookMeetingOpen}
+          onOpenChange={(open) => {
+            setBookMeetingOpen(open);
+            if (!open) setEmbeddedBooking(null);
+          }}
+        >
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Book a Meeting</DialogTitle>
+            </DialogHeader>
+            {embeddedBooking ? (
+              <div className="space-y-3">
+                <button
+                  onClick={() => setEmbeddedBooking(null)}
+                  className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-accent transition-colors"
+                >
+                  <ChevronLeft className="h-3.5 w-3.5" />
+                  Back to meeting types
+                </button>
+                <div className="rounded-lg border border-border overflow-hidden bg-card">
+                  <iframe
+                    src={embeddedBooking.embedUrl}
+                    style={{ border: 0 }}
+                    width="100%"
+                    height={650}
+                    title={embeddedBooking.label}
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                {MEETING_BOOKING_LINKS.map((link) => (
+                  <button
+                    key={link.url}
+                    onClick={() => setEmbeddedBooking(link)}
+                    className="w-full flex items-center justify-between rounded-md border border-border bg-card px-3 py-2.5 text-sm text-foreground hover:border-accent/40 hover:bg-accent/[0.03] transition-colors text-left"
+                  >
+                    {link.label}
+                    <ArrowRight className="h-4 w-4 text-accent" />
+                  </button>
+                ))}
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
 
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Main Content */}

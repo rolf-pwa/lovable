@@ -25,6 +25,7 @@ import { PortalGeorgiaChat } from "@/modules/portal/components/PortalGeorgiaChat
 import { PortalYourTeam } from "@/modules/portal/components/PortalYourTeam";
 import { PortalProfessionals } from "@/modules/portal/components/PortalProfessionals";
 import { insuranceCashForStorehouses, sumValues, isAumStorehouse, formatCurrency } from "@/modules/portal/lib/portalAum";
+import { MEETING_BOOKING_LINKS } from "@/shared/lib/meetingBookingLinks";
 import { PortalDynamicLinks } from "@/modules/portal/components/PortalDynamicLinks";
 import { PortalShoeboxUpload } from "@/modules/portal/components/PortalShoeboxUpload";
 import prosperwiseLogo from "@/assets/prosperwise-logo.png";
@@ -53,24 +54,6 @@ const fmt = (n: number) => formatCurrency(n || 0);
 // iframe. Verified live for the Admin Meeting and Quarterly Review (In
 // Person) schedules; the Video schedule follows the same URL pattern but
 // wasn't individually tested.
-const MEETING_BOOKING_LINKS = [
-  {
-    label: "Admin Meeting",
-    url: "https://calendar.app.google/eG6iJbayFnQ11fNY7",
-    embedUrl: "https://calendar.google.com/calendar/appointments/schedules/AcZssZ0K1gDPij7zWsSyPEwiG9BZ4VrKk3kzKC8p_O3TJcJHvJmmb7cj51h-AqOyeDWBEorIXbjeK0oa?gv=true",
-  },
-  {
-    label: "Quarterly Review (In Person)",
-    url: "https://calendar.app.google/atvjMpeCKyDfkvgUA",
-    embedUrl: "https://calendar.google.com/calendar/appointments/schedules/AcZssZ0cTZuvx-sJC7-U2dieS9IzrpSkJvICdJF8xp1aNAfnsiWZORWJl85cJiNFlblO8alWCbqNrvMj?gv=true",
-  },
-  {
-    label: "Quarterly Review (Video)",
-    url: "https://calendar.app.google/KpBjsrne5w7dFm22A",
-    embedUrl: "https://calendar.google.com/calendar/appointments/schedules/AcZssZ0szGL8FEh0_NKc2p1nlspTMjB04I_FbY6kT79edq_rODjTDWiD7SI107MiFJcZIamJXyY4QmTR?gv=true",
-  },
-];
-
 // Matches the sidebar card style used everywhere else in the VFO
 // (PortalTerritory's "The Vineyard"/"The Storehouses", PortalInsurance's
 // "The Shield") — icon box, title + caption, big value + optional value
