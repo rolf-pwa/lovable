@@ -166,6 +166,37 @@ function DashboardCard({
   );
 }
 
+// Same visual treatment as the original "Family AUM" aside card, reused for
+// every Holding Tank/Vineyard/Storehouse breakout card on the Family and
+// Household pages so they read as one consistent family — non-interactive
+// (no onClick), unlike DashboardCard's clickable individual-page cards.
+function FinancialSummaryCard({
+  icon: Icon,
+  label,
+  value,
+  caption,
+}: {
+  icon: typeof Anchor;
+  label: string;
+  value: string;
+  caption?: string;
+}) {
+  return (
+    <Card className="border-accent/20 bg-gradient-to-b from-accent/5 to-transparent">
+      <CardContent className="p-5 space-y-2">
+        <div className="flex items-center gap-2">
+          <Icon className="h-4 w-4 text-accent" />
+          <h3 className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</h3>
+        </div>
+        <p className="font-serif text-2xl text-accent">{value}</p>
+        {caption && (
+          <p className="text-[11px] text-muted-foreground leading-relaxed pt-2 border-t border-accent/10">{caption}</p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 const VfoPortal = () => {
   const { token } = useParams<{ token: string }>();
   const [data, setData] = useState<any | null>(null);
@@ -611,13 +642,21 @@ const VfoPortal = () => {
             </CardContent>
           </Card>
 
+          {/* Family-shared totals, broken out by category — same three
+              numbers that sum to familySharedTotal (the header's Total
+              Family AUM figure), so nothing here can drift from the header. */}
+          <div className="grid gap-3 sm:grid-cols-3">
+            <FinancialSummaryCard icon={Anchor} label="Holding Tank" value={fmt(sumValues(familySharedTank))} />
+            <FinancialSummaryCard icon={Grape} label="Vineyard" value={fmt(sumValues(familySharedVineyard))} />
+            <FinancialSummaryCard icon={Landmark} label="Storehouses" value={fmt(sumValues(familySharedStore) + insuranceCashForStorehouses(familySharedIns))} />
+          </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
             {households.map((hh: any) => {
               const members = hh.members || [];
               // Family view — every household card, including the viewer's own,
               // shows only family_shared assets so its total is a component of
-              // the Family AUM total in the aside, and no private/household-only
+              // the Family AUM total shown above, and no private/household-only
               // asset is exposed at the family level.
               const hhV = members.flatMap((m: any) =>
                 (m.vineyard_accounts || []).filter((a: any) => a.visibility_scope === "family_shared")
@@ -677,22 +716,6 @@ const VfoPortal = () => {
         </div>
 
         <aside className="space-y-4">
-          {/* Reuses the same family_shared-only total computed at the top
-              level for the header — one computation, not two. */}
-          <Card className="border-accent/20 bg-gradient-to-b from-accent/5 to-transparent">
-            <CardContent className="p-5 space-y-2">
-              <div className="flex items-center gap-2">
-                <Crown className="h-4 w-4 text-accent" />
-                <h3 className="text-[10px] uppercase tracking-wider text-muted-foreground">Family AUM</h3>
-              </div>
-              <p className="font-serif text-2xl text-accent">{fmt(familySharedTotal)}</p>
-              <p className="text-[11px] text-muted-foreground leading-relaxed pt-2 border-t border-accent/10">
-                Aggregate across {households.length} household{households.length !== 1 ? "s" : ""}. Individual account details remain private to each household.
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* Account details hidden in Family view — only AUM total shown above. */}
           {renderConciergeCard()}
 
           <PortalYourTeam professionals={professionals} engagements={engagements} />
@@ -747,6 +770,16 @@ const VfoPortal = () => {
               </div>
             </CardContent>
           </Card>
+
+          {/* Same three categories as the Family page, scoped to this
+              household (household_shared + family_shared for your own
+              household; family_shared only when a HoF is viewing a
+              sibling household). */}
+          <div className="grid gap-3 sm:grid-cols-3">
+            <FinancialSummaryCard icon={Anchor} label="Holding Tank" value={fmt(sumValues(visibleHouseholdTank))} />
+            <FinancialSummaryCard icon={Grape} label="Vineyard" value={fmt(sumValues(hhAssets.vineyard))} />
+            <FinancialSummaryCard icon={Landmark} label="Storehouses" value={fmt(sumValues(hhAssets.storehouses) + insuranceCashForStorehouses(visibleInsurance))} />
+          </div>
 
           <div className="grid gap-3">
             {orderedMembers.map((m: any) => {
@@ -859,24 +892,6 @@ const VfoPortal = () => {
         </div>
 
         <aside className="space-y-4">
-          {visibleHouseholdTank.length > 0 && <PortalHoldingTank accounts={visibleHouseholdTank} defaultCollapsed />}
-          <PortalTerritory
-            vineyardAccounts={hhAssets.vineyard}
-            storehouses={hhAssets.storehouses}
-            insurancePolicies={visibleInsurance}
-            contact={contact}
-            family={family}
-            household={currentHousehold || household}
-            householdMembers={[]}
-            scopeLabel={viewingOwnHousehold ? "Household Shared" : "Family-Shared"}
-            portalToken={portalToken}
-            onScopeChange={refreshData}
-            corporations={viewingOwnHousehold ? corporations : []}
-            defaultCollapsed
-          />
-          {visibleInsurance.length > 0 && (
-            <PortalInsurance policies={visibleInsurance} defaultCollapsed />
-          )}
           {renderConciergeCard()}
 
           <PortalYourTeam professionals={professionals} engagements={engagements} />
