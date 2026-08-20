@@ -998,7 +998,7 @@ const VfoPortal = () => {
                     label="Holding Tank"
                     caption="Awaiting Ratification"
                     value={fmt(holdingTankTotal)}
-                    valueCaption="Total Value"
+                    layout="row"
                     onClick={() => { setFinancialsFocus("holding_tank"); setTab("financials"); }}
                   />
                 )}
@@ -1007,10 +1007,10 @@ const VfoPortal = () => {
                   label="Vineyard"
                   caption="Total Asset Portfolio"
                   value={hasVineyard ? fmt(vineyardTotal) : "No accounts yet"}
-                  valueCaption={hasVineyard ? "Total Value" : undefined}
                   colorClass="text-primary"
                   bgClass="bg-primary/10"
                   muted={!hasVineyard}
+                  layout="row"
                   onClick={() => { setFinancialsFocus("vineyard"); setTab("financials"); }}
                 />
                 <DashboardCard
@@ -1018,8 +1018,8 @@ const VfoPortal = () => {
                   label="Storehouses"
                   caption="Strategic Allocation"
                   value={hasStorehouses ? fmt(storehousesTotal) : "No accounts yet"}
-                  valueCaption={hasStorehouses ? "Total Value" : undefined}
                   muted={!hasStorehouses}
+                  layout="row"
                   onClick={() => { setFinancialsFocus("storehouses"); setTab("financials"); }}
                 />
               </div>
