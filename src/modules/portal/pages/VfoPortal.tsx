@@ -114,28 +114,31 @@ function DashboardCard({
   }`;
 
   if (layout === "row") {
+    // Same look as the Family/Household financial cards (FinancialSummaryCard
+    // below) — icon + label on top, big serif value, caption as a footer —
+    // so the individual page's Financials tab matches those pages exactly.
     return (
-      <Card className={cardClassName} onClick={onClick}>
-        <CardHeader className="pb-2">
-          <div className="flex items-center gap-3">
-            <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${muted ? "bg-muted" : bgClass}`}>
-              <Icon className={`h-5 w-5 ${muted ? "text-muted-foreground" : colorClass}`} />
+      <Card
+        className={`cursor-pointer transition-colors ${
+          muted
+            ? "border-dashed border-accent/15 bg-card/50 hover:border-accent/30"
+            : "border-accent/20 bg-gradient-to-b from-accent/5 to-transparent hover:border-accent/40"
+        }`}
+        onClick={onClick}
+      >
+        <CardContent className="p-5 space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Icon className={`h-4 w-4 ${muted ? "text-muted-foreground" : colorClass}`} />
+              <h3 className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</h3>
             </div>
-            <div>
-              <CardTitle className="text-lg font-serif">{label}</CardTitle>
-              <p className="text-xs text-muted-foreground">{caption}</p>
-            </div>
-            <div className="ml-auto flex items-center gap-3">
-              <div className="text-right">
-                <p className={`${valueSize === "lg" ? "text-xl" : "text-base"} font-bold ${muted ? "text-muted-foreground" : colorClass}`}>
-                  {value}
-                </p>
-                {valueCaption && <p className="text-xs text-muted-foreground">{valueCaption}</p>}
-              </div>
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
-            </div>
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
           </div>
-        </CardHeader>
+          <p className={`font-serif text-2xl ${muted ? "text-muted-foreground" : colorClass}`}>{value}</p>
+          {caption && (
+            <p className="text-[11px] text-muted-foreground leading-relaxed pt-2 border-t border-accent/10">{caption}</p>
+          )}
+        </CardContent>
       </Card>
     );
   }
@@ -692,9 +695,11 @@ const VfoPortal = () => {
                       <Users className="h-3.5 w-3.5" />
                       {(hh.members || []).length} member{(hh.members || []).length !== 1 ? "s" : ""}
                     </span>
-                    <span className="font-serif text-foreground">
-                      {fmt(hhTotal)}
-                    </span>
+                    {hhTotal > 0 ? (
+                      <span className="font-serif text-foreground">{fmt(hhTotal)}</span>
+                    ) : (
+                      <span className="text-xs text-muted-foreground italic">Private</span>
+                    )}
                   </div>
 
                   <div className="mt-3 flex flex-wrap gap-1">
@@ -1097,7 +1102,6 @@ const VfoPortal = () => {
                         label="Holding Tank"
                         caption="Awaiting Ratification"
                         value={fmt(holdingTankTotal)}
-                        valueCaption="Total Value"
                         layout="row"
                         onClick={() => setFinancialsFocus("holding_tank")}
                       />
@@ -1107,7 +1111,6 @@ const VfoPortal = () => {
                       label="Vineyard"
                       caption="Total Asset Portfolio"
                       value={hasVineyard ? fmt(vineyardTotal) : "No accounts yet"}
-                      valueCaption={hasVineyard ? "Total Value" : undefined}
                       colorClass="text-primary"
                       bgClass="bg-primary/10"
                       muted={!hasVineyard}
@@ -1119,7 +1122,6 @@ const VfoPortal = () => {
                       label="Storehouses"
                       caption="Strategic Allocation"
                       value={hasStorehouses ? fmt(storehousesTotal) : "No accounts yet"}
-                      valueCaption={hasStorehouses ? "Total Value" : undefined}
                       muted={!hasStorehouses}
                       layout="row"
                       onClick={() => setFinancialsFocus("storehouses")}
