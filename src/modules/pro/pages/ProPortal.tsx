@@ -75,72 +75,46 @@ export default function ProPortal() {
       ) : (
         <div className="grid lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-5">
+            <ProTasksPanel scopeType="portfolio" title="All Active Tasks" />
+          </div>
+
+          <aside className="space-y-5">
             <div className="flex items-baseline justify-between mb-1">
               <h2 className="font-serif text-lg text-foreground">Families You Serve</h2>
               <span className="text-xs text-muted-foreground uppercase tracking-wider">
-                {families.length} {families.length === 1 ? "family" : "families"}
+                {families.length}
               </span>
             </div>
-            <div className="grid md:grid-cols-2 gap-5">
+            <div className="space-y-3">
               {families.map((fam) => {
                 const contactCount = fam.loose_contacts.length + fam.households.reduce((a, h) => a + h.contacts.length, 0);
                 return (
                   <button
                     key={fam.id}
                     onClick={() => navigate(`/pro-portal/family/${fam.id}`)}
-                    className="text-left group"
+                    className="text-left group w-full"
                   >
-                    <Card className="border-accent/20 hover:border-accent/40 transition-colors overflow-hidden h-full">
-                      <div className="px-5 py-4 flex items-center gap-3 border-b border-border/60">
-                        <div className="h-11 w-11 rounded-lg bg-accent/10 flex items-center justify-center shrink-0">
-                          <Crown className="h-5 w-5 text-accent" />
+                    <Card className="border-accent/20 hover:border-accent/40 transition-colors overflow-hidden">
+                      <div className="px-4 py-3 flex items-center gap-3">
+                        <div className="h-9 w-9 rounded-lg bg-accent/10 flex items-center justify-center shrink-0">
+                          <Crown className="h-4 w-4 text-accent" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="font-serif text-lg text-foreground truncate group-hover:text-accent transition-colors">
+                          <div className="font-serif text-sm text-foreground truncate group-hover:text-accent transition-colors">
                             {fam.name}
                           </div>
-                          <div className="text-[11px] uppercase tracking-wider text-muted-foreground mt-0.5">
-                            Enter workspace
+                          <div className="text-[11px] text-muted-foreground mt-0.5 flex items-center gap-1">
+                            <Users className="h-3 w-3 shrink-0" />
+                            {fam.households.length} household{fam.households.length !== 1 ? "s" : ""} · {contactCount} contact{contactCount !== 1 ? "s" : ""}
                           </div>
                         </div>
-                        <ArrowRight className="h-4 w-4 text-accent opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <ArrowRight className="h-4 w-4 text-accent opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
                       </div>
-                      <CardContent className="p-0">
-                        <div className="grid grid-cols-2 divide-x divide-border/60 border-b border-border/60">
-                          <div className="px-5 py-3">
-                            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Households</div>
-                            <div className="font-serif text-xl text-foreground">{fam.households.length}</div>
-                          </div>
-                          <div className="px-5 py-3">
-                            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Contacts</div>
-                            <div className="font-serif text-xl text-foreground">{contactCount}</div>
-                          </div>
-                        </div>
-                        <div className="px-5 py-3">
-                          <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1">
-                            <Users className="h-3 w-3" /> Households you serve
-                          </div>
-                          <ul className="space-y-1">
-                            {fam.households.slice(0, 3).map((h) => (
-                              <li key={h.id} className="text-sm text-foreground/80 truncate">
-                                · {h.label}
-                              </li>
-                            ))}
-                            {fam.households.length > 3 && (
-                              <li className="text-[11px] text-muted-foreground">+ {fam.households.length - 3} more</li>
-                            )}
-                          </ul>
-                        </div>
-                      </CardContent>
                     </Card>
                   </button>
                 );
               })}
             </div>
-          </div>
-
-          <aside className="space-y-5">
-            <ProTasksPanel scopeType="portfolio" title="All Active Tasks" />
           </aside>
         </div>
       )}
