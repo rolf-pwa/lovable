@@ -60,14 +60,12 @@ const MEETING_BOOKING_LINKS = [
     embedUrl: "https://calendar.google.com/calendar/appointments/schedules/AcZssZ0K1gDPij7zWsSyPEwiG9BZ4VrKk3kzKC8p_O3TJcJHvJmmb7cj51h-AqOyeDWBEorIXbjeK0oa?gv=true",
   },
   {
-    label: "Quarterly Review (In Person)",
+    // Was "Quarterly Review (In Person)" — the schedule itself now lets the
+    // client pick in-person vs. video within the booking flow, so the
+    // separate Video schedule/entry was removed rather than kept alongside.
+    label: "Quarterly Review",
     url: "https://calendar.app.google/atvjMpeCKyDfkvgUA",
     embedUrl: "https://calendar.google.com/calendar/appointments/schedules/AcZssZ0cTZuvx-sJC7-U2dieS9IzrpSkJvICdJF8xp1aNAfnsiWZORWJl85cJiNFlblO8alWCbqNrvMj?gv=true",
-  },
-  {
-    label: "Quarterly Review (Video)",
-    url: "https://calendar.app.google/KpBjsrne5w7dFm22A",
-    embedUrl: "https://calendar.google.com/calendar/appointments/schedules/AcZssZ0szGL8FEh0_NKc2p1nlspTMjB04I_FbY6kT79edq_rODjTDWiD7SI107MiFJcZIamJXyY4QmTR?gv=true",
   },
 ];
 

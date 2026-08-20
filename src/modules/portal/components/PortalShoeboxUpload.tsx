@@ -112,8 +112,10 @@ export function PortalShoeboxUpload({ portalToken, householdId }: Props) {
         disabled={uploading || !shoeboxId}
         onClick={() => fileInputRef.current?.click()}
       >
-        {uploading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Inbox className="h-4 w-4 mr-2" />}
-        {uploading ? "Uploading…" : "Send to Shoebox"}
+        <span className="flex items-center">
+          {uploading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Inbox className="h-4 w-4 mr-2" />}
+          {uploading ? "Uploading…" : "Send to Shoebox"}
+        </span>
       </Button>
     </>
   );
