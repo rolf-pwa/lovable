@@ -22,6 +22,7 @@ import {
   Plus,
   Eye,
   EyeOff,
+  ShieldCheck,
 } from "lucide-react";
 import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
@@ -76,10 +77,18 @@ interface HouseholdMemberInfo {
   family_role: string;
 }
 
+interface ProfessionalInfo {
+  id: string;
+  full_name: string;
+  firm: string | null;
+  professional_type: string;
+}
+
 interface Props {
   asanaUrl: string | null;
   contactId?: string;
   householdMembers?: HouseholdMemberInfo[];
+  professionals?: ProfessionalInfo[];
 }
 
 // Helper to fire task notification (non-blocking)
@@ -587,7 +596,7 @@ function TaskRow({
 }
 
 // ── Main Component ──
-export function ContactTaskList({ asanaUrl, contactId, householdMembers = [] }: Props) {
+export function ContactTaskList({ asanaUrl, contactId, householdMembers = [], professionals = [] }: Props) {
   const [tasks, setTasks] = useState<AsanaTask[]>([]);
   const [members, setMembers] = useState<AsanaMember[]>([]);
   const [loading, setLoading] = useState(true);
@@ -818,6 +827,7 @@ export function ContactTaskList({ asanaUrl, contactId, householdMembers = [] }: 
               onSubtaskCreated={fetchTasks}
               contactId={contactId}
               householdMembers={householdMembers}
+              professionals={professionals}
               asanaProjectGid={projectGid}
             />
           </div>
@@ -1178,6 +1188,7 @@ function TaskDetailPanel({
   onSubtaskCreated,
   contactId,
   householdMembers = [],
+  professionals = [],
   asanaProjectGid,
 }: {
   task: AsanaTask;
@@ -1188,6 +1199,7 @@ function TaskDetailPanel({
   onSubtaskCreated?: () => void;
   contactId?: string;
   householdMembers?: HouseholdMemberInfo[];
+  professionals?: ProfessionalInfo[];
   asanaProjectGid?: string | null;
 }) {
   const [editing, setEditing] = useState(false);
@@ -1197,6 +1209,7 @@ function TaskDetailPanel({
   const [editAssignee, setEditAssignee] = useState(task.assignee?.gid || "");
 
   const [taggedContactIds, setTaggedContactIds] = useState<string[]>([]);
+  const [taggedProfessionalIds, setTaggedProfessionalIds] = useState<string[]>([]);
   const [taggingLoading, setTaggingLoading] = useState(false);
   const [tagSaving, setTagSaving] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -1224,18 +1237,19 @@ function TaskDetailPanel({
     setShowAddSubtask(false);
   }, [task.gid, task.name, task.notes, task.due_on, task.assignee?.gid]);
 
-  // Fetch tagged household members for this task
+  // Fetch tagged household members + professionals for this task
   useEffect(() => {
-    if (householdMembers.length === 0) return;
+    if (householdMembers.length === 0 && professionals.length === 0) return;
     setTaggingLoading(true);
     supabase.functions.invoke("asana-service", {
       body: { action: "getCollaboratorsForTask", task_gid: task.gid },
     }).then((res) => {
-      if (!res.error && Array.isArray(res.data?.data)) {
-        setTaggedContactIds(res.data.data);
+      if (!res.error && res.data?.data) {
+        setTaggedContactIds(res.data.data.contact_ids || []);
+        setTaggedProfessionalIds(res.data.data.professional_ids || []);
       }
     }).finally(() => setTaggingLoading(false));
-  }, [task.gid, householdMembers.length]);
+  }, [task.gid, householdMembers.length, professionals.length]);
 
   const handleToggleTag = async (memberId: string, checked: boolean) => {
     setTagSaving(true);
@@ -1252,6 +1266,29 @@ function TaskDetailPanel({
         });
         setTaggedContactIds((prev) => prev.filter((id) => id !== memberId));
         toast.success("Household member untagged.");
+      }
+    } catch (e: any) {
+      toast.error(e.message || "Failed to update tagging.");
+    } finally {
+      setTagSaving(false);
+    }
+  };
+
+  const handleToggleProTag = async (professionalId: string, checked: boolean) => {
+    setTagSaving(true);
+    try {
+      if (checked) {
+        await supabase.functions.invoke("asana-service", {
+          body: { action: "tagCollaborators", task_gid: task.gid, professional_ids: [professionalId] },
+        });
+        setTaggedProfessionalIds((prev) => [...prev, professionalId]);
+        toast.success("Professional tagged — they'll see this task in Pro Portal.");
+      } else {
+        await supabase.functions.invoke("asana-service", {
+          body: { action: "untagCollaborator", task_gid: task.gid, professional_id: professionalId },
+        });
+        setTaggedProfessionalIds((prev) => prev.filter((id) => id !== professionalId));
+        toast.success("Professional untagged.");
       }
     } catch (e: any) {
       toast.error(e.message || "Failed to update tagging.");
@@ -1566,6 +1603,46 @@ function TaskDetailPanel({
           )}
           <p className="text-[10px] text-muted-foreground">
             Tagged members will see this task in their portal Action Items.
+          </p>
+        </div>
+      )}
+
+      {/* Tag a Professional */}
+      {professionals.length > 0 && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-medium uppercase tracking-wider">
+            <ShieldCheck className="h-3 w-3" />
+            Tag a Professional
+          </div>
+          {taggingLoading ? (
+            <Loader2 className="h-3.5 w-3.5 text-muted-foreground animate-spin" />
+          ) : (
+            <div className="space-y-1.5">
+              {professionals.map((pro) => {
+                const isTagged = taggedProfessionalIds.includes(pro.id);
+                return (
+                  <label
+                    key={pro.id}
+                    className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-muted/50 cursor-pointer transition-colors"
+                  >
+                    <Checkbox
+                      checked={isTagged}
+                      disabled={tagSaving}
+                      onCheckedChange={(checked) => handleToggleProTag(pro.id, !!checked)}
+                    />
+                    <span className="text-sm text-foreground">
+                      {pro.full_name}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground capitalize ml-auto">
+                      {pro.firm || pro.professional_type.replace(/_/g, " ")}
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+          )}
+          <p className="text-[10px] text-muted-foreground">
+            Tagged professionals will see this task in Pro Portal without needing to create it themselves.
           </p>
         </div>
       )}

@@ -98,6 +98,13 @@ interface HouseholdMember {
   family_role: string;
 }
 
+interface EngagedProfessional {
+  id: string;
+  full_name: string;
+  firm: string | null;
+  professional_type: string;
+}
+
 interface VineyardAccount {
   id: string;
   account_name: string;
@@ -160,6 +167,7 @@ const ContactDetail = () => {
   const [contact, setContact] = useState<any>(null);
   const [storehouses, setStorehouses] = useState<Storehouse[]>([]);
   const [householdMembers, setHouseholdMembers] = useState<HouseholdMember[]>([]);
+  const [engagedProfessionals, setEngagedProfessionals] = useState<EngagedProfessional[]>([]);
   const [familyName, setFamilyName] = useState<string | null>(null);
   const [householdLabel, setHouseholdLabel] = useState<string | null>(null);
   const [householdVaultRootId, setHouseholdVaultRootId] = useState<string | null>(null);
@@ -243,7 +251,8 @@ const ContactDetail = () => {
     // Batch 2 — all queries that depend on contactRes fields fire in parallel.
     const contactData = contactRes.data;
     const names = [contactData?.lawyer_name, contactData?.accountant_name, contactData?.executor_name, contactData?.poa_name].filter(Boolean) as string[];
-    const [hhMembersRes, famRes, hhRes, profRes] = await Promise.all([
+    const engagementScopeIds = [id, contactData?.household_id, contactData?.family_id].filter(Boolean) as string[];
+    const [hhMembersRes, famRes, hhRes, profRes, engagedProRes] = await Promise.all([
       contactData?.household_id
         ? supabase.from("contacts").select("id, first_name, last_name, family_role").eq("household_id", contactData.household_id).neq("id", id).order("first_name")
         : Promise.resolve({ data: [] as any[] }),
@@ -256,12 +265,23 @@ const ContactDetail = () => {
       names.length > 0
         ? supabase.from("contacts").select("id, first_name, last_name, full_name").in("full_name", names)
         : Promise.resolve({ data: [] as any[] }),
+      supabase
+        .from("professional_engagements")
+        .select("professional:professionals(id, full_name, firm, professional_type)")
+        .in("scope_id", engagementScopeIds)
+        .in("status", ["invited", "active", "completed"]),
     ]);
     if (!mountedRef.current) return;
     setHouseholdMembers((hhMembersRes.data as any) || []);
     setFamilyName((famRes.data as any)?.name || null);
     setHouseholdLabel((hhRes.data as any)?.label || null);
     setHouseholdVaultRootId((hhRes.data as any)?.vault_root_folder_id || null);
+    const proMap = new Map<string, EngagedProfessional>();
+    ((engagedProRes.data as any[]) || []).forEach((row) => {
+      const p = row.professional;
+      if (p && !proMap.has(p.id)) proMap.set(p.id, p);
+    });
+    setEngagedProfessionals(Array.from(proMap.values()));
     if (names.length > 0) {
       const matchedContacts = (profRes.data as any[]) || [];
       const map: Record<string, { id: string; full_name: string } | null> = {};
@@ -940,7 +960,7 @@ const ContactDetail = () => {
                   </CardContent>
                 </Card>
 
-                <ContactTaskList asanaUrl={contact.asana_url} contactId={contact.id} householdMembers={householdMembers} />
+                <ContactTaskList asanaUrl={contact.asana_url} contactId={contact.id} householdMembers={householdMembers} professionals={engagedProfessionals} />
                 <ContactCalendar contactEmail={contact.email} contactName={contact.full_name} />
                 <ContactRequests contactId={id!} />
                 <AuditTrail contactId={id!} />

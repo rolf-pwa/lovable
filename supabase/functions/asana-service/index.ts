@@ -1102,11 +1102,14 @@ serve(async (req) => {
       }
 
       case "tagCollaborators": {
-        // Tag household members on a task: persist to task_collaborators + optionally add as Asana followers
-        const { task_gid: tagTaskGid, contact_ids, asana_follower_gids } = params;
-        if (!tagTaskGid || !contact_ids || !Array.isArray(contact_ids)) {
+        // Tag household members and/or professionals on a task: persist to
+        // task_collaborators + optionally add as Asana followers.
+        const { task_gid: tagTaskGid, contact_ids, professional_ids, asana_follower_gids } = params;
+        const contactIdList: string[] = Array.isArray(contact_ids) ? contact_ids : [];
+        const professionalIdList: string[] = Array.isArray(professional_ids) ? professional_ids : [];
+        if (!tagTaskGid || (contactIdList.length === 0 && professionalIdList.length === 0)) {
           return new Response(
-            JSON.stringify({ error: "task_gid and contact_ids[] are required" }),
+            JSON.stringify({ error: "task_gid and at least one of contact_ids[]/professional_ids[] are required" }),
             { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
           );
         }
@@ -1126,31 +1129,43 @@ serve(async (req) => {
           const { data: userData } = await sb2.auth.getUser();
           userId = userData?.user?.id || "system";
         }
-        // Upsert into task_collaborators
-        const rows = contact_ids.map((cid: string) => ({
-          task_gid: tagTaskGid,
-          contact_id: cid,
-          tagged_by: userId,
-        }));
-        const { error: insertErr } = await supabaseAdmin
-          .from("task_collaborators")
-          .upsert(rows, { onConflict: "task_gid,contact_id" });
-        if (insertErr) {
-          console.error("[AsanaService] tagCollaborators insert error:", insertErr);
+        // Upsert into task_collaborators — contact and professional rows use
+        // different unique constraints, so they need separate upsert calls.
+        if (contactIdList.length > 0) {
+          const rows = contactIdList.map((cid: string) => ({
+            task_gid: tagTaskGid,
+            contact_id: cid,
+            tagged_by: userId,
+          }));
+          const { error: insertErr } = await supabaseAdmin
+            .from("task_collaborators")
+            .upsert(rows, { onConflict: "task_gid,contact_id" });
+          if (insertErr) console.error("[AsanaService] tagCollaborators contact insert error:", insertErr);
+        }
+        if (professionalIdList.length > 0) {
+          const rows = professionalIdList.map((pid: string) => ({
+            task_gid: tagTaskGid,
+            professional_id: pid,
+            tagged_by: userId,
+          }));
+          const { error: insertErr } = await supabaseAdmin
+            .from("task_collaborators")
+            .upsert(rows, { onConflict: "task_gid,professional_id" });
+          if (insertErr) console.error("[AsanaService] tagCollaborators professional insert error:", insertErr);
         }
         // Optionally add Asana followers
         if (asana_follower_gids && asana_follower_gids.length > 0) {
           await service.addFollowers(tagTaskGid, asana_follower_gids);
         }
-        result = { tagged: contact_ids.length };
+        result = { tagged: contactIdList.length + professionalIdList.length };
         break;
       }
 
       case "untagCollaborator": {
-        const { task_gid: untagTaskGid, contact_id: untagContactId } = params;
-        if (!untagTaskGid || !untagContactId) {
+        const { task_gid: untagTaskGid, contact_id: untagContactId, professional_id: untagProfessionalId } = params;
+        if (!untagTaskGid || (!untagContactId && !untagProfessionalId)) {
           return new Response(
-            JSON.stringify({ error: "task_gid and contact_id are required" }),
+            JSON.stringify({ error: "task_gid and one of contact_id/professional_id are required" }),
             { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
           );
         }
@@ -1158,11 +1173,9 @@ serve(async (req) => {
           Deno.env.get("SUPABASE_URL")!,
           Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
         );
-        await supabaseAdmin2
-          .from("task_collaborators")
-          .delete()
-          .eq("task_gid", untagTaskGid)
-          .eq("contact_id", untagContactId);
+        let del = supabaseAdmin2.from("task_collaborators").delete().eq("task_gid", untagTaskGid);
+        del = untagContactId ? del.eq("contact_id", untagContactId) : del.eq("professional_id", untagProfessionalId);
+        await del;
         result = { untagged: true };
         break;
       }
@@ -1218,9 +1231,12 @@ serve(async (req) => {
         );
         const { data: collabs } = await supabaseAdmin4
           .from("task_collaborators")
-          .select("contact_id")
+          .select("contact_id, professional_id")
           .eq("task_gid", collabTaskGid);
-        result = (collabs || []).map((r: any) => r.contact_id);
+        result = {
+          contact_ids: (collabs || []).map((r: any) => r.contact_id).filter(Boolean),
+          professional_ids: (collabs || []).map((r: any) => r.professional_id).filter(Boolean),
+        };
         break;
       }
 
