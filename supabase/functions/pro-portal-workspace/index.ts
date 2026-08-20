@@ -26,7 +26,12 @@ const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 // Resolve every family/household/contact the pro is engaged with.
 // Visibility rules (strict — do NOT expand downward beyond the granted scope):
-//   • family    → that family + all its households + every contact within
+//   • family    → that family record only, nothing beneath it. Households and
+//                 contacts are never auto-included — each needs its own
+//                 household- or contact-scoped engagement to become visible,
+//                 the same explicit-opt-in principle as visibility_scope on
+//                 financial data (nothing is shared just by being "in the
+//                 family").
 //   • household → that household + only its members (family shown as container)
 //   • contact   → that contact only (household + family shown as containers)
 async function resolveScope(supabase: any, professional_id: string) {
@@ -50,16 +55,6 @@ async function resolveScope(supabase: any, professional_id: string) {
     if (e.scope_type === "family") familyIds.add(e.scope_id);
     else if (e.scope_type === "household") householdIds.add(e.scope_id);
     else if (e.scope_type === "contact") contactIds.add(e.scope_id);
-  }
-
-  // family scope → expand to all households + all contacts under it
-  if (familyIds.size) {
-    const { data: allHh } = await supabase
-      .from("households").select("id, family_id").in("family_id", Array.from(familyIds));
-    (allHh || []).forEach((h: any) => householdIds.add(h.id));
-    const { data: famContacts } = await supabase
-      .from("contacts").select("id").in("family_id", Array.from(familyIds));
-    (famContacts || []).forEach((c: any) => contactIds.add(c.id));
   }
 
   // household scope → its members become visible; parent family is a container only
