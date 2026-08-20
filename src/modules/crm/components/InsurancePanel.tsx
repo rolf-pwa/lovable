@@ -50,6 +50,7 @@ interface Policy {
   cash_value_storehouse_id: string | null;
   vault_folder_id: string | null;
   notes: string | null;
+  visibility_scope: string | null;
 }
 
 const FREQUENCIES = [
@@ -62,6 +63,18 @@ const FREQUENCIES = [
 
 const STOREHOUSE_NAMES: Record<number, string> = {
   1: "Liquidity Reserve", 2: "Strategic Reserve", 3: "Philanthropic Trust", 4: "Legacy Trust",
+};
+
+const SCOPE_LABELS: Record<string, string> = {
+  private: "Private",
+  household_shared: "Household",
+  family_shared: "Family",
+};
+
+const SCOPE_COLORS: Record<string, string> = {
+  private: "border-muted-foreground/30 text-muted-foreground",
+  household_shared: "border-accent/30 text-accent",
+  family_shared: "border-primary/30 text-primary",
 };
 
 const currency = (n: number | null | undefined) =>
@@ -81,6 +94,7 @@ const blank: Partial<Policy> = {
   paid_up_date: null,
   primary_beneficiary: "",
   contingent_beneficiary: "",
+  visibility_scope: "household_shared",
   coverage_storehouse_id: null,
   cash_value_storehouse_id: null,
   notes: "",
@@ -236,6 +250,9 @@ export function InsurancePanel({ scope, storehouses, onStorehousesChanged }: { s
                     <Badge variant="outline" className="text-[10px]">
                       {POLICY_TYPES.find((t) => t.value === p.policy_type)?.label || p.policy_type}
                     </Badge>
+                    <Badge variant="outline" className={`text-[10px] ${SCOPE_COLORS[p.visibility_scope || "household_shared"] || ""}`}>
+                      {SCOPE_LABELS[p.visibility_scope || "household_shared"] || "Household"}
+                    </Badge>
                     {p.policy_number && (
                       <span className="text-xs text-muted-foreground">#{p.policy_number}</span>
                     )}
@@ -346,6 +363,20 @@ export function InsurancePanel({ scope, storehouses, onStorehousesChanged }: { s
                 <div>
                   <Label>Cash Value → Storehouse</Label>
                   <Input value="Strategic Reserve" disabled className="text-muted-foreground" />
+                </div>
+                <div>
+                  <Label>Visibility</Label>
+                  <Select
+                    value={editing.visibility_scope || "household_shared"}
+                    onValueChange={(v) => setEditing({ ...editing, visibility_scope: v })}
+                  >
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="private">Private</SelectItem>
+                      <SelectItem value="household_shared">Household</SelectItem>
+                      <SelectItem value="family_shared">Family</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div>
