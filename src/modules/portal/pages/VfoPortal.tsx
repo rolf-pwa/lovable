@@ -966,7 +966,11 @@ const VfoPortal = () => {
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="dashboard" className="mt-4">
+            <TabsContent value="dashboard" className="mt-4 space-y-3">
+              {/* Financial cards always start their own row(s) — a separate
+                  grid from Tasks/Requests/Updates below, so the two groups
+                  never share a row regardless of how many financial cards
+                  are present (e.g. Holding Tank hidden when empty). */}
               <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3">
                 {hasHolding && (
                   <DashboardCard
@@ -998,6 +1002,8 @@ const VfoPortal = () => {
                   muted={!hasStorehouses}
                   onClick={() => { setFinancialsFocus("storehouses"); setTab("financials"); }}
                 />
+              </div>
+              <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3">
                 <DashboardCard
                   icon={CheckSquare}
                   label="Action Items"
