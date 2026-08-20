@@ -1,6 +1,8 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { validateProSession } from "../_shared/pro-portal-auth.ts";
+import { driveListChildren, driveDownloadFile } from "../_shared/vault-provisioning.ts";
+import { getServiceGoogleAccessToken } from "../_shared/google-token.ts";
 
 const ALLOWED_ORIGINS = [
   "https://prosperwise-portal.web.app",
@@ -48,24 +50,59 @@ async function resolveScopeLabel(
   return scope_type;
 }
 
-async function resolveSharedFiles(supabase: any, share_link_id: string | null) {
-  if (!share_link_id) return [];
-  // V1: surface only the share-link metadata; secure download proxy is
-  // wired up in a follow-up phase (vault-service proPortalReadFile action).
+// Re-fetches the share link and confirms it's still usable — called both
+// when listing files and again before every download, so a link revoked or
+// expired between those two calls can't still be used to pull a file.
+async function loadValidShareLink(supabase: any, share_link_id: string | null) {
+  if (!share_link_id) return null;
   const { data: link } = await supabase
     .from("vault_share_links")
     .select("id, drive_id, scope_type, expires_at, revoked_at")
     .eq("id", share_link_id)
     .maybeSingle();
-  if (!link || link.revoked_at) return [];
-  if (link.expires_at && new Date(link.expires_at) <= new Date()) return [];
-  return [{
-    id: link.id,
-    name: `Shared ${link.scope_type} drive`,
-    mime_type: "application/vnd.prosperwise.vault-share",
-    size_bytes: null,
-    created_at: null,
-  }];
+  if (!link || link.revoked_at) return null;
+  if (link.expires_at && new Date(link.expires_at) <= new Date()) return null;
+  return link;
+}
+
+async function driveGetFileMeta(fileId: string, accessToken: string) {
+  const r = await fetch(
+    `https://www.googleapis.com/drive/v3/files/${fileId}?fields=id,name,mimeType,size,modifiedTime`,
+    { headers: { Authorization: `Bearer ${accessToken}` } },
+  );
+  if (!r.ok) throw new Error(`drive_get_file_failed: ${await r.text()}`);
+  return r.json();
+}
+
+async function resolveSharedFiles(supabase: any, share_link_id: string | null) {
+  const link = await loadValidShareLink(supabase, share_link_id);
+  if (!link) return [];
+  try {
+    const accessToken = await getServiceGoogleAccessToken(supabase);
+    if (link.scope_type === "file") {
+      const meta = await driveGetFileMeta(link.drive_id, accessToken);
+      return [{
+        id: meta.id,
+        name: meta.name,
+        mime_type: meta.mimeType,
+        size_bytes: meta.size ? Number(meta.size) : null,
+        created_at: meta.modifiedTime || null,
+      }];
+    }
+    const children = await driveListChildren(link.drive_id, accessToken);
+    return children
+      .filter((f: any) => f.mimeType !== "application/vnd.google-apps.folder")
+      .map((f: any) => ({
+        id: f.id,
+        name: f.name,
+        mime_type: f.mimeType,
+        size_bytes: null,
+        created_at: null,
+      }));
+  } catch (e) {
+    console.error("[pro-portal-engagements] resolveSharedFiles error", e);
+    return [];
+  }
 }
 
 serve(async (req) => {
@@ -269,6 +306,67 @@ serve(async (req) => {
         JSON.stringify({ engagement: { ...engagement, scope_label }, files, messages: messages || [] }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
+    }
+
+    if (action === "downloadSharedFile") {
+      const engagementId = body.engagement_id as string;
+      const fileId = body.file_id as string;
+      if (!engagementId || !fileId) {
+        return new Response(JSON.stringify({ error: "engagement_id and file_id required" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const { data: engagement } = await supabase
+        .from("professional_engagements")
+        .select("vault_share_link_id")
+        .eq("id", engagementId)
+        .eq("professional_id", session.professional_id)
+        .maybeSingle();
+      if (!engagement) {
+        return new Response(JSON.stringify({ error: "Not found" }), {
+          status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const link = await loadValidShareLink(supabase, engagement.vault_share_link_id);
+      if (!link) {
+        return new Response(JSON.stringify({ error: "This share is no longer available" }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      try {
+        const accessToken = await getServiceGoogleAccessToken(supabase);
+        let meta: { id: string; name: string; mimeType: string };
+        if (link.scope_type === "file") {
+          if (fileId !== link.drive_id) throw new Error("file not in this share");
+          meta = await driveGetFileMeta(link.drive_id, accessToken);
+        } else {
+          // Re-list rather than trust the client — confirms fileId is still
+          // actually a member of the shared folder right now.
+          const children = await driveListChildren(link.drive_id, accessToken);
+          const match = children.find((c: any) => c.id === fileId && c.mimeType !== "application/vnd.google-apps.folder");
+          if (!match) throw new Error("file not in this share");
+          meta = match;
+        }
+        const bytes = await driveDownloadFile(fileId, accessToken);
+        // Chunked base64 encode — a single String.fromCharCode(...bytes) call
+        // blows the stack on anything past a few MB.
+        const bin = new Uint8Array(bytes);
+        let binary = "";
+        const chunk = 0x8000;
+        for (let i = 0; i < bin.length; i += chunk) {
+          binary += String.fromCharCode.apply(null, Array.from(bin.subarray(i, i + chunk)) as any);
+        }
+        const base64 = btoa(binary);
+        return new Response(
+          JSON.stringify({ fileName: meta.name, mimeType: meta.mimeType, base64 }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      } catch (e) {
+        console.error("[pro-portal-engagements] downloadSharedFile error", e);
+        return new Response(JSON.stringify({ error: "Could not download this file" }), {
+          status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
     return new Response(JSON.stringify({ error: "Invalid action" }), {
