@@ -22,7 +22,8 @@ interface Props {
   buttonLabel?: string;
 }
 
-const PILLARS = ["legal", "tax", "insurance", "estate", "banking", "investment", "other"];
+// Must match the professional_engagements_pillar_check DB constraint exactly.
+const PILLARS = ["legal", "tax", "insurance", "estate", "philanthropy", "governance", "other"];
 
 export default function LinkProDialog({
   scopeType, scopeId, scopeLabel,
