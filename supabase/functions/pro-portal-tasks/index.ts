@@ -104,6 +104,39 @@ async function resolveProject(
   return { projectGid: null, sectionHint: null };
 }
 
+// Resolve a display label + Pro Portal link for a scope, preferring the
+// household (what a pro actually navigates by) even when the engagement
+// itself is contact- or family-scoped.
+async function resolveContext(
+  supabase: any,
+  scopeType: "family" | "household" | "contact",
+  scopeId: string,
+): Promise<{ label: string; path: string } | null> {
+  if (scopeType === "contact") {
+    const { data: c } = await supabase
+      .from("contacts")
+      .select("first_name, last_name, full_name, household_id, family_id")
+      .eq("id", scopeId)
+      .maybeSingle();
+    if (!c) return null;
+    if (c.household_id) return resolveContext(supabase, "household", c.household_id);
+    if (c.family_id) return resolveContext(supabase, "family", c.family_id);
+    const name = c.full_name || `${c.first_name || ""} ${c.last_name || ""}`.trim() || "Contact";
+    return { label: name, path: `/pro-portal/contact/${scopeId}` };
+  }
+  if (scopeType === "household") {
+    const { data: hh } = await supabase.from("households").select("label").eq("id", scopeId).maybeSingle();
+    if (!hh) return null;
+    return { label: hh.label || "Household", path: `/pro-portal/household/${scopeId}` };
+  }
+  if (scopeType === "family") {
+    const { data: fam } = await supabase.from("families").select("name").eq("id", scopeId).maybeSingle();
+    if (!fam) return null;
+    return { label: fam.name || "Family", path: `/pro-portal/family/${scopeId}` };
+  }
+  return null;
+}
+
 function proMarker(fullName: string) {
   return `[Pro: ${fullName}]`;
 }
@@ -156,19 +189,34 @@ serve(async (req) => {
           .select("scope_type, scope_id, status")
           .eq("professional_id", session.professional_id)
           .eq("status", "active");
-        const projectGids = new Set<string>();
+        // Keep every engagement's project + context + section hint — a
+        // project can be shared by more than one engagement (e.g. several
+        // household members with the same Asana project), so tasks are
+        // disambiguated by section name below rather than deduping up front.
+        const projectContexts = new Map<string, { context: { label: string; path: string } | null; sectionHint: string | null }[]>();
         for (const e of engagements || []) {
-          const { projectGid } = await resolveProject(supabase, e.scope_type, e.scope_id);
-          if (projectGid) projectGids.add(projectGid);
+          const [{ projectGid, sectionHint }, context] = await Promise.all([
+            resolveProject(supabase, e.scope_type, e.scope_id),
+            resolveContext(supabase, e.scope_type, e.scope_id),
+          ]);
+          if (!projectGid) continue;
+          const list = projectContexts.get(projectGid) || [];
+          list.push({ context, sectionHint });
+          projectContexts.set(projectGid, list);
         }
         const allTasks: any[] = [];
-        for (const pg of projectGids) {
+        for (const [pg, candidates] of projectContexts) {
           try {
             const r = await asana(
               `/tasks?project=${pg}&opt_fields=name,notes,completed,due_on,memberships.section.name,num_subtasks,created_at,modified_at&limit=100`,
             );
             for (const t of r.data || []) {
               if (matchesPro(t.name, marker) || matchesPro(t.notes, marker) || taggedGids.has(t.gid)) {
+                const sectionName = t.memberships?.[0]?.section?.name?.toLowerCase() || "";
+                const matched = candidates.find(
+                  (c) => c.sectionHint && sectionName.includes(c.sectionHint.toLowerCase()),
+                );
+                const context = (matched || candidates[0])?.context || null;
                 allTasks.push({
                   gid: t.gid,
                   name: (t.name || "").replace(marker, "").trim() || t.name,
@@ -178,6 +226,7 @@ serve(async (req) => {
                   section: t.memberships?.[0]?.section?.name || null,
                   num_subtasks: t.num_subtasks || 0,
                   modified_at: t.modified_at,
+                  context,
                 });
               }
             }

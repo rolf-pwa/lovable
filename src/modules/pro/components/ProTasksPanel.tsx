@@ -1,14 +1,16 @@
 import { useCallback, useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Button } from "@/shared/components/ui/button";
 import { Textarea } from "@/shared/components/ui/textarea";
 import { Input } from "@/shared/components/ui/input";
 import { Badge } from "@/shared/components/ui/badge";
 import { toast } from "sonner";
-import { CheckCircle2, Circle, MessageSquare, Plus, ChevronDown, ChevronRight, Loader2 } from "lucide-react";
+import { CheckCircle2, Circle, MessageSquare, Plus, ChevronDown, ChevronRight, Loader2, Home } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { FN, proFetch } from "./ProPortalShell";
 
+interface TaskContext { label: string; path: string }
 interface Task {
   gid: string;
   name: string;
@@ -18,6 +20,7 @@ interface Task {
   section: string | null;
   num_subtasks: number;
   modified_at: string;
+  context?: TaskContext | null;
 }
 interface Story { gid: string; text: string; created_at: string; author: string }
 
@@ -189,24 +192,40 @@ export default function ProTasksPanel({ scopeType, scopeId, title }: Props) {
                     >
                       {t.completed ? <CheckCircle2 className="h-4 w-4 text-accent" /> : <Circle className="h-4 w-4" />}
                     </button>
-                    <button onClick={() => toggleExpand(t)} className="flex-1 min-w-0 text-left">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className={`text-sm font-medium ${t.completed ? "line-through text-muted-foreground" : "text-foreground"}`}>
-                          {t.name}
-                        </span>
-                        {t.section && (
-                          <Badge variant="outline" className="text-[10px]">{t.section}</Badge>
-                        )}
-                        {t.due_on && (
-                          <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                            due {format(new Date(t.due_on), "MMM d")}
+                    <div className="flex-1 min-w-0">
+                      <button onClick={() => toggleExpand(t)} className="w-full text-left">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className={`text-sm font-medium ${t.completed ? "line-through text-muted-foreground" : "text-foreground"}`}>
+                            {t.name}
                           </span>
+                          {t.section && (
+                            <Badge variant="outline" className="text-[10px]">{t.section}</Badge>
+                          )}
+                          {t.due_on && (
+                            <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                              due {format(new Date(t.due_on), "MMM d")}
+                            </span>
+                          )}
+                        </div>
+                      </button>
+                      <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                        <span className="text-[11px] text-muted-foreground">
+                          Updated {formatDistanceToNow(new Date(t.modified_at), { addSuffix: true })}
+                        </span>
+                        {t.context && (
+                          <>
+                            <span className="text-muted-foreground/50">·</span>
+                            <Link
+                              to={t.context.path}
+                              className="inline-flex items-center gap-1 text-[11px] text-accent hover:underline"
+                            >
+                              <Home className="h-3 w-3" />
+                              {t.context.label}
+                            </Link>
+                          </>
                         )}
                       </div>
-                      <div className="text-[11px] text-muted-foreground mt-0.5">
-                        Updated {formatDistanceToNow(new Date(t.modified_at), { addSuffix: true })}
-                      </div>
-                    </button>
+                    </div>
                     <button onClick={() => toggleExpand(t)} className="text-muted-foreground shrink-0">
                       {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                     </button>
