@@ -339,14 +339,10 @@ const HouseholdDetail = () => {
     (sum, a) => sum + (Number(a.current_value) || 0),
     0
   );
-  const insuranceForStorehouse = (storehouseId: string) =>
-    insurancePolicies.reduce((sum, p) => {
-      let add = 0;
-      if (p.cash_value_storehouse_id === storehouseId) add += Number(p.cash_value) || 0;
-      return sum + add;
-    }, 0);
-  const totalInsuranceInStorehouses = storehouses.reduce(
-    (sum, s) => sum + insuranceForStorehouse(s.id),
+  // Cash value always belongs to Strategic Reserve, by policy — not linked to a specific
+  // storehouse account row, so it can't be broken by deleting a manual account.
+  const totalInsuranceInStorehouses = insurancePolicies.reduce(
+    (sum, p) => sum + (Number(p.cash_value) || 0),
     0
   );
   const totalStorehouses =
@@ -994,9 +990,9 @@ const HouseholdDetail = () => {
                         const shTotal = shForNum
                           .filter((s: any) => isLegacy || s.asset_type !== 'Primary Residence & Protected Legacy Accounts')
                           .reduce((sum: number, s: any) => sum + (Number(s.current_value) || 0), 0);
-                        const cashTotal = insurancePolicies
-                          .filter((p: any) => p.cash_value_storehouse_id && shIds.has(p.cash_value_storehouse_id))
-                          .reduce((sum: number, p: any) => sum + (Number(p.cash_value) || 0), 0);
+                        const cashTotal = num === 2
+                          ? insurancePolicies.reduce((sum: number, p: any) => sum + (Number(p.cash_value) || 0), 0)
+                          : 0;
                         const coverageTotal = isLegacy
                           ? insurancePolicies
                               .filter((p: any) => p.coverage_storehouse_id && shIds.has(p.coverage_storehouse_id))
@@ -1351,7 +1347,9 @@ const HouseholdDetail = () => {
             >
                 {STOREHOUSE_CONFIG.map(({ num, name, icon: Icon }) => {
                   const accounts = storehouses.filter((s) => s.storehouse_number === num);
-                  const insuranceHere = accounts.reduce((sum, s) => sum + insuranceForStorehouse(s.id), 0);
+                  const insuranceHere = num === 2
+                    ? insurancePolicies.reduce((sum, p: any) => sum + (Number(p.cash_value) || 0), 0)
+                    : 0;
                   const total = accounts.reduce((sum, s) => sum + (Number(s.current_value) || 0), 0) + insuranceHere;
                   const targetTotal = accounts.reduce((sum, s) => sum + (Number(s.target_value) || 0), 0);
                   const pct = targetTotal > 0 ? Math.min((total / targetTotal) * 100, 100) : 0;

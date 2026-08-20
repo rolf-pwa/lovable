@@ -171,9 +171,10 @@ const FamilyDetail = () => {
   const vineyardByContact = sumByContact(vineyard);
   const storehouseByContact = sumByContact(storehouses.filter((s: any) => s.asset_type !== 'Primary Residence & Protected Legacy Accounts'));
   const holdingByContact = sumByContact(holdingTank);
+  // Cash value always belongs to Strategic Reserve, by policy — not linked to a specific
+  // storehouse account row, so it can't be broken by deleting a manual account.
   const insuranceCashByContact: Record<string, number> = {};
   insurancePolicies.forEach((p: any) => {
-    if (!p.cash_value_storehouse_id) return;
     insuranceCashByContact[p.contact_id] = (insuranceCashByContact[p.contact_id] || 0) + (Number(p.cash_value) || 0);
   });
 
@@ -182,7 +183,6 @@ const FamilyDetail = () => {
     .filter((s: any) => s.asset_type !== 'Primary Residence & Protected Legacy Accounts')
     .reduce((s, a) => s + (Number(a.current_value) || 0), 0);
   const insuranceCashInStorehouses = insurancePolicies
-    .filter((p: any) => !!p.cash_value_storehouse_id)
     .reduce((s: number, p: any) => s + (Number(p.cash_value) || 0), 0);
   const totalHolding = holdingTank.reduce((s, a) => s + (Number(a.current_value) || 0), 0);
   const totalAUM = totalVineyard + totalStorehouses + insuranceCashInStorehouses + totalHolding;
@@ -194,9 +194,9 @@ const FamilyDetail = () => {
     const shTotal = shForNum
       .filter((s: any) => isLegacy || s.asset_type !== 'Primary Residence & Protected Legacy Accounts')
       .reduce((sum: number, s: any) => sum + (Number(s.current_value) || 0), 0);
-    const cashTotal = insurancePolicies
-      .filter((p: any) => p.cash_value_storehouse_id && shIds.has(p.cash_value_storehouse_id))
-      .reduce((sum: number, p: any) => sum + (Number(p.cash_value) || 0), 0);
+    const cashTotal = num === 2
+      ? insurancePolicies.reduce((sum: number, p: any) => sum + (Number(p.cash_value) || 0), 0)
+      : 0;
     const coverageTotal = isLegacy
       ? insurancePolicies
           .filter((p: any) => p.coverage_storehouse_id && shIds.has(p.coverage_storehouse_id))

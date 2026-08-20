@@ -353,7 +353,7 @@ const VfoPortal = () => {
   );
   const familySharedTotal = sumValues(familySharedVineyard) + sumValues(familySharedStore)
     + sumValues(familySharedTank)
-    + insuranceCashForStorehouses(familySharedIns, familySharedStore);
+    + insuranceCashForStorehouses(familySharedIns);
 
   // Head of Household: their own assets in full, plus other same-household
   // members' assets that are actually marked shared with the household —
@@ -396,7 +396,7 @@ const VfoPortal = () => {
   ];
   const householdTotalForHoh = sumValues(hhVineyard) + sumValues(hhStore)
     + sumValues(hhTank)
-    + insuranceCashForStorehouses(hhIns, hhStore);
+    + insuranceCashForStorehouses(hhIns);
 
   // Everyone else (spouse, beneficiary, anyone without a head role): only
   // their own assets, every scope — it's their own data, nothing to filter.
@@ -404,7 +404,7 @@ const VfoPortal = () => {
   const selfInsurance = (insurance_policies || []).filter((p: any) => p.contact_id === contact.id);
   const individualTotal = sumValues(vineyard_accounts) + sumValues(selfStoreAum)
     + sumValues(holding_tank)
-    + insuranceCashForStorehouses(selfInsurance, selfStoreAum);
+    + insuranceCashForStorehouses(selfInsurance);
 
   const headerAumLabel =
     viewerRole === "head_of_family" ? "Total Family AUM"
@@ -633,7 +633,7 @@ const VfoPortal = () => {
                 (p: any) => memberIds.has(p.contact_id) && p.visibility_scope === "family_shared"
               );
               const hhTotal = sumValues(hhV) + sumValues(hhS) + sumValues(hhT)
-                + insuranceCashForStorehouses(hhInsurance, hhS);
+                + insuranceCashForStorehouses(hhInsurance);
               return (
                 <button
                   key={hh.id}
@@ -765,7 +765,7 @@ const VfoPortal = () => {
                 (p: any) => p.contact_id === m.id && allowedScopes.has(p.visibility_scope)
               );
               const mTotal = sumValues(mVineyard) + sumValues(mStoreAum) + sumValues(mTankDedup)
-                + insuranceCashForStorehouses(mInsurance, mStoreAum);
+                + insuranceCashForStorehouses(mInsurance);
 
 
               return (
@@ -922,7 +922,7 @@ const VfoPortal = () => {
     const holdingTankTotal = sumValues(holding_tank);
     const vineyardTotal = sumValues(indVineyardAccounts);
     const storehousesTotal = sumValues(indAumStorehouses)
-      + insuranceCashForStorehouses(ind.insurancePolicies, indAumStorehouses);
+      + insuranceCashForStorehouses(ind.insurancePolicies);
     const hasVineyard = indVineyardAccounts.length > 0;
     const hasStorehouses = indAumStorehouses.length > 0;
 
