@@ -924,7 +924,7 @@ const VfoPortal = () => {
     const storehousesTotal = sumValues(indAumStorehouses)
       + insuranceCashForStorehouses(ind.insurancePolicies);
     const hasVineyard = indVineyardAccounts.length > 0;
-    const hasStorehouses = indAumStorehouses.length > 0;
+    const hasStorehouses = indAumStorehouses.length > 0 || storehousesTotal > 0;
 
 
     return (
