@@ -2,29 +2,37 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Badge } from "@/shared/components/ui/badge";
-import { Users, ShieldCheck, FileText, Mail, Phone } from "lucide-react";
+import { Users, ShieldCheck, MessageSquare, Mail, Phone } from "lucide-react";
 import ProPortalShell, { FN, proFetch } from "@/modules/pro/components/ProPortalShell";
 import ProTasksPanel from "@/modules/pro/components/ProTasksPanel";
 import { format } from "date-fns";
 import { toast } from "sonner";
 
-interface Grant { id: string; drive_id: string; permission: string; granted_at: string; expires_at: string | null }
 interface Governance { charter: any | null; latest_review: any | null }
+interface EngagementRow { id: string; title: string; unread_count: number }
 
 export default function ProPortalHousehold() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [data, setData] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
+  const [engagements, setEngagements] = useState<EngagementRow[]>([]);
 
   const load = useCallback(async () => {
     try {
       const cached = localStorage.getItem("pro_portal_profile");
       if (cached) setProfile(JSON.parse(cached));
-      const res = await fetch(FN.workspace, proFetch({ action: "household", household_id: id }));
+      const [res, engRes] = await Promise.all([
+        fetch(FN.workspace, proFetch({ action: "household", household_id: id })),
+        fetch(FN.engagements, proFetch({ action: "list" })),
+      ]);
       const d = await res.json();
       if (!res.ok) throw new Error(d.error || "Failed");
       setData(d);
+      const engData = await engRes.json();
+      if (engRes.ok) {
+        setEngagements((engData.engagements || []).filter((e: any) => e.scope_type === "household" && e.scope_id === id));
+      }
     } catch (e: any) {
       toast.error(e.message || "Could not load household");
     }
@@ -32,7 +40,6 @@ export default function ProPortalHousehold() {
   useEffect(() => { load(); }, [load]);
 
   const governance: Governance | null = data?.governance || null;
-  const vault: Grant[] = data?.vault || [];
   const members: any[] = data?.members || [];
 
   return (
@@ -47,7 +54,7 @@ export default function ProPortalHousehold() {
       stats={[
         { label: "Members", value: members.length },
         { label: "Charter", value: (governance?.charter ? "Ratified" : "Pending") },
-        { label: "Vault Grants", value: vault.length },
+        { label: "Engagements", value: engagements.length },
       ]}
     >
       {!data ? (
@@ -130,27 +137,33 @@ export default function ProPortalHousehold() {
             <Card className="border-accent/15">
               <CardHeader>
                 <CardTitle className="text-base font-serif flex items-center gap-2">
-                  <FileText className="h-4 w-4 text-accent" /> Shared Documents
+                  <MessageSquare className="h-4 w-4 text-accent" /> Engagements
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {vault.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No vault access granted to you at this scope.</p>
+                {engagements.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No engagements at this household yet.</p>
                 ) : (
                   <ul className="space-y-2">
-                    {vault.map((g) => (
-                      <li key={g.id} className="text-sm border border-border/60 rounded-md px-3 py-2 bg-muted/30">
-                        <div className="text-foreground truncate">{g.drive_id}</div>
-                        <div className="text-[11px] text-muted-foreground">
-                          {g.permission} · granted {format(new Date(g.granted_at), "PP")}
-                          {g.expires_at && ` · expires ${format(new Date(g.expires_at), "PP")}`}
-                        </div>
+                    {engagements.map((e) => (
+                      <li key={e.id}>
+                        <button
+                          onClick={() => navigate(`/pro-portal/engagement/${e.id}`)}
+                          className="w-full text-left text-sm border border-border/60 rounded-md px-3 py-2 bg-muted/30 hover:border-accent/40 transition-colors flex items-center justify-between gap-2"
+                        >
+                          <span className="truncate text-foreground">{e.title}</span>
+                          {e.unread_count > 0 && (
+                            <span className="rounded-full bg-accent text-accent-foreground text-[10px] font-semibold px-1.5 py-0.5 shrink-0">
+                              {e.unread_count}
+                            </span>
+                          )}
+                        </button>
                       </li>
                     ))}
                   </ul>
                 )}
                 <p className="text-[11px] text-muted-foreground mt-3">
-                  Secure download proxy activates in the next release.
+                  Messages and any shared files live inside each engagement.
                 </p>
               </CardContent>
             </Card>
