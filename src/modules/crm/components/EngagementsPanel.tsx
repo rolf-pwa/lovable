@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui
 import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/shared/components/ui/dialog";
-import { Briefcase, ExternalLink, FolderOpen, Folder, FileText, Loader2, ChevronRight } from "lucide-react";
+import { Briefcase, ExternalLink, FolderOpen, Folder, FileText, Loader2, ChevronRight, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
 import EngagementThreadButton from "./EngagementThreadButton";
 import LinkProDialog from "./LinkProDialog";
@@ -136,6 +136,7 @@ export function ShareVaultFilesControl({
         drive_id: item.id,
         permission: "view",
         link_type: "portal",
+        name: item.name,
       });
       const { error } = await supabase
         .from("professional_engagements")
@@ -259,6 +260,8 @@ export function ShareVaultFilesControl({
 export default function EngagementsPanel({ scopeType, scopeId, title = "Professional Engagements" }: Props) {
   const [rows, setRows] = useState<EngagementRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [links, setLinks] = useState<Record<string, { name: string | null; scope_type: string }>>({});
+  const [messageStats, setMessageStats] = useState<Record<string, { total: number; unread: number }>>({});
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -268,7 +271,40 @@ export default function EngagementsPanel({ scopeType, scopeId, title = "Professi
       .eq("scope_type", scopeType)
       .eq("scope_id", scopeId)
       .order("created_at", { ascending: false });
-    setRows(data || []);
+    const list = data || [];
+    setRows(list);
+
+    // What's actually shared and how active the thread is — at a glance.
+    const linkIds = Array.from(new Set(list.map((r: any) => r.vault_share_link_id).filter(Boolean)));
+    if (linkIds.length) {
+      const { data: ls } = await (supabase as any)
+        .from("vault_share_links")
+        .select("id, name, scope_type")
+        .in("id", linkIds);
+      const map: Record<string, { name: string | null; scope_type: string }> = {};
+      (ls || []).forEach((l: any) => { map[l.id] = { name: l.name, scope_type: l.scope_type }; });
+      setLinks(map);
+    } else {
+      setLinks({});
+    }
+
+    const engIds = list.map((r: any) => r.id);
+    if (engIds.length) {
+      const { data: msgs } = await (supabase as any)
+        .from("engagement_messages")
+        .select("engagement_id, sender_type, read_by_staff_at")
+        .in("engagement_id", engIds);
+      const stats: Record<string, { total: number; unread: number }> = {};
+      (msgs || []).forEach((m: any) => {
+        const s = stats[m.engagement_id] || { total: 0, unread: 0 };
+        s.total += 1;
+        if (m.sender_type !== "staff" && !m.read_by_staff_at) s.unread += 1;
+        stats[m.engagement_id] = s;
+      });
+      setMessageStats(stats);
+    } else {
+      setMessageStats({});
+    }
     setLoading(false);
   }, [scopeType, scopeId]);
 
@@ -292,31 +328,57 @@ export default function EngagementsPanel({ scopeType, scopeId, title = "Professi
           </div>
         ) : (
           <ul className="divide-y">
-            {rows.map((r) => (
-              <li key={r.id} className="py-2 flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="text-sm font-medium truncate">{r.title}</div>
-                  <div className="text-xs text-muted-foreground truncate">
-                    {r.professional?.full_name || "Unknown pro"}
-                    {r.professional?.firm ? ` · ${r.professional.firm}` : ""}
-                    {r.pillar ? ` · ${r.pillar}` : ""}
+            {rows.map((r) => {
+              const link = r.vault_share_link_id ? links[r.vault_share_link_id] : null;
+              const stats = messageStats[r.id];
+              return (
+                <li key={r.id} className="py-2 space-y-1.5">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="text-sm font-medium truncate">{r.title}</div>
+                      <div className="text-xs text-muted-foreground truncate">
+                        {r.professional?.full_name || "Unknown pro"}
+                        {r.professional?.firm ? ` · ${r.professional.firm}` : ""}
+                        {r.pillar ? ` · ${r.pillar}` : ""}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Badge variant="outline" className="text-[10px] capitalize">{r.status}</Badge>
+                      {r.professional?.id && (
+                        <Link
+                          to={`/professionals/${r.professional.id}`}
+                          className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
+                        >
+                          <ExternalLink className="h-3 w-3" />
+                        </Link>
+                      )}
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <Badge variant="outline" className="text-[10px] capitalize">{r.status}</Badge>
-                  <EngagementThreadButton engagementId={r.id} engagementTitle={r.title} />
-                  <ShareVaultFilesControl engagement={r} scopeType={scopeType} scopeId={scopeId} onChanged={load} />
-                  {r.professional?.id && (
-                    <Link
-                      to={`/professionals/${r.professional.id}`}
-                      className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
-                    >
-                      <ExternalLink className="h-3 w-3" />
-                    </Link>
-                  )}
-                </div>
-              </li>
-            ))}
+                  <div className="flex items-center gap-3 flex-wrap text-[11px] text-muted-foreground">
+                    <span className="flex items-center gap-1">
+                      <MessageSquare className="h-3 w-3 shrink-0" />
+                      {stats
+                        ? `${stats.total} message${stats.total !== 1 ? "s" : ""}${stats.unread > 0 ? ` · ${stats.unread} unread` : ""}`
+                        : "No messages"}
+                    </span>
+                    <span className="flex items-center gap-1 min-w-0">
+                      <FolderOpen className="h-3 w-3 shrink-0" />
+                      {link ? (
+                        <span className="truncate">
+                          Shared {link.scope_type}: <span className="text-foreground font-medium">{link.name || "Untitled"}</span>
+                        </span>
+                      ) : (
+                        "Nothing shared"
+                      )}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <EngagementThreadButton engagementId={r.id} engagementTitle={r.title} />
+                    <ShareVaultFilesControl engagement={r} scopeType={scopeType} scopeId={scopeId} onChanged={load} />
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         )}
       </CardContent>
