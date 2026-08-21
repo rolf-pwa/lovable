@@ -4,7 +4,6 @@ import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/shared/components/ui/dialog";
 import { Button } from "@/shared/components/ui/button";
-import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -22,9 +21,6 @@ interface Props {
   buttonLabel?: string;
 }
 
-// Must match the professional_engagements_pillar_check DB constraint exactly.
-const PILLARS = ["legal", "tax", "insurance", "estate", "philanthropy", "governance", "other"];
-
 export default function LinkProDialog({
   scopeType, scopeId, scopeLabel,
   onLinked, buttonSize = "sm", buttonVariant = "outline", buttonLabel = "Link a Pro",
@@ -32,8 +28,6 @@ export default function LinkProDialog({
   const [open, setOpen] = useState(false);
   const [pros, setPros] = useState<any[]>([]);
   const [proId, setProId] = useState<string>("");
-  const [pillar, setPillar] = useState<string>("legal");
-  const [title, setTitle] = useState<string>("");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -49,14 +43,31 @@ export default function LinkProDialog({
 
   const submit = async () => {
     if (!proId) return toast.error("Select a professional");
-    if (!title.trim()) return toast.error("Add an engagement title");
     setSaving(true);
+    // Idempotent: reuse an existing active grant for this pro+scope instead
+    // of piling up duplicate rows — access is on/off, not a list of tickets.
+    const { data: existing } = await (supabase as any)
+      .from("professional_engagements")
+      .select("id")
+      .eq("professional_id", proId)
+      .eq("scope_type", scopeType)
+      .eq("scope_id", scopeId)
+      .neq("status", "revoked")
+      .maybeSingle();
+    if (existing) {
+      setSaving(false);
+      toast.info("This pro already has access here.");
+      setOpen(false);
+      setProId("");
+      onLinked?.();
+      return;
+    }
     const { error } = await (supabase as any).from("professional_engagements").insert({
       professional_id: proId,
       scope_type: scopeType,
       scope_id: scopeId,
-      pillar,
-      title: title.trim(),
+      pillar: "other",
+      title: "Portal access",
       status: "active",
       started_at: new Date().toISOString(),
     });
@@ -75,7 +86,7 @@ export default function LinkProDialog({
       }.`,
     );
     setOpen(false);
-    setProId(""); setTitle(""); setPillar("legal");
+    setProId("");
     onLinked?.();
   };
 
@@ -113,23 +124,6 @@ export default function LinkProDialog({
                 ))}
               </SelectContent>
             </Select>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label>Pillar</Label>
-              <Select value={pillar} onValueChange={setPillar}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {PILLARS.map((p) => (
-                    <SelectItem key={p} value={p} className="capitalize">{p}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Engagement title</Label>
-              <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g., Estate freeze review" />
-            </div>
           </div>
         </div>
         <DialogFooter>

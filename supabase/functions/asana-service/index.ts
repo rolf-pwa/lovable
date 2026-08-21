@@ -1181,11 +1181,11 @@ serve(async (req) => {
       }
 
       case "getTaggedTasks": {
-        // Fetch task GIDs where a contact is tagged, then fetch details from Asana
-        const { contact_id: taggedContactId } = params;
-        if (!taggedContactId) {
+        // Fetch task GIDs where a contact or professional is tagged, then fetch details from Asana
+        const { contact_id: taggedContactId, professional_id: taggedProfessionalId } = params;
+        if (!taggedContactId && !taggedProfessionalId) {
           return new Response(
-            JSON.stringify({ error: "contact_id is required" }),
+            JSON.stringify({ error: "contact_id or professional_id is required" }),
             { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
           );
         }
@@ -1193,10 +1193,10 @@ serve(async (req) => {
           Deno.env.get("SUPABASE_URL")!,
           Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
         );
-        const { data: tagged } = await supabaseAdmin3
-          .from("task_collaborators")
-          .select("task_gid")
-          .eq("contact_id", taggedContactId);
+        const taggedQuery = supabaseAdmin3.from("task_collaborators").select("task_gid");
+        const { data: tagged } = taggedContactId
+          ? await taggedQuery.eq("contact_id", taggedContactId)
+          : await taggedQuery.eq("professional_id", taggedProfessionalId);
         const taskGids = (tagged || []).map((r: any) => r.task_gid);
         if (taskGids.length === 0) {
           result = [];
