@@ -43,7 +43,6 @@ import { HouseholdTaskRollup } from "@/modules/crm/components/HouseholdTaskRollu
 import { HoldingTank } from "@/modules/crm/components/HoldingTank";
 import { VaultView } from "@/modules/crm/pages/Vault";
 import { CharterRatificationTile, StabilizationMapButton } from "@/modules/audit";
-import EngagementsPanel from "@/modules/crm/components/EngagementsPanel";
 import { ProsPanel } from "@/modules/crm/components/ProsPanel";
 import { AddCompanyDialog } from "@/modules/crm/components/AddCompanyDialog";
 import {
@@ -1129,7 +1128,6 @@ const HouseholdDetail = () => {
                     </Card>
                   );
                 })()}
-                <EngagementsPanel scopeType="household" scopeId={id!} title="Pro Engagements & Threads" />
               </div>
             </div>
           </TabsContent>

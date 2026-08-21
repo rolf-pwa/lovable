@@ -56,7 +56,7 @@ interface DriveFile extends DriveEntry { mimeType: string }
 // no single vault to browse from here. Browsing and sharing happen in this
 // one dialog — no separate trip to the Vault page, no email prompt, no
 // picking from a list of pre-existing links that may or may not match.
-function ShareVaultFilesControl({
+export function ShareVaultFilesControl({
   engagement,
   scopeType,
   scopeId,

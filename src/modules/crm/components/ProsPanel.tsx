@@ -6,6 +6,7 @@ import { Badge } from "@/shared/components/ui/badge";
 import { Briefcase, ExternalLink, Home, User, TreesIcon } from "lucide-react";
 import EngagementThreadButton from "@/modules/crm/components/EngagementThreadButton";
 import LinkProDialog from "@/modules/crm/components/LinkProDialog";
+import { ShareVaultFilesControl } from "@/modules/crm/components/EngagementsPanel";
 import { format } from "date-fns";
 
 interface Props {
@@ -136,6 +137,14 @@ export function ProsPanel({ scope, scopeId, memberContactIds = [], householdIds 
                           {e.status}
                         </Badge>
                         <EngagementThreadButton engagementId={e.id} engagementTitle={e.title} />
+                        {e.scope_type !== "family" && (
+                          <ShareVaultFilesControl
+                            engagement={e}
+                            scopeType={e.scope_type}
+                            scopeId={e.scope_id}
+                            onChanged={load}
+                          />
+                        )}
                       </li>
                     );
                   })}
