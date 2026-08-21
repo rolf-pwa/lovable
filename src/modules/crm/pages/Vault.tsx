@@ -189,11 +189,15 @@ function FolderNode({
       });
       const url = `${window.location.origin}/vault/share/${res.link.token}`;
       await navigator.clipboard.writeText(`${url}\nUnlock code: ${res.link.unlock_code}`);
-      toast.success(
-        notifyEmail?.trim()
-          ? `Link emailed to ${notifyEmail.trim()}. Unlock code copied — send it separately.`
-          : "Vault link copied (with unlock code)"
-      );
+      if (notifyEmail?.trim()) {
+        if (res.email_sent) {
+          toast.success(`Link emailed to ${notifyEmail.trim()}. Unlock code copied — send it separately.`);
+        } else {
+          toast.warning(`Link created and copied, but the email to ${notifyEmail.trim()} failed to send (${res.email_reason || "unknown error"}). Send the link manually.`);
+        }
+      } else {
+        toast.success("Vault link copied (with unlock code)");
+      }
     } catch (e: any) { toast.error(e.message); }
   };
 
