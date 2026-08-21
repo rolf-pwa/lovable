@@ -17,7 +17,9 @@ import { checkOutboundPii } from "../_shared/pii-shield.ts";
 
 const APP_BASE_URL = "https://app.prosperwise.ca";
 
-// ── Wix Velo relay (client-facing email) ──
+// ── Gmail relay (client-facing email) — Wix was fully decommissioned; this
+// used to call sendVaultEmailViaWix, which silently no-op'd once the Wix
+// secrets were removed, while still reporting success to the caller. ──
 function maskEmail(email: string): string {
   const [local, domain] = email.split("@");
   if (!domain) return "•••";
@@ -25,45 +27,42 @@ function maskEmail(email: string): string {
   return `${head}${"•".repeat(Math.max(1, local.length - 2))}@${domain}`;
 }
 
-async function sendVaultEmailViaWix(payload: {
+async function sendVaultEmail(payload: {
   email: string;
   full_name?: string;
   subject: string;
   message: string;
   event_type: string;
-}): Promise<void> {
-  const WIX_SITE_URL = Deno.env.get("WIX_SITE_URL");
-  const WIX_OTP_SECRET = Deno.env.get("WIX_OTP_SECRET");
-  if (!WIX_SITE_URL || !WIX_OTP_SECRET) {
-    console.warn("[VaultEmail] Wix secrets missing; skipping send");
-    return;
-  }
+}): Promise<{ sent: boolean; reason?: string }> {
   // PII Shield — never let financial/health content leave Canadian infra
   const pii = checkOutboundPii(`${payload.subject}\n${payload.message}`);
   if (pii.blocked) {
     console.warn("[VaultEmail] PII Shield blocked send:", pii.reason);
-    return;
+    return { sent: false, reason: "pii_blocked" };
   }
-  const baseUrl = WIX_SITE_URL.replace(/\/sendOtp\/?$/, "");
-  const notifyUrl = `${baseUrl}/sendNotification`;
-  const relayPayload = {
-    ...payload,
-    title: payload.subject,
-    email_subject: payload.subject,
-    subject_line: payload.subject,
-    update_title: payload.subject,
-    secret: WIX_OTP_SECRET,
-  };
   try {
-    const res = await fetch(notifyUrl, {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/send-admin-email`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(relayPayload),
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        "x-internal-secret": Deno.env.get("INTERNAL_FUNCTION_SECRET") ?? "",
+      },
+      body: JSON.stringify({
+        to: payload.email,
+        subject: payload.subject,
+        text: payload.message,
+      }),
     });
     const text = await res.text();
-    console.log(`[VaultEmail] Wix response ${res.status}: ${text}`);
+    if (!res.ok) {
+      console.error(`[VaultEmail] Gmail relay failed ${res.status}: ${text}`);
+      return { sent: false, reason: "gmail_error" };
+    }
+    return { sent: true };
   } catch (e) {
-    console.error("[VaultEmail] Wix relay error:", e);
+    console.error("[VaultEmail] Gmail relay error:", e);
+    return { sent: false, reason: "gmail_error" };
   }
 }
 
@@ -639,12 +638,14 @@ serve(async (req) => {
       `This code replaces any previous code and is valid for 24 hours.\n\n` +
       `If you didn't request this code, you can safely ignore this email — no one can access the vault without it.\n\n` +
       `— ProsperWise`;
-    // @ts-ignore EdgeRuntime is provided by Supabase Edge Functions runtime
-    EdgeRuntime.waitUntil(sendVaultEmailViaWix({
+    const otpEmailResult = await sendVaultEmail({
       email: collab.email, full_name: collab.full_name, subject, message, event_type: "vault_collaborator_otp",
-    }));
-    await audit(null, "vault_collaborator_otp_sent", null, null, null, req, { collaborator_id: collab.id, email: collab.email });
-    return new Response(JSON.stringify({ ok: true, email_hint: maskEmail(collab.email) }), { headers: { ...cors, "Content-Type": "application/json" } });
+    });
+    await audit(null, otpEmailResult.sent ? "vault_collaborator_otp_sent" : "vault_collaborator_otp_failed", null, null, null, req, { collaborator_id: collab.id, email: collab.email, reason: otpEmailResult.reason });
+    return new Response(
+      JSON.stringify({ ok: true, email_hint: maskEmail(collab.email), email_sent: otpEmailResult.sent }),
+      { headers: { ...cors, "Content-Type": "application/json" } },
+    );
   }
 
   // Anonymous endpoint: resolveShareLink runs before any actor exists,
@@ -1108,11 +1109,10 @@ serve(async (req) => {
           `That code is being sent to you separately.\n\n` +
           `Access can be revoked at any time. If you weren't expecting this invitation, please disregard this email.\n\n` +
           `— ProsperWise`;
-        // @ts-ignore EdgeRuntime is provided by Supabase Edge Functions runtime
-        EdgeRuntime.waitUntil(sendVaultEmailViaWix({
+        const inviteEmailResult = await sendVaultEmail({
           email, full_name: fullName, subject, message, event_type: "vault_collaborator_invite",
-        }));
-        await audit(actor, "vault_invite_email_sent", cId ?? null, null, null, req, { collaborator_id: collab.id, email });
+        });
+        await audit(actor, inviteEmailResult.sent ? "vault_invite_email_sent" : "vault_invite_email_failed", cId ?? null, null, null, req, { collaborator_id: collab.id, email, reason: inviteEmailResult.reason });
       }
 
       return new Response(JSON.stringify({ ok: true, collaborator: collab, magicToken: tok?.token, unlockCode: code }), { headers: { ...cors, "Content-Type": "application/json" } });
@@ -1436,7 +1436,10 @@ serve(async (req) => {
       if (error) throw error;
       await audit(actor, "share_link_created", null, drive_id, null, req, { link_type, permission });
 
-      // Optional: auto-send the share URL by email (link only — unlock code sent separately/manually)
+      // Optional: auto-send the share URL by email (link only — unlock code sent separately/manually).
+      // Awaited (not fire-and-forget) so the response can honestly report
+      // whether it actually sent, rather than the caller assuming success.
+      let emailResult: { sent: boolean; reason?: string } | null = null;
       if (notify_email) {
         const path = link_type === "guest" ? `/vault/share/${link.token}` : `/portal/vault?share=${link.token}`;
         const url = `${APP_BASE_URL}${path}`;
@@ -1450,14 +1453,16 @@ serve(async (req) => {
             : `You'll be asked to verify your identity on the landing page.\n\n`) +
           `Access can be revoked at any time. If you weren't expecting this, please disregard.\n\n` +
           `— ProsperWise`;
-        // @ts-ignore EdgeRuntime is provided by Supabase Edge Functions runtime
-        EdgeRuntime.waitUntil(sendVaultEmailViaWix({
+        emailResult = await sendVaultEmail({
           email: notify_email, full_name: recipient_name, subject, message, event_type: "vault_share_link",
-        }));
-        await audit(actor, "share_link_email_sent", null, drive_id, null, req, { link_id: link.id, email: notify_email });
+        });
+        await audit(actor, emailResult.sent ? "share_link_email_sent" : "share_link_email_failed", null, drive_id, null, req, { link_id: link.id, email: notify_email, reason: emailResult.reason });
       }
 
-      return new Response(JSON.stringify({ ok: true, link }), { headers: { ...cors, "Content-Type": "application/json" } });
+      return new Response(
+        JSON.stringify({ ok: true, link, email_sent: emailResult?.sent ?? null, email_reason: emailResult?.reason ?? null }),
+        { headers: { ...cors, "Content-Type": "application/json" } },
+      );
     }
 
     if (action === "listShareLinks") {
