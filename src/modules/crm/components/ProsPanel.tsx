@@ -17,15 +17,6 @@ interface Props {
   title?: string;
 }
 
-const STATUS_COLORS: Record<string, string> = {
-  draft: "bg-muted text-muted-foreground border-border",
-  invited: "bg-blue-100 text-blue-800 border-blue-200",
-  active: "bg-emerald-100 text-emerald-800 border-emerald-200",
-  completed: "bg-slate-100 text-slate-800 border-slate-200",
-  archived: "bg-muted text-muted-foreground border-border",
-  revoked: "bg-red-100 text-red-800 border-red-200",
-};
-
 const SCOPE_ICON = { family: TreesIcon, household: Home, contact: User } as const;
 
 interface LinkInfo { name: string | null; scope_type: string }
@@ -153,7 +144,7 @@ export function ProsPanel({ scope, scopeId, memberContactIds = [], householdIds 
                     <ExternalLink className="h-3 w-3 text-muted-foreground ml-1" />
                   </Link>
                   <Badge variant="outline" className="text-[10px]">
-                    {engs.length} engagement{engs.length !== 1 ? "s" : ""}
+                    {engs.length} scope{engs.length !== 1 ? "s" : ""}
                   </Badge>
                 </div>
                 <ul className="divide-y divide-border">
@@ -165,19 +156,13 @@ export function ProsPanel({ scope, scopeId, memberContactIds = [], householdIds 
                       <li key={e.id} className="px-3 py-2 space-y-1.5">
                         <div className="flex items-center gap-3">
                           <div className="min-w-0 flex-1">
-                            <p className="text-sm font-medium truncate">{e.title}</p>
-                            <div className="flex items-center gap-2 mt-0.5 text-[10px] text-muted-foreground">
+                            <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
                               <Icon className="h-3 w-3" />
-                              <span className="capitalize">{e.scope_type}</span>
+                              <span className="capitalize">{e.scope_type} access</span>
                               <span>·</span>
-                              <span className="uppercase">{e.pillar}</span>
-                              <span>·</span>
-                              <span>{format(new Date(e.created_at), "PP")}</span>
+                              <span>granted {format(new Date(e.created_at), "PP")}</span>
                             </div>
                           </div>
-                          <Badge variant="outline" className={`text-[10px] ${STATUS_COLORS[e.status] || ""}`}>
-                            {e.status}
-                          </Badge>
                         </div>
                         <div className="flex items-center gap-3 flex-wrap text-[11px] text-muted-foreground">
                           <span className="flex items-center gap-1">
@@ -190,7 +175,7 @@ export function ProsPanel({ scope, scopeId, memberContactIds = [], householdIds 
                             <FolderOpen className="h-3 w-3 shrink-0" />
                             {link ? (
                               <span className="truncate">
-                                Shared {link.scope_type}: <span className="text-foreground font-medium">{link.name || "Untitled"}</span>
+                                Shared folder: <span className="text-foreground font-medium">{link.name || "Untitled"}</span>
                               </span>
                             ) : (
                               "Nothing shared"
@@ -198,13 +183,14 @@ export function ProsPanel({ scope, scopeId, memberContactIds = [], householdIds 
                           </span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <EngagementThreadButton engagementId={e.id} engagementTitle={e.title} />
+                          <EngagementThreadButton engagementId={e.id} engagementTitle={p.full_name} />
                           {e.scope_type !== "family" && (
                             <ShareVaultFilesControl
                               engagement={e}
                               scopeType={e.scope_type}
                               scopeId={e.scope_id}
                               onChanged={load}
+                              label={p.full_name}
                             />
                           )}
                         </div>

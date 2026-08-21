@@ -4,8 +4,6 @@ import { supabase } from "@/shared/integrations/supabase/client";
 import { AppLayout } from "@/shared/components/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Button } from "@/shared/components/ui/button";
-import { Input } from "@/shared/components/ui/input";
-import { Textarea } from "@/shared/components/ui/textarea";
 import { Badge } from "@/shared/components/ui/badge";
 import { Switch } from "@/shared/components/ui/switch";
 import {
@@ -31,31 +29,14 @@ import {
 import {
   Plus, ArrowLeft, Briefcase, Mail, Phone, Building2,
   TreesIcon, Home, User, ChevronDown, ChevronRight, Loader2, Eye,
+  ListTodo, FolderOpen, MessageSquare, X, ExternalLink,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/shared/hooks/useAuth";
 import { format } from "date-fns";
 import EngagementThreadButton from "@/modules/crm/components/EngagementThreadButton";
+import { ShareVaultFilesControl } from "@/modules/crm/components/EngagementsPanel";
 import { PageBreadcrumbs } from "@/shared/components/PageBreadcrumbs";
-
-const PILLARS = [
-  { value: "tax", label: "Tax" },
-  { value: "legal", label: "Legal" },
-  { value: "insurance", label: "Insurance" },
-  { value: "estate", label: "Estate" },
-  { value: "philanthropy", label: "Philanthropy" },
-  { value: "governance", label: "Governance" },
-  { value: "other", label: "Other" },
-];
-
-const STATUS_COLORS: Record<string, string> = {
-  draft: "bg-muted text-muted-foreground",
-  invited: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100",
-  active: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-100",
-  completed: "bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-100",
-  archived: "bg-muted text-muted-foreground",
-  revoked: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100",
-};
 
 const SCOPE_ICON = { family: TreesIcon, household: Home, contact: User } as const;
 const SCOPE_LABEL = { family: "Family", household: "Household", contact: "Individual" } as const;
@@ -76,10 +57,10 @@ export default function ProfessionalDetail() {
   const [saving, setSaving] = useState(false);
   const [openGroups, setOpenGroups] = useState<Set<string>>(new Set());
   const [viewPortalLoading, setViewPortalLoading] = useState(false);
+  const [tasks, setTasks] = useState<any[]>([]);
+  const [tasksLoading, setTasksLoading] = useState(true);
+  const [links, setLinks] = useState<Record<string, { name: string | null }>>({});
   const [form, setForm] = useState({
-    title: "",
-    description: "",
-    pillar: "tax",
     scope_type: "household",
     scope_id: "",
   });
@@ -117,7 +98,7 @@ export default function ProfessionalDetail() {
     const [{ data: p }, { data: e }, { data: fams }, { data: hhs }, { data: cs }] = await Promise.all([
       (supabase as any).from("professionals").select("*").eq("id", id).maybeSingle(),
       (supabase as any).from("professional_engagements")
-        .select("*").eq("professional_id", id).order("created_at", { ascending: false }),
+        .select("*").eq("professional_id", id).neq("status", "revoked").order("created_at", { ascending: false }),
       supabase.from("families").select("id, name").order("name"),
       supabase.from("households").select("id, label").order("label"),
       supabase.from("contacts").select("id, full_name").order("full_name").limit(500),
@@ -133,12 +114,33 @@ export default function ProfessionalDetail() {
     (cs || []).forEach((c: any) => { map[`contact:${c.id}`] = c.full_name; });
     setScopeNames(map);
 
+    // What's actually shared with this pro, at a glance.
+    const linkIds = Array.from(new Set((e || []).map((r: any) => r.vault_share_link_id).filter(Boolean)));
+    if (linkIds.length) {
+      const { data: ls } = await (supabase as any).from("vault_share_links").select("id, name").in("id", linkIds);
+      const linkMap: Record<string, { name: string | null }> = {};
+      (ls || []).forEach((l: any) => { linkMap[l.id] = { name: l.name }; });
+      setLinks(linkMap);
+    } else {
+      setLinks({});
+    }
+
     // Open all scope-type groups by default
     setOpenGroups(new Set(["family", "household", "contact"]));
     setLoading(false);
   }, [id]);
 
-  useEffect(() => { load(); }, [load]);
+  const loadTasks = useCallback(async () => {
+    if (!id) return;
+    setTasksLoading(true);
+    const res = await supabase.functions.invoke("asana-service", {
+      body: { action: "getTaggedTasks", professional_id: id },
+    });
+    setTasks(res.error || res.data?.error ? [] : (res.data?.data || []));
+    setTasksLoading(false);
+  }, [id]);
+
+  useEffect(() => { load(); loadTasks(); }, [load, loadTasks]);
 
   async function togglePortal(enabled: boolean) {
     const { error } = await (supabase as any).from("professionals").update({ pro_portal_enabled: enabled }).eq("id", id);
@@ -147,36 +149,53 @@ export default function ProfessionalDetail() {
     load();
   }
 
-  async function createEngagement() {
-    if (!form.title || !form.scope_id) {
-      toast.error("Title and scope are required");
+  async function grantAccess() {
+    if (!form.scope_id) {
+      toast.error("Select a scope");
       return;
     }
     setSaving(true);
+    const { data: existing } = await (supabase as any)
+      .from("professional_engagements")
+      .select("id")
+      .eq("professional_id", id)
+      .eq("scope_type", form.scope_type)
+      .eq("scope_id", form.scope_id)
+      .neq("status", "revoked")
+      .maybeSingle();
+    if (existing) {
+      setSaving(false);
+      toast.info("Already has access here.");
+      setOpen(false);
+      setForm({ scope_type: "household", scope_id: "" });
+      load();
+      return;
+    }
     const { error } = await (supabase as any).from("professional_engagements").insert({
       professional_id: id,
-      title: form.title,
-      description: form.description,
-      pillar: form.pillar,
+      title: "Portal access",
+      pillar: "other",
       scope_type: form.scope_type,
       scope_id: form.scope_id,
-      status: "draft",
+      status: "active",
+      started_at: new Date().toISOString(),
       created_by: user?.id,
     });
     setSaving(false);
     if (error) { toast.error(error.message); return; }
-    toast.success("Engagement created");
+    toast.success("Access granted");
     setOpen(false);
-    setForm({ title: "", description: "", pillar: "tax", scope_type: "household", scope_id: "" });
+    setForm({ scope_type: "household", scope_id: "" });
     load();
   }
 
-  async function updateStatus(engagementId: string, status: string) {
-    const patch: any = { status };
-    if (status === "active") patch.started_at = new Date().toISOString();
-    if (status === "completed") patch.completed_at = new Date().toISOString();
-    const { error } = await (supabase as any).from("professional_engagements").update(patch).eq("id", engagementId);
+  async function revokeAccess(engagementId: string) {
+    const { error } = await (supabase as any)
+      .from("professional_engagements")
+      .update({ status: "revoked" })
+      .eq("id", engagementId);
     if (error) { toast.error(error.message); return; }
+    toast.success("Access revoked");
     load();
   }
 
@@ -205,8 +224,9 @@ export default function ProfessionalDetail() {
     });
   };
 
-  const activeCount = engagements.filter((e) => e.status === "active").length;
-  const completedCount = engagements.filter((e) => e.status === "completed").length;
+  const scopeCount = engagements.length;
+  const sharedFolderCount = engagements.filter((e) => e.vault_share_link_id).length;
+  const openTaskCount = tasks.filter((t) => !t.completed).length;
 
   if (loading) {
     return <AppLayout><div className="flex justify-center py-24"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div></AppLayout>;
@@ -284,16 +304,16 @@ export default function ProfessionalDetail() {
 
             <div className="mt-6 grid grid-cols-3 gap-4">
               <div className="rounded-md border border-border bg-muted/30 p-3">
-                <p className="text-[10px] uppercase text-muted-foreground tracking-wider">Active</p>
-                <p className="text-2xl font-bold text-emerald-600">{activeCount}</p>
+                <p className="text-[10px] uppercase text-muted-foreground tracking-wider">Open Tasks</p>
+                <p className="text-2xl font-bold text-emerald-600">{tasksLoading ? "–" : openTaskCount}</p>
               </div>
               <div className="rounded-md border border-border bg-muted/30 p-3">
-                <p className="text-[10px] uppercase text-muted-foreground tracking-wider">Completed</p>
-                <p className="text-2xl font-bold">{completedCount}</p>
+                <p className="text-[10px] uppercase text-muted-foreground tracking-wider">Shared Folders</p>
+                <p className="text-2xl font-bold">{sharedFolderCount}</p>
               </div>
               <div className="rounded-md border border-border bg-muted/30 p-3">
-                <p className="text-[10px] uppercase text-muted-foreground tracking-wider">Total</p>
-                <p className="text-2xl font-bold">{engagements.length}</p>
+                <p className="text-[10px] uppercase text-muted-foreground tracking-wider">Scopes</p>
+                <p className="text-2xl font-bold">{scopeCount}</p>
               </div>
             </div>
           </CardContent>
@@ -353,39 +373,24 @@ export default function ProfessionalDetail() {
             {/* Directory */}
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-lg font-serif">Client Directory</CardTitle>
+                <CardTitle className="text-lg font-serif">Access</CardTitle>
                 <Dialog open={open} onOpenChange={setOpen}>
                   <DialogTrigger asChild>
-                    <Button size="sm"><Plus className="h-4 w-4 mr-2" />New Engagement</Button>
+                    <Button size="sm"><Plus className="h-4 w-4 mr-2" />Grant Access</Button>
                   </DialogTrigger>
                   <DialogContent>
-                    <DialogHeader><DialogTitle>New Engagement</DialogTitle></DialogHeader>
+                    <DialogHeader><DialogTitle>Grant Access</DialogTitle></DialogHeader>
                     <div className="space-y-3">
                       <div>
-                        <label className="text-xs text-muted-foreground">Title *</label>
-                        <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="e.g. 2026 Tax Filing" />
-                      </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className="text-xs text-muted-foreground">Pillar</label>
-                          <Select value={form.pillar} onValueChange={(v) => setForm({ ...form, pillar: v })}>
-                            <SelectTrigger><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                              {PILLARS.map((p) => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div>
-                          <label className="text-xs text-muted-foreground">Scope Type</label>
-                          <Select value={form.scope_type} onValueChange={(v) => setForm({ ...form, scope_type: v, scope_id: "" })}>
-                            <SelectTrigger><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="family">Family</SelectItem>
-                              <SelectItem value="household">Household</SelectItem>
-                              <SelectItem value="contact">Contact</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
+                        <label className="text-xs text-muted-foreground">Scope Type</label>
+                        <Select value={form.scope_type} onValueChange={(v) => setForm({ ...form, scope_type: v, scope_id: "" })}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="family">Family</SelectItem>
+                            <SelectItem value="household">Household</SelectItem>
+                            <SelectItem value="contact">Contact</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                       <div>
                         <label className="text-xs text-muted-foreground">Scope *</label>
@@ -396,14 +401,10 @@ export default function ProfessionalDetail() {
                           </SelectContent>
                         </Select>
                       </div>
-                      <div>
-                        <label className="text-xs text-muted-foreground">Description</label>
-                        <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} />
-                      </div>
                     </div>
                     <DialogFooter>
                       <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
-                      <Button onClick={createEngagement} disabled={saving}>Create</Button>
+                      <Button onClick={grantAccess} disabled={saving}>Grant</Button>
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>
@@ -411,7 +412,7 @@ export default function ProfessionalDetail() {
               <CardContent className="space-y-3">
                 {engagements.length === 0 && (
                   <p className="text-sm text-muted-foreground py-8 text-center">
-                    No client engagements yet. Link this professional to a family, household, or individual.
+                    No access granted yet. Link this professional to a family, household, or individual.
                   </p>
                 )}
                 {(["family", "household", "contact"] as const).map((scopeType) => {
@@ -441,37 +442,46 @@ export default function ProfessionalDetail() {
                                   <Icon className="h-3.5 w-3.5 text-muted-foreground" />
                                   {name}
                                 </Link>
-                                <Badge variant="outline" className="text-[10px]">
-                                  {engs.length} engagement{engs.length !== 1 ? "s" : ""}
-                                </Badge>
+                                <span className="text-[10px] text-muted-foreground">
+                                  granted {format(new Date(engs[0].created_at), "PP")}
+                                </span>
                               </div>
-                              <ul className="divide-y divide-border">
-                                {engs.map((e) => (
-                                  <li key={e.id} className="px-3 py-2 flex items-center gap-3">
-                                    <div className="min-w-0 flex-1">
-                                      <p className="text-sm font-medium truncate">{e.title}</p>
-                                      <div className="flex items-center gap-2 mt-0.5">
-                                        <span className="text-[10px] uppercase text-muted-foreground">{e.pillar}</span>
-                                        <span className="text-[10px] text-muted-foreground">·</span>
-                                        <span className="text-[10px] text-muted-foreground">
-                                          {format(new Date(e.created_at), "PP")}
+                              {(() => {
+                                const e = engs[0]; // canonical grant for this scope
+                                const link = e.vault_share_link_id ? links[e.vault_share_link_id] : null;
+                                return (
+                                  <div className="px-3 py-2 space-y-2">
+                                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                      <FolderOpen className="h-3 w-3 shrink-0" />
+                                      {link ? (
+                                        <span className="truncate">
+                                          Shared folder: <span className="text-foreground font-medium">{link.name || "Untitled"}</span>
                                         </span>
-                                      </div>
+                                      ) : "Nothing shared"}
                                     </div>
-                                    <Select value={e.status} onValueChange={(v) => updateStatus(e.id, v)}>
-                                      <SelectTrigger className={`h-7 w-28 text-xs ${STATUS_COLORS[e.status] || ""}`}>
-                                        <SelectValue />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        {["draft", "invited", "active", "completed", "archived", "revoked"].map((s) => (
-                                          <SelectItem key={s} value={s} className="text-xs">{s}</SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
-                                    <EngagementThreadButton engagementId={e.id} engagementTitle={e.title} />
-                                  </li>
-                                ))}
-                              </ul>
+                                    <div className="flex items-center gap-2">
+                                      <EngagementThreadButton engagementId={e.id} engagementTitle={`${pro.full_name} — ${name}`} />
+                                      {scopeType !== "family" && (
+                                        <ShareVaultFilesControl
+                                          engagement={e}
+                                          scopeType={scopeType}
+                                          scopeId={scopeId}
+                                          onChanged={load}
+                                          label={name}
+                                        />
+                                      )}
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        className="h-7 px-2 text-xs text-destructive hover:text-destructive"
+                                        onClick={() => revokeAccess(e.id)}
+                                      >
+                                        <X className="h-3 w-3 mr-1" /> Revoke
+                                      </Button>
+                                    </div>
+                                  </div>
+                                );
+                              })()}
                             </div>
                           );
                         })}
@@ -479,6 +489,51 @@ export default function ProfessionalDetail() {
                     </Collapsible>
                   );
                 })}
+              </CardContent>
+            </Card>
+
+            {/* Tasks — a new engagement is a new task tagged to this pro. */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg font-serif flex items-center gap-2">
+                  <ListTodo className="h-4 w-4" /> Tasks
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {tasksLoading ? (
+                  <div className="text-sm text-muted-foreground py-4 text-center">Loading…</div>
+                ) : tasks.length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-8 text-center">
+                    No tasks tagged to this pro yet. Tag them from a task on the relevant household or contact page.
+                  </p>
+                ) : (
+                  <ul className="divide-y divide-border">
+                    {tasks.map((t) => (
+                      <li key={t.gid} className="py-2 flex items-center gap-3">
+                        <div className="min-w-0 flex-1">
+                          <p className={`text-sm font-medium truncate ${t.completed ? "line-through text-muted-foreground" : ""}`}>
+                            {t.name}
+                          </p>
+                          <div className="flex items-center gap-2 mt-0.5 text-[10px] text-muted-foreground">
+                            {t.memberships?.[0]?.section?.name && <span>{t.memberships[0].section.name}</span>}
+                            {t.due_on && <span>· Due {format(new Date(t.due_on), "PP")}</span>}
+                          </div>
+                        </div>
+                        <Badge variant="outline" className={`text-[10px] shrink-0 ${t.completed ? "" : "bg-emerald-100 text-emerald-800 border-emerald-200"}`}>
+                          {t.completed ? "Done" : "Open"}
+                        </Badge>
+                        <a
+                          href={`https://app.asana.com/0/0/${t.gid}/f`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-muted-foreground hover:text-foreground shrink-0"
+                        >
+                          <ExternalLink className="h-3.5 w-3.5" />
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </CardContent>
             </Card>
           </div>

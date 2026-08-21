@@ -2,7 +2,6 @@ import { useEffect, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
-import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/shared/components/ui/dialog";
 import { Briefcase, ExternalLink, FolderOpen, Folder, FileText, Loader2, ChevronRight, MessageSquare } from "lucide-react";
@@ -61,11 +60,13 @@ export function ShareVaultFilesControl({
   scopeType,
   scopeId,
   onChanged,
+  label,
 }: {
   engagement: EngagementRow;
   scopeType: "contact" | "household" | "family";
   scopeId: string;
   onChanged: () => void;
+  label?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -126,13 +127,13 @@ export function ShareVaultFilesControl({
     loadFolder(next[next.length - 1].id);
   };
 
-  const share = async (item: DriveEntry, isFolder: boolean) => {
+  const share = async (item: DriveEntry) => {
     if (!householdId) return;
     setSharing(item.id);
     try {
       const res = await callVault("createShareLink", {
         householdId,
-        scope_type: isFolder ? "folder" : "file",
+        scope_type: "folder",
         drive_id: item.id,
         permission: "view",
         link_type: "portal",
@@ -143,7 +144,7 @@ export function ShareVaultFilesControl({
         .update({ vault_share_link_id: res.link.id } as any)
         .eq("id", engagement.id);
       if (error) throw error;
-      toast.success(`"${item.name}" shared with this engagement.`);
+      toast.success(`"${item.name}" folder shared.`);
       onChanged();
       setOpen(false);
     } catch (e: any) {
@@ -179,15 +180,15 @@ export function ShareVaultFilesControl({
         className="h-7 px-2 text-xs"
         onClick={openDialog}
         disabled={scopeType === "family"}
-        title={scopeType === "family" ? "Share files at the household or contact level instead" : undefined}
+        title={scopeType === "family" ? "Share a folder at the household or contact level instead" : undefined}
       >
         <FolderOpen className="h-3 w-3 mr-1" />
-        {engagement.vault_share_link_id ? "Files Shared" : "Share Files"}
+        {engagement.vault_share_link_id ? "Shared Folder" : "Share Folder"}
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Share Vault Files — {engagement.title}</DialogTitle>
+            <DialogTitle>Share a Vault Folder{label ? ` — ${label}` : ""}</DialogTitle>
           </DialogHeader>
           {!householdId && !loading ? (
             <p className="text-sm text-muted-foreground py-4">
@@ -225,18 +226,15 @@ export function ShareVaultFilesControl({
                         <Folder className="h-4 w-4 text-accent shrink-0" />
                         <span className="truncate">{f.name}</span>
                       </button>
-                      <Button size="sm" variant="outline" className="h-7 text-xs shrink-0" disabled={sharing !== null} onClick={() => share(f, true)}>
-                        {sharing === f.id ? <Loader2 className="h-3 w-3 animate-spin" /> : "Share"}
+                      <Button size="sm" variant="outline" className="h-7 text-xs shrink-0" disabled={sharing !== null} onClick={() => share(f)}>
+                        {sharing === f.id ? <Loader2 className="h-3 w-3 animate-spin" /> : "Share this folder"}
                       </Button>
                     </div>
                   ))}
                   {files.map((f) => (
-                    <div key={f.id} className="flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm">
-                      <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <div key={f.id} className="flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm text-muted-foreground">
+                      <FileText className="h-4 w-4 shrink-0" />
                       <span className="flex-1 truncate">{f.name}</span>
-                      <Button size="sm" variant="outline" className="h-7 text-xs shrink-0" disabled={sharing !== null} onClick={() => share(f, false)}>
-                        {sharing === f.id ? <Loader2 className="h-3 w-3 animate-spin" /> : "Share"}
-                      </Button>
                     </div>
                   ))}
                 </div>
@@ -328,31 +326,34 @@ export default function EngagementsPanel({ scopeType, scopeId, title = "Professi
           </div>
         ) : (
           <ul className="divide-y">
-            {rows.map((r) => {
+            {/* One row per pro — a scope grant is on/off, not a list of tickets. */}
+            {Object.values(
+              rows.reduce((acc: Record<string, EngagementRow>, r) => {
+                if (!acc[r.professional_id]) acc[r.professional_id] = r; // rows are newest-first
+                return acc;
+              }, {}),
+            ).map((r) => {
               const link = r.vault_share_link_id ? links[r.vault_share_link_id] : null;
               const stats = messageStats[r.id];
+              const proName = r.professional?.full_name || "Unknown pro";
               return (
-                <li key={r.id} className="py-2 space-y-1.5">
+                <li key={r.professional_id} className="py-2 space-y-1.5">
                   <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0">
-                      <div className="text-sm font-medium truncate">{r.title}</div>
+                      <div className="text-sm font-medium truncate">{proName}</div>
                       <div className="text-xs text-muted-foreground truncate">
-                        {r.professional?.full_name || "Unknown pro"}
-                        {r.professional?.firm ? ` · ${r.professional.firm}` : ""}
-                        {r.pillar ? ` · ${r.pillar}` : ""}
+                        {r.professional?.firm}
+                        {r.professional?.professional_type ? ` · ${r.professional.professional_type.replace("_", " ")}` : ""}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <Badge variant="outline" className="text-[10px] capitalize">{r.status}</Badge>
-                      {r.professional?.id && (
-                        <Link
-                          to={`/professionals/${r.professional.id}`}
-                          className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
-                        >
-                          <ExternalLink className="h-3 w-3" />
-                        </Link>
-                      )}
-                    </div>
+                    {r.professional?.id && (
+                      <Link
+                        to={`/professionals/${r.professional.id}`}
+                        className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1 shrink-0"
+                      >
+                        <ExternalLink className="h-3 w-3" />
+                      </Link>
+                    )}
                   </div>
                   <div className="flex items-center gap-3 flex-wrap text-[11px] text-muted-foreground">
                     <span className="flex items-center gap-1">
@@ -365,7 +366,7 @@ export default function EngagementsPanel({ scopeType, scopeId, title = "Professi
                       <FolderOpen className="h-3 w-3 shrink-0" />
                       {link ? (
                         <span className="truncate">
-                          Shared {link.scope_type}: <span className="text-foreground font-medium">{link.name || "Untitled"}</span>
+                          Shared folder: <span className="text-foreground font-medium">{link.name || "Untitled"}</span>
                         </span>
                       ) : (
                         "Nothing shared"
@@ -373,8 +374,8 @@ export default function EngagementsPanel({ scopeType, scopeId, title = "Professi
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <EngagementThreadButton engagementId={r.id} engagementTitle={r.title} />
-                    <ShareVaultFilesControl engagement={r} scopeType={scopeType} scopeId={scopeId} onChanged={load} />
+                    <EngagementThreadButton engagementId={r.id} engagementTitle={proName} />
+                    <ShareVaultFilesControl engagement={r} scopeType={scopeType} scopeId={scopeId} onChanged={load} label={proName} />
                   </div>
                 </li>
               );
