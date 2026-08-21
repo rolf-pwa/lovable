@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Badge } from "@/shared/components/ui/badge";
-import { Briefcase, ExternalLink, Home, User, TreesIcon } from "lucide-react";
+import { Briefcase, ExternalLink, Home, User, TreesIcon, FolderOpen, MessageSquare } from "lucide-react";
 import EngagementThreadButton from "@/modules/crm/components/EngagementThreadButton";
 import LinkProDialog from "@/modules/crm/components/LinkProDialog";
 import { ShareVaultFilesControl } from "@/modules/crm/components/EngagementsPanel";
@@ -28,10 +28,15 @@ const STATUS_COLORS: Record<string, string> = {
 
 const SCOPE_ICON = { family: TreesIcon, household: Home, contact: User } as const;
 
+interface LinkInfo { name: string | null; scope_type: string }
+interface MessageStats { total: number; unread: number; lastAt: string | null }
+
 export function ProsPanel({ scope, scopeId, memberContactIds = [], householdIds = [], title = "Pros" }: Props) {
   const [loading, setLoading] = useState(true);
   const [engagements, setEngagements] = useState<any[]>([]);
   const [pros, setPros] = useState<Record<string, any>>({});
+  const [links, setLinks] = useState<Record<string, LinkInfo>>({});
+  const [messageStats, setMessageStats] = useState<Record<string, MessageStats>>({});
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -63,6 +68,40 @@ export function ProsPanel({ scope, scopeId, memberContactIds = [], householdIds 
       setPros(map);
     } else {
       setPros({});
+    }
+
+    // What's actually shared, at a glance — no clicking through to find out.
+    const linkIds = Array.from(new Set(list.map((e: any) => e.vault_share_link_id).filter(Boolean)));
+    if (linkIds.length) {
+      const { data: ls } = await (supabase as any)
+        .from("vault_share_links")
+        .select("id, name, scope_type")
+        .in("id", linkIds);
+      const map: Record<string, LinkInfo> = {};
+      (ls || []).forEach((l: any) => { map[l.id] = { name: l.name, scope_type: l.scope_type }; });
+      setLinks(map);
+    } else {
+      setLinks({});
+    }
+
+    // Message activity per engagement, same idea.
+    const engIds = list.map((e: any) => e.id);
+    if (engIds.length) {
+      const { data: msgs } = await (supabase as any)
+        .from("engagement_messages")
+        .select("engagement_id, sender_type, read_by_staff_at, created_at")
+        .in("engagement_id", engIds);
+      const stats: Record<string, MessageStats> = {};
+      (msgs || []).forEach((m: any) => {
+        const s = stats[m.engagement_id] || { total: 0, unread: 0, lastAt: null };
+        s.total += 1;
+        if (m.sender_type !== "staff" && !m.read_by_staff_at) s.unread += 1;
+        if (!s.lastAt || m.created_at > s.lastAt) s.lastAt = m.created_at;
+        stats[m.engagement_id] = s;
+      });
+      setMessageStats(stats);
+    } else {
+      setMessageStats({});
     }
     setLoading(false);
   }, [scope, scopeId, memberContactIds.join(","), householdIds.join(",")]);
@@ -120,31 +159,55 @@ export function ProsPanel({ scope, scopeId, memberContactIds = [], householdIds 
                 <ul className="divide-y divide-border">
                   {engs.map((e) => {
                     const Icon = SCOPE_ICON[e.scope_type as keyof typeof SCOPE_ICON] || User;
+                    const link = e.vault_share_link_id ? links[e.vault_share_link_id] : null;
+                    const stats = messageStats[e.id];
                     return (
-                      <li key={e.id} className="px-3 py-2 flex items-center gap-3">
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium truncate">{e.title}</p>
-                          <div className="flex items-center gap-2 mt-0.5 text-[10px] text-muted-foreground">
-                            <Icon className="h-3 w-3" />
-                            <span className="capitalize">{e.scope_type}</span>
-                            <span>·</span>
-                            <span className="uppercase">{e.pillar}</span>
-                            <span>·</span>
-                            <span>{format(new Date(e.created_at), "PP")}</span>
+                      <li key={e.id} className="px-3 py-2 space-y-1.5">
+                        <div className="flex items-center gap-3">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium truncate">{e.title}</p>
+                            <div className="flex items-center gap-2 mt-0.5 text-[10px] text-muted-foreground">
+                              <Icon className="h-3 w-3" />
+                              <span className="capitalize">{e.scope_type}</span>
+                              <span>·</span>
+                              <span className="uppercase">{e.pillar}</span>
+                              <span>·</span>
+                              <span>{format(new Date(e.created_at), "PP")}</span>
+                            </div>
                           </div>
+                          <Badge variant="outline" className={`text-[10px] ${STATUS_COLORS[e.status] || ""}`}>
+                            {e.status}
+                          </Badge>
                         </div>
-                        <Badge variant="outline" className={`text-[10px] ${STATUS_COLORS[e.status] || ""}`}>
-                          {e.status}
-                        </Badge>
-                        <EngagementThreadButton engagementId={e.id} engagementTitle={e.title} />
-                        {e.scope_type !== "family" && (
-                          <ShareVaultFilesControl
-                            engagement={e}
-                            scopeType={e.scope_type}
-                            scopeId={e.scope_id}
-                            onChanged={load}
-                          />
-                        )}
+                        <div className="flex items-center gap-3 flex-wrap text-[11px] text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <MessageSquare className="h-3 w-3 shrink-0" />
+                            {stats
+                              ? `${stats.total} message${stats.total !== 1 ? "s" : ""}${stats.unread > 0 ? ` · ${stats.unread} unread` : ""}`
+                              : "No messages"}
+                          </span>
+                          <span className="flex items-center gap-1 min-w-0">
+                            <FolderOpen className="h-3 w-3 shrink-0" />
+                            {link ? (
+                              <span className="truncate">
+                                Shared {link.scope_type}: <span className="text-foreground font-medium">{link.name || "Untitled"}</span>
+                              </span>
+                            ) : (
+                              "Nothing shared"
+                            )}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <EngagementThreadButton engagementId={e.id} engagementTitle={e.title} />
+                          {e.scope_type !== "family" && (
+                            <ShareVaultFilesControl
+                              engagement={e}
+                              scopeType={e.scope_type}
+                              scopeId={e.scope_id}
+                              onChanged={load}
+                            />
+                          )}
+                        </div>
                       </li>
                     );
                   })}

@@ -1410,7 +1410,7 @@ serve(async (req) => {
     if (action === "createShareLink") {
       if (actor.kind !== "staff")
         return new Response(JSON.stringify({ error: "staff_only" }), { status: 403, headers: { ...cors, "Content-Type": "application/json" } });
-      const { householdId, scope_type, drive_id, permission, link_type, expires_at, max_uses, generate_unlock_code, notify_email, recipient_name } = body;
+      const { householdId, scope_type, drive_id, permission, link_type, expires_at, max_uses, generate_unlock_code, notify_email, recipient_name, name } = body;
       if (!householdId || !scope_type || !drive_id || !permission || !link_type)
         return new Response(JSON.stringify({ error: "missing_fields" }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
       // Verify scope is inside the household root
@@ -1432,6 +1432,7 @@ serve(async (req) => {
         expires_at: expires_at ?? null,
         max_uses: max_uses ?? null,
         created_by: actor.userId,
+        name: name ?? null,
       }).select().single();
       if (error) throw error;
       await audit(actor, "share_link_created", null, drive_id, null, req, { link_type, permission });
