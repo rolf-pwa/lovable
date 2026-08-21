@@ -1,34 +1,24 @@
 import { useCallback, useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Badge } from "@/shared/components/ui/badge";
-import { ShieldCheck, MessageSquare, Mail, Phone, User } from "lucide-react";
+import { ShieldCheck, Mail, Phone, User } from "lucide-react";
 import ProPortalShell, { FN, proFetch } from "@/modules/pro/components/ProPortalShell";
 import ProTasksPanel from "@/modules/pro/components/ProTasksPanel";
+import SharedFolderCard from "@/modules/pro/components/SharedFolderCard";
 import { format } from "date-fns";
 import { toast } from "sonner";
 
-interface EngagementRow { id: string; title: string; unread_count: number }
-
 export default function ProPortalContact() {
   const { id } = useParams();
-  const navigate = useNavigate();
   const [data, setData] = useState<any>(null);
-  const [engagements, setEngagements] = useState<EngagementRow[]>([]);
 
   const load = useCallback(async () => {
     try {
-      const [res, engRes] = await Promise.all([
-        fetch(FN.workspace, proFetch({ action: "contact", contact_id: id })),
-        fetch(FN.engagements, proFetch({ action: "list" })),
-      ]);
+      const res = await fetch(FN.workspace, proFetch({ action: "contact", contact_id: id }));
       const d = await res.json();
       if (!res.ok) throw new Error(d.error || "Failed");
       setData(d);
-      const engData = await engRes.json();
-      if (engRes.ok) {
-        setEngagements((engData.engagements || []).filter((e: any) => e.scope_type === "contact" && e.scope_id === id));
-      }
     } catch (e: any) {
       toast.error(e.message || "Could not load contact");
     }
@@ -54,7 +44,6 @@ export default function ProPortalContact() {
       ]}
       stats={[
         { label: "Charter", value: (governance?.charter ? "Ratified" : "Pending") },
-        { label: "Engagements", value: engagements.length },
       ]}
     >
       {!data ? (
@@ -117,39 +106,7 @@ export default function ProPortalContact() {
               </CardContent>
             </Card>
 
-            <Card className="border-accent/15">
-              <CardHeader>
-                <CardTitle className="text-base font-serif flex items-center gap-2">
-                  <MessageSquare className="h-4 w-4 text-accent" /> Engagements
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {engagements.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No engagements for this contact yet.</p>
-                ) : (
-                  <ul className="space-y-2">
-                    {engagements.map((e) => (
-                      <li key={e.id}>
-                        <button
-                          onClick={() => navigate(`/pro-portal/engagement/${e.id}`)}
-                          className="w-full text-left text-sm border border-border/60 rounded-md px-3 py-2 bg-muted/30 hover:border-accent/40 transition-colors flex items-center justify-between gap-2"
-                        >
-                          <span className="truncate text-foreground">{e.title}</span>
-                          {e.unread_count > 0 && (
-                            <span className="rounded-full bg-accent text-accent-foreground text-[10px] font-semibold px-1.5 py-0.5 shrink-0">
-                              {e.unread_count}
-                            </span>
-                          )}
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                <p className="text-[11px] text-muted-foreground mt-3">
-                  Messages and any shared files live inside each engagement.
-                </p>
-              </CardContent>
-            </Card>
+            <SharedFolderCard scopeType="contact" scopeId={id!} />
           </aside>
         </div>
       )}
