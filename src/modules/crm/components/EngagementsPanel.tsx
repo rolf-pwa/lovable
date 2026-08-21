@@ -4,10 +4,10 @@ import { supabase } from "@/shared/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Button } from "@/shared/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/shared/components/ui/dialog";
-import { Briefcase, ExternalLink, FolderOpen, Folder, FileText, Loader2, ChevronRight, MessageSquare } from "lucide-react";
+import { Briefcase, ExternalLink, FolderOpen, Folder, FileText, Loader2, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
-import EngagementThreadButton from "./EngagementThreadButton";
 import LinkProDialog from "./LinkProDialog";
+import { ProTasksButton } from "./ProTasksButton";
 
 const VAULT_FN_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/vault-service`;
 
@@ -258,8 +258,7 @@ export function ShareVaultFilesControl({
 export default function EngagementsPanel({ scopeType, scopeId, title = "Professional Engagements" }: Props) {
   const [rows, setRows] = useState<EngagementRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [links, setLinks] = useState<Record<string, { name: string | null; scope_type: string }>>({});
-  const [messageStats, setMessageStats] = useState<Record<string, { total: number; unread: number }>>({});
+  const [links, setLinks] = useState<Record<string, { name: string | null; drive_id: string | null }>>({});
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -272,36 +271,18 @@ export default function EngagementsPanel({ scopeType, scopeId, title = "Professi
     const list = data || [];
     setRows(list);
 
-    // What's actually shared and how active the thread is — at a glance.
+    // What's actually shared, at a glance.
     const linkIds = Array.from(new Set(list.map((r: any) => r.vault_share_link_id).filter(Boolean)));
     if (linkIds.length) {
       const { data: ls } = await (supabase as any)
         .from("vault_share_links")
-        .select("id, name, scope_type")
+        .select("id, name, drive_id")
         .in("id", linkIds);
-      const map: Record<string, { name: string | null; scope_type: string }> = {};
-      (ls || []).forEach((l: any) => { map[l.id] = { name: l.name, scope_type: l.scope_type }; });
+      const map: Record<string, { name: string | null; drive_id: string | null }> = {};
+      (ls || []).forEach((l: any) => { map[l.id] = { name: l.name, drive_id: l.drive_id }; });
       setLinks(map);
     } else {
       setLinks({});
-    }
-
-    const engIds = list.map((r: any) => r.id);
-    if (engIds.length) {
-      const { data: msgs } = await (supabase as any)
-        .from("engagement_messages")
-        .select("engagement_id, sender_type, read_by_staff_at")
-        .in("engagement_id", engIds);
-      const stats: Record<string, { total: number; unread: number }> = {};
-      (msgs || []).forEach((m: any) => {
-        const s = stats[m.engagement_id] || { total: 0, unread: 0 };
-        s.total += 1;
-        if (m.sender_type !== "staff" && !m.read_by_staff_at) s.unread += 1;
-        stats[m.engagement_id] = s;
-      });
-      setMessageStats(stats);
-    } else {
-      setMessageStats({});
     }
     setLoading(false);
   }, [scopeType, scopeId]);
@@ -334,7 +315,6 @@ export default function EngagementsPanel({ scopeType, scopeId, title = "Professi
               }, {}),
             ).map((r) => {
               const link = r.vault_share_link_id ? links[r.vault_share_link_id] : null;
-              const stats = messageStats[r.id];
               const proName = r.professional?.full_name || "Unknown pro";
               return (
                 <li key={r.professional_id} className="py-2 space-y-1.5">
@@ -355,26 +335,23 @@ export default function EngagementsPanel({ scopeType, scopeId, title = "Professi
                       </Link>
                     )}
                   </div>
-                  <div className="flex items-center gap-3 flex-wrap text-[11px] text-muted-foreground">
-                    <span className="flex items-center gap-1">
-                      <MessageSquare className="h-3 w-3 shrink-0" />
-                      {stats
-                        ? `${stats.total} message${stats.total !== 1 ? "s" : ""}${stats.unread > 0 ? ` · ${stats.unread} unread` : ""}`
-                        : "No messages"}
-                    </span>
-                    <span className="flex items-center gap-1 min-w-0">
-                      <FolderOpen className="h-3 w-3 shrink-0" />
-                      {link ? (
-                        <span className="truncate">
-                          Shared folder: <span className="text-foreground font-medium">{link.name || "Untitled"}</span>
-                        </span>
-                      ) : (
-                        "Nothing shared"
-                      )}
-                    </span>
+                  <div className="flex items-center gap-1 text-[11px] text-muted-foreground min-w-0">
+                    <FolderOpen className="h-3 w-3 shrink-0" />
+                    {link?.drive_id ? (
+                      <a
+                        href={`https://drive.google.com/drive/folders/${link.drive_id}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="truncate text-accent hover:underline"
+                      >
+                        {link.name || "Untitled"}
+                      </a>
+                    ) : (
+                      "Nothing shared"
+                    )}
                   </div>
                   <div className="flex items-center gap-2">
-                    <EngagementThreadButton engagementId={r.id} engagementTitle={proName} />
+                    <ProTasksButton professionalId={r.professional_id} professionalName={proName} />
                     <ShareVaultFilesControl engagement={r} scopeType={scopeType} scopeId={scopeId} onChanged={load} label={proName} />
                   </div>
                 </li>
