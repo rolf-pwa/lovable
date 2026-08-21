@@ -34,7 +34,6 @@ const ProPortal = lazy(() => import("@/modules/pro/pages/ProPortal"));
 const ProPortalFamily = lazy(() => import("@/modules/pro/pages/ProPortalFamily"));
 const ProPortalHousehold = lazy(() => import("@/modules/pro/pages/ProPortalHousehold"));
 const ProPortalContact = lazy(() => import("@/modules/pro/pages/ProPortalContact"));
-const ProPortalEngagement = lazy(() => import("@/modules/pro/pages/ProPortalEngagement"));
 const Leads = lazy(() => import("@/modules/crm/pages/Leads"));
 const ReviewQueue = lazy(() => import("@/modules/audit/pages/ReviewQueue"));
 const Requests = lazy(() => import("@/modules/crm/pages/Requests"));
@@ -111,7 +110,6 @@ const App = () => (
               <Route path="/pro-portal/family/:id" element={<ProPortalFamily />} />
               <Route path="/pro-portal/household/:id" element={<ProPortalHousehold />} />
               <Route path="/pro-portal/contact/:id" element={<ProPortalContact />} />
-              <Route path="/pro-portal/engagement/:id" element={<ProPortalEngagement />} />
               <Route path="/admin/vfo" element={<ProtectedRoute><AdminVfo /></ProtectedRoute>} />
               <Route path="/google-callback" element={<ProtectedRoute><GoogleCallback /></ProtectedRoute>} />
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/shared/components/ui/card";
-import { Crown, ArrowRight, Users, Briefcase } from "lucide-react";
+import { Crown, ArrowRight, Users } from "lucide-react";
 import { toast } from "sonner";
 import ProPortalShell, { FN, proFetch } from "@/modules/pro/components/ProPortalShell";
 import ProTasksPanel from "@/modules/pro/components/ProTasksPanel";
@@ -19,16 +19,9 @@ interface Family {
   loose_contacts: any[];
 }
 
-interface EngagementRow {
-  id: string;
-  title: string;
-  scope_label: string;
-}
-
 export default function ProPortal() {
   const navigate = useNavigate();
   const [families, setFamilies] = useState<Family[]>([]);
-  const [engagements, setEngagements] = useState<EngagementRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<any>(null);
 
@@ -37,15 +30,10 @@ export default function ProPortal() {
     try {
       const cached = localStorage.getItem("pro_portal_profile");
       if (cached) setProfile(JSON.parse(cached));
-      const [treeRes, engRes] = await Promise.all([
-        fetch(FN.workspace, proFetch({ action: "tree" })),
-        fetch(FN.engagements, proFetch({ action: "list" })),
-      ]);
+      const treeRes = await fetch(FN.workspace, proFetch({ action: "tree" }));
       const data = await treeRes.json();
       if (!treeRes.ok) throw new Error(data.error || "Failed");
       setFamilies(data.families || []);
-      const engData = await engRes.json();
-      if (engRes.ok) setEngagements(engData.engagements || []);
     } catch (e: any) {
       toast.error(e.message || "Could not load your families");
     } finally {
@@ -91,41 +79,6 @@ export default function ProPortal() {
           </div>
 
           <aside className="space-y-5">
-            {engagements.length > 0 && (
-              <>
-                <div className="flex items-baseline justify-between mb-1">
-                  <h2 className="font-serif text-lg text-foreground">Engagements</h2>
-                  <span className="text-xs text-muted-foreground uppercase tracking-wider">
-                    {engagements.length}
-                  </span>
-                </div>
-                <div className="space-y-3">
-                  {engagements.map((e) => (
-                    <button
-                      key={e.id}
-                      onClick={() => navigate(`/pro-portal/engagement/${e.id}`)}
-                      className="text-left group w-full"
-                    >
-                      <Card className="border-accent/20 hover:border-accent/40 transition-colors overflow-hidden">
-                        <div className="px-4 py-3 flex items-start gap-3">
-                          <div className="h-9 w-9 rounded-lg bg-accent/10 flex items-center justify-center shrink-0">
-                            <Briefcase className="h-4 w-4 text-accent" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <span className="text-sm text-foreground truncate group-hover:text-accent transition-colors">
-                              {e.title}
-                            </span>
-                            <div className="text-[11px] text-muted-foreground truncate">{e.scope_label}</div>
-                          </div>
-                          <ArrowRight className="h-4 w-4 text-accent opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
-                        </div>
-                      </Card>
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-
             <div className="flex items-baseline justify-between mb-1">
               <h2 className="font-serif text-lg text-foreground">Families You Serve</h2>
               <span className="text-xs text-muted-foreground uppercase tracking-wider">
