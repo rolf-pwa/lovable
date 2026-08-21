@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/shared/components/ui/card";
-import { Crown, ArrowRight, Users, MessageSquare } from "lucide-react";
+import { Crown, ArrowRight, Users, Briefcase } from "lucide-react";
 import { toast } from "sonner";
 import ProPortalShell, { FN, proFetch } from "@/modules/pro/components/ProPortalShell";
 import ProTasksPanel from "@/modules/pro/components/ProTasksPanel";
-import { formatDistanceToNow } from "date-fns";
 
 const PRO_TYPE_LABELS: Record<string, string> = {
   lawyer: "Legal Counsel", accountant: "Tax & Accounting", insurance: "Insurance",
@@ -24,9 +23,6 @@ interface EngagementRow {
   id: string;
   title: string;
   scope_label: string;
-  unread_count: number;
-  last_message_at: string | null;
-  last_message_preview: string | null;
 }
 
 export default function ProPortal() {
@@ -113,26 +109,13 @@ export default function ProPortal() {
                       <Card className="border-accent/20 hover:border-accent/40 transition-colors overflow-hidden">
                         <div className="px-4 py-3 flex items-start gap-3">
                           <div className="h-9 w-9 rounded-lg bg-accent/10 flex items-center justify-center shrink-0">
-                            <MessageSquare className="h-4 w-4 text-accent" />
+                            <Briefcase className="h-4 w-4 text-accent" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-sm text-foreground truncate group-hover:text-accent transition-colors">
-                                {e.title}
-                              </span>
-                              {e.unread_count > 0 && (
-                                <span className="rounded-full bg-accent text-accent-foreground text-[10px] font-semibold px-1.5 py-0.5 shrink-0">
-                                  {e.unread_count}
-                                </span>
-                              )}
-                            </div>
+                            <span className="text-sm text-foreground truncate group-hover:text-accent transition-colors">
+                              {e.title}
+                            </span>
                             <div className="text-[11px] text-muted-foreground truncate">{e.scope_label}</div>
-                            {e.last_message_preview && (
-                              <div className="text-[11px] text-muted-foreground/80 truncate mt-0.5">
-                                {e.last_message_preview}
-                                {e.last_message_at && ` · ${formatDistanceToNow(new Date(e.last_message_at), { addSuffix: true })}`}
-                              </div>
-                            )}
                           </div>
                           <ArrowRight className="h-4 w-4 text-accent opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
                         </div>

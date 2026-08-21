@@ -29,7 +29,6 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { FamilyRollup } from "@/modules/crm/components/FamilyRollup";
-import { ProsPanel } from "@/modules/crm/components/ProsPanel";
 import { AddCompanyDialog } from "@/modules/crm/components/AddCompanyDialog";
 
 const ROLE_ICONS: Record<string, typeof Crown> = {
@@ -594,15 +593,6 @@ const FamilyDetail = () => {
             </Card>
           </div>
         </div>
-
-        {/* Family Pros */}
-        <ProsPanel
-          scope="family"
-          scopeId={family.id}
-          memberContactIds={contacts.map((c: any) => c.id)}
-          householdIds={households.map((h: any) => h.id)}
-          title="Family Pros"
-        />
       </div>
     </AppLayout>
   );
