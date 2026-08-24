@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui
 import { Badge } from "@/shared/components/ui/badge";
 import { Briefcase, ExternalLink, Home, User, TreesIcon, FolderOpen } from "lucide-react";
 import LinkProDialog from "@/modules/crm/components/LinkProDialog";
-import { ShareVaultFilesControl } from "@/modules/crm/components/EngagementsPanel";
+import { ShareVaultFilesControl } from "@/modules/crm/components/ShareVaultFilesControl";
 import { ProTasksButton } from "@/modules/crm/components/ProTasksButton";
 import { format } from "date-fns";
 

@@ -1,13 +1,9 @@
-import { useEffect, useState, useCallback } from "react";
-import { Link } from "react-router-dom";
+import { useState } from "react";
 import { supabase } from "@/shared/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Button } from "@/shared/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/shared/components/ui/dialog";
-import { Briefcase, ExternalLink, FolderOpen, Folder, FileText, Loader2, ChevronRight } from "lucide-react";
+import { FolderOpen, Folder, FileText, Loader2, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
-import LinkProDialog from "./LinkProDialog";
-import { ProTasksButton } from "./ProTasksButton";
 
 const VAULT_FN_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/vault-service`;
 
@@ -24,12 +20,6 @@ async function callVault(action: string, payload: Record<string, unknown> = {}) 
   const json = await res.json();
   if (!res.ok) throw new Error(json.error ?? `HTTP ${res.status}`);
   return json;
-}
-
-interface Props {
-  scopeType: "contact" | "household" | "family";
-  scopeId: string;
-  title?: string;
 }
 
 interface EngagementRow {
@@ -252,114 +242,5 @@ export function ShareVaultFilesControl({
         </DialogContent>
       </Dialog>
     </>
-  );
-}
-
-export default function EngagementsPanel({ scopeType, scopeId, title = "Professional Engagements" }: Props) {
-  const [rows, setRows] = useState<EngagementRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [links, setLinks] = useState<Record<string, { name: string | null; drive_id: string | null }>>({});
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    const { data } = await (supabase as any)
-      .from("professional_engagements")
-      .select("id, title, pillar, status, professional_id, vault_share_link_id, professional:professionals(id, full_name, firm, professional_type)")
-      .eq("scope_type", scopeType)
-      .eq("scope_id", scopeId)
-      .order("created_at", { ascending: false });
-    const list = data || [];
-    setRows(list);
-
-    // What's actually shared, at a glance.
-    const linkIds = Array.from(new Set(list.map((r: any) => r.vault_share_link_id).filter(Boolean)));
-    if (linkIds.length) {
-      const { data: ls } = await (supabase as any)
-        .from("vault_share_links")
-        .select("id, name, drive_id")
-        .in("id", linkIds);
-      const map: Record<string, { name: string | null; drive_id: string | null }> = {};
-      (ls || []).forEach((l: any) => { map[l.id] = { name: l.name, drive_id: l.drive_id }; });
-      setLinks(map);
-    } else {
-      setLinks({});
-    }
-    setLoading(false);
-  }, [scopeType, scopeId]);
-
-  useEffect(() => { load(); }, [load]);
-
-  return (
-    <Card>
-      <CardHeader className="pb-3 flex-row items-center justify-between space-y-0">
-        <CardTitle className="text-base font-serif flex items-center gap-2">
-          <Briefcase className="h-4 w-4" /> {title}
-        </CardTitle>
-        <LinkProDialog scopeType={scopeType} scopeId={scopeId} onLinked={load} />
-      </CardHeader>
-      <CardContent>
-        {loading ? (
-          <div className="text-sm text-muted-foreground py-4 text-center">Loading…</div>
-        ) : rows.length === 0 ? (
-          <div className="text-sm text-muted-foreground py-4 text-center">
-            No professionals linked to this {scopeType} yet. Use "Link a Pro" to grant portal
-            visibility scoped strictly to this {scopeType}.
-          </div>
-        ) : (
-          <ul className="divide-y">
-            {/* One row per pro — a scope grant is on/off, not a list of tickets. */}
-            {Object.values(
-              rows.reduce((acc: Record<string, EngagementRow>, r) => {
-                if (!acc[r.professional_id]) acc[r.professional_id] = r; // rows are newest-first
-                return acc;
-              }, {}),
-            ).map((r) => {
-              const link = r.vault_share_link_id ? links[r.vault_share_link_id] : null;
-              const proName = r.professional?.full_name || "Unknown pro";
-              return (
-                <li key={r.professional_id} className="py-2 space-y-1.5">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="text-sm font-medium truncate">{proName}</div>
-                      <div className="text-xs text-muted-foreground truncate">
-                        {r.professional?.firm}
-                        {r.professional?.professional_type ? ` · ${r.professional.professional_type.replace("_", " ")}` : ""}
-                      </div>
-                    </div>
-                    {r.professional?.id && (
-                      <Link
-                        to={`/professionals/${r.professional.id}`}
-                        className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1 shrink-0"
-                      >
-                        <ExternalLink className="h-3 w-3" />
-                      </Link>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-1 text-[11px] text-muted-foreground min-w-0">
-                    <FolderOpen className="h-3 w-3 shrink-0" />
-                    {link?.drive_id ? (
-                      <a
-                        href={`https://drive.google.com/drive/folders/${link.drive_id}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="truncate text-accent hover:underline"
-                      >
-                        {link.name || "Untitled"}
-                      </a>
-                    ) : (
-                      "Nothing shared"
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <ProTasksButton professionalId={r.professional_id} professionalName={proName} />
-                    <ShareVaultFilesControl engagement={r} scopeType={scopeType} scopeId={scopeId} onChanged={load} label={proName} />
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </CardContent>
-    </Card>
   );
 }
