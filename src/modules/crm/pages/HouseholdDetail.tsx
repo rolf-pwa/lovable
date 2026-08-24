@@ -40,9 +40,11 @@ import { policyTypeLabel } from "@/shared/lib/insurance";
 import { CollapsibleCard } from "@/shared/components/CollapsibleCard";
 import { Progress } from "@/shared/components/ui/progress";
 import { HouseholdTaskRollup } from "@/modules/crm/components/HouseholdTaskRollup";
+import { HouseholdRequestsRollup } from "@/modules/crm/components/HouseholdRequestsRollup";
+import { HouseholdStatementIngestion } from "@/modules/crm/components/HouseholdStatementIngestion";
 import { HoldingTank } from "@/modules/crm/components/HoldingTank";
 import { VaultView } from "@/modules/crm/pages/Vault";
-import { CharterRatificationTile, StabilizationMapButton } from "@/modules/audit";
+import { CharterRatificationTile, StabilizationMapButton, HouseholdAuditTrailRollup } from "@/modules/audit";
 import { ProsPanel } from "@/modules/crm/components/ProsPanel";
 import { AddCompanyDialog } from "@/modules/crm/components/AddCompanyDialog";
 import {
@@ -1209,7 +1211,10 @@ const HouseholdDetail = () => {
 
           {/* Action Items */}
           <TabsContent value="actions" className="space-y-6 mt-4">
+            <HouseholdStatementIngestion householdId={id!} members={members} onIngested={fetchData} />
             <HouseholdTaskRollup members={members} />
+            <HouseholdRequestsRollup members={members} />
+            <HouseholdAuditTrailRollup members={members} />
             <HoldingTank householdId={id!} onAccountMoved={() => fetchData()} />
           </TabsContent>
 

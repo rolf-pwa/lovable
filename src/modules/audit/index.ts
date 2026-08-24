@@ -5,6 +5,7 @@
  * inside it. Deep cross-module imports are blocked by ESLint.
  */
 export { AuditTrail } from "./components/AuditTrail";
+export { HouseholdAuditTrailRollup } from "./components/HouseholdAuditTrailRollup";
 export { StabilizationMapButton } from "./components/StabilizationMapButton";
 export { QuarterlySystemReviewButton } from "./components/QuarterlySystemReviewButton";
 export { SovereigntyCharterButton } from "./components/SovereigntyCharterButton";

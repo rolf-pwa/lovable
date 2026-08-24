@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Badge } from "@/shared/components/ui/badge";
 import { ScrollArea } from "@/shared/components/ui/scroll-area";
-import { Shield, Loader2 } from "lucide-react";
+import { Shield } from "lucide-react";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { format } from "date-fns";
 
@@ -38,15 +38,7 @@ export function AuditTrail({ contactId }: { contactId: string }) {
     fetch();
   }, [contactId]);
 
-  if (loading) {
-    return (
-      <Card>
-        <CardContent className="flex justify-center p-6">
-          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-        </CardContent>
-      </Card>
-    );
-  }
+  if (loading || entries.length === 0) return null;
 
   return (
     <Card>
@@ -57,10 +49,7 @@ export function AuditTrail({ contactId }: { contactId: string }) {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        {entries.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No audit entries yet.</p>
-        ) : (
-          <ScrollArea className="h-[200px]">
+        <ScrollArea className="h-[200px]">
             <div className="space-y-2">
               {entries.map((entry) => (
                 <div key={entry.id} className="rounded-md border p-2.5 text-xs">
@@ -80,7 +69,6 @@ export function AuditTrail({ contactId }: { contactId: string }) {
               ))}
             </div>
           </ScrollArea>
-        )}
       </CardContent>
     </Card>
   );
