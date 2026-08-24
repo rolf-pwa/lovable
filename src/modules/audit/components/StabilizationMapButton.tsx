@@ -11,6 +11,7 @@ import {
 import { ChevronDown, FileText, Loader2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/shared/integrations/supabase/client";
+import { cn } from "@/shared/lib/utils";
 
 const MAX_PDF_BYTES = 25 * 1024 * 1024; // 25 MB
 
@@ -31,9 +32,10 @@ function fileToBase64(file: File): Promise<string> {
 interface Props {
   contactId?: string;
   householdId?: string;
+  className?: string;
 }
 
-export function StabilizationMapButton({ contactId, householdId }: Props) {
+export function StabilizationMapButton({ contactId, householdId, className }: Props) {
   const navigate = useNavigate();
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -98,7 +100,7 @@ export function StabilizationMapButton({ contactId, householdId }: Props) {
       />
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" disabled={uploading}>
+          <Button variant="outline" className={cn(className)} disabled={uploading}>
             {uploading ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
