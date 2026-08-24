@@ -1,7 +1,6 @@
 import { AppSidebar, SidebarCollapseProvider } from "./AppSidebar";
 import { AssistantSidebar } from "@/shared/components/AssistantSidebar";
 import { CommandPalette } from "@/shared/components/CommandPalette";
-import { DashboardSidebar } from "./DashboardSidebar";
 import { useAuth } from "@/shared/hooks/useAuth";
 import { signOut } from "@/shared/lib/auth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/shared/components/ui/avatar";
@@ -24,9 +23,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground shrink-0">
                 {today}
               </span>
-              <div className="min-w-0 flex-1">
-                <DashboardSidebar />
-              </div>
             </div>
             <div className="flex items-center gap-3 shrink-0">
               <NotificationBell />
