@@ -14,6 +14,7 @@ import {
 import {
   Calendar, Mail, Plus, Send, Loader2, Link2Off, Inbox, ExternalLink, ChevronRight,
   MessageSquare, CheckSquare, FileText, X, UserCircle,
+  Grape, Landmark, Anchor, Building2,
 } from "lucide-react";
 import { format, parseISO, formatDistanceToNow } from "date-fns";
 import { parseLocalDate } from "@/shared/lib/date-utils";
@@ -110,6 +111,7 @@ export function CommandCenter() {
         </div>
         <div className="space-y-6">
           <CalendarWidget />
+          <FirmAumWidget />
         </div>
       </div>
     </div>
@@ -186,6 +188,145 @@ function CalendarWidget() {
               );
             })}
           </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// Firm-wide AUM — same card style/breakdown as the Contact/Household AUM
+// cards, but unfiltered across every household so it aggregates the whole
+// firm rather than one family.
+function FirmAumWidget() {
+  const [loading, setLoading] = useState(true);
+  const [totals, setTotals] = useState({
+    vineyard: 0,
+    storehouses: 0,
+    corp: 0,
+    holdingTank: 0,
+    insuranceCash: 0,
+  });
+  const [byStorehouse, setByStorehouse] = useState<Record<number, number>>({});
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      const [
+        { data: vineyard },
+        { data: storehouses },
+        { data: corpVineyard },
+        { data: holdingTank },
+        { data: insurance },
+      ] = await Promise.all([
+        supabase.from("vineyard_accounts").select("current_value"),
+        supabase.from("storehouses").select("current_value, storehouse_number, asset_type"),
+        supabase.from("corporate_vineyard_accounts").select("current_value"),
+        supabase.from("holding_tank").select("current_value").neq("status", "moved"),
+        supabase.from("insurance_policies" as any).select("cash_value, coverage_amount, coverage_storehouse_id"),
+      ]);
+      if (!mounted) return;
+
+      const sum = (rows: any[] | null, key: string) =>
+        (rows || []).reduce((s, r) => s + (Number(r[key]) || 0), 0);
+
+      const nonResidence = (storehouses || []).filter(
+        (s: any) => s.asset_type !== "Primary Residence & Protected Legacy Accounts",
+      );
+      const insuranceCash = sum(insurance, "cash_value");
+      const legacyStorehouseIds = new Set(
+        (storehouses || []).filter((s: any) => s.storehouse_number === 4).map((s: any) => s.id),
+      );
+      const coverageTotal = (insurance || [])
+        .filter((p: any) => p.coverage_storehouse_id && legacyStorehouseIds.has(p.coverage_storehouse_id))
+        .reduce((s: number, p: any) => s + (Number(p.coverage_amount) || 0), 0);
+
+      const byNum: Record<number, number> = {};
+      [1, 2, 3, 4].forEach((num) => {
+        const rowTotal = nonResidence
+          .filter((s: any) => s.storehouse_number === num)
+          .reduce((s: number, r: any) => s + (Number(r.current_value) || 0), 0);
+        byNum[num] = rowTotal + (num === 2 ? insuranceCash : 0) + (num === 4 ? coverageTotal : 0);
+      });
+
+      setTotals({
+        vineyard: sum(vineyard, "current_value"),
+        storehouses: sum(nonResidence, "current_value") + insuranceCash,
+        corp: sum(corpVineyard, "current_value"),
+        holdingTank: sum(holdingTank, "current_value"),
+        insuranceCash,
+      });
+      setByStorehouse(byNum);
+      setLoading(false);
+    })();
+    return () => { mounted = false; };
+  }, []);
+
+  const formatCurrency = (value: number) =>
+    new Intl.NumberFormat("en-CA", {
+      style: "currency",
+      currency: "CAD",
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(value);
+
+  const total = totals.vineyard + totals.storehouses + totals.corp + totals.holdingTank;
+
+  return (
+    <Card className="border-sanctuary-bronze/30">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-sm uppercase tracking-widest text-sanctuary-bronze">
+          Assets Under Management
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {loading ? (
+          <div className="flex justify-center py-4">
+            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+          </div>
+        ) : (
+          <>
+            <div>
+              <p className="text-xs text-muted-foreground">Total Firm AUM</p>
+              <p className="text-3xl font-bold text-foreground">{formatCurrency(total)}</p>
+            </div>
+            <div className="space-y-2 pt-2 border-t border-border">
+              <div className="flex items-center justify-between text-sm">
+                <span className="flex items-center gap-2 text-muted-foreground">
+                  <Grape className="h-3.5 w-3.5" /> Portfolio
+                </span>
+                <span className="font-semibold text-primary">{formatCurrency(totals.vineyard)}</span>
+              </div>
+              {[
+                { num: 1, label: "Liquidity Reserve" },
+                { num: 2, label: "Strategic Reserve" },
+                { num: 3, label: "Philanthropic Trust" },
+                { num: 4, label: "Legacy Trust" },
+              ].map(({ num, label }) => (
+                <div key={num} className="flex items-center justify-between text-sm">
+                  <span className="flex items-center gap-2 text-muted-foreground">
+                    <Landmark className="h-3.5 w-3.5" /> {label}
+                  </span>
+                  <span className="font-semibold text-accent">{formatCurrency(byStorehouse[num] || 0)}</span>
+                </div>
+              ))}
+              {totals.corp > 0 && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="flex items-center gap-2 text-muted-foreground">
+                    <Building2 className="h-3.5 w-3.5" /> Corporate
+                  </span>
+                  <span className="font-semibold text-foreground">{formatCurrency(totals.corp)}</span>
+                </div>
+              )}
+              {totals.holdingTank > 0 && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="flex items-center gap-2 text-muted-foreground">
+                    <Anchor className="h-3.5 w-3.5" /> Holding Tank
+                  </span>
+                  <span className="font-semibold text-amber-600">{formatCurrency(totals.holdingTank)}</span>
+                </div>
+              )}
+            </div>
+          </>
         )}
       </CardContent>
     </Card>
