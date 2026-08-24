@@ -832,6 +832,7 @@ const ContactDetail = () => {
 
               {/* Communications Tab — Messaging first, above the fold */}
               <TabsContent value="comms" className="space-y-6 mt-4">
+                <ContactRequests contactId={id!} />
                 <QuoCommunications
                   contactId={contact.id}
                   contactPhone={contact.phone}
@@ -912,35 +913,8 @@ const ContactDetail = () => {
 
               {/* Action Items Tab */}
               <TabsContent value="actions" className="space-y-6 mt-4">
-                {/* Statement Upload — moved from Vineyard tab */}
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base">Statement Ingestion</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <StatementUpload
-                      files={statementFiles}
-                      onFilesChange={setStatementFiles}
-                      isIngesting={isIngesting}
-                    />
-                    {statementFiles.length > 0 && !isIngesting && (
-                      <Button onClick={handleIngestStatements} className="w-full">
-                        <FileUp className="h-4 w-4 mr-2" />
-                        Ingest {statementFiles.length} Statement{statementFiles.length !== 1 ? "s" : ""}
-                      </Button>
-                    )}
-                    {isIngesting && (
-                      <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground py-2">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        AI is parsing statements…
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-
-                <ContactTaskList asanaUrl={contact.asana_url} contactId={contact.id} householdMembers={householdMembers} professionals={engagedProfessionals} />
                 <ContactCalendar contactEmail={contact.email} contactName={contact.full_name} />
-                <ContactRequests contactId={id!} />
+                <ContactTaskList asanaUrl={contact.asana_url} contactId={contact.id} householdMembers={householdMembers} professionals={engagedProfessionals} />
                 <AuditTrail contactId={id!} />
               </TabsContent>
 
@@ -1233,10 +1207,10 @@ const ContactDetail = () => {
                 <CardTitle className="text-base">AI Workbench</CardTitle>
               </CardHeader>
               <CardContent className="flex flex-col gap-2">
-                <SovereigntyCharterButton contactId={id!} />
-                <GenerateCharterDraftButton contactId={id!} />
-                <StabilizationMapButton contactId={id!} />
-                <QuarterlySystemReviewButton contactId={id!} />
+                <SovereigntyCharterButton contactId={id!} className="w-full justify-start" />
+                <GenerateCharterDraftButton contactId={id!} className="w-full justify-start" />
+                <StabilizationMapButton contactId={id!} className="w-full justify-start" />
+                <QuarterlySystemReviewButton contactId={id!} className="w-full justify-start" />
                 <Button
                   variant="outline"
                   size="sm"
@@ -1247,6 +1221,26 @@ const ContactDetail = () => {
                   <ShieldCheck className="mr-2 h-4 w-4" />
                   Governance Review
                 </Button>
+
+                <div className="pt-2 mt-1 border-t border-border space-y-2">
+                  <StatementUpload
+                    files={statementFiles}
+                    onFilesChange={setStatementFiles}
+                    isIngesting={isIngesting}
+                  />
+                  {statementFiles.length > 0 && !isIngesting && (
+                    <Button onClick={handleIngestStatements} size="sm" className="w-full">
+                      <FileUp className="h-4 w-4 mr-2" />
+                      Ingest {statementFiles.length} Statement{statementFiles.length !== 1 ? "s" : ""}
+                    </Button>
+                  )}
+                  {isIngesting && (
+                    <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground py-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      AI is parsing statements…
+                    </div>
+                  )}
+                </div>
               </CardContent>
             </Card>
 

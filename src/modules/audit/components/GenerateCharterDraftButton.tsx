@@ -5,6 +5,7 @@ import { Button } from "@/shared/components/ui/button";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { draftSovereigntyCharter, type DraftCharterPayload } from "@/modules/audit/lib/charter";
 import { toast } from "sonner";
+import { cn } from "@/shared/lib/utils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,9 +19,10 @@ import {
 
 interface Props {
   contactId: string;
+  className?: string;
 }
 
-export function GenerateCharterDraftButton({ contactId }: Props) {
+export function GenerateCharterDraftButton({ contactId, className }: Props) {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -110,7 +112,7 @@ export function GenerateCharterDraftButton({ contactId }: Props) {
 
   return (
     <>
-      <Button variant="outline" onClick={handleClick} disabled={loading}>
+      <Button variant="outline" className={cn(className)} onClick={handleClick} disabled={loading}>
         {loading ? (
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
         ) : (
