@@ -40,7 +40,7 @@ const ALLOWED_ORIGIN_SUFFIXES = [
 
 function getCorsHeaders(req: Request) {
   const origin = req.headers.get("Origin") || "";
-  let allowed = "https://prosperwise.lovable.app";
+  let allowed = "https://app.prosperwise.ca";
   try {
     const url = new URL(origin);
     const host = url.hostname;
