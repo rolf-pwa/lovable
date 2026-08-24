@@ -58,8 +58,6 @@ import { HoldingTank } from "@/modules/crm/components/HoldingTank";
 import { AssetContainer, type MoveTarget } from "@/modules/crm/components/AssetContainer";
 import type { WebFormRecord } from "@/modules/crm/components/WebFormEditorDialog";
 import { InsurancePanel } from "@/modules/crm/components/InsurancePanel";
-import { ProfessionalLinker } from "@/modules/crm/components/ProfessionalLinker";
-import EngagementsPanel from "@/modules/crm/components/EngagementsPanel";
 import { StabilizationMapButton } from "@/modules/audit";
 import { QuarterlySystemReviewButton } from "@/modules/audit";
 import { SovereigntyCharterButton } from "@/modules/audit";
@@ -914,26 +912,6 @@ const ContactDetail = () => {
 
               {/* Action Items Tab */}
               <TabsContent value="actions" className="space-y-6 mt-4">
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base">AI Workbench</CardTitle>
-                  </CardHeader>
-                  <CardContent className="flex flex-wrap gap-2">
-                    <SovereigntyCharterButton contactId={id!} />
-                    <GenerateCharterDraftButton contactId={id!} />
-                    <StabilizationMapButton contactId={id!} />
-                    <QuarterlySystemReviewButton contactId={id!} />
-                    <Button
-                      variant="outline"
-                      onClick={() => navigate(`/workbench/governance-review?scope_id=${contact.household_id ?? ""}`)}
-                      disabled={!contact.household_id}
-                    >
-                      <ShieldCheck className="mr-2 h-4 w-4" />
-                      Governance Review
-                    </Button>
-                  </CardContent>
-                </Card>
-
                 {/* Statement Upload — moved from Vineyard tab */}
                 <Card>
                   <CardHeader className="pb-3">
@@ -964,7 +942,6 @@ const ContactDetail = () => {
                 <ContactCalendar contactEmail={contact.email} contactName={contact.full_name} />
                 <ContactRequests contactId={id!} />
                 <AuditTrail contactId={id!} />
-                <EngagementsPanel scopeType="contact" scopeId={id!} />
               </TabsContent>
 
               {/* The Vineyard Tab */}
@@ -1251,6 +1228,28 @@ const ContactDetail = () => {
 
           {/* Right Sidebar — Individual AUM */}
           <div className="space-y-4">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">AI Workbench</CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-2">
+                <SovereigntyCharterButton contactId={id!} />
+                <GenerateCharterDraftButton contactId={id!} />
+                <StabilizationMapButton contactId={id!} />
+                <QuarterlySystemReviewButton contactId={id!} />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full justify-start"
+                  onClick={() => navigate(`/workbench/governance-review?scope_id=${contact.household_id ?? ""}`)}
+                  disabled={!contact.household_id}
+                >
+                  <ShieldCheck className="mr-2 h-4 w-4" />
+                  Governance Review
+                </Button>
+              </CardContent>
+            </Card>
+
             {(() => {
               const totalVineyard = vineyardAccounts.reduce((s, a) => s + (Number(a.current_value) || 0), 0);
               const nonRealEstateStorehouses = storehouses.filter((s: any) => s.asset_type !== 'Primary Residence & Protected Legacy Accounts');
