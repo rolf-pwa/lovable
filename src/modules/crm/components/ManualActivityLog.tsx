@@ -179,7 +179,7 @@ export default function ManualActivityLog({ contactId, contactName }: Props) {
   }, [contactId]);
 
   const unlinkQuo = async (linkId: string) => {
-    if (!confirm("Remove this Quo cross-link from the activity log? (Original Quo record is kept.)")) return;
+    if (!confirm("Remove this Quo cross-link from Manual Notes? (Original Quo record is kept.)")) return;
     const { error } = await supabase.from("quo_activity_links").delete().eq("id", linkId);
     if (error) { toast.error(`Unlink failed: ${error.message}`); return; }
     toast.success("Unlinked");
@@ -214,11 +214,11 @@ export default function ManualActivityLog({ contactId, contactName }: Props) {
           .update(payload)
           .eq("id", editing.id);
         if (error) throw error;
-        toast.success("Activity updated");
+        toast.success("Note updated");
       } else {
         const { error } = await supabase.from("manual_activity_log").insert(payload);
         if (error) throw error;
-        toast.success("Activity logged");
+        toast.success("Note added");
       }
       setDialogOpen(false);
       resetForm();
@@ -231,7 +231,7 @@ export default function ManualActivityLog({ contactId, contactName }: Props) {
   };
 
   const remove = async (id: string) => {
-    if (!confirm("Delete this activity entry?")) return;
+    if (!confirm("Delete this note?")) return;
     const { error } = await supabase.from("manual_activity_log").delete().eq("id", id);
     if (error) { toast.error(`Delete failed: ${error.message}`); return; }
     toast.success("Deleted");
@@ -245,17 +245,17 @@ export default function ManualActivityLog({ contactId, contactName }: Props) {
           <CollapsibleTrigger className="flex items-center gap-2 flex-1 text-left hover:opacity-80">
             <ChevronDown className={`h-4 w-4 transition-transform ${open ? "" : "-rotate-90"}`} />
             <ClipboardList className="h-4 w-4 text-amber-500" />
-            <h3 className="font-serif text-base">Activity Log</h3>
+            <h3 className="font-serif text-base">Manual Notes</h3>
             {(entries.length + linkedQuo.length) > 0 && (
               <Badge variant="outline" className="text-[10px] ml-1">{entries.length + linkedQuo.length}</Badge>
             )}
             <span className="text-[11px] text-muted-foreground ml-2">
-              Manual entries &amp; Quo cross-links
+              Notes on calls or texts outside Quo
             </span>
           </CollapsibleTrigger>
           {open && (
             <Button size="sm" variant="ghost" onClick={openNew} className="h-7 px-2 text-xs">
-              <Plus className="h-3.5 w-3.5 mr-1" /> Log
+              <Plus className="h-3.5 w-3.5 mr-1" /> Add Note
             </Button>
           )}
         </div>
@@ -264,7 +264,7 @@ export default function ManualActivityLog({ contactId, contactName }: Props) {
           {loading && <p className="text-sm text-muted-foreground">Loading…</p>}
           {!loading && entries.length === 0 && linkedQuo.length === 0 && (
             <p className="text-sm text-muted-foreground italic">
-              No entries yet. Use "Log" for calls/texts outside Quo, or use the "Link" button on a Quo message/call to surface it here.
+              No notes yet. Use "Add Note" for a call or text that happened outside Quo, or use the "Link" button on a Quo message/call above to keep it here for reference.
             </p>
           )}
 
@@ -350,7 +350,7 @@ export default function ManualActivityLog({ contactId, contactName }: Props) {
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>
-              {editing ? "Edit activity" : `Log activity · ${contactName}`}
+              {editing ? "Edit note" : `Add note · ${contactName}`}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
@@ -405,7 +405,7 @@ export default function ManualActivityLog({ contactId, contactName }: Props) {
           <DialogFooter>
             <Button variant="ghost" onClick={() => setDialogOpen(false)}>Cancel</Button>
             <Button onClick={save} disabled={saving}>
-              {saving ? "Saving…" : (editing ? "Save changes" : "Log activity")}
+              {saving ? "Saving…" : (editing ? "Save changes" : "Save note")}
             </Button>
           </DialogFooter>
         </DialogContent>
