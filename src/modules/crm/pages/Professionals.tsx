@@ -21,7 +21,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/shared/components/ui/select";
-import { Briefcase, Plus, Search } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/shared/components/ui/alert-dialog";
+import { Briefcase, Plus, Search, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/shared/hooks/useAuth";
 import { CrmTabs } from "@/modules/crm/components/CrmTabs";
@@ -32,8 +42,19 @@ type Pro = {
   email: string;
   firm: string | null;
   professional_type: string;
+  credentials: string | null;
+  phone: string | null;
   pro_portal_enabled: boolean;
   last_login_at: string | null;
+};
+
+const EMPTY_FORM = {
+  full_name: "",
+  email: "",
+  firm: "",
+  professional_type: "lawyer",
+  credentials: "",
+  phone: "",
 };
 
 const TYPES = [
@@ -53,19 +74,14 @@ export default function Professionals() {
   const [filter, setFilter] = useState<string>("all");
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({
-    full_name: "",
-    email: "",
-    firm: "",
-    professional_type: "lawyer",
-    credentials: "",
-    phone: "",
-  });
+  const [editing, setEditing] = useState<Pro | null>(null);
+  const [deleting, setDeleting] = useState<Pro | null>(null);
+  const [form, setForm] = useState(EMPTY_FORM);
 
   async function load() {
     const { data, error } = await (supabase as any)
       .from("professionals")
-      .select("id, full_name, email, firm, professional_type, pro_portal_enabled, last_login_at")
+      .select("id, full_name, email, firm, professional_type, credentials, phone, pro_portal_enabled, last_login_at")
       .order("full_name");
     if (error) {
       toast.error("Failed to load professionals");
@@ -78,24 +94,57 @@ export default function Professionals() {
     load();
   }, []);
 
-  async function create() {
+  function openCreate() {
+    setEditing(null);
+    setForm(EMPTY_FORM);
+    setOpen(true);
+  }
+
+  function openEdit(pro: Pro) {
+    setEditing(pro);
+    setForm({
+      full_name: pro.full_name,
+      email: pro.email,
+      firm: pro.firm || "",
+      professional_type: pro.professional_type,
+      credentials: pro.credentials || "",
+      phone: pro.phone || "",
+    });
+    setOpen(true);
+  }
+
+  async function save() {
     if (!form.full_name || !form.email) {
       toast.error("Name and email are required");
       return;
     }
     setSaving(true);
-    const { error } = await (supabase as any).from("professionals").insert({
-      ...form,
-      created_by: user?.id,
-    });
+    const { error } = editing
+      ? await (supabase as any).from("professionals").update(form).eq("id", editing.id)
+      : await (supabase as any).from("professionals").insert({ ...form, created_by: user?.id });
     setSaving(false);
     if (error) {
       toast.error(error.message);
       return;
     }
-    toast.success("Professional added");
+    toast.success(editing ? "Professional updated" : "Professional added");
     setOpen(false);
-    setForm({ full_name: "", email: "", firm: "", professional_type: "lawyer", credentials: "", phone: "" });
+    setEditing(null);
+    setForm(EMPTY_FORM);
+    load();
+  }
+
+  async function remove() {
+    if (!deleting) return;
+    setSaving(true);
+    const { error } = await (supabase as any).from("professionals").delete().eq("id", deleting.id);
+    setSaving(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success(`${deleting.full_name} removed`);
+    setDeleting(null);
     load();
   }
 
@@ -126,16 +175,16 @@ export default function Professionals() {
               Outside legal, tax, insurance, and estate professionals supporting your families.
             </p>
           </div>
-          <Dialog open={open} onOpenChange={setOpen}>
+          <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) setEditing(null); }}>
             <DialogTrigger asChild>
-              <Button>
+              <Button onClick={openCreate}>
                 <Plus className="h-4 w-4 mr-2" />
                 Add Professional
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Add Professional</DialogTitle>
+                <DialogTitle>{editing ? "Edit Professional" : "Add Professional"}</DialogTitle>
               </DialogHeader>
               <div className="space-y-3">
                 <div>
@@ -172,11 +221,29 @@ export default function Professionals() {
               </div>
               <DialogFooter>
                 <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
-                <Button onClick={create} disabled={saving}>Add</Button>
+                <Button onClick={save} disabled={saving}>{editing ? "Save changes" : "Add"}</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
         </div>
+
+        <AlertDialog open={!!deleting} onOpenChange={(o) => !o && setDeleting(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Remove {deleting?.full_name}?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This also removes their portal access, any household/contact grants, and task tags.
+                This can't be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={remove} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                Remove
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         <Card>
           <CardHeader>
@@ -208,6 +275,7 @@ export default function Professionals() {
                   <th className="text-left px-4 py-3">Firm</th>
                   <th className="text-left px-4 py-3">Email</th>
                   <th className="text-left px-4 py-3">Portal</th>
+                  <th className="text-right px-4 py-3">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -226,11 +294,27 @@ export default function Professionals() {
                         {r.pro_portal_enabled ? "Enabled" : "Disabled"}
                       </Badge>
                     </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-end gap-1">
+                        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openEdit(r)} title="Edit">
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-7 w-7 text-destructive hover:text-destructive"
+                          onClick={() => setDeleting(r)}
+                          title="Remove"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </td>
                   </tr>
                 ))}
                 {filtered.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="px-4 py-10 text-center text-muted-foreground">
+                    <td colSpan={6} className="px-4 py-10 text-center text-muted-foreground">
                       No professionals yet. Add your first one above.
                     </td>
                   </tr>
