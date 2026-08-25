@@ -456,7 +456,7 @@ const Portal = ({ intakeRoute = false }: { intakeRoute?: boolean }) => {
               <img src={prosperwiseLogo} alt="ProsperWise" className="h-16 w-16" />
             </div>
             <h1 className="text-3xl font-bold text-foreground font-serif">
-              Sovereign Portal
+              ProsperWise Portal
             </h1>
             <p className="text-sm text-muted-foreground">
               ProsperWise Advisors — Secure Client Access

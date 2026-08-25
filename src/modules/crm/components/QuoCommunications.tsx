@@ -102,7 +102,7 @@ export default function QuoCommunications({ contactId, contactPhone, contactName
         try { parsed = await (error as any).context?.response?.json?.(); } catch {}
         if (parsed?.blocked) {
           toast.error(`PII Shield blocked: ${parsed.reason}`, {
-            description: "Rephrase without dollar amounts, account numbers, or health terms — or use the Sovereign Portal for sensitive details.",
+            description: "Rephrase without dollar amounts, account numbers, or health terms — or use the ProsperWise Portal for sensitive details.",
           });
           load();
           return;
