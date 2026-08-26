@@ -15,6 +15,7 @@ import {
   HelpCircle,
   Circle,
   ArrowRight,
+  Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -102,10 +103,6 @@ export function PortalIntakePage({ portalToken, onBack, onAskForHelp, onComplete
             ? `${manifest.householdName} · secure Canadian infrastructure`
             : "Secure Canadian infrastructure"}
         </p>
-        <p className="mt-1.5 max-w-xl text-xs text-muted-foreground">
-          Our AI reads each document you send to pull the details your Survey needs — the more you're
-          able to share now, the more precise and personalized your Survey will be.
-        </p>
       </div>
       {onAskForHelp && (
         <Button variant="outline" size="sm" className="gap-1.5" onClick={onAskForHelp}>
@@ -171,6 +168,17 @@ export function PortalIntakePage({ portalToken, onBack, onAskForHelp, onComplete
   return (
     <div className="space-y-6">
       {header}
+
+      {/* AI parsing instructions — prominent, so clients know exactly what to do */}
+      <Card className="border-primary/30 bg-primary/5">
+        <CardContent className="flex items-start gap-3 p-5">
+          <Sparkles className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+          <p className="text-sm font-medium text-foreground">
+            Our AI reads each document you send to pull the details your Survey needs — send as much
+            as you can now, and the more precise and personalized your Survey will be.
+          </p>
+        </CardContent>
+      </Card>
 
       {/* Progress */}
       <Card className="border-amber-500/30 bg-amber-500/[0.03]">
