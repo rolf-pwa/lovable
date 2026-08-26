@@ -46,7 +46,7 @@ export function StepResults() {
               <p className="text-xs uppercase tracking-wider text-muted-foreground">
                 {CATALYST_LABELS[state.catalyst]} · {formatCAD(state.scale)}
               </p>
-              <h2 className="mt-1 text-2xl">Your Sovereignty Operating System™ next step.</h2>
+              <h2 className="mt-1 text-2xl">Your Sovereignty Survey™ next step.</h2>
             </div>
             <Button variant="ghost" size="sm" onClick={() => dispatch({ type: "set_step", step: 3 })}>
               <ArrowLeft className="mr-1 h-4 w-4" /> Back
@@ -56,10 +56,11 @@ export function StepResults() {
           <div className="rounded-lg border border-primary/30 bg-primary/5 p-4">
             <p className="text-[10px] uppercase tracking-widest text-primary">Rolf's Voice</p>
             <p className="mt-1 text-xs leading-relaxed text-foreground">
-              The Sovereignty Survey is a working session, not a sales call — 90 minutes with me, built
-              around exactly what you've just told Georgia. You leave with a Stabilization Map, an
-              Immediate Risk Scan, and a 30-Day Action Framework. No pitch, no commitment beyond the
-              session itself.
+              The Sovereignty Survey is a three-step process built around exactly what you've just told
+              Georgia. We take a look at your financial system and run an Immediate Risk Scan. Then we
+              meet to go over the results of your audit — you walk away with a 30-Day Action Framework
+              report. No pitch, no commitment beyond the session itself, just total clarity about your
+              next steps.
             </p>
           </div>
 
