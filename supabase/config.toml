@@ -84,6 +84,12 @@ verify_jwt = false
 [functions.pro-portal-engagements]
 verify_jwt = false
 
+[functions.pro-portal-workspace]
+verify_jwt = false
+
+[functions.pro-portal-tasks]
+verify_jwt = false
+
 [functions.engagement-message-send]
 verify_jwt = false
 
