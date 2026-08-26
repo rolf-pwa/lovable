@@ -520,7 +520,7 @@ export default function StabilizationMap() {
             <div>
               {isHouseholdMap ? (
                 <>
-                  <strong style={{ display: "block", fontSize: "8.5pt", fontWeight: 600 }}>Prepared By: Rolf Issler, BMgt, CLU</strong>
+                  <strong style={{ display: "block", fontSize: "8.5pt", fontWeight: 600 }}>Prepared By:<br />Rolf Issler, BMgt, CLU</strong>
                   <p style={{ fontSize: "7.5pt", color: "rgba(255,255,255,.5)", marginTop: "1pt" }}>Sudden Wealth Specialist, Family CFO</p>
                 </>
               ) : (
@@ -547,7 +547,7 @@ export default function StabilizationMap() {
               </div>
               <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: isHouseholdMap ? "25pt" : "26pt", fontWeight: 300, color: "#334155", lineHeight: isHouseholdMap ? 1.3 : 1.1, letterSpacing: "-0.005em" }}>
                 {isHouseholdMap ? (
-                  "Sovereignty Survey — Stabilization Map"
+                  "Sovereignty Survey™"
                 ) : (
                   <>
                     {map.event_type} &nbsp;·&nbsp; {map.event_context || "Post-Close Governance"}<br />
@@ -735,7 +735,7 @@ export default function StabilizationMap() {
                 Stabilization Map &nbsp;·&nbsp; Prepared for <strong>{fullName}</strong>
               </div>
               <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "18pt", fontWeight: 300, color: "#334155", lineHeight: 1.1 }}>
-                90-Day Stabilization Action Plan
+                90-Day Stabilization Plan
               </div>
               <hr style={{ width: "18mm", height: "3px", background: "#a37c58", border: "none", marginTop: "2.5mm" }} />
             </div>
