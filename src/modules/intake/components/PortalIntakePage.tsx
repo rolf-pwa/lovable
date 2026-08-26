@@ -102,6 +102,10 @@ export function PortalIntakePage({ portalToken, onBack, onAskForHelp, onComplete
             ? `${manifest.householdName} · secure Canadian infrastructure`
             : "Secure Canadian infrastructure"}
         </p>
+        <p className="mt-1.5 max-w-xl text-xs text-muted-foreground">
+          Our AI reads each document you send to pull the details your Survey needs — the more you're
+          able to share now, the more precise and personalized your Survey will be.
+        </p>
       </div>
       {onAskForHelp && (
         <Button variant="outline" size="sm" className="gap-1.5" onClick={onAskForHelp}>
