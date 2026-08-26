@@ -75,6 +75,7 @@ import {
   RotateCcw,
   UserCheck,
   ScanSearch,
+  TrendingDown,
 } from "lucide-react";
 import { ContactAnalytics } from "@/modules/crm/components/ContactAnalytics";
 
@@ -128,6 +129,7 @@ const HouseholdDetail = () => {
   const [storehouses, setStorehouses] = useState<any[]>([]);
   const [corporations, setCorporations] = useState<any[]>([]);
   const [holdingTank, setHoldingTank] = useState<any[]>([]);
+  const [liabilities, setLiabilities] = useState<any[]>([]);
   const [insurancePolicies, setInsurancePolicies] = useState<any[]>([]);
   const [endRelationshipOpen, setEndRelationshipOpen] = useState(false);
   const [endReason, setEndReason] = useState("");
@@ -180,11 +182,12 @@ const HouseholdDetail = () => {
 
     const memberIds = (contacts || []).map((c: any) => c.id);
     if (memberIds.length > 0) {
-      const [{ data: vine }, { data: store }, { data: shareholders }, { data: tank }] = await Promise.all([
+      const [{ data: vine }, { data: store }, { data: shareholders }, { data: tank }, { data: personalLiab }] = await Promise.all([
         supabase.from("vineyard_accounts").select("*").in("contact_id", memberIds),
         supabase.from("storehouses").select("*").in("contact_id", memberIds),
         supabase.from("shareholders").select("contact_id, corporation_id, ownership_percentage, share_class, role_title").in("contact_id", memberIds).eq("is_active", true),
         supabase.from("holding_tank").select("contact_id, current_value").in("contact_id", memberIds).neq("status", "moved"),
+        (supabase.from("liabilities" as any) as any).select("*").eq("holder_type", "contact").in("contact_id", memberIds),
       ]);
       if (!mountedRef.current) return;
       setVineyardAccounts(vine || []);
@@ -192,13 +195,16 @@ const HouseholdDetail = () => {
       setHoldingTank(tank || []);
 
       let corpIds: string[] = [];
+      let corpLiabilities: any[] = [];
       if (shareholders && shareholders.length > 0) {
         corpIds = [...new Set(shareholders.map((s: any) => s.corporation_id))];
-        const [{ data: corps }, { data: corpVineyard }] = await Promise.all([
+        const [{ data: corps }, { data: corpVineyard }, { data: corpLiab }] = await Promise.all([
           supabase.from("corporations").select("id, name, corporation_type, jurisdiction").in("id", corpIds),
           supabase.from("corporate_vineyard_accounts").select("*").in("corporation_id", corpIds),
+          (supabase.from("liabilities" as any) as any).select("*").eq("holder_type", "corporation").in("corporation_id", corpIds),
         ]);
         if (!mountedRef.current) return;
+        corpLiabilities = corpLiab || [];
 
         const enrichedCorps = (corps || []).map((corp: any) => ({
           ...corp,
@@ -210,6 +216,7 @@ const HouseholdDetail = () => {
         }));
         setCorporations(enrichedCorps);
       }
+      setLiabilities([...(personalLiab || []), ...corpLiabilities]);
 
       // Insurance policies for members + related corporations
       const { data: ins } = await (supabase.from("insurance_policies" as any) as any)
@@ -359,6 +366,11 @@ const HouseholdDetail = () => {
     (sum, h) => sum + (Number(h.current_value) || 0),
     0
   );
+  const totalLiabilities = liabilities.reduce(
+    (sum, l) => sum + (Number(l.current_balance) || 0),
+    0
+  );
+  const netWorth = totalVineyard + totalStorehouses + totalCorpAssets + totalHoldingTank - totalLiabilities;
 
   // Group vineyard by type
   const byType: Record<string, { accounts: any[]; total: number }> = {};
@@ -1026,6 +1038,18 @@ const HouseholdDetail = () => {
                           <span className="font-semibold text-foreground">{formatCurrency(totalCorpAssets)}</span>
                         </div>
                       )}
+                      {totalLiabilities > 0 && (
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="flex items-center gap-2 text-muted-foreground">
+                            <TrendingDown className="h-3.5 w-3.5" /> Liabilities
+                          </span>
+                          <span className="font-semibold text-destructive">-{formatCurrency(totalLiabilities)}</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="pt-3 border-t border-border">
+                      <p className="text-xs text-muted-foreground">Net Worth</p>
+                      <p className="text-2xl font-bold text-foreground mb-2">{formatCurrency(netWorth)}</p>
                       <div className="flex items-center justify-between text-sm">
                         <span className="flex items-center gap-2 text-muted-foreground">
                           <User className="h-3.5 w-3.5" /> Members

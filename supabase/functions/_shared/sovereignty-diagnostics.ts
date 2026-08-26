@@ -249,6 +249,48 @@ export interface StorehouseReserves {
   legacy: number;
 }
 
+export interface LoanFlag {
+  id: string;
+  description: string;
+  liability_type: string;
+  current_balance: number;
+  due_date: string | null;
+  isOverdue: boolean;
+  isDueSoon: boolean;
+}
+
+/**
+ * Flags intercompany/shareholder loans approaching or past their due date —
+ * the classic CRA s.15(2) trap (a loan from a corp to a shareholder must be
+ * repaid within one year after the corp's fiscal year-end or it's deemed
+ * income). Deliberately generic over any liabilities array, not tied to the
+ * household-track Stabilization Map, so the Quarterly VFO Audit Agent can
+ * reuse this same helper later instead of reimplementing the check.
+ */
+export function computeIntercompanyLoanFlags(liabilities: any[], asOf: Date = new Date()): LoanFlag[] {
+  const DUE_SOON_DAYS = 60;
+  return liabilities
+    .filter((l: any) => l.liability_type === "intercompany_loan" || l.liability_type === "shareholder_loan")
+    .map((l: any) => {
+      const dueDate = l.due_date ? new Date(l.due_date) : null;
+      const isOverdue = dueDate !== null && dueDate.getTime() < asOf.getTime();
+      const isDueSoon =
+        dueDate !== null &&
+        !isOverdue &&
+        (dueDate.getTime() - asOf.getTime()) / (24 * 60 * 60 * 1000) <= DUE_SOON_DAYS;
+      return {
+        id: l.id,
+        description: l.description,
+        liability_type: l.liability_type,
+        current_balance: Number(l.current_balance) || 0,
+        due_date: l.due_date ?? null,
+        isOverdue,
+        isDueSoon,
+      };
+    })
+    .filter((f) => f.isOverdue || f.isDueSoon);
+}
+
 const REAL_ESTATE_ASSET_TYPE = "Primary Residence & Protected Legacy Accounts";
 const RESERVE_KEY_BY_STOREHOUSE_NUMBER: Record<number, keyof StorehouseReserves> = {
   1: "liquidity",
@@ -280,6 +322,10 @@ export interface HouseholdFinancials {
   vaultRootFolderId: string | null;
   storehouseReserves: StorehouseReserves;
   totalInsuranceCoverage: number;
+  liabilities: any[];
+  totalPersonalLiabilities: number;
+  totalCorpLiabilities: number;
+  netWorth: number;
 }
 
 /** Mirrors the financial-data gathering in HouseholdDetail.tsx's fetchData(). */
@@ -326,45 +372,69 @@ export async function gatherHouseholdFinancials(
       vaultRootFolderId: household?.vault_root_folder_id ?? null,
       storehouseReserves: { liquidity: 0, strategic: 0, philanthropic: 0, legacy: 0 },
       totalInsuranceCoverage: 0,
+      liabilities: [],
+      totalPersonalLiabilities: 0,
+      totalCorpLiabilities: 0,
+      netWorth: 0,
     };
   }
 
-  const [{ data: vine }, { data: store }, { data: shareholders }, { data: tank }] = await Promise.all([
-    admin.from("vineyard_accounts").select("*").in("contact_id", memberIds),
-    admin.from("storehouses").select("*").in("contact_id", memberIds),
-    admin
-      .from("shareholders")
-      .select("contact_id, corporation_id, ownership_percentage, share_class, role_title")
-      .in("contact_id", memberIds)
-      .eq("is_active", true),
-    admin.from("holding_tank").select("contact_id, current_value").in("contact_id", memberIds).neq("status", "moved"),
-  ]);
+  const [{ data: vine }, { data: store }, { data: shareholders }, { data: tank }, { data: personalLiab }] =
+    await Promise.all([
+      admin.from("vineyard_accounts").select("*").in("contact_id", memberIds),
+      admin.from("storehouses").select("*").in("contact_id", memberIds),
+      admin
+        .from("shareholders")
+        .select("contact_id, corporation_id, ownership_percentage, share_class, role_title")
+        .in("contact_id", memberIds)
+        .eq("is_active", true),
+      admin.from("holding_tank").select("contact_id, current_value").in("contact_id", memberIds).neq("status", "moved"),
+      admin.from("liabilities").select("*").eq("holder_type", "contact").in("contact_id", memberIds),
+    ]);
 
   const vineyardAccounts = vine ?? [];
   const storehouses = store ?? [];
   const shareholderRows = shareholders ?? [];
   const holdingTank = tank ?? [];
+  const personalLiabilities = personalLiab ?? [];
 
   let corporations: any[] = [];
   let totalCorpAssets = 0;
+  let totalCorpLiabilities = 0;
+  let corpLiabilities: any[] = [];
   let corpIds: string[] = [];
   if (shareholderRows.length > 0) {
     corpIds = [...new Set(shareholderRows.map((s: any) => s.corporation_id))];
-    const [{ data: corps }, { data: corpVineyard }] = await Promise.all([
+    const [{ data: corps }, { data: corpVineyard }, { data: corpLiab }] = await Promise.all([
       admin.from("corporations").select("id, name, corporation_type, jurisdiction").in("id", corpIds),
       admin.from("corporate_vineyard_accounts").select("*").in("corporation_id", corpIds),
+      admin.from("liabilities").select("*").eq("holder_type", "corporation").in("corporation_id", corpIds),
     ]);
+    corpLiabilities = corpLiab ?? [];
     corporations = (corps ?? []).map((corp: any) => {
       const accounts = (corpVineyard ?? []).filter((v: any) => v.corporation_id === corp.id);
+      const liabs = corpLiabilities.filter((l: any) => l.corporation_id === corp.id);
+      const total_assets = accounts.reduce((sum: number, v: any) => sum + (Number(v.current_value) || 0), 0);
+      const total_liabilities = liabs.reduce((sum: number, l: any) => sum + (Number(l.current_balance) || 0), 0);
       return {
         ...corp,
         shareholders: shareholderRows.filter((s: any) => s.corporation_id === corp.id),
         vineyard_accounts: accounts,
-        total_assets: accounts.reduce((sum: number, v: any) => sum + (Number(v.current_value) || 0), 0),
+        liabilities: liabs,
+        total_assets,
+        total_liabilities,
+        net_assets: total_assets - total_liabilities,
       };
     });
     totalCorpAssets = corporations.reduce((sum, c) => sum + c.total_assets, 0);
+    totalCorpLiabilities = corporations.reduce((sum, c) => sum + c.total_liabilities, 0);
   }
+
+  const liabilities = [...personalLiabilities, ...corpLiabilities];
+  const totalPersonalLiabilities = personalLiabilities.reduce(
+    (sum: number, l: any) => sum + (Number(l.current_balance) || 0),
+    0,
+  );
 
   const { data: ins } = await admin
     .from("insurance_policies")
@@ -400,6 +470,7 @@ export async function gatherHouseholdFinancials(
   const totalVineyard = vineyardAccounts.reduce((sum: number, a: any) => sum + (Number(a.current_value) || 0), 0);
 
   const totalAum = totalVineyard + totalStorehouses + totalCorpAssets + totalHoldingTank;
+  const netWorth = totalAum - totalPersonalLiabilities - totalCorpLiabilities;
 
   return {
     householdLabel: household?.label ?? "Household",
@@ -416,9 +487,14 @@ export async function gatherHouseholdFinancials(
     holdingTank,
     totalHoldingTank,
     onboardingEnabled: household?.onboarding_enabled !== false,
+    isLegacyClient,
     vaultRootFolderId: household?.vault_root_folder_id ?? null,
     storehouseReserves,
     totalInsuranceCoverage,
+    liabilities,
+    totalPersonalLiabilities,
+    totalCorpLiabilities,
+    netWorth,
   };
 }
 
@@ -441,6 +517,11 @@ export interface SovereigntyDiagnostics {
   insurance_coverage_total: number;
   vineyard_total: number;
   holding_tank_total: number;
+  net_worth: number;
+  personal_liabilities_total: number;
+  corp_liabilities_total: number;
+  corporations: { id: string; name: string; total_assets: number; total_liabilities: number; net_assets: number }[];
+  intercompany_loan_flags?: LoanFlag[];
 }
 
 /** Orchestrator: gathers real data, infers track type, computes the applicable formulas. */
@@ -466,6 +547,16 @@ export async function computeSovereigntyDiagnostics(
     insurance_coverage_total: financials.totalInsuranceCoverage,
     vineyard_total: financials.totalVineyard,
     holding_tank_total: financials.totalHoldingTank,
+    net_worth: financials.netWorth,
+    personal_liabilities_total: financials.totalPersonalLiabilities,
+    corp_liabilities_total: financials.totalCorpLiabilities,
+    corporations: financials.corporations.map((c: any) => ({
+      id: c.id,
+      name: c.name,
+      total_assets: c.total_assets,
+      total_liabilities: c.total_liabilities,
+      net_assets: c.net_assets,
+    })),
   };
 
   // Fee drag is paused (not just hidden) until CRM3's fee-disclosure data feeds
@@ -479,6 +570,7 @@ export async function computeSovereigntyDiagnostics(
       financials.totalCorpAssets,
     );
     diagnostics.usa_staleness = computeUsaStaleness(inputs.usa_last_reviewed_date);
+    diagnostics.intercompany_loan_flags = computeIntercompanyLoanFlags(financials.liabilities);
   } else {
     diagnostics.estate_hygiene = {
       will_status: inputs.will_status ?? null,

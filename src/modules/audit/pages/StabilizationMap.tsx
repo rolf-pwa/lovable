@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { Button } from "@/shared/components/ui/button";
@@ -25,6 +25,17 @@ type DocumentReadiness = {
   missingRecommended: string[];
 };
 
+type CorpBalanceSheetRow = { id: string; name: string; total_assets: number; total_liabilities: number; net_assets: number };
+type LoanFlag = {
+  id: string;
+  description: string;
+  liability_type: string;
+  current_balance: number;
+  due_date: string | null;
+  isOverdue: boolean;
+  isDueSoon: boolean;
+};
+
 type Diagnostics = {
   track_type?: "personal" | "corporate";
   document_readiness?: DocumentReadiness;
@@ -38,6 +49,11 @@ type Diagnostics = {
   insurance_coverage_total?: number;
   vineyard_total?: number;
   holding_tank_total?: number;
+  net_worth?: number;
+  personal_liabilities_total?: number;
+  corp_liabilities_total?: number;
+  corporations?: CorpBalanceSheetRow[];
+  intercompany_loan_flags?: LoanFlag[];
 };
 
 type DiagnosticInputs = {
@@ -590,6 +606,18 @@ export default function StabilizationMap() {
                         </div>
                       ))}
                     </div>
+
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginTop: "2mm" }}>
+                      <span style={{ fontSize: "8.5pt", fontWeight: 600, color: "#334155" }}>Total Liabilities</span>
+                      <span style={{ fontSize: "8.5pt", fontWeight: 600, color: "#c0392b" }}>
+                        -{fmtCurrency((diag.personal_liabilities_total ?? 0) + (diag.corp_liabilities_total ?? 0))}
+                      </span>
+                    </div>
+                    <hr style={{ border: "none", borderTop: "1.5px solid #334155", margin: "1.5mm 0" }} />
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                      <span style={{ fontSize: "9.5pt", fontWeight: 700, color: "#334155" }}>Net Worth</span>
+                      <span style={{ fontSize: "9.5pt", fontWeight: 700, color: "#334155" }}>{fmtCurrency(diag.net_worth ?? diag.aum)}</span>
+                    </div>
                   </div>
 
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "4mm" }}>
@@ -606,10 +634,39 @@ export default function StabilizationMap() {
                   </div>
                 </div>
 
+                {/* Corporate Balance Sheet — per-entity assets/liabilities/net, corporate track only */}
+                {map.track_type === "corporate" && diag.corporations && diag.corporations.length > 0 && (
+                  <div>
+                    <div style={colLabel}>Corporate Balance Sheet</div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "1mm 4mm", fontSize: "7.5pt" }}>
+                      <span style={{ color: "#94a3b8", fontWeight: 600 }}>Entity</span>
+                      <span style={{ color: "#94a3b8", fontWeight: 600, textAlign: "right" }}>Assets</span>
+                      <span style={{ color: "#94a3b8", fontWeight: 600, textAlign: "right" }}>Liabilities</span>
+                      <span style={{ color: "#94a3b8", fontWeight: 600, textAlign: "right" }}>Net</span>
+                      {diag.corporations.map((c) => (
+                        <Fragment key={c.id}>
+                          <span style={{ color: "#334155" }}>{c.name}</span>
+                          <span style={{ color: "#64748b", textAlign: "right" }}>{fmtCurrency(c.total_assets)}</span>
+                          <span style={{ color: "#c0392b", textAlign: "right" }}>-{fmtCurrency(c.total_liabilities)}</span>
+                          <span style={{ color: "#334155", fontWeight: 600, textAlign: "right" }}>{fmtCurrency(c.net_assets)}</span>
+                        </Fragment>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* Governance & Deceleration Risk Vectors */}
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(60mm, 1fr))", gap: "3mm" }}>
                   {governanceCards.map((c) => (
                     <StatusCard key={c.label} label={c.label} status={c.status} detail={c.detail} />
+                  ))}
+                  {diag.intercompany_loan_flags?.map((f) => (
+                    <StatusCard
+                      key={f.id}
+                      label={f.description}
+                      status={f.isOverdue ? "Not Established" : "Partial"}
+                      detail={`${fmtCurrency(f.current_balance)}${f.due_date ? ` — due ${f.due_date}` : ""}${f.isOverdue ? " (OVERDUE — s.15(2) deemed-income risk)" : " (due soon)"}`}
+                    />
                   ))}
                 </div>
               </>

@@ -10,7 +10,32 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.1"
+    PostgrestVersion: "14.17"
+  }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
   public: {
     Tables: {
@@ -115,6 +140,42 @@ export type Database = {
           },
         ]
       }
+      adobe_webforms: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          custodian: string | null
+          fields: Json
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+          widget_url: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          custodian?: string | null
+          fields?: Json
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+          widget_url: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          custodian?: string | null
+          fields?: Json
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+          widget_url?: string
+        }
+        Relationships: []
+      }
       asana_sync_events: {
         Row: {
           contact_id: string | null
@@ -158,6 +219,211 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      brain_chunks: {
+        Row: {
+          chunk_index: number
+          content: string
+          content_tsv: unknown
+          created_at: string
+          document_id: string
+          embedding: string | null
+          embedding_model: string
+          heading: string | null
+          id: string
+          token_estimate: number | null
+        }
+        Insert: {
+          chunk_index: number
+          content: string
+          content_tsv?: unknown
+          created_at?: string
+          document_id: string
+          embedding?: string | null
+          embedding_model?: string
+          heading?: string | null
+          id?: string
+          token_estimate?: number | null
+        }
+        Update: {
+          chunk_index?: number
+          content?: string
+          content_tsv?: unknown
+          created_at?: string
+          document_id?: string
+          embedding?: string | null
+          embedding_model?: string
+          heading?: string | null
+          id?: string
+          token_estimate?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brain_chunks_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "brain_documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      brain_documents: {
+        Row: {
+          body: string | null
+          chunk_count: number
+          content_hash: string | null
+          created_at: string
+          created_by: string | null
+          doc_type: string
+          external_id: string | null
+          file_name: string | null
+          id: string
+          index_error: string | null
+          index_status: string
+          indexed_at: string | null
+          is_active: boolean
+          mime_type: string | null
+          occurred_at: string | null
+          pinned: boolean
+          sensitivity: string
+          source_record_id: string | null
+          source_system: string
+          source_table: string | null
+          source_url: string | null
+          storage_bucket: string | null
+          storage_path: string | null
+          summary: string | null
+          tags: string[]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          body?: string | null
+          chunk_count?: number
+          content_hash?: string | null
+          created_at?: string
+          created_by?: string | null
+          doc_type?: string
+          external_id?: string | null
+          file_name?: string | null
+          id?: string
+          index_error?: string | null
+          index_status?: string
+          indexed_at?: string | null
+          is_active?: boolean
+          mime_type?: string | null
+          occurred_at?: string | null
+          pinned?: boolean
+          sensitivity?: string
+          source_record_id?: string | null
+          source_system?: string
+          source_table?: string | null
+          source_url?: string | null
+          storage_bucket?: string | null
+          storage_path?: string | null
+          summary?: string | null
+          tags?: string[]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          body?: string | null
+          chunk_count?: number
+          content_hash?: string | null
+          created_at?: string
+          created_by?: string | null
+          doc_type?: string
+          external_id?: string | null
+          file_name?: string | null
+          id?: string
+          index_error?: string | null
+          index_status?: string
+          indexed_at?: string | null
+          is_active?: boolean
+          mime_type?: string | null
+          occurred_at?: string | null
+          pinned?: boolean
+          sensitivity?: string
+          source_record_id?: string | null
+          source_system?: string
+          source_table?: string | null
+          source_url?: string | null
+          storage_bucket?: string | null
+          storage_path?: string | null
+          summary?: string | null
+          tags?: string[]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      brain_entity_links: {
+        Row: {
+          created_at: string
+          document_id: string
+          entity_id: string
+          entity_type: string
+          id: string
+          link_source: string
+        }
+        Insert: {
+          created_at?: string
+          document_id: string
+          entity_id: string
+          entity_type: string
+          id?: string
+          link_source?: string
+        }
+        Update: {
+          created_at?: string
+          document_id?: string
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          link_source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brain_entity_links_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "brain_documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      brain_queries: {
+        Row: {
+          answer: string | null
+          chunk_ids: string[]
+          citations: Json
+          created_at: string
+          id: string
+          latency_ms: number | null
+          question: string
+          user_id: string | null
+        }
+        Insert: {
+          answer?: string | null
+          chunk_ids?: string[]
+          citations?: Json
+          created_at?: string
+          id?: string
+          latency_ms?: number | null
+          question: string
+          user_id?: string | null
+        }
+        Update: {
+          answer?: string | null
+          chunk_ids?: string[]
+          citations?: Json
+          created_at?: string
+          id?: string
+          latency_ms?: number | null
+          question?: string
+          user_id?: string | null
+        }
+        Relationships: []
       }
       business_pipeline: {
         Row: {
@@ -1498,14 +1764,21 @@ export type Database = {
           intake_share_token: string | null
           intake_upload_url: string | null
           label: string
+          legacy_intake_upgrade: boolean
           onboarding_completed_at: string | null
           onboarding_enabled: boolean
           onboarding_step: number
           profile_completed_at: string | null
+          purpose_notes: string | null
           quiet_period_start_date: string | null
+          relationship_end_reason: string | null
+          relationship_ended_at: string | null
+          retention_flagged_at: string | null
           updated_at: string
+          values_notes: string | null
           vault_root_folder_id: string | null
           vault_shoebox_folder_id: string | null
+          vision_notes: string | null
           wealth_event_completed_at: string | null
           wealth_event_notes: string | null
           wealth_event_type: string | null
@@ -1523,14 +1796,21 @@ export type Database = {
           intake_share_token?: string | null
           intake_upload_url?: string | null
           label?: string
+          legacy_intake_upgrade?: boolean
           onboarding_completed_at?: string | null
           onboarding_enabled?: boolean
           onboarding_step?: number
           profile_completed_at?: string | null
+          purpose_notes?: string | null
           quiet_period_start_date?: string | null
+          relationship_end_reason?: string | null
+          relationship_ended_at?: string | null
+          retention_flagged_at?: string | null
           updated_at?: string
+          values_notes?: string | null
           vault_root_folder_id?: string | null
           vault_shoebox_folder_id?: string | null
+          vision_notes?: string | null
           wealth_event_completed_at?: string | null
           wealth_event_notes?: string | null
           wealth_event_type?: string | null
@@ -1548,14 +1828,21 @@ export type Database = {
           intake_share_token?: string | null
           intake_upload_url?: string | null
           label?: string
+          legacy_intake_upgrade?: boolean
           onboarding_completed_at?: string | null
           onboarding_enabled?: boolean
           onboarding_step?: number
           profile_completed_at?: string | null
+          purpose_notes?: string | null
           quiet_period_start_date?: string | null
+          relationship_end_reason?: string | null
+          relationship_ended_at?: string | null
+          retention_flagged_at?: string | null
           updated_at?: string
+          values_notes?: string | null
           vault_root_folder_id?: string | null
           vault_shoebox_folder_id?: string | null
+          vision_notes?: string | null
           wealth_event_completed_at?: string | null
           wealth_event_notes?: string | null
           wealth_event_type?: string | null
@@ -2036,6 +2323,104 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      liabilities: {
+        Row: {
+          contact_id: string | null
+          corporation_id: string | null
+          counterparty_contact_id: string | null
+          counterparty_corporation_id: string | null
+          counterparty_type:
+            | Database["public"]["Enums"]["liability_counterparty_type"]
+            | null
+          created_at: string
+          created_by: string
+          current_balance: number
+          description: string
+          due_date: string | null
+          holder_type: Database["public"]["Enums"]["liability_holder_type"]
+          id: string
+          interest_rate_pct: number | null
+          liability_type: Database["public"]["Enums"]["liability_type"]
+          notes: string | null
+          original_amount: number | null
+          origination_date: string | null
+          updated_at: string
+        }
+        Insert: {
+          contact_id?: string | null
+          corporation_id?: string | null
+          counterparty_contact_id?: string | null
+          counterparty_corporation_id?: string | null
+          counterparty_type?:
+            | Database["public"]["Enums"]["liability_counterparty_type"]
+            | null
+          created_at?: string
+          created_by: string
+          current_balance?: number
+          description: string
+          due_date?: string | null
+          holder_type: Database["public"]["Enums"]["liability_holder_type"]
+          id?: string
+          interest_rate_pct?: number | null
+          liability_type?: Database["public"]["Enums"]["liability_type"]
+          notes?: string | null
+          original_amount?: number | null
+          origination_date?: string | null
+          updated_at?: string
+        }
+        Update: {
+          contact_id?: string | null
+          corporation_id?: string | null
+          counterparty_contact_id?: string | null
+          counterparty_corporation_id?: string | null
+          counterparty_type?:
+            | Database["public"]["Enums"]["liability_counterparty_type"]
+            | null
+          created_at?: string
+          created_by?: string
+          current_balance?: number
+          description?: string
+          due_date?: string | null
+          holder_type?: Database["public"]["Enums"]["liability_holder_type"]
+          id?: string
+          interest_rate_pct?: number | null
+          liability_type?: Database["public"]["Enums"]["liability_type"]
+          notes?: string | null
+          original_amount?: number | null
+          origination_date?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "liabilities_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "liabilities_corporation_id_fkey"
+            columns: ["corporation_id"]
+            isOneToOne: false
+            referencedRelation: "corporations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "liabilities_counterparty_contact_id_fkey"
+            columns: ["counterparty_contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "liabilities_counterparty_corporation_id_fkey"
+            columns: ["counterparty_corporation_id"]
+            isOneToOne: false
+            referencedRelation: "corporations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       manual_activity_log: {
         Row: {
@@ -3848,16 +4233,20 @@ export type Database = {
       }
       stabilization_maps: {
         Row: {
+          action_plan: Json
           client_first_name: string
           client_last_name: string
           contact_id: string | null
           created_at: string
           created_by: string | null
+          diagnostic_inputs: Json
+          diagnostics: Json
           event_context: string
           event_type: string
           footer_note: string
           generation_error: string | null
           generation_status: string
+          household_id: string | null
           id: string
           lead_id: string | null
           logic_trace: string | null
@@ -3881,20 +4270,25 @@ export type Database = {
           storehouse_status: string
           tax_detail: string
           tax_status: string
+          track_type: string
           updated_at: string
           urgency_flag: string
         }
         Insert: {
+          action_plan?: Json
           client_first_name?: string
           client_last_name?: string
           contact_id?: string | null
           created_at?: string
           created_by?: string | null
+          diagnostic_inputs?: Json
+          diagnostics?: Json
           event_context?: string
           event_type?: string
           footer_note?: string
           generation_error?: string | null
           generation_status?: string
+          household_id?: string | null
           id?: string
           lead_id?: string | null
           logic_trace?: string | null
@@ -3918,20 +4312,25 @@ export type Database = {
           storehouse_status?: string
           tax_detail?: string
           tax_status?: string
+          track_type?: string
           updated_at?: string
           urgency_flag?: string
         }
         Update: {
+          action_plan?: Json
           client_first_name?: string
           client_last_name?: string
           contact_id?: string | null
           created_at?: string
           created_by?: string | null
+          diagnostic_inputs?: Json
+          diagnostics?: Json
           event_context?: string
           event_type?: string
           footer_note?: string
           generation_error?: string | null
           generation_status?: string
+          household_id?: string | null
           id?: string
           lead_id?: string | null
           logic_trace?: string | null
@@ -3955,6 +4354,7 @@ export type Database = {
           storehouse_status?: string
           tax_detail?: string
           tax_status?: string
+          track_type?: string
           updated_at?: string
           urgency_flag?: string
         }
@@ -3964,6 +4364,13 @@ export type Database = {
             columns: ["contact_id"]
             isOneToOne: false
             referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stabilization_maps_household_id_fkey"
+            columns: ["household_id"]
+            isOneToOne: false
+            referencedRelation: "households"
             referencedColumns: ["id"]
           },
           {
@@ -4065,6 +4472,7 @@ export type Database = {
       }
       storehouses: {
         Row: {
+          account_number: string | null
           asset_type: string | null
           book_value: number | null
           charter_alignment: Database["public"]["Enums"]["charter_alignment"]
@@ -4072,6 +4480,7 @@ export type Database = {
           corporation_id: string | null
           created_at: string
           current_value: number | null
+          custodian: string | null
           id: string
           label: string
           notes: string | null
@@ -4082,6 +4491,7 @@ export type Database = {
           visibility_scope: Database["public"]["Enums"]["visibility_scope"]
         }
         Insert: {
+          account_number?: string | null
           asset_type?: string | null
           book_value?: number | null
           charter_alignment?: Database["public"]["Enums"]["charter_alignment"]
@@ -4089,6 +4499,7 @@ export type Database = {
           corporation_id?: string | null
           created_at?: string
           current_value?: number | null
+          custodian?: string | null
           id?: string
           label?: string
           notes?: string | null
@@ -4099,6 +4510,7 @@ export type Database = {
           visibility_scope?: Database["public"]["Enums"]["visibility_scope"]
         }
         Update: {
+          account_number?: string | null
           asset_type?: string | null
           book_value?: number | null
           charter_alignment?: Database["public"]["Enums"]["charter_alignment"]
@@ -4106,6 +4518,7 @@ export type Database = {
           corporation_id?: string | null
           created_at?: string
           current_value?: number | null
+          custodian?: string | null
           id?: string
           label?: string
           notes?: string | null
@@ -4134,23 +4547,26 @@ export type Database = {
       }
       task_collaborators: {
         Row: {
-          contact_id: string
+          contact_id: string | null
           created_at: string
           id: string
+          professional_id: string | null
           tagged_by: string
           task_gid: string
         }
         Insert: {
-          contact_id: string
+          contact_id?: string | null
           created_at?: string
           id?: string
+          professional_id?: string | null
           tagged_by: string
           task_gid: string
         }
         Update: {
-          contact_id?: string
+          contact_id?: string | null
           created_at?: string
           id?: string
+          professional_id?: string | null
           tagged_by?: string
           task_gid?: string
         }
@@ -4162,7 +4578,41 @@ export type Database = {
             referencedRelation: "contacts"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "task_collaborators_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
         ]
+      }
+      toe_acceptances: {
+        Row: {
+          accepted_at: string
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+          pay_slug: string
+        }
+        Insert: {
+          accepted_at?: string
+          created_at?: string
+          email: string
+          full_name: string
+          id?: string
+          pay_slug: string
+        }
+        Update: {
+          accepted_at?: string
+          created_at?: string
+          email?: string
+          full_name?: string
+          id?: string
+          pay_slug?: string
+        }
+        Relationships: []
       }
       vault_audit_log: {
         Row: {
@@ -4519,6 +4969,7 @@ export type Database = {
           last_accessed_at: string | null
           link_type: Database["public"]["Enums"]["vault_share_link_type"]
           max_uses: number | null
+          name: string | null
           permission: Database["public"]["Enums"]["vault_share_permission"]
           revoked_at: string | null
           scope_type: string
@@ -4537,6 +4988,7 @@ export type Database = {
           last_accessed_at?: string | null
           link_type: Database["public"]["Enums"]["vault_share_link_type"]
           max_uses?: number | null
+          name?: string | null
           permission?: Database["public"]["Enums"]["vault_share_permission"]
           revoked_at?: string | null
           scope_type: string
@@ -4555,6 +5007,7 @@ export type Database = {
           last_accessed_at?: string | null
           link_type?: Database["public"]["Enums"]["vault_share_link_type"]
           max_uses?: number | null
+          name?: string | null
           permission?: Database["public"]["Enums"]["vault_share_permission"]
           revoked_at?: string | null
           scope_type?: string
@@ -4573,6 +5026,7 @@ export type Database = {
           contact_id: string
           created_at: string
           current_value: number | null
+          custodian: string | null
           id: string
           notes: string | null
           updated_at: string
@@ -4586,6 +5040,7 @@ export type Database = {
           contact_id: string
           created_at?: string
           current_value?: number | null
+          custodian?: string | null
           id?: string
           notes?: string | null
           updated_at?: string
@@ -4599,6 +5054,7 @@ export type Database = {
           contact_id?: string
           created_at?: string
           current_value?: number | null
+          custodian?: string | null
           id?: string
           notes?: string | null
           updated_at?: string
@@ -4663,7 +5119,36 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      dearmor: { Args: { "": string }; Returns: string }
+      gen_random_uuid: { Args: never; Returns: string }
+      gen_salt: { Args: { "": string }; Returns: string }
+      match_brain_chunks: {
+        Args: {
+          filter_doc_types?: string[]
+          filter_entity_id?: string
+          filter_entity_type?: string
+          match_count?: number
+          query_embedding: string
+          similarity_threshold?: number
+        }
+        Returns: {
+          chunk_id: string
+          chunk_index: number
+          content: string
+          doc_type: string
+          document_id: string
+          heading: string
+          occurred_at: string
+          similarity: number
+          source_system: string
+          source_url: string
+          title: string
+        }[]
+      }
+      pgp_armor_headers: {
+        Args: { "": string }
+        Returns: Record<string, unknown>[]
+      }
     }
     Enums: {
       charter_alignment: "aligned" | "misaligned" | "pending_review"
@@ -4679,6 +5164,16 @@ export type Database = {
       fee_tier: "sovereign" | "legacy" | "dynasty"
       fiduciary_entity: "pws" | "pwa"
       governance_status: "stabilization" | "sovereign" | "none" | "core"
+      liability_counterparty_type: "external" | "corporation" | "contact"
+      liability_holder_type: "contact" | "corporation"
+      liability_type:
+        | "mortgage"
+        | "personal_loan"
+        | "line_of_credit"
+        | "credit_card"
+        | "intercompany_loan"
+        | "shareholder_loan"
+        | "other_debt"
       manual_activity_direction: "inbound" | "outbound"
       manual_activity_kind: "call" | "sms"
       pipeline_category: "pws_consulting" | "new_aum" | "insurance"
@@ -4813,6 +5308,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       charter_alignment: ["aligned", "misaligned", "pending_review"],
@@ -4829,6 +5327,17 @@ export const Constants = {
       fee_tier: ["sovereign", "legacy", "dynasty"],
       fiduciary_entity: ["pws", "pwa"],
       governance_status: ["stabilization", "sovereign", "none", "core"],
+      liability_counterparty_type: ["external", "corporation", "contact"],
+      liability_holder_type: ["contact", "corporation"],
+      liability_type: [
+        "mortgage",
+        "personal_loan",
+        "line_of_credit",
+        "credit_card",
+        "intercompany_loan",
+        "shareholder_loan",
+        "other_debt",
+      ],
       manual_activity_direction: ["inbound", "outbound"],
       manual_activity_kind: ["call", "sms"],
       pipeline_category: ["pws_consulting", "new_aum", "insurance"],

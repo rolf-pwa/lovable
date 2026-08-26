@@ -55,6 +55,7 @@ import { SovereigntyAssistant } from "@/shared/components/SovereigntyAssistant";
 import { AuditTrail } from "@/modules/audit";
 import { StatementUpload } from "@/modules/crm";
 import { HoldingTank } from "@/modules/crm/components/HoldingTank";
+import { LiabilitiesCard } from "@/modules/crm/components/LiabilitiesCard";
 import { AssetContainer, type MoveTarget } from "@/modules/crm/components/AssetContainer";
 import type { WebFormRecord } from "@/modules/crm/components/WebFormEditorDialog";
 import { InsurancePanel } from "@/modules/crm/components/InsurancePanel";
@@ -930,8 +931,8 @@ const ContactDetail = () => {
                   onStorehousesChanged={() => fetchData()}
                 />
 
-
-
+                {/* Liabilities */}
+                <LiabilitiesCard holderType="contact" holderId={id!} />
 
 
                 {/* The Vineyard Accounts */}
