@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import { useGeorgia2 } from "./state";
 import { Button } from "@/shared/components/ui/button";
 import { Slider } from "@/shared/components/ui/slider";
-import { ArrowLeft, Info } from "lucide-react";
+import { ArrowLeft, ArrowRight, Info } from "lucide-react";
 import {
   CATALYST_QUESTIONS,
   formatCAD,
@@ -118,10 +118,14 @@ export function StepDiagnostic() {
           <span>{formatCAD(SCALE_MIN)}</span>
           <span>{formatCAD(SCALE_MAX)}</span>
         </div>
-        {result && allAnswered && (
-          <div className="mt-4 rounded-md border border-primary/40 bg-primary/5 px-3 py-2 text-sm text-primary">
-            {result.headline}
-          </div>
+        {result && allAnswered && !state.resultsRevealed && (
+          <Button
+            size="lg"
+            className="mt-4 w-full"
+            onClick={() => dispatch({ type: "reveal_results" })}
+          >
+            See my pathway <ArrowRight className="ml-1 h-4 w-4" />
+          </Button>
         )}
 
       </div>
