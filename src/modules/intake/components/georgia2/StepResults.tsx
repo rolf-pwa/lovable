@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { useGeorgia2 } from "./state";
 import { Button } from "@/shared/components/ui/button";
-import { ArrowLeft, ArrowRight, Calendar, Phone } from "lucide-react";
+import { ArrowLeft, Calendar, Phone } from "lucide-react";
 import {
   deriveResult,
   formatCAD,
@@ -13,22 +13,22 @@ import { trackGeorgia2 } from "@/modules/intake/lib/session-tracker";
 export function StepResults() {
   const { state, dispatch } = useGeorgia2();
   const rootRef = useRef<HTMLDivElement>(null);
-  // The full recommendation stays hidden until the visitor asks to see it by
-  // clicking "See my pathway". The first click reveals the card and stays put;
-  // a second click proceeds to lead capture.
-  const [revealed, setRevealed] = useState(false);
+  // The full recommendation stays hidden until the visitor clicks "See my
+  // pathway" — that button now lives in StepDiagnostic, right below the
+  // scale slider, so it dispatches "reveal_results" instead of local state.
+  const revealed = state.resultsRevealed;
   if (!state.domain || !state.catalyst) return null;
   const result = deriveResult(state.domain);
 
 
-  // Bring the top of the results card into view as soon as it appears, so the
-  // visitor lands on the recommendation rather than the question section above it.
+  // Bring the results card into view once it's revealed, so the visitor
+  // lands on the recommendation instead of having to scroll to find it.
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined" || !revealed) return;
     if (rootRef.current) {
       rootRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
     }
-  }, []);
+  }, [revealed]);
 
   const pick = (p: Pathway) => {
     dispatch({ type: "set_pathway", pathway: p });
@@ -95,12 +95,6 @@ export function StepResults() {
           </div>
         </>
       )}
-      {!revealed && (
-        <Button size="lg" className="w-full" onClick={() => setRevealed(true)}>
-          See my pathway <ArrowRight className="ml-1 h-4 w-4" />
-        </Button>
-      )}
-
     </div>
   );
 }
