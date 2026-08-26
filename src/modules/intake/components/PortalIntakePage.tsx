@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
+import { Card, CardContent } from "@/shared/components/ui/card";
 import { Button } from "@/shared/components/ui/button";
 import { Badge } from "@/shared/components/ui/badge";
 import { Progress } from "@/shared/components/ui/progress";
@@ -46,6 +46,8 @@ function prettyCategory(raw?: string | null) {
   return raw.replace(/^\d+[_\-\s]*/, "").replace(/[_&]+/g, " ").replace(/\s+/g, " ").trim();
 }
 
+const sectionLabel = "text-sm font-semibold text-foreground font-serif";
+
 export function PortalIntakePage({ portalToken, onBack, onComplete }: Props) {
   const {
     manifest,
@@ -85,16 +87,20 @@ export function PortalIntakePage({ portalToken, onBack, onComplete }: Props) {
     if (inputRef.current) inputRef.current.value = "";
   };
 
+  const backLink = (
+    <button
+      onClick={onBack}
+      className="mb-2 inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+    >
+      <ArrowLeft className="h-3.5 w-3.5" />
+      Back to portal
+    </button>
+  );
+
   const header = (
-    <div>
-      <button
-        onClick={onBack}
-        className="mb-2 inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
-      >
-        <ArrowLeft className="h-3.5 w-3.5" />
-        Back to portal
-      </button>
-      <h1 className="font-serif text-2xl text-foreground">Your documents</h1>
+    <div className="space-y-1.5">
+      {backLink}
+      <h2 className="font-serif text-lg font-semibold text-foreground">Your documents</h2>
       <p className="text-sm text-muted-foreground">
         {manifest?.householdName
           ? `${manifest.householdName} · secure Canadian infrastructure`
@@ -105,36 +111,38 @@ export function PortalIntakePage({ portalToken, onBack, onComplete }: Props) {
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        {header}
-        <div className="p-16 text-center text-muted-foreground">Loading your checklist…</div>
-      </div>
+      <Card>
+        <CardContent className="space-y-6 p-6">
+          {header}
+          <div className="py-10 text-center text-sm text-muted-foreground">Loading your checklist…</div>
+        </CardContent>
+      </Card>
     );
   }
 
   if (!manifest?.enabled || manifest.ready === false) {
     return (
-      <div className="space-y-6">
-        {header}
-        <Card>
-          <CardContent className="p-10 text-center">
+      <Card>
+        <CardContent className="space-y-6 p-6">
+          {header}
+          <div className="py-10 text-center">
             <Inbox className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
             <p className="text-sm text-muted-foreground">
               Your vault is still being prepared. We'll let you know as soon as your Sovereignty Survey is
               open.
             </p>
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
   if (isComplete) {
     return (
-      <div className="space-y-6">
-        {header}
-        <Card className="border-emerald-600/30 bg-emerald-600/[0.04]">
-          <CardContent className="p-10 text-center">
+      <Card>
+        <CardContent className="space-y-6 p-6">
+          {header}
+          <div className="py-10 text-center">
             <CheckCircle2 className="mx-auto mb-3 h-8 w-8 text-emerald-500" />
             <p className="font-serif text-lg text-foreground">Your vault is complete</p>
             <p className="mt-1 text-sm text-muted-foreground">
@@ -144,9 +152,9 @@ export function PortalIntakePage({ portalToken, onBack, onComplete }: Props) {
             <Button variant="outline" className="mt-5" onClick={onBack}>
               Return to portal
             </Button>
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
@@ -156,12 +164,12 @@ export function PortalIntakePage({ portalToken, onBack, onComplete }: Props) {
   const maxMb = Math.round((manifest.limits?.maxBytes ?? 25 * 1024 * 1024) / 1024 / 1024);
 
   return (
-    <div className="space-y-6">
-      {header}
+    <Card>
+      <CardContent className="space-y-6 p-6">
+        {header}
 
-      {/* Progress */}
-      <Card className="border-amber-500/30 bg-amber-500/[0.03]">
-        <CardContent className="space-y-3 p-5">
+        {/* Progress */}
+        <div className="space-y-3 border-t border-border pt-5">
           <div className="flex items-center justify-between text-sm">
             <span className="text-foreground">
               {audit && typeof audit.criticalTotal === "number" && audit.criticalTotal > 0
@@ -183,17 +191,12 @@ export function PortalIntakePage({ portalToken, onBack, onComplete }: Props) {
               ? ` ${processing} document${processing === 1 ? " is" : "s are"} still being processed — this list updates on its own.`
               : ""}
           </p>
-        </CardContent>
-      </Card>
+        </div>
 
-
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Dropzone */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="font-serif text-base">Send documents</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
+        <div className="grid gap-6 border-t border-border pt-5 sm:grid-cols-2">
+          {/* Dropzone */}
+          <div className="space-y-3">
+            <h3 className={sectionLabel}>Send documents</h3>
             <div
               onDragOver={(e) => {
                 e.preventDefault();
@@ -208,8 +211,8 @@ export function PortalIntakePage({ portalToken, onBack, onComplete }: Props) {
               onClick={() => inputRef.current?.click()}
               className={`cursor-pointer rounded-lg border-2 border-dashed p-8 text-center transition ${
                 dragging
-                  ? "border-amber-500 bg-amber-500/[0.06]"
-                  : "border-border hover:border-amber-500/50"
+                  ? "border-primary bg-primary/[0.06]"
+                  : "border-border hover:border-primary/50"
               }`}
             >
               <input
@@ -220,9 +223,9 @@ export function PortalIntakePage({ portalToken, onBack, onComplete }: Props) {
                 onChange={(e) => handleFiles(e.target.files)}
               />
               {uploading ? (
-                <Loader2 className="mx-auto mb-2 h-6 w-6 animate-spin text-amber-500" />
+                <Loader2 className="mx-auto mb-2 h-6 w-6 animate-spin text-primary" />
               ) : (
-                <Upload className="mx-auto mb-2 h-6 w-6 text-amber-500" />
+                <Upload className="mx-auto mb-2 h-6 w-6 text-primary" />
               )}
               <p className="text-sm text-foreground">
                 {uploading ? "Uploading…" : "Drag files here, or click to browse"}
@@ -258,22 +261,18 @@ export function PortalIntakePage({ portalToken, onBack, onComplete }: Props) {
                 ))}
               </ul>
             )}
-          </CardContent>
-        </Card>
+          </div>
 
-        {/* Checklist */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="font-serif text-base">What we're expecting</CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
+          {/* Checklist */}
+          <div className="space-y-3">
+            <h3 className={sectionLabel}>What we're expecting</h3>
             {checklist.length === 0 ? (
-              <p className="p-5 text-sm text-muted-foreground">
+              <p className="text-sm text-muted-foreground">
                 No specific checklist yet — send whatever you have and we'll sort it. Your advisor
                 will follow up if anything is missing.
               </p>
             ) : (
-              <div>
+              <div className="rounded-lg border border-border">
                 {(
                   [
                     ["required", "Required", checklist.filter((i) => i.requirement === "required")],
@@ -318,64 +317,61 @@ export function PortalIntakePage({ portalToken, onBack, onComplete }: Props) {
                 )}
               </div>
             )}
-          </CardContent>
-        </Card>
-
-      </div>
-
-      {/* Activity */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="font-serif text-base">Received documents</CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          {uploads.length === 0 ? (
-            <p className="p-5 text-sm text-muted-foreground">Nothing received yet.</p>
-          ) : (
-            <ul className="divide-y divide-border/60">
-              {uploads.map((u, i) => {
-                const meta =
-                  STATUS_META[u.classification?.status ?? "pending"] ?? STATUS_META.pending;
-                const Icon = meta.icon;
-                return (
-                  <li
-                    key={`${u.fileName}-${i}`}
-                    className="flex items-center justify-between gap-3 px-4 py-2.5"
-                  >
-                    <div className="min-w-0">
-                      <p className="truncate text-sm text-foreground">{u.fileName}</p>
-                      <p className="truncate text-[11px] text-muted-foreground">
-                        {[u.folderName ? prettyCategory(u.folderName) : null,
-                          u.createdAt ? format(new Date(u.createdAt), "PP") : null]
-                          .filter(Boolean)
-                          .join(" · ")}
-                      </p>
-                    </div>
-                    <Badge variant="outline" className="shrink-0 gap-1 text-[10px]">
-                      <Icon className="h-3 w-3" />
-                      {meta.label}
-                    </Badge>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
-
-      {onComplete && (
-        <div className="flex flex-col items-center gap-2 text-center">
-          <Button onClick={onComplete}>
-            <CheckCircle2 className="h-4 w-4" />
-            I've sent everything I have — Continue
-            <ArrowRight className="h-4 w-4" />
-          </Button>
-          <p className="text-xs text-muted-foreground">
-            Missing something? No problem — send it whenever it's ready, and our team will follow up
-            on anything still outstanding.
-          </p>
+          </div>
         </div>
-      )}
-    </div>
+
+        {/* Activity */}
+        <div className="space-y-3 border-t border-border pt-5">
+          <h3 className={sectionLabel}>Received documents</h3>
+          {uploads.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nothing received yet.</p>
+          ) : (
+            <div className="rounded-lg border border-border">
+              <ul className="divide-y divide-border/60">
+                {uploads.map((u, i) => {
+                  const meta =
+                    STATUS_META[u.classification?.status ?? "pending"] ?? STATUS_META.pending;
+                  const Icon = meta.icon;
+                  return (
+                    <li
+                      key={`${u.fileName}-${i}`}
+                      className="flex items-center justify-between gap-3 px-4 py-2.5"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm text-foreground">{u.fileName}</p>
+                        <p className="truncate text-[11px] text-muted-foreground">
+                          {[u.folderName ? prettyCategory(u.folderName) : null,
+                            u.createdAt ? format(new Date(u.createdAt), "PP") : null]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </p>
+                      </div>
+                      <Badge variant="outline" className="shrink-0 gap-1 text-[10px]">
+                        <Icon className="h-3 w-3" />
+                        {meta.label}
+                      </Badge>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
+        </div>
+
+        {onComplete && (
+          <div className="flex flex-col items-center gap-2 border-t border-border pt-5 text-center">
+            <Button onClick={onComplete}>
+              <CheckCircle2 className="h-4 w-4" />
+              I've sent everything I have — Continue
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+            <p className="text-xs text-muted-foreground">
+              Missing something? No problem — send it whenever it's ready, and our team will follow up
+              on anything still outstanding.
+            </p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
