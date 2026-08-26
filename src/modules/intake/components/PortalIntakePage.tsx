@@ -97,7 +97,7 @@ export function PortalIntakePage({ portalToken, onBack, onAskForHelp, onComplete
           <ArrowLeft className="h-3.5 w-3.5" />
           Back to portal
         </button>
-        <h1 className="font-serif text-2xl text-foreground">Sovereignty Survey</h1>
+        <h1 className="font-serif text-2xl text-foreground">Your documents</h1>
         <p className="text-sm text-muted-foreground">
           {manifest?.householdName
             ? `${manifest.householdName} · secure Canadian infrastructure`
