@@ -655,20 +655,17 @@ export default function StabilizationMap() {
                   </div>
                 )}
 
-                {/* Governance & Deceleration Risk Vectors */}
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(60mm, 1fr))", gap: "3mm" }}>
-                  {governanceCards.map((c) => (
-                    <StatusCard key={c.label} label={c.label} status={c.status} detail={c.detail} />
-                  ))}
-                  {diag.intercompany_loan_flags?.map((f) => (
-                    <StatusCard
-                      key={f.id}
-                      label={f.description}
-                      status={f.isOverdue ? "Not Established" : "Partial"}
-                      detail={`${fmtCurrency(f.current_balance)}${f.due_date ? ` — due ${f.due_date}` : ""}${f.isOverdue ? " (OVERDUE — s.15(2) deemed-income risk)" : " (due soon)"}`}
-                    />
-                  ))}
-                </div>
+                {/* Governance & Deceleration Risk Vectors — corporate track moved to its own
+                    page (below, after this stab-doc closes): the balance sheet section alone
+                    pushes corporate-track content past 297mm, so cramming the governance cards
+                    on too just clips them at print time. Personal track still fits, unchanged. */}
+                {map.track_type !== "corporate" && (
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(60mm, 1fr))", gap: "3mm" }}>
+                    {governanceCards.map((c) => (
+                      <StatusCard key={c.label} label={c.label} status={c.status} detail={c.detail} />
+                    ))}
+                  </div>
+                )}
               </>
             ) : (
               <>
@@ -713,7 +710,53 @@ export default function StabilizationMap() {
           </main>
         </div>
 
-        {/* Page 2 — 90-Day Stabilization Action Plan (household maps only) */}
+        {/* Page 2 — Governance & Deceleration Risk Vectors (corporate track only —
+            the balance sheet section alone already fills page 1 for a corporate
+            household, so the governance cards get their own page instead of
+            being clipped at print time). */}
+        {isHouseholdMap && map.track_type === "corporate" && (
+          <div
+            className="stab-doc-page2 bg-white shadow-lg print:shadow-none mt-6 print:mt-0"
+            style={{
+              width: "210mm",
+              minHeight: "297mm",
+              padding: "12mm",
+              display: "flex",
+              flexDirection: "column",
+              gap: "5mm",
+              fontFamily: "'DM Sans', sans-serif",
+              color: "#334155",
+              pageBreakBefore: "always",
+              breakBefore: "page",
+            }}
+          >
+            <div>
+              <div style={{ fontSize: "7.5pt", letterSpacing: ".1em", textTransform: "uppercase", color: "#94a3b8", marginBottom: "1.5mm" }}>
+                Stabilization Map &nbsp;·&nbsp; Prepared for <strong>{fullName}</strong>
+              </div>
+              <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "18pt", fontWeight: 300, color: "#334155", lineHeight: 1.1 }}>
+                Governance &amp; Deceleration Risk Vectors
+              </div>
+              <hr style={{ width: "18mm", height: "3px", background: "#a37c58", border: "none", marginTop: "2.5mm" }} />
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(60mm, 1fr))", gap: "4mm" }}>
+              {governanceCards.map((c) => (
+                <StatusCard key={c.label} label={c.label} status={c.status} detail={c.detail} />
+              ))}
+              {diag.intercompany_loan_flags?.map((f) => (
+                <StatusCard
+                  key={f.id}
+                  label={f.description}
+                  status={f.isOverdue ? "Not Established" : "Partial"}
+                  detail={`${fmtCurrency(f.current_balance)}${f.due_date ? ` — due ${f.due_date}` : ""}${f.isOverdue ? " (OVERDUE — s.15(2) deemed-income risk)" : " (due soon)"}`}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Page 3 — 90-Day Stabilization Action Plan (household maps only) */}
         {isHouseholdMap && (
           <div
             className="stab-doc-page2 bg-white shadow-lg print:shadow-none mt-6 print:mt-0"
