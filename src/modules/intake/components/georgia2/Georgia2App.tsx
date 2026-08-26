@@ -38,6 +38,24 @@ function Shell({ embed }: { embed?: boolean }) {
     }
   }, [state.step]);
 
+  // When embedded, report our real content height to the parent page so it
+  // can size the iframe to fit — the marketing site already listens for this
+  // (ask-georgia.html), it just never had anything sending it. ResizeObserver
+  // catches every height change (step transitions, the results reveal toggle,
+  // font/image load reflow) without hooking each one individually.
+  useEffect(() => {
+    if (!embed || typeof window === "undefined" || window.parent === window) return;
+    const el = rootRef.current;
+    if (!el) return;
+    const report = () => {
+      window.parent.postMessage({ height: el.scrollHeight }, "*");
+    };
+    report();
+    const ro = new ResizeObserver(report);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [embed]);
+
   return (
     <div ref={rootRef} className={embed ? "min-h-screen bg-background" : "min-h-screen bg-background"}>
       <div className="mx-auto max-w-6xl px-4 py-6 md:py-10">
