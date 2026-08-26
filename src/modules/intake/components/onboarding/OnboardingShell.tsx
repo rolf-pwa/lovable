@@ -202,7 +202,6 @@ export const OnboardingShell = ({ portalToken, onBack, onAskForHelp }: Props) =>
           <PortalIntakePage
             portalToken={portalToken}
             onBack={onBack}
-            onAskForHelp={onAskForHelp}
             onComplete={state.household.step < 4 ? () => void markDocumentsComplete() : undefined}
           />
         ) : (
@@ -247,7 +246,6 @@ export const OnboardingShell = ({ portalToken, onBack, onAskForHelp }: Props) =>
           <PortalIntakePage
             portalToken={portalToken}
             onBack={onBack}
-            onAskForHelp={onAskForHelp}
             onComplete={
               state.household.onboardingCompletedAt ? undefined : () => void markDocumentsComplete()
             }

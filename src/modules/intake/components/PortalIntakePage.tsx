@@ -12,7 +12,6 @@ import {
   Inbox,
   CheckCircle2,
   ArrowLeft,
-  HelpCircle,
   Circle,
   ArrowRight,
   Sparkles,
@@ -24,7 +23,6 @@ import { useOnboardingManifest, type IntakeChecklistItem } from "@/shared/hooks/
 interface Props {
   portalToken: string;
   onBack: () => void;
-  onAskForHelp?: () => void;
   /** Fired once when the document checklist first reports completion. */
   onComplete?: () => void;
 }
@@ -48,7 +46,7 @@ function prettyCategory(raw?: string | null) {
   return raw.replace(/^\d+[_\-\s]*/, "").replace(/[_&]+/g, " ").replace(/\s+/g, " ").trim();
 }
 
-export function PortalIntakePage({ portalToken, onBack, onAskForHelp, onComplete }: Props) {
+export function PortalIntakePage({ portalToken, onBack, onComplete }: Props) {
   const {
     manifest,
     loading,
@@ -88,28 +86,20 @@ export function PortalIntakePage({ portalToken, onBack, onAskForHelp, onComplete
   };
 
   const header = (
-    <div className="flex flex-wrap items-center justify-between gap-3">
-      <div>
-        <button
-          onClick={onBack}
-          className="mb-2 inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" />
-          Back to portal
-        </button>
-        <h1 className="font-serif text-2xl text-foreground">Your documents</h1>
-        <p className="text-sm text-muted-foreground">
-          {manifest?.householdName
-            ? `${manifest.householdName} · secure Canadian infrastructure`
-            : "Secure Canadian infrastructure"}
-        </p>
-      </div>
-      {onAskForHelp && (
-        <Button variant="outline" size="sm" className="gap-1.5" onClick={onAskForHelp}>
-          <HelpCircle className="h-4 w-4" />
-          Not sure what to send?
-        </Button>
-      )}
+    <div>
+      <button
+        onClick={onBack}
+        className="mb-2 inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+      >
+        <ArrowLeft className="h-3.5 w-3.5" />
+        Back to portal
+      </button>
+      <h1 className="font-serif text-2xl text-foreground">Your documents</h1>
+      <p className="text-sm text-muted-foreground">
+        {manifest?.householdName
+          ? `${manifest.householdName} · secure Canadian infrastructure`
+          : "Secure Canadian infrastructure"}
+      </p>
     </div>
   );
 
