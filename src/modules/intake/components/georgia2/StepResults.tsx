@@ -1,12 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { useGeorgia2 } from "./state";
 import { Button } from "@/shared/components/ui/button";
-import { ArrowLeft, ArrowRight, Calendar, BookOpen } from "lucide-react";
+import { ArrowLeft, ArrowRight, Calendar, Phone } from "lucide-react";
 import {
   deriveResult,
   formatCAD,
   CATALYST_LABELS,
-  CATALYST_ACADEMY,
   type Pathway,
 } from "@/modules/intake/lib/derive";
 import { trackGeorgia2 } from "@/modules/intake/lib/session-tracker";
@@ -20,7 +19,6 @@ export function StepResults() {
   const [revealed, setRevealed] = useState(false);
   if (!state.domain || !state.catalyst) return null;
   const result = deriveResult(state.domain);
-  const academy = CATALYST_ACADEMY[state.catalyst];
 
 
   // Bring the top of the results card into view as soon as it appears, so the
@@ -85,12 +83,12 @@ export function StepResults() {
                 variant="outline"
                 className="h-auto w-full whitespace-normal py-3 text-center leading-snug"
                 onClick={() => {
-                  trackGeorgia2({ chosen_pathway: "academy_guide" });
-                  window.open(academy.url, "_blank", "noopener,noreferrer");
+                  trackGeorgia2({ chosen_pathway: "clarity_call" });
+                  window.open("https://www.prosperwise.ca/clarity-call", "_blank", "noopener,noreferrer");
                 }}
               >
-                <BookOpen className="mr-2 h-4 w-4 shrink-0" />
-                Read the {academy.title} Guide
+                <Phone className="mr-2 h-4 w-4 shrink-0" />
+                Talk It Through
               </Button>
             </div>
           </div>
