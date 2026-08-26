@@ -169,17 +169,6 @@ export function PortalIntakePage({ portalToken, onBack, onAskForHelp, onComplete
     <div className="space-y-6">
       {header}
 
-      {/* AI parsing instructions — prominent, so clients know exactly what to do */}
-      <Card className="border-primary/30 bg-primary/5">
-        <CardContent className="flex items-start gap-3 p-5">
-          <Sparkles className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
-          <p className="text-sm font-medium text-foreground">
-            Our AI reads each document you send to pull the details your Survey needs — send as much
-            as you can now, and the more precise and personalized your Survey will be.
-          </p>
-        </CardContent>
-      </Card>
-
       {/* Progress */}
       <Card className="border-amber-500/30 bg-amber-500/[0.03]">
         <CardContent className="space-y-3 p-5">
@@ -192,6 +181,11 @@ export function PortalIntakePage({ portalToken, onBack, onAskForHelp, onComplete
             <span className="text-muted-foreground">{percent}%</span>
           </div>
           <Progress value={percent} className="h-2" />
+          <p className="flex items-start gap-1.5 text-sm font-medium text-foreground">
+            <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
+            Our AI reads each document to build your Survey — send as much as you can now for a more
+            precise, personalized result.
+          </p>
           <p className="text-xs text-muted-foreground">
             Every document you send is renamed and filed into the right vault folder automatically.
             Our team reviews anything that needs a second look.
