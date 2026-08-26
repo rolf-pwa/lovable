@@ -547,7 +547,7 @@ export default function StabilizationMap() {
               </div>
               <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: isHouseholdMap ? "25pt" : "26pt", fontWeight: 300, color: "#334155", lineHeight: isHouseholdMap ? 1.3 : 1.1, letterSpacing: "-0.005em" }}>
                 {isHouseholdMap ? (
-                  "Sovereignty Survey — Stabilization Map"
+                  "Sovereignty Survey™"
                 ) : (
                   <>
                     {map.event_type} &nbsp;·&nbsp; {map.event_context || "Post-Close Governance"}<br />
