@@ -76,6 +76,7 @@ import {
   UserCheck,
   ScanSearch,
   TrendingDown,
+  HeartHandshake,
 } from "lucide-react";
 import { ContactAnalytics } from "@/modules/crm/components/ContactAnalytics";
 
@@ -970,6 +971,85 @@ const HouseholdDetail = () => {
                     </div>
                   </CardContent>
                 </Card>
+                {(household?.vision_notes || household?.values_notes || household?.purpose_notes ||
+                  household?.anchor_transfer_amount != null || household?.spousal_alignment_score != null ||
+                  household?.pressure_types?.length > 0 || household?.pending_capex_amount != null ||
+                  household?.legacy_advisor_friction_notes) && (
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="flex items-center gap-2 text-base">
+                        <HeartHandshake className="h-4 w-4 text-sanctuary-bronze" />
+                        Household Context
+                      </CardTitle>
+                      <p className="text-xs text-muted-foreground">
+                        Captured during guided intake — read-only.
+                      </p>
+                    </CardHeader>
+                    <CardContent className="space-y-3 text-sm">
+                      {household?.vision_notes && (
+                        <div>
+                          <p className="text-xs font-medium text-muted-foreground">Vision</p>
+                          <p className="text-foreground">{household.vision_notes}</p>
+                        </div>
+                      )}
+                      {household?.values_notes && (
+                        <div>
+                          <p className="text-xs font-medium text-muted-foreground">Values</p>
+                          <p className="text-foreground">{household.values_notes}</p>
+                        </div>
+                      )}
+                      {household?.purpose_notes && (
+                        <div>
+                          <p className="text-xs font-medium text-muted-foreground">Purpose for their capital</p>
+                          <p className="text-foreground">{household.purpose_notes}</p>
+                        </div>
+                      )}
+                      {household?.anchor_transfer_amount != null && (
+                        <div>
+                          <p className="text-xs font-medium text-muted-foreground">Anchor transfer amount</p>
+                          <p className="text-foreground">
+                            {formatCurrency(household.anchor_transfer_amount)}
+                            {household.anchor_transfer_amount_note ? ` — ${household.anchor_transfer_amount_note}` : ""}
+                          </p>
+                        </div>
+                      )}
+                      {household?.spousal_alignment_score != null && (
+                        <div>
+                          <p className="text-xs font-medium text-muted-foreground">Spousal/partner alignment</p>
+                          <p className="text-foreground">
+                            {household.spousal_alignment_score}/5
+                            {household.spousal_alignment_note ? ` — ${household.spousal_alignment_note}` : ""}
+                          </p>
+                        </div>
+                      )}
+                      {household?.pressure_types?.length > 0 && (
+                        <div>
+                          <p className="text-xs font-medium text-muted-foreground">Outside pressure</p>
+                          <p className="text-foreground">
+                            {household.pressure_types.join(", ")}
+                            {household.pressure_note ? ` — ${household.pressure_note}` : ""}
+                          </p>
+                        </div>
+                      )}
+                      {household?.pending_capex_amount != null && (
+                        <div>
+                          <p className="text-xs font-medium text-muted-foreground">Pending capital expenditure</p>
+                          <p className="text-foreground">
+                            {formatCurrency(household.pending_capex_amount)}
+                            {household.pending_capex_date ? ` — planned for ${household.pending_capex_date}` : ""}
+                            {household.pending_capex_description ? ` — ${household.pending_capex_description}` : ""}
+                          </p>
+                        </div>
+                      )}
+                      {household?.legacy_advisor_friction_notes && (
+                        <div>
+                          <p className="text-xs font-medium text-muted-foreground">Friction with a previous advisor</p>
+                          <p className="text-foreground">{household.legacy_advisor_friction_notes}</p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
                 <CharterRatificationTile householdId={id} />
                 <Card className="border-sanctuary-bronze/30">
                   <CardHeader className="pb-3">

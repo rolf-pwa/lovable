@@ -1753,27 +1753,38 @@ export type Database = {
       households: {
         Row: {
           address: string | null
+          anchor_transfer_amount: number | null
+          anchor_transfer_amount_note: string | null
           audit_booked_at: string | null
           created_at: string
           family_id: string
           fiduciary_entity: Database["public"]["Enums"]["fiduciary_entity"]
           governance_status: Database["public"]["Enums"]["governance_status"]
           hof_visible: boolean
+          household_context_completed_at: string | null
           id: string
           intake_manifest_url: string | null
           intake_share_token: string | null
           intake_upload_url: string | null
           label: string
+          legacy_advisor_friction_notes: string | null
           legacy_intake_upgrade: boolean
           onboarding_completed_at: string | null
           onboarding_enabled: boolean
           onboarding_step: number
+          pending_capex_amount: number | null
+          pending_capex_date: string | null
+          pending_capex_description: string | null
+          pressure_note: string | null
+          pressure_types: string[] | null
           profile_completed_at: string | null
           purpose_notes: string | null
           quiet_period_start_date: string | null
           relationship_end_reason: string | null
           relationship_ended_at: string | null
           retention_flagged_at: string | null
+          spousal_alignment_note: string | null
+          spousal_alignment_score: number | null
           updated_at: string
           values_notes: string | null
           vault_root_folder_id: string | null
@@ -1785,27 +1796,38 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          anchor_transfer_amount?: number | null
+          anchor_transfer_amount_note?: string | null
           audit_booked_at?: string | null
           created_at?: string
           family_id: string
           fiduciary_entity?: Database["public"]["Enums"]["fiduciary_entity"]
           governance_status?: Database["public"]["Enums"]["governance_status"]
           hof_visible?: boolean
+          household_context_completed_at?: string | null
           id?: string
           intake_manifest_url?: string | null
           intake_share_token?: string | null
           intake_upload_url?: string | null
           label?: string
+          legacy_advisor_friction_notes?: string | null
           legacy_intake_upgrade?: boolean
           onboarding_completed_at?: string | null
           onboarding_enabled?: boolean
           onboarding_step?: number
+          pending_capex_amount?: number | null
+          pending_capex_date?: string | null
+          pending_capex_description?: string | null
+          pressure_note?: string | null
+          pressure_types?: string[] | null
           profile_completed_at?: string | null
           purpose_notes?: string | null
           quiet_period_start_date?: string | null
           relationship_end_reason?: string | null
           relationship_ended_at?: string | null
           retention_flagged_at?: string | null
+          spousal_alignment_note?: string | null
+          spousal_alignment_score?: number | null
           updated_at?: string
           values_notes?: string | null
           vault_root_folder_id?: string | null
@@ -1817,27 +1839,38 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          anchor_transfer_amount?: number | null
+          anchor_transfer_amount_note?: string | null
           audit_booked_at?: string | null
           created_at?: string
           family_id?: string
           fiduciary_entity?: Database["public"]["Enums"]["fiduciary_entity"]
           governance_status?: Database["public"]["Enums"]["governance_status"]
           hof_visible?: boolean
+          household_context_completed_at?: string | null
           id?: string
           intake_manifest_url?: string | null
           intake_share_token?: string | null
           intake_upload_url?: string | null
           label?: string
+          legacy_advisor_friction_notes?: string | null
           legacy_intake_upgrade?: boolean
           onboarding_completed_at?: string | null
           onboarding_enabled?: boolean
           onboarding_step?: number
+          pending_capex_amount?: number | null
+          pending_capex_date?: string | null
+          pending_capex_description?: string | null
+          pressure_note?: string | null
+          pressure_types?: string[] | null
           profile_completed_at?: string | null
           purpose_notes?: string | null
           quiet_period_start_date?: string | null
           relationship_end_reason?: string | null
           relationship_ended_at?: string | null
           retention_flagged_at?: string | null
+          spousal_alignment_note?: string | null
+          spousal_alignment_score?: number | null
           updated_at?: string
           values_notes?: string | null
           vault_root_folder_id?: string | null

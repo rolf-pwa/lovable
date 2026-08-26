@@ -247,6 +247,19 @@ const HOUSEHOLD_TOOL_SCHEMA = {
   ],
 };
 
+interface HouseholdContext {
+  anchorTransferAmount: number | null;
+  anchorTransferAmountNote: string | null;
+  spousalAlignmentScore: number | null;
+  spousalAlignmentNote: string | null;
+  pressureTypes: string[] | null;
+  pressureNote: string | null;
+  pendingCapexAmount: number | null;
+  pendingCapexDate: string | null;
+  pendingCapexDescription: string | null;
+  legacyAdvisorFrictionNotes: string | null;
+}
+
 function factsBlock(
   householdLabel: string,
   familyName: string,
@@ -255,6 +268,7 @@ function factsBlock(
   diagnostics: any,
   isLegacyClient: boolean,
   visionValues?: { vision: string; values: string; purpose: string },
+  householdContext?: HouseholdContext,
 ): string {
   const lines = [`Household: ${householdLabel} (${familyName})`];
   if (isLegacyClient) {
@@ -270,6 +284,41 @@ function factsBlock(
   } else {
     lines.push(`Wealth event: ${wealthEventType || "(not specified)"}`);
     lines.push(`Wealth event notes: ${wealthEventNotes || "(none provided)"}`);
+  }
+  // Household Context — new-lead, personal sudden-wealth events only (never
+  // populated for legacy clients or corporate wealth events, so every field
+  // is optional here and simply omitted when absent).
+  if (householdContext) {
+    const hc = householdContext;
+    if (hc.anchorTransferAmount != null) {
+      lines.push(
+        `Client's anchor transfer amount (the figure they're anchored to for this transfer): $${Math.round(hc.anchorTransferAmount).toLocaleString()}${hc.anchorTransferAmountNote ? ` — ${hc.anchorTransferAmountNote}` : ""}`,
+      );
+    }
+    if (hc.spousalAlignmentScore != null) {
+      lines.push(
+        `Spousal/partner alignment on financial decisions (self-reported, 1-5 scale): ${hc.spousalAlignmentScore}/5${hc.spousalAlignmentNote ? ` — ${hc.spousalAlignmentNote}` : ""}`,
+      );
+    }
+    if (hc.pressureTypes && hc.pressureTypes.length > 0) {
+      lines.push(
+        `Outside pressures on their decisions: ${hc.pressureTypes.join(", ")}${hc.pressureNote ? ` — ${hc.pressureNote}` : ""}`,
+      );
+    }
+    if (hc.pendingCapexAmount != null) {
+      const daysAway = hc.pendingCapexDate
+        ? Math.round((new Date(hc.pendingCapexDate).getTime() - Date.now()) / (24 * 60 * 60 * 1000))
+        : null;
+      const timing = hc.pendingCapexDate
+        ? ` planned for ${hc.pendingCapexDate}${daysAway != null ? ` (${daysAway >= 0 ? `${daysAway} days away` : `${Math.abs(daysAway)} days ago`})` : ""}`
+        : "";
+      lines.push(
+        `Pending capital expenditure: $${Math.round(hc.pendingCapexAmount).toLocaleString()}${timing}${hc.pendingCapexDescription ? ` — ${hc.pendingCapexDescription}` : ""}`,
+      );
+    }
+    if (hc.legacyAdvisorFrictionNotes) {
+      lines.push(`Friction with a previous advisor: ${hc.legacyAdvisorFrictionNotes}`);
+    }
   }
   lines.push(`Track type: ${diagnostics.track_type}`);
   lines.push(
@@ -318,7 +367,9 @@ async function handleHouseholdGeneration(
 
   const { data: household, error: hhErr } = await supabase
     .from("households")
-    .select("id, wealth_event_type, wealth_event_notes, vision_notes, values_notes, purpose_notes")
+    .select(
+      "id, wealth_event_type, wealth_event_notes, vision_notes, values_notes, purpose_notes, anchor_transfer_amount, anchor_transfer_amount_note, spousal_alignment_score, spousal_alignment_note, pressure_types, pressure_note, pending_capex_amount, pending_capex_date, pending_capex_description, legacy_advisor_friction_notes",
+    )
     .eq("id", householdId)
     .maybeSingle();
   if (hhErr || !household) return json({ error: "Household not found" }, 404);
@@ -414,6 +465,18 @@ async function handleHouseholdGeneration(
         vision: household.vision_notes || "",
         values: household.values_notes || "",
         purpose: household.purpose_notes || "",
+      },
+      {
+        anchorTransferAmount: household.anchor_transfer_amount,
+        anchorTransferAmountNote: household.anchor_transfer_amount_note,
+        spousalAlignmentScore: household.spousal_alignment_score,
+        spousalAlignmentNote: household.spousal_alignment_note,
+        pressureTypes: household.pressure_types,
+        pressureNote: household.pressure_note,
+        pendingCapexAmount: household.pending_capex_amount,
+        pendingCapexDate: household.pending_capex_date,
+        pendingCapexDescription: household.pending_capex_description,
+        legacyAdvisorFrictionNotes: household.legacy_advisor_friction_notes,
       },
     );
 

@@ -38,6 +38,20 @@ export interface OnboardingState {
      *  first, vision/values instead of a wealth event, meeting booked last). */
     legacyUpgrade: boolean;
     vaultReady: boolean;
+    /** Household Context step (new-lead, personal sudden-wealth events only —
+     *  skipped entirely for business_exit/business_growth and for legacy
+     *  upgrades). Every field optional. */
+    anchorTransferAmount: number | null;
+    anchorTransferAmountNote: string;
+    spousalAlignmentScore: number | null;
+    spousalAlignmentNote: string;
+    pressureTypes: string[];
+    pressureNote: string;
+    pendingCapexAmount: number | null;
+    pendingCapexDate: string | null;
+    pendingCapexDescription: string;
+    legacyAdvisorFrictionNotes: string;
+    householdContextCompletedAt: string | null;
   };
   contact: {
     id?: string;
@@ -154,6 +168,18 @@ export function useOnboarding(portalToken?: string) {
 
     saveWealthEvent: (wealthEventType: WealthEventType, notes: string) =>
       mutate({ action: "onboarding_wealth_event", wealthEventType, notes }),
+    saveHouseholdContext: (input: {
+      anchorTransferAmount?: number | null;
+      anchorTransferAmountNote?: string;
+      spousalAlignmentScore?: number | null;
+      spousalAlignmentNote?: string;
+      pressureTypes?: string[];
+      pressureNote?: string;
+      pendingCapexAmount?: number | null;
+      pendingCapexDate?: string | null;
+      pendingCapexDescription?: string;
+      legacyAdvisorFrictionNotes?: string;
+    }) => mutate({ action: "onboarding_household_context", ...input }),
     saveVisionValues: (vision: string, values: string, purpose: string) =>
       mutate({ action: "onboarding_vision_values", vision, values, purpose }),
     markDocumentsComplete: () => mutate({ action: "onboarding_documents_complete" }),

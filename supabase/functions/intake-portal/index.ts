@@ -917,6 +917,12 @@ const WEALTH_EVENTS = [
   "other_sudden_wealth",
 ] as const;
 
+// The Household Context step (psychological/relational intake) only applies to
+// personal sudden-wealth situations — it would feel out of place for a
+// Corporate Exit or Growth-Stage Founder, so those two skip straight to
+// Documents instead of landing on it.
+const PERSONAL_WEALTH_EVENTS = ["inheritance", "divorce", "retirement", "other_sudden_wealth"] as const;
+
 const MEMBER_ROLES: Record<string, string> = {
   spouse: "spouse",
   child: "beneficiary",
@@ -932,7 +938,7 @@ async function loadOnboarding(resolved: Resolved) {
       admin
         .from("households")
         .select(
-          "id, label, address, onboarding_step, onboarding_completed_at, audit_booked_at, profile_completed_at, wealth_event_type, wealth_event_notes, wealth_event_completed_at, vision_notes, values_notes, purpose_notes, intake_share_token, vault_root_folder_id",
+          "id, label, address, onboarding_step, onboarding_completed_at, audit_booked_at, profile_completed_at, wealth_event_type, wealth_event_notes, wealth_event_completed_at, vision_notes, values_notes, purpose_notes, intake_share_token, vault_root_folder_id, anchor_transfer_amount, anchor_transfer_amount_note, spousal_alignment_score, spousal_alignment_note, pressure_types, pressure_note, pending_capex_amount, pending_capex_date, pending_capex_description, legacy_advisor_friction_notes, household_context_completed_at",
         )
         .eq("id", resolved.householdId)
         .maybeSingle(),
@@ -976,6 +982,17 @@ async function loadOnboarding(resolved: Resolved) {
       onboardingCompletedAt: household?.onboarding_completed_at ?? null,
       legacyUpgrade: resolved.legacyUpgrade,
       vaultReady,
+      anchorTransferAmount: household?.anchor_transfer_amount ?? null,
+      anchorTransferAmountNote: household?.anchor_transfer_amount_note ?? "",
+      spousalAlignmentScore: household?.spousal_alignment_score ?? null,
+      spousalAlignmentNote: household?.spousal_alignment_note ?? "",
+      pressureTypes: household?.pressure_types ?? [],
+      pressureNote: household?.pressure_note ?? "",
+      pendingCapexAmount: household?.pending_capex_amount ?? null,
+      pendingCapexDate: household?.pending_capex_date ?? null,
+      pendingCapexDescription: household?.pending_capex_description ?? "",
+      legacyAdvisorFrictionNotes: household?.legacy_advisor_friction_notes ?? "",
+      householdContextCompletedAt: household?.household_context_completed_at ?? null,
     },
     contact: {
       id: contact?.id,
@@ -1187,10 +1204,59 @@ async function handleOnboardingAction(
     if (!WEALTH_EVENTS.includes(type as (typeof WEALTH_EVENTS)[number])) {
       return json({ error: "Please choose a wealth event" }, 400);
     }
-    await advanceStep(resolved.householdId, 4, {
+    // Personal events (inheritance/divorce/retirement/other sudden wealth) land
+    // on the new Household Context step next; corporate events (business exit,
+    // growth-stage founder) skip it entirely and go straight to Documents.
+    const isPersonalEvent = PERSONAL_WEALTH_EVENTS.includes(type as (typeof PERSONAL_WEALTH_EVENTS)[number]);
+    await advanceStep(resolved.householdId, isPersonalEvent ? 4 : 5, {
       wealth_event_type: type,
       wealth_event_notes: notes || null,
       wealth_event_completed_at: new Date().toISOString(),
+    });
+    return json(await loadOnboarding(resolved));
+  }
+
+  // New-lead Step 4 (personal sudden-wealth events only — see
+  // PERSONAL_WEALTH_EVENTS) — the psychological/relational intake layer.
+  // Every field is optional; this step never blocks progress.
+  if (action === "onboarding_household_context") {
+    if (resolved.legacyUpgrade) {
+      return json({ error: "Not applicable for this household" }, 400);
+    }
+    const { data: hhCheck } = await admin
+      .from("households")
+      .select("wealth_event_type")
+      .eq("id", resolved.householdId)
+      .maybeSingle();
+    const eventType = hhCheck?.wealth_event_type;
+    if (!PERSONAL_WEALTH_EVENTS.includes(eventType as (typeof PERSONAL_WEALTH_EVENTS)[number])) {
+      return json({ error: "Not applicable for this household's wealth event" }, 400);
+    }
+    const anchorTransferAmount = payload?.anchorTransferAmount;
+    const spousalAlignmentScore = payload?.spousalAlignmentScore;
+    const pendingCapexAmount = payload?.pendingCapexAmount;
+    const pendingCapexDate = str(payload?.pendingCapexDate, 10);
+    const pressureTypes = Array.isArray(payload?.pressureTypes)
+      ? payload.pressureTypes.map((t: unknown) => str(t, 40)).filter(Boolean).slice(0, 20)
+      : [];
+
+    await advanceStep(resolved.householdId, 5, {
+      anchor_transfer_amount:
+        typeof anchorTransferAmount === "number" && anchorTransferAmount >= 0 ? anchorTransferAmount : null,
+      anchor_transfer_amount_note: str(payload?.anchorTransferAmountNote, 1000) || null,
+      spousal_alignment_score:
+        typeof spousalAlignmentScore === "number" && spousalAlignmentScore >= 1 && spousalAlignmentScore <= 5
+          ? spousalAlignmentScore
+          : null,
+      spousal_alignment_note: str(payload?.spousalAlignmentNote, 1000) || null,
+      pressure_types: pressureTypes,
+      pressure_note: str(payload?.pressureNote, 1000) || null,
+      pending_capex_amount:
+        typeof pendingCapexAmount === "number" && pendingCapexAmount >= 0 ? pendingCapexAmount : null,
+      pending_capex_date: pendingCapexDate || null,
+      pending_capex_description: str(payload?.pendingCapexDescription, 1000) || null,
+      legacy_advisor_friction_notes: str(payload?.legacyAdvisorFrictionNotes, 2000) || null,
+      household_context_completed_at: new Date().toISOString(),
     });
     return json(await loadOnboarding(resolved));
   }
@@ -1219,10 +1285,12 @@ async function handleOnboardingAction(
 
   if (action === "onboarding_documents_complete") {
     // Legacy upgrades still have a Step 4 (Book Meeting) after documents —
-    // advance without finishing. New clients finish here (Step 4 is last).
+    // advance without finishing (Documents is legacy step 3, unchanged).
+    // New clients finish here — Documents is their step 5 now that Household
+    // Context (personal wealth events only) sits between Wealth Event and it.
     await advanceStep(
       resolved.householdId,
-      4,
+      resolved.legacyUpgrade ? 4 : 5,
       resolved.legacyUpgrade ? {} : { onboarding_completed_at: new Date().toISOString() },
     );
     return json(await loadOnboarding(resolved));
@@ -1248,6 +1316,7 @@ const ONBOARDING_ACTIONS = new Set([
   "onboarding_check_booking",
   "onboarding_profile",
   "onboarding_wealth_event",
+  "onboarding_household_context",
   "onboarding_vision_values",
   "onboarding_documents_complete",
   "onboarding_meeting_booked",

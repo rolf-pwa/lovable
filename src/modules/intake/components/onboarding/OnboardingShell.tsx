@@ -7,6 +7,7 @@ import { LEGACY_ONBOARDING_STEPS, ONBOARDING_STEPS, OnboardingStepper } from "./
 import { OnboardingSummary } from "./OnboardingSummary";
 import { StepBookAudit } from "./StepBookAudit";
 import { StepBookMeeting } from "./StepBookMeeting";
+import { StepHouseholdContext } from "./StepHouseholdContext";
 import { StepHouseholdProfile } from "./StepHouseholdProfile";
 import { StepVisionValues } from "./StepVisionValues";
 import { StepWealthEvent } from "./StepWealthEvent";
@@ -20,10 +21,13 @@ interface Props {
 
 /**
  * Guided Sovereignty Survey onboarding. New clients: Book Audit → Household →
- * Wealth event → Documents. Legacy upgrades (existing clients staff enrolled,
- * no payment): Household info → Vision & values → Documents → Book meeting —
- * same 4 steps, different order and content, since nothing "brought them here"
- * and there's no payment-track audit to book.
+ * Wealth event → Household context (personal sudden-wealth events only —
+ * skipped straight to Documents for business_exit/business_growth) →
+ * Documents. Legacy upgrades (existing clients staff enrolled, no payment):
+ * Household info → Vision & values → Documents → Book meeting — no Household
+ * context step at all (no triggering wealth event to gate it on), different
+ * order and content throughout, since nothing "brought them here" and there's
+ * no payment-track audit to book.
  */
 export const OnboardingShell = ({ portalToken, onBack, onAskForHelp }: Props) => {
   const {
@@ -36,6 +40,7 @@ export const OnboardingShell = ({ portalToken, onBack, onAskForHelp }: Props) =>
     checkAuditBooking,
     saveProfile,
     saveWealthEvent,
+    saveHouseholdContext,
     saveVisionValues,
     markDocumentsComplete,
     confirmMeetingBooked,
@@ -115,7 +120,7 @@ export const OnboardingShell = ({ portalToken, onBack, onAskForHelp }: Props) =>
               Welcome, {firstName}.
             </h1>
             <p className="max-w-2xl text-sm text-muted-foreground">
-              I'm Georgia. There are four short steps to get your Sovereignty Survey underway — no
+              I'm Georgia. There are a few short steps to get your Sovereignty Survey underway — no
               pressure, no sales, and you can stop and come back at any time.
             </p>
           </div>
@@ -205,8 +210,12 @@ export const OnboardingShell = ({ portalToken, onBack, onAskForHelp }: Props) =>
             state={state}
             saving={saving}
             onSave={async (type, notes) => {
-              const ok = await saveWealthEvent(type, notes);
-              if (ok) setCurrent(4);
+              // Personal events land on Household Context (step 4) next;
+              // corporate events skip it entirely and land on Documents (step
+              // 5) instead — the server decides which via household.step, so
+              // just let the furthest-tracking effect above follow it forward
+              // rather than hardcoding a target step here.
+              await saveWealthEvent(type, notes);
             }}
           />
         ))}
@@ -223,18 +232,29 @@ export const OnboardingShell = ({ portalToken, onBack, onAskForHelp }: Props) =>
             {completionBanner}
           </div>
         ) : (
-          <div className="space-y-4">
-            <PortalIntakePage
-              portalToken={portalToken}
-              onBack={onBack}
-              onAskForHelp={onAskForHelp}
-              onComplete={
-                state.household.onboardingCompletedAt ? undefined : () => void markDocumentsComplete()
-              }
-            />
-            {completionBanner}
-          </div>
+          <StepHouseholdContext
+            state={state}
+            saving={saving}
+            onSave={async (input) => {
+              const ok = await saveHouseholdContext(input);
+              if (ok) setCurrent(5);
+            }}
+          />
         ))}
+
+      {current === 5 && !isLegacy && (
+        <div className="space-y-4">
+          <PortalIntakePage
+            portalToken={portalToken}
+            onBack={onBack}
+            onAskForHelp={onAskForHelp}
+            onComplete={
+              state.household.onboardingCompletedAt ? undefined : () => void markDocumentsComplete()
+            }
+          />
+          {completionBanner}
+        </div>
+      )}
 
       {state.household.onboardingCompletedAt && (
         <OnboardingSummary
