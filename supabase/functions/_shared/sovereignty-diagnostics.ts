@@ -416,6 +416,7 @@ export async function gatherHouseholdFinancials(
     holdingTank,
     totalHoldingTank,
     onboardingEnabled: household?.onboarding_enabled !== false,
+    isLegacyClient,
     vaultRootFolderId: household?.vault_root_folder_id ?? null,
     storehouseReserves,
     totalInsuranceCoverage,
