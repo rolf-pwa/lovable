@@ -10,6 +10,7 @@ import { Textarea } from "@/shared/components/ui/textarea";
 import { PageBreadcrumbs } from "@/shared/components/PageBreadcrumbs";
 import { InlineEdit } from "@/shared/components/InlineEdit";
 import { InsurancePanel } from "@/modules/crm/components/InsurancePanel";
+import { LiabilitiesCard } from "@/modules/crm/components/LiabilitiesCard";
 import {
   Dialog,
   DialogContent,
@@ -585,6 +586,9 @@ const CorporationDetail = () => {
             }))}
             onStorehousesChanged={() => fetchData()}
           />
+
+          {/* Liabilities */}
+          <LiabilitiesCard holderType="corporation" holderId={id!} />
         </div>
 
 
