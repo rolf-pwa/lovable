@@ -76,10 +76,22 @@ export async function ensureInvoiceBooking(client: any, invoiceId: string): Prom
 export async function enrollFromPaidInvoice(client: any, invoiceId: string): Promise<void> {
   const { data: booking } = await client
     .from("service_bookings")
-    .select("id")
+    .select("id, paid_at")
     .eq("invoice_id", invoiceId)
     .maybeSingle();
   if (!booking) return;
+
+  // The portal's own onboarding gate checks service_bookings.payment_status
+  // directly (see intake-portal's resolveHousehold), the same field the
+  // Checkout payment webhook sets — enrollPaidBooking itself never touches it.
+  await client
+    .from("service_bookings")
+    .update({
+      payment_status: "paid",
+      status: "confirmed",
+      paid_at: booking.paid_at || new Date().toISOString(),
+    })
+    .eq("id", booking.id);
 
   try {
     await enrollPaidBooking(client, booking.id);
