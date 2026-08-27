@@ -11,6 +11,7 @@ import {
   fromMinor,
   ensureSquareCustomer,
 } from "../_shared/square.ts";
+import { ensureInvoiceBooking, enrollFromPaidInvoice } from "../_shared/invoice-enrollment.ts";
 
 const ALLOWED_ORIGINS = [
   "https://prosperwise-portal.web.app",
@@ -290,6 +291,12 @@ async function sendInvoice(invoiceId: string) {
     })
     .eq("id", invoiceId);
 
+  try {
+    await ensureInvoiceBooking(db, invoiceId);
+  } catch (e) {
+    console.error("[sendInvoice] ensureInvoiceBooking failed:", e);
+  }
+
   return { ok: true, publicUrl: published.public_url, status: mapSquareStatus(published.status) };
 }
 
@@ -314,7 +321,10 @@ async function refreshInvoice(invoiceId: string) {
     })
     .eq("id", invoiceId);
 
-  if (status === "paid") await syncPipelineForPaidInvoice(invoiceId);
+  if (status === "paid") {
+    await syncPipelineForPaidInvoice(invoiceId);
+    await enrollFromPaidInvoice(db, invoiceId);
+  }
   return { ok: true, status };
 }
 
@@ -435,6 +445,7 @@ async function markPaidManually(invoiceId: string, reference?: string, amount?: 
     .eq("id", invoiceId);
 
   await syncPipelineForPaidInvoice(invoiceId);
+  await enrollFromPaidInvoice(db, invoiceId);
   return { ok: true, status: "paid" };
 }
 
@@ -448,6 +459,11 @@ async function markSentManually(invoiceId: string) {
     .from("invoices")
     .update({ status: "sent", sent_at: new Date().toISOString(), last_error: null })
     .eq("id", invoiceId);
+  try {
+    await ensureInvoiceBooking(db, invoiceId);
+  } catch (e) {
+    console.error("[markSentManually] ensureInvoiceBooking failed:", e);
+  }
   return { ok: true, status: "sent" };
 }
 

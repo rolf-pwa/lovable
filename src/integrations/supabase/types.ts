@@ -3822,6 +3822,7 @@ export type Database = {
           square_synced_at: string | null
           square_variation_id: string | null
           tax_rate: number
+          triggers_onboarding: boolean
           updated_at: string
         }
         Insert: {
@@ -3844,6 +3845,7 @@ export type Database = {
           square_synced_at?: string | null
           square_variation_id?: string | null
           tax_rate?: number
+          triggers_onboarding?: boolean
           updated_at?: string
         }
         Update: {
@@ -3866,6 +3868,7 @@ export type Database = {
           square_synced_at?: string | null
           square_variation_id?: string | null
           tax_rate?: number
+          triggers_onboarding?: boolean
           updated_at?: string
         }
         Relationships: []

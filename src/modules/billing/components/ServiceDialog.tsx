@@ -27,6 +27,7 @@ export interface ServiceRecord {
   requires_prepayment?: boolean | null;
   booking_url?: string | null;
   slug?: string | null;
+  triggers_onboarding?: boolean | null;
 }
 
 interface Props {
@@ -51,6 +52,7 @@ export function ServiceDialog({ open, onOpenChange, service, onSaved }: Props) {
   const [taxRate, setTaxRate] = useState(service ? String(service.tax_rate ?? 0) : "5");
   const [isActive, setIsActive] = useState(service?.is_active ?? true);
   const [requiresPrepayment, setRequiresPrepayment] = useState(service?.requires_prepayment ?? true);
+  const [triggersOnboarding, setTriggersOnboarding] = useState(service?.triggers_onboarding ?? false);
   const [bookingUrl, setBookingUrl] = useState(service?.booking_url ?? "");
   const [slug, setSlug] = useState(service?.slug ?? "");
   const [saving, setSaving] = useState(false);
@@ -70,6 +72,7 @@ export function ServiceDialog({ open, onOpenChange, service, onSaved }: Props) {
       tax_rate: Number(taxRate || 0),
       is_active: isActive,
       requires_prepayment: requiresPrepayment,
+      triggers_onboarding: triggersOnboarding,
       booking_url: bookingUrl.trim() || null,
       slug: slugify(slug || name) || null,
     };
@@ -163,6 +166,16 @@ export function ServiceDialog({ open, onOpenChange, service, onSaved }: Props) {
           <div className="flex items-center gap-3">
             <Switch id="svc-prepay" checked={requiresPrepayment} onCheckedChange={setRequiresPrepayment} />
             <Label htmlFor="svc-prepay">Require payment before booking</Label>
+          </div>
+          <div className="space-y-2">
+            <div className="flex items-center gap-3">
+              <Switch id="svc-onboarding" checked={triggersOnboarding} onCheckedChange={setTriggersOnboarding} />
+              <Label htmlFor="svc-onboarding">Paying this invoice enrolls the client in guided onboarding</Label>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              When an invoice with this service is paid, the client is matched or created in the CRM and their
+              onboarding portal is turned on automatically — same as paying through Checkout.
+            </p>
           </div>
           <div className="space-y-2">
             <Label htmlFor="svc-booking-url">Scheduling link</Label>
