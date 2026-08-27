@@ -69,7 +69,7 @@ We are committed to protecting your personal information in accordance with PIPE
 
 **Consent.** Information is collected with your knowledge as part of engaging ProsperWise's services. Where we connect to third-party services on your behalf (such as sending calendar invitations or processing payments), this is done to deliver the services you've engaged us for.
 
-**Limiting collection.** We collect information relevant to the advisory relationship — contact details, household and family structure, financial holdings, insurance information, and correspondence related to your engagement with us.
+**Limiting collection.** We collect information relevant to the advisory relationship — contact details, household and family structure, financial holdings and liabilities, insurance information, and correspondence related to your engagement with us. For clients coming to us through a personal sudden-wealth event (inheritance, divorce, retirement, or a windfall — not a corporate transaction), our guided intake also asks a small set of optional relational and psychological context questions to help us understand the fuller picture: financial expectations tied to the transfer, alignment with a spouse or partner on financial decisions, outside pressures on your decisions, any major purchase plans, and any friction with a previous advisor. None of these questions are required to proceed.
 
 **Limiting use and disclosure.** Your information is used only for the purposes of providing our services and is disclosed to third parties only as necessary to deliver those services (see "Third parties we work with," below), or as required by law.
 
@@ -79,7 +79,7 @@ We are committed to protecting your personal information in accordance with PIPE
 
 **Openness.** This document is our commitment to being transparent about our practices. We are also open about the current limits of those practices — see "Where we're still building," below.
 
-**Individual access.** You may request a summary of the personal information we hold about you by contacting your advisor directly. **We do not yet have an automated self-service tool for this within the portal** — today, this is handled as a manual request to our team. Note that ProsperWise retains client records for 7 years from the end of the advisory relationship (see "Data retention," above); we are unable to delete personal information on request during that period.
+**Individual access.** You may request a summary of the personal information we hold about you either by contacting your advisor directly, or through a self-service request in the portal. Note that ProsperWise retains client records for 7 years from the end of the advisory relationship (see "Data retention," above); we are unable to delete personal information on request during that period.
 
 **Challenging compliance.** If you have concerns about how your information is handled, please contact your advisor or ProsperWise directly. You also have the right to file a complaint with the Office of the Privacy Commissioner of Canada or BC's Office of the Information and Privacy Commissioner.
 
@@ -88,13 +88,18 @@ We are committed to protecting your personal information in accordance with PIPE
 We work with the following categories of service providers, each of whom processes a limited scope of information necessary for their function:
 
 - **Google Workspace** — email, calendar, document storage, and spreadsheet tools used by staff in serving your account
+- **Google Cloud (Vertex AI)** — used to draft certain internal planning documents (such as a household's Sovereignty Survey and governance materials) from data already on file. A staff member reviews and can edit anything AI-assisted before it's used or shared with you.
+- **Supabase** — our core database and application backend, where your records are stored
 - **Square** — payment processing for invoicing (Square handles card details directly; ProsperWise's own systems do not store card numbers)
 - **Asana** — internal task and workflow management
 - **A telephony/SMS provider** — client calls and text communication, with calls and messages retained for service continuity
+- **Wix** — powers our public marketing website; being phased out of any role that touches client data
+
+A full registry of these providers, including data-processing agreement status, is maintained internally and available on request.
 
 ### Data retention
 
-ProsperWise retains client records for **7 years from the end of the advisory relationship**, consistent with Canadian financial-services recordkeeping practice. This applies regardless of any request to delete information sooner — we are unable to delete personal information during this retention period. We are building automated internal tooling to track this retention period and flag records for staff review once it has elapsed; see "Where we're still building," below.
+ProsperWise retains client records for **7 years from the end of the advisory relationship**, consistent with Canadian financial-services recordkeeping practice. This applies regardless of any request to delete information sooner — we are unable to delete personal information during this retention period. Automated internal tooling flags records for staff review once that period has elapsed; deletion, if it happens at all after that point, remains a deliberate staff decision, never an automatic one.
 
 ### Where your data is stored
 
@@ -106,10 +111,8 @@ Our production database is operated in the Canada Central data center region.
 
 In the interest of transparency, here is what we consider works-in-progress rather than finished commitments:
 
-- Automated internal tooling to track our 7-year retention period and flag records for staff review once it has elapsed (the retention period itself is fixed at 7 years — see "Data retention," above; this is about building the tooling to monitor it)
-- A self-service tool for clients to request a copy of their information directly through the portal (deletion is not offered as a self-service option — see "Data retention," above)
-- A formally documented registry of service-provider agreements
 - Formal, scheduled database backups (currently relying on underlying infrastructure resilience only)
+- Confirming data-processing agreement status individually with each service provider in our internal subprocessor registry (the registry itself, listing every provider and what it touches, is complete — the DPA confirmations are in progress)
 
 We'd rather tell you what we're actively improving than overstate what's already finished.
 
