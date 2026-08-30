@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.17"
+    PostgrestVersion: "14.5"
   }
   graphql_public: {
     Tables: {
@@ -2628,6 +2628,189 @@ export type Database = {
           verified_at?: string | null
         }
         Relationships: []
+      }
+      pm_projects: {
+        Row: {
+          contact_id: string | null
+          corporation_id: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          household_id: string | null
+          id: string
+          name: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          contact_id?: string | null
+          corporation_id?: string | null
+          created_at?: string
+          created_by: string
+          description?: string | null
+          household_id?: string | null
+          id?: string
+          name: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          contact_id?: string | null
+          corporation_id?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          household_id?: string | null
+          id?: string
+          name?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pm_projects_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pm_projects_corporation_id_fkey"
+            columns: ["corporation_id"]
+            isOneToOne: false
+            referencedRelation: "corporations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pm_projects_household_id_fkey"
+            columns: ["household_id"]
+            isOneToOne: false
+            referencedRelation: "households"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pm_task_comments: {
+        Row: {
+          author_id: string
+          body: string
+          created_at: string
+          id: string
+          task_id: string
+        }
+        Insert: {
+          author_id: string
+          body: string
+          created_at?: string
+          id?: string
+          task_id: string
+        }
+        Update: {
+          author_id?: string
+          body?: string
+          created_at?: string
+          id?: string
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pm_task_comments_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "pm_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pm_tasks: {
+        Row: {
+          assignee_id: string | null
+          completed_at: string | null
+          contact_id: string | null
+          corporation_id: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          due_date: string | null
+          household_id: string | null
+          id: string
+          parent_task_id: string | null
+          project_id: string | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assignee_id?: string | null
+          completed_at?: string | null
+          contact_id?: string | null
+          corporation_id?: string | null
+          created_at?: string
+          created_by: string
+          description?: string | null
+          due_date?: string | null
+          household_id?: string | null
+          id?: string
+          parent_task_id?: string | null
+          project_id?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assignee_id?: string | null
+          completed_at?: string | null
+          contact_id?: string | null
+          corporation_id?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          due_date?: string | null
+          household_id?: string | null
+          id?: string
+          parent_task_id?: string | null
+          project_id?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pm_tasks_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pm_tasks_corporation_id_fkey"
+            columns: ["corporation_id"]
+            isOneToOne: false
+            referencedRelation: "corporations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pm_tasks_household_id_fkey"
+            columns: ["household_id"]
+            isOneToOne: false
+            referencedRelation: "households"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pm_tasks_parent_task_id_fkey"
+            columns: ["parent_task_id"]
+            isOneToOne: false
+            referencedRelation: "pm_tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pm_tasks_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "pm_projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       portal_client_notifications: {
         Row: {

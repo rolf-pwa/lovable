@@ -31,6 +31,7 @@ import {
   Upload,
   Brain,
   FileSignature,
+  ListTodo,
 } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 import { Separator } from "@/shared/components/ui/separator";
@@ -73,6 +74,7 @@ const topItems = [
   { to: "/requests", label: "Client Requests", icon: ClipboardList, requestsBadge: true },
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/contacts", label: "CRM", icon: Users },
+  { to: "/projects", label: "Projects", icon: ListTodo },
   { to: "/inbox", label: "Inbox", icon: InboxIcon, inboxBadge: true },
   { to: "/brain", label: "Second Brain", icon: Brain },
 ];

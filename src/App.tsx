@@ -58,6 +58,8 @@ const BookService = lazy(() => import("@/modules/billing/pages/BookService"));
 const BookingConfirmation = lazy(() => import("@/modules/billing/pages/BookingConfirmation"));
 const QuickPay = lazy(() => import("@/modules/billing/pages/QuickPay"));
 const TermsOfEngagementDoc = lazy(() => import("@/modules/billing/pages/TermsOfEngagementDoc"));
+const Projects = lazy(() => import("@/modules/pm/pages/Projects"));
+const ProjectDetail = lazy(() => import("@/modules/pm/pages/ProjectDetail"));
 
 const Brain = lazy(() => import("@/modules/brain/pages/Brain"));
 const BrainDocument = lazy(() => import("@/modules/brain/pages/BrainDocument"));
@@ -134,6 +136,8 @@ const App = () => (
               <Route path="/pipeline" element={<ProtectedRoute><Pipeline /></ProtectedRoute>} />
               <Route path="/services" element={<ProtectedRoute><BillingServices /></ProtectedRoute>} />
               <Route path="/invoices" element={<ProtectedRoute><BillingInvoices /></ProtectedRoute>} />
+              <Route path="/projects" element={<ProtectedRoute><Projects /></ProtectedRoute>} />
+              <Route path="/projects/:id" element={<ProtectedRoute><ProjectDetail /></ProtectedRoute>} />
               <Route path="/book" element={<BookService />} />
               <Route path="/book/embed" element={<BookService embed />} />
               <Route path="/book/confirm" element={<BookingConfirmation />} />

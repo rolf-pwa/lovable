@@ -157,3 +157,84 @@ export interface IInvoiceAgentProvider {
   deleteService(serviceId: string): Promise<{ ok: boolean }>;
   getStatus(): Promise<{ configured: boolean; environment: string }>;
 }
+
+export interface PmProject {
+  id: string;
+  name: string;
+  description: string | null;
+  status: string;
+  household_id: string | null;
+  contact_id: string | null;
+  corporation_id: string | null;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PmTask {
+  id: string;
+  project_id: string | null;
+  parent_task_id: string | null;
+  title: string;
+  description: string | null;
+  status: string;
+  due_date: string | null;
+  assignee_id: string | null;
+  household_id: string | null;
+  contact_id: string | null;
+  corporation_id: string | null;
+  completed_at: string | null;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PmTaskComment {
+  id: string;
+  task_id: string;
+  author_id: string;
+  body: string;
+  created_at: string;
+}
+
+export interface PmTaskFilter {
+  project_id?: string;
+  /** Pass "me" to resolve to the calling staff member. */
+  assignee_id?: string;
+  household_id?: string;
+  contact_id?: string;
+  corporation_id?: string;
+  status?: string;
+}
+
+export interface ITaskAgentProvider {
+  readonly id: string;
+  listProjects(): Promise<PmProject[]>;
+  createProject(input: {
+    name: string;
+    description?: string;
+    status?: string;
+    household_id?: string;
+    contact_id?: string;
+    corporation_id?: string;
+  }): Promise<PmProject>;
+  updateProject(id: string, updates: Partial<PmProject>): Promise<PmProject>;
+  listTasks(filter?: PmTaskFilter): Promise<PmTask[]>;
+  createTask(input: {
+    title: string;
+    description?: string;
+    project_id?: string;
+    parent_task_id?: string;
+    due_date?: string;
+    assignee_id?: string;
+    household_id?: string;
+    contact_id?: string;
+    corporation_id?: string;
+  }): Promise<PmTask>;
+  updateTask(
+    id: string,
+    updates: Partial<Pick<PmTask, "title" | "description" | "status" | "due_date" | "assignee_id">>,
+  ): Promise<PmTask>;
+  getTaskComments(taskId: string): Promise<PmTaskComment[]>;
+  postTaskComment(taskId: string, body: string): Promise<PmTaskComment>;
+}
