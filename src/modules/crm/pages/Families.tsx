@@ -1,19 +1,13 @@
 import { useEffect, useState, useCallback } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { AppLayout } from "@/shared/components/AppLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
-import { Badge } from "@/shared/components/ui/badge";
+import { Card, CardContent } from "@/shared/components/ui/card";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { PageBreadcrumbs } from "@/shared/components/PageBreadcrumbs";
 import { ListRow } from "@/shared/components/ListRow";
 import { CrmTabs } from "@/modules/crm/components/CrmTabs";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/shared/components/ui/collapsible";
 import {
   Dialog,
   DialogContent,
@@ -21,36 +15,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/shared/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/shared/components/ui/alert-dialog";
-import {
-  TreesIcon,
-  ChevronRight,
-  ChevronDown,
-  Home,
-  User,
-  Plus,
-  Search,
-  Crown,
-  TrendingDown,
-  Shield,
-  Baby,
-  Trash2,
-  Unlink,
-  ArrowRightLeft,
-  Scissors,
-  Cross,
-  MoveRight,
-} from "lucide-react";
+import { TreesIcon, User, Plus, Search, MoveRight } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -61,61 +26,9 @@ import {
 import { toast } from "sonner";
 import { useAuth } from "@/shared/hooks/useAuth";
 import { DecouplerWizard } from "@/modules/crm/components/DecouplerWizard";
-import { FamilyRollup } from "@/modules/crm/components/FamilyRollup";
-import { InlineEdit } from "@/shared/components/InlineEdit";
-
-interface Individual {
-  id: string;
-  first_name: string;
-  last_name: string | null;
-  family_role: string;
-  is_minor: boolean;
-  email: string | null;
-}
-
-interface Household {
-  id: string;
-  label: string;
-  address: string | null;
-  individuals: Individual[];
-}
-
-interface Family {
-  id: string;
-  name: string;
-  fee_tier: string;
-  fee_tier_discount_pct: number;
-  total_family_assets: number;
-  annual_savings: number;
-  charter_document_url: string | null;
-  households: Household[];
-}
-
-const ROLE_ICONS: Record<string, typeof Crown> = {
-  head_of_family: Crown,
-  spouse: Shield,
-  beneficiary: User,
-  minor: Baby,
-};
-
-const ROLE_LABELS: Record<string, string> = {
-  head_of_family: "Head of Family",
-  spouse: "Spouse",
-  beneficiary: "Beneficiary",
-  minor: "Minor",
-};
-
-const TIER_COLORS: Record<string, string> = {
-  sovereign: "bg-muted text-muted-foreground",
-  legacy: "bg-accent/20 text-accent border-accent/30",
-  dynasty: "bg-primary/20 text-primary border-primary/30",
-};
-
-const TIER_LABELS: Record<string, string> = {
-  sovereign: "Sovereign Tier",
-  legacy: "Legacy Tier — 15% Discount",
-  dynasty: "Dynasty Tier — 25% Discount",
-};
+import { FamilyTreeList } from "@/modules/crm/components/families/FamilyTreeList";
+import { DetailPanel } from "@/modules/crm/components/families/DetailPanel";
+import type { Family, Individual, Selected, ResolvedSelection } from "@/modules/crm/components/families/types";
 
 const Families = () => {
   const { user } = useAuth();
@@ -143,6 +56,7 @@ const Families = () => {
   const [moveDestinationFamilyId, setMoveDestinationFamilyId] = useState<string>("");
   const [moveNewFamilyName, setMoveNewFamilyName] = useState("");
   const [moveCreateNew, setMoveCreateNew] = useState(false);
+  const [selected, setSelected] = useState<Selected>(null);
 
   const fetchFamilies = useCallback(async () => {
     // Fetch families
@@ -167,7 +81,7 @@ const Families = () => {
     // Fetch individuals (contacts with family_id)
     const { data: contactData } = await supabase
       .from("contacts")
-      .select("id, first_name, last_name, family_role, is_minor, email, household_id, family_id")
+      .select("id, first_name, last_name, family_role, is_minor, email, phone, household_id, family_id")
       .in("family_id", familyIds);
 
     // Build tree
@@ -494,6 +408,26 @@ const Families = () => {
     f.name.toLowerCase().includes(search.toLowerCase())
   );
 
+  const resolvedSelection: ResolvedSelection | null = (() => {
+    if (!selected) return null;
+    for (const family of families) {
+      if (selected.type === "family" && family.id === selected.id) {
+        return { type: "family", family };
+      }
+      for (const household of family.households) {
+        if (selected.type === "household" && household.id === selected.id) {
+          return { type: "household", family, household };
+        }
+        for (const individual of household.individuals) {
+          if (selected.type === "contact" && individual.id === selected.id) {
+            return { type: "contact", family, household, individual };
+          }
+        }
+      }
+    }
+    return null;
+  })();
+
   return (
     <AppLayout>
       <div className="space-y-6">
@@ -530,7 +464,7 @@ const Families = () => {
           />
         </div>
 
-        {/* Tree View */}
+        {/* Tree View + Detail Panel */}
         {loading ? (
           <p className="text-sm text-muted-foreground">Loading families...</p>
         ) : filtered.length === 0 ? (
@@ -543,322 +477,45 @@ const Families = () => {
             </CardContent>
           </Card>
         ) : (
-          <div className="space-y-3">
-            {filtered.map((family) => {
-              const isOpen = openFamilies.has(family.id);
-              return (
-                <Card key={family.id} className="overflow-hidden">
-                  <Collapsible open={isOpen} onOpenChange={() => toggleFamily(family.id)}>
-                    {/* Family Level */}
-                    <CollapsibleTrigger asChild>
-                      <button className="flex w-full items-center gap-3 p-4 text-left transition-colors hover:bg-muted/30">
-                        {isOpen ? (
-                          <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
-                        ) : (
-                          <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
-                        )}
-                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 shrink-0">
-                          <TreesIcon className="h-5 w-5 text-primary" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <InlineEdit
-                            value={family.name}
-                            onSave={(v) => updateFamilyName(family.id, v)}
-                            className="font-semibold"
-                          />
-                          <p className="text-xs text-muted-foreground">
-                            {family.households.length} household{family.households.length !== 1 ? "s" : ""} ·{" "}
-                            {family.households.reduce((sum, h) => sum + h.individuals.length, 0)} individuals
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          {family.total_family_assets > 0 && (
-                            <span className="text-sm font-medium text-muted-foreground">
-                              ${Number(family.total_family_assets).toLocaleString()}
-                            </span>
-                          )}
-                          <Badge className={TIER_COLORS[family.fee_tier] || ""}>
-                            {TIER_LABELS[family.fee_tier] || family.fee_tier}
-                          </Badge>
-                          {family.annual_savings > 0 && (
-                            <Badge variant="outline" className="text-xs border-accent/30 text-accent">
-                              <TrendingDown className="mr-1 h-3 w-3" />
-                              ${Number(family.annual_savings).toLocaleString()} saved
-                            </Badge>
-                          )}
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <button
-                                onClick={(e) => e.stopPropagation()}
-                                className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Delete Family</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  This will permanently delete "{family.name}" and all its households. Individuals will be unlinked but not deleted. This cannot be undone.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction
-                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                  onClick={() => deleteFamily(family.id)}
-                                >
-                                  Delete Family
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        </div>
-                      </button>
-                    </CollapsibleTrigger>
-
-                    <CollapsibleContent>
-                      <div className="border-t border-border">
-                        {family.households.map((household) => {
-                          const hhOpen = openHouseholds.has(household.id);
-                          return (
-                            <Collapsible
-                              key={household.id}
-                              open={hhOpen}
-                              onOpenChange={() => toggleHousehold(household.id)}
-                            >
-                              {/* Household Level */}
-                              <CollapsibleTrigger asChild>
-                                <button className="flex w-full items-center gap-3 py-3 pl-12 pr-4 text-left transition-colors hover:bg-muted/20">
-                                  {hhOpen ? (
-                                    <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                                  ) : (
-                                    <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                                  )}
-                                  <Home className="h-4 w-4 text-accent shrink-0" />
-                                  <div className="flex-1 min-w-0">
-                                    <InlineEdit
-                                      value={household.label}
-                                      onSave={(v) => updateHouseholdField(household.id, "label", v)}
-                                      className="text-sm font-medium"
-                                      suffix=" Household"
-                                    />
-                                    <InlineEdit
-                                      value={household.address || ""}
-                                      onSave={(v) => updateHouseholdField(household.id, "address", v)}
-                                      className="text-xs text-muted-foreground"
-                                      placeholder="Add address..."
-                                    />
-                                  </div>
-                                  <span className="text-xs text-muted-foreground">
-                                    {household.individuals.length} member{household.individuals.length !== 1 ? "s" : ""}
-                                  </span>
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setMoveHouseholdTarget({
-                                        householdId: household.id,
-                                        householdLabel: household.label,
-                                        currentFamilyId: family.id,
-                                      });
-                                      setMoveDestinationFamilyId("");
-                                      setMoveNewFamilyName("");
-                                      setMoveCreateNew(false);
-                                    }}
-                                    title="Move household to another family"
-                                    className="p-1 rounded-md text-muted-foreground hover:text-accent hover:bg-accent/10 transition-colors"
-                                  >
-                                    <MoveRight className="h-3.5 w-3.5" />
-                                  </button>
-                                  <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                      <button
-                                        onClick={(e) => e.stopPropagation()}
-                                        className="p-1 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-                                      >
-                                        <Trash2 className="h-3.5 w-3.5" />
-                                      </button>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent>
-                                      <AlertDialogHeader>
-                                        <AlertDialogTitle>Delete Household</AlertDialogTitle>
-                                        <AlertDialogDescription>
-                                          This will permanently delete the "{household.label}" household. Individuals will be unlinked but not deleted.
-                                        </AlertDialogDescription>
-                                      </AlertDialogHeader>
-                                      <AlertDialogFooter>
-                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                        <AlertDialogAction
-                                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                          onClick={() => deleteHousehold(household.id)}
-                                        >
-                                          Delete Household
-                                        </AlertDialogAction>
-                                      </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                  </AlertDialog>
-                                </button>
-                              </CollapsibleTrigger>
-
-                              <CollapsibleContent>
-                                {/* Individual Level */}
-                                <div className="space-y-0.5">
-                                  {[...household.individuals].sort((a, b) => {
-                                    const order: Record<string, number> = { head_of_family: 0, head_of_household: 1, spouse: 2, beneficiary: 3, minor: 4 };
-                                    return (order[a.family_role] ?? 4) - (order[b.family_role] ?? 4);
-                                  }).map((individual) => {
-                                    const RoleIcon = ROLE_ICONS[individual.family_role] || User;
-                                    return (
-                                      <div
-                                        key={individual.id}
-                                        className="flex items-center gap-3 py-2.5 pl-20 pr-4 transition-colors hover:bg-muted/30"
-                                      >
-                                        <RoleIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                                        <Link
-                                          to={`/contacts/${individual.id}`}
-                                          className="flex-1 min-w-0"
-                                        >
-                                          <p className="text-sm hover:underline">
-                                            {individual.first_name} {individual.last_name}
-                                          </p>
-                                          {individual.email && (
-                                            <p className="text-xs text-muted-foreground truncate">{individual.email}</p>
-                                          )}
-                                        </Link>
-                                        <div className="flex items-center gap-1.5 shrink-0">
-                                          <Badge variant="outline" className="text-[10px]">
-                                            {ROLE_LABELS[individual.family_role] || individual.family_role}
-                                          </Badge>
-                                          {individual.is_minor && (
-                                            <Badge variant="secondary" className="text-[10px]">
-                                              Minor
-                                            </Badge>
-                                          )}
-                                          <button
-                                            onClick={() => openReassign(individual, family.id, household.id)}
-                                            title="Reassign to another household"
-                                            className="p-1 rounded-md text-muted-foreground hover:text-accent hover:bg-accent/10 transition-colors"
-                                          >
-                                            <ArrowRightLeft className="h-3.5 w-3.5" />
-                                          </button>
-                                          <button
-                                            onClick={() =>
-                                              setDecouplerTarget({
-                                                contactId: individual.id,
-                                                contactName: `${individual.first_name} ${individual.last_name || ""}`.trim(),
-                                                familyId: family.id,
-                                                familyName: family.name,
-                                              })
-                                            }
-                                            title="Decoupler Protocol"
-                                            className="p-1 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-                                          >
-                                            <Scissors className="h-3.5 w-3.5" />
-                                          </button>
-                                          <AlertDialog>
-                                            <AlertDialogTrigger asChild>
-                                              <button
-                                                title="Mark as deceased (Estate)"
-                                                className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
-                                              >
-                                                <Cross className="h-3.5 w-3.5" />
-                                              </button>
-                                            </AlertDialogTrigger>
-                                            <AlertDialogContent>
-                                              <AlertDialogHeader>
-                                                <AlertDialogTitle>Mark as Deceased</AlertDialogTitle>
-                                                <AlertDialogDescription>
-                                                  This will rename the contact record to "The Estate of — {individual.first_name} {individual.last_name}". The individual will remain in their household. This cannot be undone.
-                                                </AlertDialogDescription>
-                                              </AlertDialogHeader>
-                                              <AlertDialogFooter>
-                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                <AlertDialogAction
-                                                  onClick={() => markDeceased(individual.id, individual.first_name, individual.last_name)}
-                                                >
-                                                  Confirm
-                                                </AlertDialogAction>
-                                              </AlertDialogFooter>
-                                            </AlertDialogContent>
-                                          </AlertDialog>
-                                          <AlertDialog>
-                                            <AlertDialogTrigger asChild>
-                                              <button
-                                                title="Remove from household"
-                                                className="p-1 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-                                              >
-                                                <Unlink className="h-3.5 w-3.5" />
-                                              </button>
-                                            </AlertDialogTrigger>
-                                            <AlertDialogContent>
-                                              <AlertDialogHeader>
-                                                <AlertDialogTitle>Remove Individual</AlertDialogTitle>
-                                                <AlertDialogDescription>
-                                                  This will remove {individual.first_name} {individual.last_name} from this household and family. The contact record will not be deleted.
-                                                </AlertDialogDescription>
-                                              </AlertDialogHeader>
-                                              <AlertDialogFooter>
-                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                <AlertDialogAction
-                                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                                  onClick={() => unlinkIndividual(individual.id, family.id)}
-                                                >
-                                                  Remove
-                                                </AlertDialogAction>
-                                              </AlertDialogFooter>
-                                            </AlertDialogContent>
-                                          </AlertDialog>
-                                        </div>
-                                      </div>
-                                    );
-                                  })}
-                                  {household.individuals.length === 0 && (
-                                    <p className="py-2 pl-20 text-xs text-muted-foreground">
-                                      No members in this household.
-                                    </p>
-                                  )}
-                                  {/* Add Individual Button */}
-                                  <button
-                                    onClick={() => openAddIndividual(family.id, household.id)}
-                                    className="flex w-full items-center gap-2 py-2 pl-20 pr-4 text-xs text-muted-foreground transition-colors hover:text-foreground hover:bg-muted/20"
-                                  >
-                                    <Plus className="h-3 w-3" />
-                                    Add Individual
-                                  </button>
-                                </div>
-                              </CollapsibleContent>
-                            </Collapsible>
-                          );
-                        })}
-
-                        {/* Add Household Button */}
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setShowNewHousehold(family.id);
-                          }}
-                          className="flex w-full items-center gap-2 py-2.5 pl-12 pr-4 text-xs text-muted-foreground transition-colors hover:text-foreground hover:bg-muted/20"
-                        >
-                          <Plus className="h-3.5 w-3.5" />
-                          Add Household
-                        </button>
-
-                        {/* Financial Rollup */}
-                        <FamilyRollup
-                          familyId={family.id}
-                          familyName={family.name}
-                          feeTier={family.fee_tier}
-                          totalAssets={family.total_family_assets}
-                          annualSavings={family.annual_savings}
-                          discountPct={family.fee_tier_discount_pct}
-                          onRecalculated={fetchFamilies}
-                        />
-                      </div>
-                    </CollapsibleContent>
-                  </Collapsible>
-                </Card>
-              );
-            })}
+          <div className="flex items-start gap-4">
+            <div className="min-w-0 flex-1">
+              <FamilyTreeList
+                families={filtered}
+                openFamilies={openFamilies}
+                openHouseholds={openHouseholds}
+                toggleFamily={toggleFamily}
+                toggleHousehold={toggleHousehold}
+                selected={selected}
+                onSelect={(type, id) => setSelected({ type, id })}
+              />
+            </div>
+            {resolvedSelection && (
+              <DetailPanel
+                selection={resolvedSelection}
+                onClose={() => setSelected(null)}
+                onSelectHousehold={(id) => setSelected({ type: "household", id })}
+                onSelectContact={(id) => setSelected({ type: "contact", id })}
+                onRefetch={fetchFamilies}
+                updateFamilyName={updateFamilyName}
+                deleteFamily={deleteFamily}
+                updateHouseholdField={updateHouseholdField}
+                deleteHousehold={deleteHousehold}
+                onAddHousehold={(familyId) => setShowNewHousehold(familyId)}
+                onAddIndividual={openAddIndividual}
+                onMoveHousehold={(householdId, householdLabel, currentFamilyId) => {
+                  setMoveHouseholdTarget({ householdId, householdLabel, currentFamilyId });
+                  setMoveDestinationFamilyId("");
+                  setMoveNewFamilyName("");
+                  setMoveCreateNew(false);
+                }}
+                onReassign={openReassign}
+                onDecoupler={(contactId, contactName, familyId, familyName) =>
+                  setDecouplerTarget({ contactId, contactName, familyId, familyName })
+                }
+                markDeceased={markDeceased}
+                unlinkIndividual={unlinkIndividual}
+              />
+            )}
           </div>
         )}
 
