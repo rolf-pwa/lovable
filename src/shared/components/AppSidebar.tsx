@@ -13,9 +13,7 @@ import {
   Calendar,
   Mail,
   FolderOpen,
-  ChevronDown,
   PanelLeftClose,
-  PanelLeft,
   Megaphone,
   Cpu,
   TrendingUp,
@@ -32,78 +30,97 @@ import {
   Brain,
   FileSignature,
   ListTodo,
+  MoreHorizontal,
 } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
-import { Separator } from "@/shared/components/ui/separator";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/shared/components/ui/collapsible";
 import { useEffect, useState, createContext, useContext } from "react";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/shared/components/ui/tooltip";
 
-// Context for sidebar collapsed state
-const SidebarCollapseContext = createContext<{ collapsed: boolean; toggle: () => void }>({
-  collapsed: false,
-  toggle: () => {},
+// Context for which nav group's panel is showing, and whether it's open at all.
+const SidebarNavContext = createContext<{
+  selectedGroup: string | null;
+  panelOpen: boolean;
+  select: (group: string) => void;
+}>({
+  selectedGroup: null,
+  panelOpen: false,
+  select: () => {},
 });
 
+export function useSidebarNav() {
+  return useContext(SidebarNavContext);
+}
+
+/** @deprecated Kept only so any stray import doesn't crash; the collapse-boolean model is gone. */
 export function useSidebarCollapse() {
-  return useContext(SidebarCollapseContext);
+  return { collapsed: false, toggle: () => {} };
 }
 
-export function SidebarCollapseProvider({ children }: { children: React.ReactNode }) {
-  const [collapsed, setCollapsed] = useState(() => {
-    const stored = localStorage.getItem("sidebar-collapsed");
-    return stored === "true";
-  });
-
-  const toggle = () => {
-    setCollapsed((prev) => {
-      localStorage.setItem("sidebar-collapsed", String(!prev));
-      return !prev;
-    });
-  };
-
-  return (
-    <SidebarCollapseContext.Provider value={{ collapsed, toggle }}>
-      {children}
-    </SidebarCollapseContext.Provider>
-  );
-}
-
-const topItems = [
-  { to: "/requests", label: "Client Requests", icon: ClipboardList, requestsBadge: true },
-  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/contacts", label: "CRM", icon: Users },
-  { to: "/projects", label: "Projects", icon: ListTodo },
-  { to: "/inbox", label: "Inbox", icon: InboxIcon, inboxBadge: true },
-  { to: "/brain", label: "Second Brain", icon: Brain },
-];
-
-const marketingItems = [
-  { to: "/marketing-updates", label: "Marketing Updates", icon: Megaphone },
-  { to: "/analytics", label: "Analytics", icon: BarChart3 },
-];
-
-const growthItems = [
-  { to: "/pipeline", label: "Pipeline", icon: TrendingUp },
-  { to: "/holding-tank", label: "Holding Tank", icon: Anchor },
-];
-
-const billingItems = [
-  { to: "/invoices", label: "Invoices", icon: Receipt },
-  { to: "/services", label: "Services", icon: ConciergeBell },
-];
-
-const adminItems = [
-  { to: "/onboarding", label: "Onboarding", icon: PackagePlus },
-  { to: "/importers", label: "Bulk Importers", icon: Upload },
-  { to: "/review-queue", label: "Review Queue", icon: ClipboardCheck, reviewBadge: true },
-  { to: "/knowledge-base", label: "Bot Knowledge", icon: BookOpen },
-  { to: "/workbench", label: "Workbench", icon: Cpu },
-  { to: "/admin/vfo", label: "VFO Roster", icon: Crown },
-  { to: "/professionals", label: "Professionals", icon: Briefcase },
-  { to: "/webforms", label: "Web Forms", icon: FileSignature },
-];
+const GROUPS = [
+  {
+    key: "work",
+    label: "Work",
+    icon: LayoutDashboard,
+    items: [
+      { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+      { to: "/requests", label: "Client Requests", icon: ClipboardList, badgeKey: "requests" },
+      { to: "/inbox", label: "Inbox", icon: InboxIcon, badgeKey: "inbox" },
+      { to: "/projects", label: "Projects", icon: ListTodo },
+    ],
+  },
+  {
+    key: "clients",
+    label: "Clients",
+    icon: Users,
+    items: [
+      { to: "/contacts", label: "CRM", icon: Users },
+      { to: "/pipeline", label: "Pipeline", icon: TrendingUp },
+      { to: "/holding-tank", label: "Holding Tank", icon: Anchor },
+      { to: "/professionals", label: "Professionals", icon: Briefcase },
+    ],
+  },
+  {
+    key: "billing",
+    label: "Billing",
+    icon: Receipt,
+    items: [
+      { to: "/invoices", label: "Invoices", icon: Receipt },
+      { to: "/services", label: "Services", icon: ConciergeBell },
+    ],
+  },
+  {
+    key: "agents",
+    label: "Agents",
+    icon: Brain,
+    items: [
+      { to: "/brain", label: "Second Brain", icon: Brain },
+      { to: "/workbench", label: "Workbench", icon: Cpu },
+      { to: "/review-queue", label: "Review Queue", icon: ClipboardCheck, badgeKey: "review" },
+      { to: "/knowledge-base", label: "Bot Knowledge", icon: BookOpen },
+    ],
+  },
+  {
+    key: "strategy",
+    label: "Strategy",
+    icon: BarChart3,
+    items: [
+      { to: "/analytics", label: "Analytics", icon: BarChart3 },
+      { to: "/marketing-updates", label: "Marketing Updates", icon: Megaphone },
+      { to: "/admin/vfo", label: "VFO Roster", icon: Crown },
+    ],
+  },
+  {
+    key: "onboarding",
+    label: "Onboarding",
+    icon: PackagePlus,
+    items: [
+      { to: "/onboarding", label: "Onboarding", icon: PackagePlus },
+      { to: "/importers", label: "Bulk Importers", icon: Upload },
+      { to: "/webforms", label: "Web Forms", icon: FileSignature },
+    ],
+  },
+] as const;
 
 const externalLinks = [
   { href: "https://app.asana.com", label: "Asana", icon: CheckSquare },
@@ -113,28 +130,60 @@ const externalLinks = [
   { href: "https://drive.google.com", label: "Google Drive", icon: FolderOpen },
 ];
 
-export function AppSidebar() {
-  const { user } = useAuth();
+function isActive(pathname: string, to: string) {
+  return pathname === to || pathname.startsWith(to + "/");
+}
+
+function groupForPath(pathname: string): string | null {
+  for (const group of GROUPS) {
+    if (group.items.some((item) => isActive(pathname, item.to))) return group.key;
+  }
+  return null;
+}
+
+export function SidebarCollapseProvider({ children }: { children: React.ReactNode }) {
   const location = useLocation();
-  const { collapsed, toggle } = useSidebarCollapse();
-  const [pendingTasksCount, setPendingTasksCount] = useState<number | null>(null);
+  const [selectedGroup, setSelectedGroup] = useState<string | null>(() => {
+    return localStorage.getItem("sidebar-selected-group") || groupForPath(location.pathname) || "work";
+  });
+  const [panelOpen, setPanelOpen] = useState(() => localStorage.getItem("sidebar-panel-open") !== "false");
+
+  // Auto-follow the route into whichever group actually owns the current page.
+  useEffect(() => {
+    const owner = groupForPath(location.pathname);
+    if (owner && owner !== selectedGroup) setSelectedGroup(owner);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname]);
+
+  const select = (group: string) => {
+    if (group === selectedGroup) {
+      setPanelOpen((prev) => {
+        const next = !prev;
+        localStorage.setItem("sidebar-panel-open", String(next));
+        return next;
+      });
+      return;
+    }
+    setSelectedGroup(group);
+    localStorage.setItem("sidebar-selected-group", group);
+    setPanelOpen(true);
+    localStorage.setItem("sidebar-panel-open", "true");
+  };
+
+  return (
+    <SidebarNavContext.Provider value={{ selectedGroup, panelOpen, select }}>{children}</SidebarNavContext.Provider>
+  );
+}
+
+export function AppSidebar() {
+  useAuth();
+  const location = useLocation();
+  const { selectedGroup, panelOpen, select } = useSidebarNav();
   const [pendingReviewCount, setPendingReviewCount] = useState<number | null>(null);
   const [openRequestsCount, setOpenRequestsCount] = useState<number | null>(null);
   const [inboxUnreadCount, setInboxUnreadCount] = useState<number | null>(null);
 
   useEffect(() => {
-    (async () => {
-      try {
-        const res = await supabase.functions.invoke("asana-service", {
-          body: { action: "getInbox" },
-        });
-        if (!res.error && res.data?.data) {
-          const open = (res.data.data as any[]).filter((t: any) => !t.completed).length;
-          setPendingTasksCount(open);
-        }
-      } catch {}
-    })();
-
     (async () => {
       try {
         const { count } = await (supabase.from("review_queue" as any) as any)
@@ -169,229 +218,146 @@ export function AppSidebar() {
       .on("postgres_changes", { event: "*", schema: "public", table: "quo_messages" }, loadInboxUnread)
       .on("postgres_changes", { event: "*", schema: "public", table: "quo_calls" }, loadInboxUnread)
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
-  const getBadgeCount = (item: any) => {
-    if (item.tasksBadge && pendingTasksCount !== null && pendingTasksCount > 0) return pendingTasksCount;
-    if (item.reviewBadge && pendingReviewCount !== null && pendingReviewCount > 0) return pendingReviewCount;
-    if (item.requestsBadge && openRequestsCount !== null && openRequestsCount > 0) return openRequestsCount;
-    if (item.inboxBadge && inboxUnreadCount !== null && inboxUnreadCount > 0) return inboxUnreadCount;
+  const badgeFor = (badgeKey: string | undefined): number | null => {
+    if (badgeKey === "requests" && openRequestsCount) return openRequestsCount;
+    if (badgeKey === "inbox" && inboxUnreadCount) return inboxUnreadCount;
+    if (badgeKey === "review" && pendingReviewCount) return pendingReviewCount;
     return null;
   };
 
-  const renderNavLink = (to: string, label: string, Icon: any, badge: number | null, active: boolean, isCollapsed: boolean, nested = false) => {
-    const linkContent = (
-      <Link
-        key={to}
-        to={to}
-        className={cn(
-          "flex items-center gap-4 rounded-md transition-colors",
-          isCollapsed ? "justify-center px-3 py-3" : nested ? "px-5 py-2.5" : "px-5 py-3.5",
-          nested ? "text-sm font-medium" : "text-[15px] font-medium",
-          active
-            ? "bg-sidebar-primary/15 text-sidebar-primary border-l-2 border-sidebar-primary"
-            : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-        )}
-      >
-        <Icon className={cn("shrink-0", nested ? "h-4 w-4" : "h-5 w-5")} />
-        {!isCollapsed && label}
-        {!isCollapsed && badge !== null && (
-          <span
-            className={cn(
-              "ml-auto flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 font-mono text-[10px] font-semibold",
-              active
-                ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                : "bg-sidebar-primary/20 text-sidebar-primary"
-            )}
-          >
-            {badge > 99 ? "99+" : badge}
-          </span>
-        )}
-      </Link>
-    );
+  const groupHasBadge = (group: (typeof GROUPS)[number]) =>
+    group.items.some((item) => badgeFor((item as any).badgeKey) !== null);
 
-
-    if (isCollapsed) {
-      return (
-        <Tooltip key={to}>
-          <TooltipTrigger asChild>{linkContent}</TooltipTrigger>
-          <TooltipContent side="right" className="font-medium">
-            {label}
-            {badge !== null && ` (${badge})`}
-          </TooltipContent>
-        </Tooltip>
-      );
-    }
-
-    return <div key={to}>{linkContent}</div>;
-  };
+  const activeGroup = GROUPS.find((g) => g.key === selectedGroup) ?? GROUPS[0];
 
   return (
     <TooltipProvider delayDuration={0}>
-      <aside
-        className={cn(
-          "flex h-full flex-col bg-sidebar text-sidebar-foreground border-r border-sidebar-border transition-all duration-200",
-          collapsed ? "w-[68px]" : "w-72"
-        )}
-      >
-        {/* Logo + Toggle */}
-        <div className={cn("flex items-center justify-between pt-6 pb-4 border-b border-sidebar-border", collapsed ? "px-3" : "px-6")}>
-          {!collapsed && <img src={prosperwiseLogoWhite} alt="ProsperWise" className="h-9" />}
-          <button
-            onClick={toggle}
-            className="rounded-md p-1.5 text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
-          >
-            {collapsed ? <PanelLeft className="h-5 w-5" /> : <PanelLeftClose className="h-5 w-5" />}
-          </button>
-        </div>
-
-
-        {/* Nav */}
-        <nav className="flex-1 space-y-1 px-2 pt-8 overflow-y-auto">
-          {topItems.map(({ to, label, icon: Icon, ...rest }: any) => {
-            const active = location.pathname === to || location.pathname.startsWith(to + "/");
-            const badge = getBadgeCount({ ...rest });
-            return renderNavLink(to, label, Icon, badge, active, collapsed);
-          })}
-
-          {/* Growth group: Pipeline, Leads, Holding Tank */}
-          {collapsed ? (
-            growthItems.map(({ to, label, icon: Icon }) => {
-              const active = location.pathname === to || location.pathname.startsWith(to + "/");
-              return renderNavLink(to, label, Icon, null, active, collapsed);
-            })
-          ) : (
-            <Collapsible defaultOpen={growthItems.some(({ to }) => location.pathname === to || location.pathname.startsWith(to + "/"))}>
-              <CollapsibleTrigger className="flex w-full items-center gap-4 rounded-md px-5 py-3 text-[15px] font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors">
-                <TrendingUp className="h-5 w-5 shrink-0" />
-                <span className="flex-1 text-left">Growth</span>
-                <ChevronDown className="h-4 w-4 transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
-              </CollapsibleTrigger>
-              <CollapsibleContent className="space-y-0.5 pl-4">
-                {growthItems.map(({ to, label, icon: Icon }) => {
-                  const active = location.pathname === to || location.pathname.startsWith(to + "/");
-                  return renderNavLink(to, label, Icon, null, active, false, true);
-                })}
-              </CollapsibleContent>
-            </Collapsible>
-          )}
-
-          {/* Billing group: Invoices, Services */}
-          {collapsed ? (
-            billingItems.map(({ to, label, icon: Icon }) => {
-              const active = location.pathname === to || location.pathname.startsWith(to + "/");
-              return renderNavLink(to, label, Icon, null, active, collapsed);
-            })
-          ) : (
-            <Collapsible defaultOpen={billingItems.some(({ to }) => location.pathname === to || location.pathname.startsWith(to + "/"))}>
-              <CollapsibleTrigger className="flex w-full items-center gap-4 rounded-md px-5 py-3 text-[15px] font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors">
-                <Receipt className="h-5 w-5 shrink-0" />
-                <span className="flex-1 text-left">Billing</span>
-                <ChevronDown className="h-4 w-4 transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
-              </CollapsibleTrigger>
-              <CollapsibleContent className="space-y-0.5 pl-4">
-                {billingItems.map(({ to, label, icon: Icon }) => {
-                  const active = location.pathname === to || location.pathname.startsWith(to + "/");
-                  return renderNavLink(to, label, Icon, null, active, false, true);
-                })}
-              </CollapsibleContent>
-            </Collapsible>
-          )}
-
-
-
-          {/* Admin group: Onboarding, Review Queue, Knowledge Base, Workbench */}
-          {collapsed ? (
-            adminItems.map(({ to, label, icon: Icon, ...rest }: any) => {
-              const active = location.pathname === to || location.pathname.startsWith(to + "/");
-              const badge = getBadgeCount({ ...rest });
-              return renderNavLink(to, label, Icon, badge, active, collapsed);
-            })
-          ) : (
-            <Collapsible defaultOpen={adminItems.some(({ to }) => location.pathname === to || location.pathname.startsWith(to + "/"))}>
-              <CollapsibleTrigger className="flex w-full items-center gap-4 rounded-md px-5 py-3 text-[15px] font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors">
-                <ShieldCheck className="h-5 w-5 shrink-0" />
-                <span className="flex-1 text-left">Admin</span>
-                <ChevronDown className="h-4 w-4 transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
-              </CollapsibleTrigger>
-              <CollapsibleContent className="space-y-0.5 pl-4">
-                {adminItems.map(({ to, label, icon: Icon, ...rest }: any) => {
-                  const active = location.pathname === to || location.pathname.startsWith(to + "/");
-                  const badge = getBadgeCount({ ...rest });
-                  return renderNavLink(to, label, Icon, badge, active, false, true);
-                })}
-              </CollapsibleContent>
-            </Collapsible>
-          )}
-
-          {/* Marketing group: Marketing Updates, Analytics */}
-          {collapsed ? (
-            marketingItems.map(({ to, label, icon: Icon }) => {
-              const active = location.pathname === to || location.pathname.startsWith(to + "/");
-              return renderNavLink(to, label, Icon, null, active, collapsed);
-            })
-          ) : (
-            <Collapsible defaultOpen={marketingItems.some(({ to }) => location.pathname === to || location.pathname.startsWith(to + "/"))}>
-              <CollapsibleTrigger className="flex w-full items-center gap-4 rounded-md px-5 py-3 text-[15px] font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors">
-                <Megaphone className="h-5 w-5 shrink-0" />
-                <span className="flex-1 text-left">Marketing</span>
-                <ChevronDown className="h-4 w-4 transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
-              </CollapsibleTrigger>
-              <CollapsibleContent className="space-y-0.5 pl-4">
-                {marketingItems.map(({ to, label, icon: Icon }) => {
-                  const active = location.pathname === to || location.pathname.startsWith(to + "/");
-                  return renderNavLink(to, label, Icon, null, active, false, true);
-                })}
-              </CollapsibleContent>
-            </Collapsible>
-          )}
-
-          <Separator className="my-4 bg-sidebar-border" />
-
-          {collapsed ? (
-            <div className="space-y-0.5">
-              {externalLinks.map(({ href, label, icon: Icon }) => (
-                <Tooltip key={href}>
+      <div className="flex h-full">
+        {/* Icon rail */}
+        <aside className="flex h-full w-[60px] shrink-0 flex-col items-center border-r border-sidebar-border bg-sidebar py-4">
+          <img src={prosperwiseLogoWhite} alt="ProsperWise" className="mb-4 h-6 w-6 object-contain" />
+          <nav className="flex flex-1 flex-col items-center gap-1">
+            {GROUPS.map((group) => {
+              const Icon = group.icon;
+              const active = group.key === selectedGroup;
+              const hasBadge = groupHasBadge(group);
+              return (
+                <Tooltip key={group.key}>
                   <TooltipTrigger asChild>
+                    <button
+                      onClick={() => select(group.key)}
+                      className={cn(
+                        "relative flex h-10 w-10 items-center justify-center rounded-md transition-colors",
+                        active && panelOpen
+                          ? "bg-sidebar-primary/15 text-sidebar-primary"
+                          : "text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                      )}
+                    >
+                      <Icon className="h-5 w-5" />
+                      {hasBadge && !(active && panelOpen) && (
+                        <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-sidebar-primary" />
+                      )}
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="font-medium">
+                    {group.label}
+                  </TooltipContent>
+                </Tooltip>
+              );
+            })}
+          </nav>
+
+          <div className="mt-auto flex flex-col items-center gap-1 pt-2">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => select("more")}
+                  className={cn(
+                    "flex h-10 w-10 items-center justify-center rounded-md transition-colors",
+                    selectedGroup === "more" && panelOpen
+                      ? "bg-sidebar-primary/15 text-sidebar-primary"
+                      : "text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                  )}
+                >
+                  <MoreHorizontal className="h-5 w-5" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="right" className="font-medium">
+                More
+              </TooltipContent>
+            </Tooltip>
+          </div>
+        </aside>
+
+        {/* Group panel */}
+        {panelOpen && (
+          <aside className="flex h-full w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
+            <div className="flex items-center justify-between px-4 pb-3 pt-6">
+              <h2 className="font-serif text-lg">{selectedGroup === "more" ? "More" : activeGroup.label}</h2>
+              <button
+                onClick={() => select(selectedGroup || "work")}
+                className="rounded-md p-1 text-sidebar-foreground/50 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+              >
+                <PanelLeftClose className="h-4 w-4" />
+              </button>
+            </div>
+
+            <nav className="flex-1 space-y-0.5 overflow-y-auto px-2">
+              {selectedGroup === "more"
+                ? externalLinks.map(({ href, label, icon: Icon }) => (
                     <a
+                      key={href}
                       href={href}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center justify-center rounded-md px-3 py-2.5 text-sidebar-foreground/60 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                      className="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                     >
-                      <Icon className="h-4 w-4" />
+                      <Icon className="h-4 w-4 shrink-0" />
+                      {label}
+                      <ExternalLink className="ml-auto h-3 w-3 opacity-30" />
                     </a>
-                  </TooltipTrigger>
-                  <TooltipContent side="right">{label}</TooltipContent>
-                </Tooltip>
-              ))}
-            </div>
-          ) : (
-            <Collapsible>
-              <CollapsibleTrigger className="flex w-full items-center gap-2 px-5 py-2 font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-sidebar-foreground/45 hover:text-sidebar-foreground transition-colors">
-                <ChevronDown className="h-3 w-3 transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
-                Integrations
-              </CollapsibleTrigger>
-              <CollapsibleContent className="space-y-0.5">
-                {externalLinks.map(({ href, label, icon: Icon }) => (
-                  <a
-                    key={href}
-                    href={href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-4 rounded-md px-5 py-2.5 text-sm font-medium text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                  >
-                    <Icon className="h-4 w-4" />
-                    {label}
-                    <ExternalLink className="ml-auto h-3 w-3 opacity-30" />
-                  </a>
-                ))}
-              </CollapsibleContent>
-            </Collapsible>
-          )}
-        </nav>
-      </aside>
+                  ))
+                : activeGroup.items.map((item) => {
+                    const Icon = item.icon;
+                    const active = isActive(location.pathname, item.to);
+                    const badge = badgeFor((item as any).badgeKey);
+                    return (
+                      <Link
+                        key={item.to}
+                        to={item.to}
+                        className={cn(
+                          "flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors",
+                          active
+                            ? "bg-sidebar-primary/15 text-sidebar-primary border-l-2 border-sidebar-primary"
+                            : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                        )}
+                      >
+                        <Icon className="h-4 w-4 shrink-0" />
+                        {item.label}
+                        {badge !== null && (
+                          <span
+                            className={cn(
+                              "ml-auto flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 font-mono text-[10px] font-semibold",
+                              active
+                                ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                                : "bg-sidebar-primary/20 text-sidebar-primary",
+                            )}
+                          >
+                            {badge > 99 ? "99+" : badge}
+                          </span>
+                        )}
+                      </Link>
+                    );
+                  })}
+            </nav>
+          </aside>
+        )}
+      </div>
     </TooltipProvider>
   );
 }
