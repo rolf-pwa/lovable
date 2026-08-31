@@ -3,6 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { AppLayout } from "@/shared/components/AppLayout";
 import { Card, CardContent } from "@/shared/components/ui/card";
+import { ListRowStatic } from "@/shared/components/ListRow";
 import { Button } from "@/shared/components/ui/button";
 import { Badge } from "@/shared/components/ui/badge";
 import { Input } from "@/shared/components/ui/input";
@@ -237,10 +238,9 @@ const Contacts = () => {
                 <p className="sticky top-0 z-10 bg-background px-1 py-1.5 text-xs font-bold uppercase tracking-widest text-muted-foreground border-b mb-2">
                   {letter}
                 </p>
-                <div className="space-y-1">
+                <div>
                   {grouped[letter].map((c) => (
-              <Card key={c.id} className="transition-colors hover:bg-muted/30">
-                <CardContent className="flex items-center gap-4 p-4">
+              <ListRowStatic key={c.id}>
                   {/* Name & Info */}
                   <Link to={`/contacts/${c.id}`} className="flex-1 min-w-0">
                     <p className="font-medium truncate">{c.first_name} {c.last_name}</p>
@@ -330,8 +330,7 @@ const Contacts = () => {
                       </Badge>
                     )}
                   </div>
-                </CardContent>
-              </Card>
+              </ListRowStatic>
                   ))}
                 </div>
               </div>

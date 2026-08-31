@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { AppLayout } from "@/shared/components/AppLayout";
-import { Card, CardHeader, CardTitle } from "@/shared/components/ui/card";
+import { ListRow } from "@/shared/components/ListRow";
 import { Badge } from "@/shared/components/ui/badge";
 import { Input } from "@/shared/components/ui/input";
 import { PageBreadcrumbs } from "@/shared/components/PageBreadcrumbs";
@@ -217,17 +217,14 @@ const Households = () => {
             ) : filtered.length === 0 ? (
               <p className="text-center text-muted-foreground py-16">No households found.</p>
             ) : (
-              <div className="space-y-2">
+              <div>
                 {filtered.map((hh) => (
-                  <Link key={hh.id} to={`/households/${hh.id}`}>
-                    <Card className="hover:bg-muted/30 transition-colors cursor-pointer">
-                      <CardHeader className="py-4">
-                        <div className="flex items-center gap-4">
-                          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 shrink-0">
-                            <Home className="h-5 w-5 text-primary" />
+                  <ListRow key={hh.id} to={`/households/${hh.id}`}>
+                          <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10 shrink-0">
+                            <Home className="h-4 w-4 text-primary" />
                           </div>
                             <div className="flex-1 min-w-0">
-                              <CardTitle className="text-base">{hh.label}</CardTitle>
+                              <p className="font-serif text-base font-semibold leading-tight">{hh.label}</p>
                               <div className="flex flex-wrap items-center gap-1.5 mt-1">
                                 <span className="text-xs text-muted-foreground">
                                   {hh.familyName} Family
@@ -293,10 +290,7 @@ const Households = () => {
                             </Tooltip>
                             <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
                           </div>
-                        </div>
-                      </CardHeader>
-                    </Card>
-                  </Link>
+                  </ListRow>
                 ))}
               </div>
             )}

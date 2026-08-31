@@ -564,17 +564,17 @@ const ContactDetail = () => {
         ]} />
         {/* Header Card */}
         <Card>
-          <CardContent className="p-6">
+          <CardContent className="p-4">
             <div className="flex items-start justify-between gap-4">
-              <div className="flex items-start gap-4 min-w-0 flex-1">
+              <div className="flex items-start gap-3 min-w-0 flex-1">
                 <Button variant="ghost" size="icon" onClick={() => navigate("/contacts")} className="shrink-0 -ml-2">
                   <ArrowLeft className="h-4 w-4" />
                 </Button>
-                <div className="h-16 w-16 shrink-0 rounded-full bg-sanctuary-green text-sanctuary-bronze flex items-center justify-center text-xl font-semibold">
+                <div className="h-12 w-12 shrink-0 rounded-full bg-sanctuary-green text-sanctuary-bronze flex items-center justify-center text-base font-semibold">
                   {(contact.first_name?.[0] || "").toUpperCase()}{(contact.last_name?.[0] || "").toUpperCase()}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <h1 className="text-2xl font-bold truncate">
+                  <h1 className="text-xl font-bold truncate">
                     {contact.first_name} {contact.last_name}
                   </h1>
                   <div className="mt-1 flex flex-wrap items-center gap-2">
@@ -678,7 +678,7 @@ const ContactDetail = () => {
             </div>
 
             {/* Contact info grid */}
-            <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <div>
                 <p className="text-xs text-muted-foreground mb-1">Primary email</p>
                 {contact.email ? (
