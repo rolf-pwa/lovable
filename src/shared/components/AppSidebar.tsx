@@ -75,7 +75,7 @@ const GROUPS = [
     label: "People",
     icon: Users,
     items: [
-      { to: "/contacts", label: "CRM", icon: Users },
+      { to: "/families", label: "CRM", icon: Users },
       { to: "/pipeline", label: "Pipeline", icon: TrendingUp },
       { to: "/holding-tank", label: "Holding Tank", icon: Anchor },
       { to: "/professionals", label: "Professionals", icon: Briefcase },

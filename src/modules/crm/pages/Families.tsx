@@ -7,6 +7,7 @@ import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { PageBreadcrumbs } from "@/shared/components/PageBreadcrumbs";
+import { ListRow } from "@/shared/components/ListRow";
 import { CrmTabs } from "@/modules/crm/components/CrmTabs";
 import {
   Collapsible,
@@ -130,6 +131,7 @@ const Families = () => {
   const [newHouseholdLabel, setNewHouseholdLabel] = useState("");
   const [addIndividualTarget, setAddIndividualTarget] = useState<{ familyId: string; householdId: string } | null>(null);
   const [unlinkedContacts, setUnlinkedContacts] = useState<{ id: string; first_name: string; last_name: string | null; email: string | null }[]>([]);
+  const [unassignedContacts, setUnassignedContacts] = useState<{ id: string; first_name: string; last_name: string | null; email: string | null }[]>([]);
   const [individualSearch, setIndividualSearch] = useState("");
   const [selectedRole, setSelectedRole] = useState<string>("beneficiary");
   const [reassignTarget, setReassignTarget] = useState<{ contactId: string; contactName: string; currentFamilyId: string; currentHouseholdId: string } | null>(null);
@@ -193,6 +195,15 @@ const Families = () => {
     });
 
     setFamilies(tree);
+
+    // Contacts with no family at all — otherwise invisible from this page
+    const { data: orphanData } = await supabase
+      .from("contacts")
+      .select("id, first_name, last_name, email")
+      .is("family_id", null)
+      .order("first_name");
+    setUnassignedContacts(orphanData || []);
+
     setLoading(false);
   }, []);
 
@@ -849,6 +860,30 @@ const Families = () => {
               );
             })}
           </div>
+        )}
+
+        {/* Contacts with no family at all */}
+        {!loading && unassignedContacts.length > 0 && (
+          <Card>
+            <CardContent className="p-0">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+                <p className="font-serif text-base font-semibold">Unassigned Contacts</p>
+                <p className="text-xs text-muted-foreground">
+                  {unassignedContacts.length} not linked to a family
+                </p>
+              </div>
+              <div>
+                {unassignedContacts.map((c) => (
+                  <ListRow key={c.id} to={`/contacts/${c.id}`}>
+                    <span className="font-medium">
+                      {c.first_name} {c.last_name}
+                    </span>
+                    {c.email && <span className="text-xs text-muted-foreground ml-auto">{c.email}</span>}
+                  </ListRow>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         )}
       </div>
 

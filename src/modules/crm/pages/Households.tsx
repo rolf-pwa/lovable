@@ -7,8 +7,6 @@ import { Badge } from "@/shared/components/ui/badge";
 import { Input } from "@/shared/components/ui/input";
 import { PageBreadcrumbs } from "@/shared/components/PageBreadcrumbs";
 import { CrmTabs } from "@/modules/crm/components/CrmTabs";
-import { CharterRatificationTile } from "@/modules/audit";
-import { IntakeBackfillTile } from "@/modules/intake";
 
 import {
   Select,
@@ -208,8 +206,7 @@ const Households = () => {
           )}
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-          <div>
+        <div>
             {loading ? (
               <div className="flex justify-center py-16">
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -294,11 +291,6 @@ const Households = () => {
                 ))}
               </div>
             )}
-          </div>
-          <aside className="space-y-4">
-            <IntakeBackfillTile />
-            <CharterRatificationTile />
-          </aside>
         </div>
 
       </div>
