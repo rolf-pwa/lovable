@@ -915,7 +915,7 @@ const ContactDetail = () => {
               {/* Action Items Tab */}
               <TabsContent value="actions" className="space-y-6 mt-4">
                 <ContactCalendar contactEmail={contact.email} contactName={contact.full_name} />
-                <ContactTaskList asanaUrl={contact.asana_url} contactId={contact.id} householdMembers={householdMembers} professionals={engagedProfessionals} />
+                <ContactTaskList contactId={contact.id} />
                 <AuditTrail contactId={id!} />
               </TabsContent>
 

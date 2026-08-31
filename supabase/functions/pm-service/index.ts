@@ -113,7 +113,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "listTasks") {
-      const { project_id, assignee_id, household_id, contact_id, corporation_id, status } = body;
+      const { project_id, assignee_id, household_id, contact_id, corporation_id, status, parent_task_id } = body;
       let q = db.from("pm_tasks").select(TASK_FIELDS).order("due_date", { ascending: true, nullsFirst: false });
       if (project_id) q = q.eq("project_id", project_id);
       if (assignee_id) q = q.eq("assignee_id", assignee_id === "me" ? userId : assignee_id);
@@ -121,6 +121,7 @@ Deno.serve(async (req) => {
       if (contact_id) q = q.eq("contact_id", contact_id);
       if (corporation_id) q = q.eq("corporation_id", corporation_id);
       if (status) q = q.eq("status", status);
+      if (parent_task_id) q = q.eq("parent_task_id", parent_task_id);
       const { data, error } = await q;
       if (error) return json({ ok: false, error: error.message }, 500);
       return json({ ok: true, tasks: data });

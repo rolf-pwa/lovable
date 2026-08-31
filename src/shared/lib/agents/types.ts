@@ -205,6 +205,7 @@ export interface PmTaskFilter {
   contact_id?: string;
   corporation_id?: string;
   status?: string;
+  parent_task_id?: string;
 }
 
 export interface ITaskAgentProvider {
