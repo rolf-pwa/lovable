@@ -5,6 +5,8 @@ import { format, parseISO, isToday, differenceInCalendarDays } from "date-fns";
 import { parseLocalDate } from "@/shared/lib/date-utils";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { useCalendarEvents, useGoogleStatus } from "@/shared/hooks/useGoogle";
+import { getTaskAgent } from "@/shared/lib/agents";
+import type { PmTask } from "@/shared/lib/agents";
 import { Input } from "@/shared/components/ui/input";
 import { Button } from "@/shared/components/ui/button";
 
@@ -21,23 +23,15 @@ function extractProjectGid(input: string): string | null {
 }
 
 function TodayTasks() {
-  const [tasks, setTasks] = useState<any[]>([]);
+  const [tasks, setTasks] = useState<PmTask[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     (async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-        const res = await supabase.functions.invoke("asana-service", {
-          body: { action: "getMyTasks" },
-        });
-        const all = res.data?.data || [];
+        const all = await getTaskAgent().listTasks({ assignee_id: "me" });
         const todays = all.filter(
-          (t: any) =>
-            !t.completed &&
-            t.due_on &&
-            isToday(parseLocalDate(t.due_on))
+          (t) => t.status !== "done" && t.due_date && isToday(parseLocalDate(t.due_date))
         );
         setTasks(todays);
       } catch {
@@ -66,18 +60,18 @@ function TodayTasks() {
         ) : (
           <ul className="space-y-2">
             {tasks.slice(0, 6).map((t) => (
-              <li key={t.gid}>
+              <li key={t.id}>
                 <button
                   type="button"
                   onClick={() => {
                     window.dispatchEvent(
-                      new CustomEvent("open-my-task", { detail: { gid: t.gid } })
+                      new CustomEvent("open-my-task", { detail: { id: t.id } })
                     );
                   }}
                   className="flex w-full items-start gap-2 text-sm text-foreground rounded-md px-1 py-0.5 -mx-1 hover:bg-muted/50 transition-colors text-left"
                 >
                   <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-sanctuary-bronze shrink-0" />
-                  <span className="truncate">{t.name}</span>
+                  <span className="truncate">{t.title}</span>
                 </button>
               </li>
             ))}

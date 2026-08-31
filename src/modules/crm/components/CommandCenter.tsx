@@ -1,27 +1,20 @@
 import { useMemo, useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Button } from "@/shared/components/ui/button";
 import { Badge } from "@/shared/components/ui/badge";
-import { Textarea } from "@/shared/components/ui/textarea";
-import { Separator } from "@/shared/components/ui/separator";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/shared/components/ui/popover";
-import {
-  Calendar, Mail, Plus, Send, Loader2, Link2Off, Inbox, ExternalLink, ChevronRight,
-  MessageSquare, CheckSquare, FileText, X, UserCircle,
+  Calendar, Mail, Plus, Loader2, Link2Off, Inbox, ChevronRight,
   Grape, Landmark, Anchor, Building2,
 } from "lucide-react";
-import { format, parseISO, formatDistanceToNow } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { parseLocalDate } from "@/shared/lib/date-utils";
 import { toast } from "sonner";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { cn } from "@/shared/lib/utils";
-import { AssigneePicker } from "@/modules/crm/components/AssigneePicker";
+import { getTaskAgent } from "@/shared/lib/agents";
+import type { PmTask, PmProject } from "@/shared/lib/agents";
+import { TaskDetailPanel } from "@/modules/pm/components/TaskDetailPanel";
 import {
   useGoogleStatus,
   useConnectGoogle,
@@ -83,7 +76,7 @@ export function CommandCenter() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <h2 className="text-lg font-semibold">Command Center</h2>
@@ -105,11 +98,11 @@ export function CommandCenter() {
           Disconnect
         </Button>
       </div>
-      <div className="grid gap-6 grid-cols-1 lg:grid-cols-3">
+      <div className="grid gap-4 grid-cols-1 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          <AsanaMyTasksWidget />
+          <MyTasksWidget />
         </div>
-        <div className="space-y-6">
+        <div className="space-y-4">
           <CalendarWidget />
           <FirmAumWidget />
         </div>
@@ -130,7 +123,7 @@ function CalendarWidget() {
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between pb-3">
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className="flex items-center gap-2 text-base">
           <Calendar className="h-4 w-4 text-sanctuary-bronze" />
           Upcoming Events
@@ -273,12 +266,12 @@ function FirmAumWidget() {
 
   return (
     <Card className="border-sanctuary-bronze/30">
-      <CardHeader className="pb-3">
+      <CardHeader className="pb-2">
         <CardTitle className="text-sm uppercase tracking-widest text-sanctuary-bronze">
           Assets Under Management
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-3">
         {loading ? (
           <div className="flex justify-center py-4">
             <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
@@ -333,491 +326,75 @@ function FirmAumWidget() {
   );
 }
 
-// ── Linkify helper ──
-function Linkify({ children }: { children: string }) {
-  const urlRegex = /(https?:\/\/[^\s]+)/g;
-  const parts = children.split(urlRegex);
-  return (
-    <>
-      {parts.map((part, i) =>
-        urlRegex.test(part) ? (
-          <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-accent underline break-all hover:text-accent/80">
-            {part}
-          </a>
-        ) : (
-          <span key={i}>{part}</span>
-        )
-      )}
-    </>
-  );
-}
+const STATUS_DOT: Record<string, string> = {
+  open: "bg-muted-foreground/40",
+  in_progress: "bg-primary",
+  done: "bg-emerald-500",
+};
 
-// AssigneePicker is now imported from @/modules/crm/components/AssigneePicker
-
-interface AsanaTask {
-  gid: string;
-  name: string;
-  completed: boolean;
-  due_on: string | null;
-  notes?: string;
-  modified_at?: string | null;
-  assignee?: { gid: string; name: string } | null;
-  memberships?: { section?: { name?: string }; project?: { gid?: string } }[];
-  custom_fields?: any[];
-}
-
-interface AsanaComment {
-  gid: string;
-  text: string;
-  created_at: string;
-  created_by?: { name?: string };
-}
-
-function extractProjectGid(asanaUrl: string | null): string | null {
-  if (!asanaUrl) return null;
-  const newMatch = asanaUrl.match(/\/project\/(\d+)/);
-  if (newMatch) return newMatch[1];
-  const match = asanaUrl.match(/app\.asana\.com\/(?:0|project)\/(\d+)/);
-  return match ? match[1] : null;
-}
-
-function extractTaskGid(asanaUrl: string | null): string | null {
-  if (!asanaUrl) return null;
-  const taskMatch = asanaUrl.match(/\/task\/(\d+)/);
-  if (taskMatch) return taskMatch[1];
-  const listTaskMatch = asanaUrl.match(/\/project\/\d+\/list\/(\d+)/);
-  if (listTaskMatch) return listTaskMatch[1];
-  const twoSegment = asanaUrl.match(/app\.asana\.com\/0\/\d+\/(\d+)/);
-  return twoSegment ? twoSegment[1] : null;
-}
-
-function isTaskBasedUrl(asanaUrl: string | null): boolean {
-  if (!asanaUrl) return false;
-  if (/\/task\/\d+/.test(asanaUrl)) return true;
-  if (/\/project\/\d+\/list\/\d+/.test(asanaUrl)) return true;
-  if (/app\.asana\.com\/0\/\d+\/f/.test(asanaUrl)) return true;
-  if (/app\.asana\.com\/0\/\d+\/\d+/.test(asanaUrl) && !/\/(list|board|timeline|calendar)/.test(asanaUrl)) return true;
-  return false;
-}
-
-// ── Dashboard Task Detail Panel ──
-function DashboardTaskDetail({
-  task,
-  linked,
-  section,
-  onClose,
-  onTaskUpdated,
-}: {
-  task: AsanaTask;
-  linked: { id: string; name: string } | null;
-  section: string | null;
-  onClose: () => void;
-  onTaskUpdated?: (t: AsanaTask) => void;
-}) {
-  const navigate = useNavigate();
-  const [comments, setComments] = useState<AsanaComment[]>([]);
-  const [commentsLoading, setCommentsLoading] = useState(true);
-  const [newComment, setNewComment] = useState("");
-  const [posting, setPosting] = useState(false);
-  const [subtasks, setSubtasks] = useState<AsanaTask[]>([]);
-  const [subtasksLoading, setSubtasksLoading] = useState(true);
-  const [completing, setCompleting] = useState(false);
-  const scrollRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    (async () => {
-      setCommentsLoading(true);
-      setSubtasksLoading(true);
-      try {
-        const [commentsRes, subtasksRes] = await Promise.all([
-          supabase.functions.invoke("asana-service", {
-            body: { action: "getTaskStories", task_gid: task.gid },
-          }),
-          supabase.functions.invoke("asana-service", {
-            body: { action: "getSubtasks", task_gid: task.gid },
-          }),
-        ]);
-        if (!commentsRes.error && !commentsRes.data?.error) {
-          setComments(commentsRes.data?.data || []);
-        }
-        if (!subtasksRes.error && !subtasksRes.data?.error) {
-          setSubtasks(subtasksRes.data?.data || []);
-        }
-      } catch {
-        // silent
-      } finally {
-        setCommentsLoading(false);
-        setSubtasksLoading(false);
-      }
-    })();
-  }, [task.gid]);
-
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [comments]);
-
-  const handlePostComment = async () => {
-    if (!newComment.trim()) return;
-    setPosting(true);
-    try {
-      const res = await supabase.functions.invoke("asana-service", {
-        body: { action: "postTaskComment", task_gid: task.gid, text: newComment.trim() },
-      });
-      if (res.error) throw res.error;
-      if (res.data?.error) throw new Error(res.data.error);
-      setComments((prev) => [
-        ...prev,
-        { gid: Date.now().toString(), text: newComment.trim(), created_at: new Date().toISOString(), created_by: { name: "You" } },
-      ]);
-      setNewComment("");
-      toast.success("Comment posted.");
-    } catch (e: any) {
-      toast.error(e.message || "Failed to post comment.");
-    } finally {
-      setPosting(false);
-    }
-  };
-
-  const handleToggleComplete = async () => {
-    setCompleting(true);
-    try {
-      const newCompleted = !task.completed;
-      const res = await supabase.functions.invoke("asana-service", {
-        body: { action: "updateTask", task_gid: task.gid, updates: { completed: newCompleted } },
-      });
-      if (res.error) throw res.error;
-      if (res.data?.error) throw new Error(res.data.error);
-      onTaskUpdated?.({ ...task, completed: newCompleted });
-      toast.success(newCompleted ? "Task completed." : "Task reopened.");
-    } catch (e: any) {
-      toast.error(e.message || "Failed to update task.");
-    } finally {
-      setCompleting(false);
-    }
-  };
-
-  return (
-    <div className="mt-1 mb-2 rounded-lg border border-border bg-background p-4 space-y-4">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-3">
-        <h4 className="text-sm font-semibold text-foreground flex-1">{task.name}</h4>
-        <div className="flex items-center gap-1 shrink-0">
-          {linked && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-xs h-7"
-              onClick={() => navigate(`/contacts/${linked.id}`)}
-            >
-              View Contact
-            </Button>
-          )}
-          <a
-            href={`https://app.asana.com/0/0/${task.gid}/f`}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Button variant="ghost" size="sm" className="text-xs h-7">
-              <ExternalLink className="h-3 w-3 mr-1" />
-              Asana
-            </Button>
-          </a>
-          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onClose}>
-            <X className="h-3.5 w-3.5" />
-          </Button>
-        </div>
-      </div>
-
-      {/* Meta + Actions */}
-      <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-        {task.due_on && (
-          <span className="flex items-center gap-1">
-            <Calendar className="h-3 w-3" />
-            Due: {format(parseLocalDate(task.due_on), "MMM d, yyyy")}
-          </span>
-        )}
-        {section && <span>Section: {section}</span>}
-        {linked && <span>Client: {linked.name}</span>}
-        <span className="flex items-center gap-1">
-          Assignee:
-          <AssigneePicker
-            currentAssignee={task.assignee}
-            taskGid={task.gid}
-            onAssigneeChanged={(a) => onTaskUpdated?.({ ...task, assignee: a })}
-          />
-        </span>
-        {task.modified_at && (
-          <span>Updated {formatDistanceToNow(new Date(task.modified_at), { addSuffix: true })}</span>
-        )}
-      </div>
-
-      <div className="flex items-center gap-2">
-        <Button
-          variant={task.completed ? "secondary" : "outline"}
-          size="sm"
-          className="h-7 text-xs"
-          onClick={handleToggleComplete}
-          disabled={completing}
-        >
-          {completing ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
-          {task.completed ? "Reopen" : "Mark Complete"}
-        </Button>
-      </div>
-
-      {/* Subtasks */}
-      <div className="space-y-2">
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-medium uppercase tracking-wider">
-          <CheckSquare className="h-3 w-3" />
-          Subtasks ({subtasksLoading ? "…" : subtasks.length})
-        </div>
-        {subtasksLoading ? (
-          <Loader2 className="h-4 w-4 text-muted-foreground animate-spin" />
-        ) : subtasks.length === 0 ? (
-          <p className="text-xs text-muted-foreground italic">No subtasks</p>
-        ) : (
-          <div className="space-y-1">
-            {subtasks.map((sub) => (
-              <div
-                key={sub.gid}
-                className={cn(
-                  "flex items-center gap-2 rounded px-2.5 py-1.5 text-sm",
-                  sub.completed ? "opacity-50 line-through text-muted-foreground" : "bg-muted/50"
-                )}
-              >
-                <CheckSquare className="h-3 w-3 shrink-0 text-muted-foreground" />
-                <span className="truncate flex-1">{sub.name}</span>
-                {sub.due_on && (
-                  <span className="text-[10px] text-muted-foreground shrink-0">
-                    {format(parseLocalDate(sub.due_on), "MMM d")}
-                  </span>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Notes */}
-      {task.notes && (
-        <div className="space-y-2">
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-medium uppercase tracking-wider">
-            <FileText className="h-3 w-3" />
-            Notes
-          </div>
-          <div className="rounded-md bg-muted/50 px-3 py-2 text-sm whitespace-pre-wrap">
-            <Linkify>{task.notes}</Linkify>
-          </div>
-        </div>
-      )}
-
-      <Separator />
-
-      {/* Comments */}
-      <div className="space-y-3">
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-medium uppercase tracking-wider">
-          <MessageSquare className="h-3 w-3" />
-          Comments ({commentsLoading ? "…" : comments.length})
-        </div>
-
-        {commentsLoading ? (
-          <div className="flex items-center justify-center py-4">
-            <Loader2 className="h-4 w-4 text-muted-foreground animate-spin" />
-          </div>
-        ) : comments.length === 0 ? (
-          <p className="text-sm text-muted-foreground italic py-2">No comments yet.</p>
-        ) : (
-          <div ref={scrollRef} className="space-y-2 max-h-[300px] overflow-y-auto">
-            {comments.map((comment) => (
-              <div key={comment.gid} className="rounded-md bg-muted/50 px-3 py-2 space-y-1">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-foreground">
-                    {comment.created_by?.name || "Unknown"}
-                  </span>
-                  <span className="text-[10px] text-muted-foreground">
-                    {new Date(comment.created_at).toLocaleDateString("en-US", {
-                      month: "short", day: "numeric", hour: "numeric", minute: "2-digit",
-                    })}
-                  </span>
-                </div>
-                <p className="text-sm whitespace-pre-wrap"><Linkify>{comment.text}</Linkify></p>
-              </div>
-            ))}
-          </div>
-        )}
-
-        <div className="flex gap-2">
-          <Textarea
-            value={newComment}
-            onChange={(e) => setNewComment(e.target.value)}
-            placeholder="Write a comment..."
-            rows={2}
-            className="text-sm flex-1 min-h-[44px]"
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) handlePostComment();
-            }}
-          />
-          <Button
-            size="icon"
-            className="shrink-0 self-end h-9 w-9"
-            onClick={handlePostComment}
-            disabled={posting || !newComment.trim()}
-          >
-            {posting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-          </Button>
-        </div>
-        <p className="text-[10px] text-muted-foreground">Press ⌘+Enter to send</p>
-      </div>
-    </div>
-  );
-}
-
-function AsanaMyTasksWidget() {
-  const [tasks, setTasks] = useState<AsanaTask[]>([]);
+function MyTasksWidget() {
+  const [tasks, setTasks] = useState<PmTask[]>([]);
+  const [projectNames, setProjectNames] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [contactMap, setContactMap] = useState<Record<string, { id: string; name: string }>>({});
-  const [expandedGid, setExpandedGid] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const taskRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const [myTasks, projects] = await Promise.all([
+        getTaskAgent().listTasks({ assignee_id: "me" }),
+        getTaskAgent().listProjects(),
+      ]);
+      const names: Record<string, string> = {};
+      for (const p of projects as PmProject[]) names[p.id] = p.name;
+      setProjectNames(names);
+
+      const incomplete = myTasks.filter((t) => t.status !== "done");
+      const sorted = [...incomplete].sort((a, b) => {
+        if (!a.due_date && !b.due_date) return 0;
+        if (!a.due_date) return 1;
+        if (!b.due_date) return -1;
+        return parseLocalDate(a.due_date).getTime() - parseLocalDate(b.due_date).getTime();
+      });
+      setTasks(sorted);
+      setError(false);
+    } catch {
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    load();
+  }, []);
 
   useEffect(() => {
     const handler = (e: Event) => {
-      const gid = (e as CustomEvent).detail?.gid;
-      if (!gid) return;
-      setExpandedGid(gid);
+      const id = (e as CustomEvent).detail?.id;
+      if (!id) return;
+      setExpandedId(id);
       setTimeout(() => {
-        taskRefs.current[gid]?.scrollIntoView({ behavior: "smooth", block: "center" });
+        taskRefs.current[id]?.scrollIntoView({ behavior: "smooth", block: "center" });
       }, 50);
     };
     window.addEventListener("open-my-task", handler);
     return () => window.removeEventListener("open-my-task", handler);
   }, []);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        // Use getUser() to force token refresh (getSession returns cached/stale tokens)
-        const { data: { user }, error: authError } = await supabase.auth.getUser();
-        if (authError || !user) return;
-
-        const contactRes = await supabase
-          .from("contacts")
-          .select("id, full_name, asana_url")
-          .not("asana_url", "is", null);
-
-        const map: Record<string, { id: string; name: string }> = {};
-        const projectGids: string[] = [];
-        const taskBasedContacts: { taskGid: string; contactId: string; contactName: string }[] = [];
-
-        if (contactRes.data) {
-          for (const c of contactRes.data) {
-            // Determine if this is a task-based or project-based URL
-            const isTask = isTaskBasedUrl(c.asana_url);
-            if (isTask) {
-              const taskGid = extractTaskGid(c.asana_url);
-              if (taskGid) {
-                map[taskGid] = { id: c.id, name: c.full_name };
-                taskBasedContacts.push({ taskGid, contactId: c.id, contactName: c.full_name });
-              }
-            } else {
-              const projGid = extractProjectGid(c.asana_url);
-              if (projGid) {
-                map[projGid] = { id: c.id, name: c.full_name };
-                projectGids.push(projGid);
-              }
-            }
-          }
-        }
-        setContactMap(map);
-
-        // Fetch project-level tasks AND subtasks from task-based contacts in parallel
-        const fetches: Promise<any>[] = [
-          supabase.functions.invoke("asana-service", {
-            body: { action: "getMyTasks", project_gids: projectGids.length > 0 ? projectGids : undefined },
-          }),
-        ];
-
-        // For each task-based contact, fetch its subtasks
-        for (const tc of taskBasedContacts) {
-          fetches.push(
-            supabase.functions.invoke("asana-service", {
-              body: { action: "getSubtasks", task_gid: tc.taskGid },
-            }),
-          );
-        }
-
-        const results = await Promise.all(fetches);
-
-        // Merge all tasks, dedup by GID
-        const seen = new Set<string>();
-        const allTasks: AsanaTask[] = [];
-
-        // Project-level tasks from getMyTasks
-        const myTasksData = results[0]?.data?.data || [];
-        for (const t of myTasksData) {
-          if (!seen.has(t.gid)) {
-            seen.add(t.gid);
-            allTasks.push(t);
-          }
-        }
-
-        // Subtasks from task-based contacts
-        for (let i = 0; i < taskBasedContacts.length; i++) {
-          const tc = taskBasedContacts[i];
-          const subtaskData = results[i + 1]?.data?.data || [];
-          for (const sub of subtaskData) {
-            if (!seen.has(sub.gid) && sub.assignee) {
-              seen.add(sub.gid);
-              sub._parentTaskGid = tc.taskGid;
-              allTasks.push(sub);
-            }
-          }
-        }
-
-        const incomplete = allTasks.filter((t) => !t.completed);
-        const sorted = incomplete.sort((a, b) => {
-          if (!a.due_on && !b.due_on) return 0;
-          if (!a.due_on) return 1;
-          if (!b.due_on) return -1;
-          return parseLocalDate(a.due_on).getTime() - parseLocalDate(b.due_on).getTime();
-        });
-        setTasks(sorted);
-      } catch {
-        setError(true);
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, []);
-
-  function getLinkedContact(task: AsanaTask) {
-    // Check if subtask was tagged with a parent task GID
-    const parentGid = (task as any)._parentTaskGid;
-    if (parentGid && contactMap[parentGid]) return contactMap[parentGid];
-    // Check project memberships
-    for (const m of task.memberships || []) {
-      const gid = m.project?.gid;
-      if (gid && contactMap[gid]) return contactMap[gid];
-    }
-    if (contactMap[task.gid]) return contactMap[task.gid];
-    return null;
-  }
-
-  function getSectionLabel(task: AsanaTask): string | null {
-    const section = task.memberships?.[0]?.section?.name;
-    return section || null;
-  }
-
-  const handleTaskUpdated = (updatedTask: AsanaTask) => {
+  const handleTaskChanged = (updated: PmTask) => {
     setTasks((prev) =>
-      prev.map((t) => (t.gid === updatedTask.gid ? { ...t, ...updatedTask } : t))
+      updated.status === "done"
+        ? prev.filter((t) => t.id !== updated.id)
+        : prev.map((t) => (t.id === updated.id ? updated : t)),
     );
   };
 
   return (
     <Card className="h-full">
-      <CardHeader className="flex flex-row items-center justify-between pb-3">
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className="flex items-center gap-2 text-base">
           <Inbox className="h-4 w-4 text-sanctuary-bronze" />
           My Tasks
@@ -838,63 +415,44 @@ function AsanaMyTasksWidget() {
         ) : tasks.length === 0 ? (
           <p className="text-sm text-muted-foreground">No tasks assigned to you.</p>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             {tasks.slice(0, 20).map((task) => {
-              const linked = getLinkedContact(task);
-              const section = getSectionLabel(task);
-              const isExpanded = expandedGid === task.gid;
+              const projectName = task.project_id ? projectNames[task.project_id] : null;
+              const isExpanded = expandedId === task.id;
               return (
-                <div key={task.gid} ref={(el) => (taskRefs.current[task.gid] = el)}>
+                <div key={task.id} ref={(el) => (taskRefs.current[task.id] = el)}>
                   <button
-                    onClick={() => setExpandedGid(isExpanded ? null : task.gid)}
+                    onClick={() => setExpandedId(isExpanded ? null : task.id)}
                     className={cn(
-                      "flex w-full items-center justify-between gap-3 rounded-md border border-border p-3 transition-colors hover:bg-muted/50 text-left",
+                      "flex w-full items-center justify-between gap-3 rounded-md border border-border px-3 py-2 transition-colors hover:bg-muted/50 text-left",
                       isExpanded && "bg-muted/50 border-accent/30"
                     )}
                   >
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium truncate">{task.name}</p>
-                      <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                        {linked && (
-                          <span className="text-xs text-accent font-medium truncate">{linked.name}</span>
-                        )}
-                        <AssigneePicker
-                          currentAssignee={task.assignee}
-                          taskGid={task.gid}
-                          onAssigneeChanged={(a) => handleTaskUpdated({ ...task, assignee: a })}
-                        />
-                        {task.due_on && (
-                          <span className="text-xs text-muted-foreground">
-                            Due: {format(parseLocalDate(task.due_on), "MMM d")}
-                          </span>
-                        )}
-                        {task.modified_at && (
-                          <span className="text-xs text-muted-foreground">
-                            · {formatDistanceToNow(new Date(task.modified_at), { addSuffix: true })}
-                          </span>
-                        )}
+                    <div className="min-w-0 flex-1 flex items-center gap-2">
+                      <span className={cn("h-1.5 w-1.5 rounded-full shrink-0", STATUS_DOT[task.status] || STATUS_DOT.open)} />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium truncate">{task.title}</p>
+                        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                          {projectName && (
+                            <span className="text-xs text-accent font-medium truncate">{projectName}</span>
+                          )}
+                          {task.due_date && (
+                            <span className="text-xs text-muted-foreground">
+                              Due: {format(parseLocalDate(task.due_date), "MMM d")}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      {section && (
-                        <Badge variant="outline" className="text-[10px] whitespace-nowrap">
-                          {section}
-                        </Badge>
-                      )}
-                      <ChevronRight className={cn(
-                        "h-4 w-4 text-muted-foreground transition-transform",
-                        isExpanded && "rotate-90"
-                      )} />
-                    </div>
+                    <ChevronRight className={cn(
+                      "h-4 w-4 text-muted-foreground transition-transform shrink-0",
+                      isExpanded && "rotate-90"
+                    )} />
                   </button>
                   {isExpanded && (
-                    <DashboardTaskDetail
-                      task={task}
-                      linked={linked}
-                      section={section}
-                      onClose={() => setExpandedGid(null)}
-                      onTaskUpdated={handleTaskUpdated}
-                    />
+                    <div className="mt-1 mb-2 rounded-lg border border-border bg-background p-3">
+                      <TaskDetailPanel task={task} onChanged={handleTaskChanged} />
+                    </div>
                   )}
                 </div>
               );
