@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { AppLayout } from "@/shared/components/AppLayout";
 import { supabase } from "@/shared/integrations/supabase/client";
@@ -6,6 +6,7 @@ import { getTaskAgent } from "@/shared/lib/agents";
 import type { PmProject, PmTask } from "@/shared/lib/agents";
 import { Card, CardContent } from "@/shared/components/ui/card";
 import { Badge } from "@/shared/components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table";
 import { Loader2, ChevronLeft, ChevronDown, ChevronRight, CheckCircle2, Circle } from "lucide-react";
 import { AddTaskForm } from "../components/AddTaskForm";
 import { TaskDetailPanel } from "../components/TaskDetailPanel";
@@ -63,6 +64,7 @@ export default function ProjectDetail() {
 
   const open = tasks.filter((t) => t.status !== "done");
   const done = tasks.filter((t) => t.status === "done");
+  const ordered = [...open, ...done];
 
   return (
     <AppLayout>
@@ -76,47 +78,67 @@ export default function ProjectDetail() {
         </div>
 
         <Card>
-          <CardContent className="space-y-4 p-6">
+          <CardContent className="space-y-4 p-4 sm:p-6">
             <AddTaskForm projectId={project.id} onCreated={loadTasks} />
 
             {tasks.length === 0 ? (
               <p className="py-6 text-center text-sm text-muted-foreground">No tasks yet. Add the first one above.</p>
             ) : (
-              <div className="space-y-1">
-                {[...open, ...done].map((task) => (
-                  <div key={task.id} className="rounded-md border border-border">
-                    <button
-                      className="flex w-full items-center gap-2 px-3 py-2 text-left"
-                      onClick={() => setExpandedId(expandedId === task.id ? null : task.id)}
-                    >
-                      {expandedId === task.id ? (
-                        <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
-                      ) : (
-                        <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-8" />
+                    <TableHead>Name</TableHead>
+                    <TableHead className="hidden w-[110px] sm:table-cell">Due date</TableHead>
+                    <TableHead className="w-[110px]">Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {ordered.map((task) => (
+                    <Fragment key={task.id}>
+                      <TableRow
+                        className="cursor-pointer"
+                        onClick={() => setExpandedId(expandedId === task.id ? null : task.id)}
+                      >
+                        <TableCell className="w-8 pr-0">
+                          {expandedId === task.id ? (
+                            <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                          ) : (
+                            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            {task.status === "done" ? (
+                              <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+                            ) : (
+                              <Circle className="h-4 w-4 shrink-0 text-muted-foreground" />
+                            )}
+                            <span className={cn("text-sm", task.status === "done" && "text-muted-foreground line-through")}>
+                              {task.title}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="hidden text-sm text-muted-foreground sm:table-cell">
+                          {task.due_date || "—"}
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={STATUS_BADGE[task.status] || ""} variant="secondary">
+                            {task.status.replace("_", " ")}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                      {expandedId === task.id && (
+                        <TableRow>
+                          <TableCell colSpan={4} className="bg-muted/20 p-4">
+                            <TaskDetailPanel task={task} onChanged={handleTaskChanged} />
+                          </TableCell>
+                        </TableRow>
                       )}
-                      {task.status === "done" ? (
-                        <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
-                      ) : (
-                        <Circle className="h-4 w-4 shrink-0 text-muted-foreground" />
-                      )}
-                      <span className={cn("flex-1 text-sm", task.status === "done" && "text-muted-foreground line-through")}>
-                        {task.title}
-                      </span>
-                      {task.due_date && (
-                        <span className="text-xs text-muted-foreground">{task.due_date}</span>
-                      )}
-                      <Badge className={STATUS_BADGE[task.status] || ""} variant="secondary">
-                        {task.status.replace("_", " ")}
-                      </Badge>
-                    </button>
-                    {expandedId === task.id && (
-                      <div className="px-3 pb-4">
-                        <TaskDetailPanel task={task} onChanged={handleTaskChanged} />
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
+                    </Fragment>
+                  ))}
+                </TableBody>
+              </Table>
             )}
           </CardContent>
         </Card>

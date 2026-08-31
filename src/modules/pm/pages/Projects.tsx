@@ -6,8 +6,15 @@ import type { PmProject } from "@/shared/lib/agents";
 import { Card, CardContent } from "@/shared/components/ui/card";
 import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table";
 import { Loader2, Plus, FolderKanban } from "lucide-react";
 import { NewProjectDialog } from "../components/NewProjectDialog";
+
+const STATUS_BADGE: Record<string, string> = {
+  active: "bg-primary/15 text-primary",
+  on_hold: "bg-secondary text-secondary-foreground",
+  archived: "bg-muted text-muted-foreground",
+};
 
 export default function Projects() {
   const [projects, setProjects] = useState<PmProject[]>([]);
@@ -42,7 +49,7 @@ export default function Projects() {
         </div>
 
         <Card>
-          <CardContent className="p-6">
+          <CardContent className="p-0">
             {loading ? (
               <div className="flex justify-center py-10">
                 <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -50,26 +57,39 @@ export default function Projects() {
             ) : projects.length === 0 ? (
               <p className="py-6 text-center text-sm text-muted-foreground">No projects yet. Create your first one.</p>
             ) : (
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {projects.map((p) => (
-                  <button
-                    key={p.id}
-                    onClick={() => navigate(`/projects/${p.id}`)}
-                    className="flex flex-col items-start gap-2 rounded-lg border border-border p-4 text-left transition-colors hover:border-primary/50 hover:bg-muted/40"
-                  >
-                    <div className="flex w-full items-center justify-between gap-2">
-                      <FolderKanban className="h-4 w-4 shrink-0 text-primary" />
-                      <Badge variant="secondary" className="ml-auto capitalize">
-                        {p.status.replace("_", " ")}
-                      </Badge>
-                    </div>
-                    <div className="font-serif text-base">{p.name}</div>
-                    {p.description && (
-                      <p className="line-clamp-2 text-xs text-muted-foreground">{p.description}</p>
-                    )}
-                  </button>
-                ))}
-              </div>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead className="hidden sm:table-cell">Description</TableHead>
+                    <TableHead className="w-[110px]">Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {projects.map((p) => (
+                    <TableRow
+                      key={p.id}
+                      className="cursor-pointer"
+                      onClick={() => navigate(`/projects/${p.id}`)}
+                    >
+                      <TableCell>
+                        <div className="flex items-center gap-2 font-medium">
+                          <FolderKanban className="h-4 w-4 shrink-0 text-primary" />
+                          {p.name}
+                        </div>
+                      </TableCell>
+                      <TableCell className="hidden max-w-md truncate text-sm text-muted-foreground sm:table-cell">
+                        {p.description || "—"}
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={STATUS_BADGE[p.status] || ""} variant="secondary">
+                          {p.status.replace("_", " ")}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             )}
           </CardContent>
         </Card>
