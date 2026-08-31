@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/shared/components/ui/avat
 import { LogOut } from "lucide-react";
 import { format } from "date-fns";
 import { NotificationBell } from "@/shared/components/NotificationBell";
+import prosperwiseWordmark from "@/assets/prosperwise-logo-full.png";
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
@@ -14,16 +15,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <SidebarCollapseProvider>
-      <div className="flex h-screen overflow-hidden bg-background">
-        <AppSidebar />
-        <div className="flex flex-1 flex-col overflow-hidden">
-          {/* Header */}
-          <header className="flex items-center justify-between gap-4 border-b border-border bg-card px-6 py-3">
-            <div className="flex items-center gap-6 min-w-0 flex-1">
-              <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground shrink-0">
-                {today}
-              </span>
-            </div>
+      <div className="flex h-screen flex-col overflow-hidden bg-background">
+        {/* Header — full width, above the sidebar and the content */}
+        <header className="flex shrink-0 items-center justify-between gap-4 border-b border-border bg-card px-4 py-2.5">
+          <img src={prosperwiseWordmark} alt="ProsperWise" className="h-6 shrink-0" />
+          <div className="flex items-center gap-4 min-w-0">
+            <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground shrink-0">
+              {today}
+            </span>
             <div className="flex items-center gap-3 shrink-0">
               <NotificationBell />
               <div className="h-6 w-px bg-border" />
@@ -45,9 +44,11 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 <LogOut className="h-4 w-4" />
               </button>
             </div>
-          </header>
+          </div>
+        </header>
 
-
+        <div className="flex flex-1 overflow-hidden">
+          <AppSidebar />
           <main className="flex-1 overflow-y-auto">
             <div className="mx-auto max-w-6xl px-6 py-8">{children}</div>
           </main>

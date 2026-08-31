@@ -1,5 +1,4 @@
 import { Link, useLocation } from "react-router-dom";
-import prosperwiseMark from "@/assets/prosperwise-logo.png";
 
 import { useAuth } from "@/shared/hooks/useAuth";
 import {
@@ -233,7 +232,6 @@ export function AppSidebar() {
       <div className="flex h-full">
         {/* Icon rail */}
         <aside className="flex h-full w-[60px] shrink-0 flex-col items-center border-r border-sidebar-border bg-sidebar py-4">
-          <img src={prosperwiseMark} alt="ProsperWise" className="mb-4 h-8 w-8 rounded-full object-contain" />
           <nav className="flex flex-1 flex-col items-center gap-1">
             {GROUPS.map((group) => {
               const Icon = group.icon;
