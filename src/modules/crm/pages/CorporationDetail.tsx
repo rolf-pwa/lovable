@@ -376,8 +376,8 @@ const CorporationDetail = () => {
         <div className="flex items-start justify-between">
           <div>
             <div className="flex items-center gap-3">
-              <Building2 className="h-7 w-7 text-accent" />
-              <InlineEdit value={corp.name} onSave={(v) => updateField("name", v)} className="text-3xl font-bold font-serif" />
+              <Building2 className="h-6 w-6 text-accent" />
+              <InlineEdit value={corp.name} onSave={(v) => updateField("name", v)} className="text-2xl font-bold font-serif" />
             </div>
             <div className="mt-2 flex items-center gap-3">
               <Badge variant="outline">{TYPE_LABELS[corp.corporation_type] || corp.corporation_type}</Badge>
@@ -405,8 +405,9 @@ const CorporationDetail = () => {
           </AlertDialog>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-2">
-          {/* Shareholders */}
+        <div className="grid gap-4 lg:grid-cols-2">
+          {/* Relationships: Shareholders + Subsidiaries */}
+          <div className="space-y-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-3">
               <CardTitle className="flex items-center gap-2 text-lg">
@@ -512,7 +513,10 @@ const CorporationDetail = () => {
               )}
             </CardContent>
           </Card>
+          </div>
 
+          {/* Financials: Corporate Vineyard + Insurance + Liabilities */}
+          <div className="space-y-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-3">
               <CardTitle className="flex items-center gap-2 text-lg">
@@ -589,8 +593,8 @@ const CorporationDetail = () => {
 
           {/* Liabilities */}
           <LiabilitiesCard holderType="corporation" holderId={id!} />
+          </div>
         </div>
-
 
         {/* Details card */}
         <Card>

@@ -1,5 +1,4 @@
 import { useEffect, useState, useCallback } from "react";
-import { Link } from "react-router-dom";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { AppLayout } from "@/shared/components/AppLayout";
 import { Card, CardContent } from "@/shared/components/ui/card";
@@ -7,6 +6,7 @@ import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { PageBreadcrumbs } from "@/shared/components/PageBreadcrumbs";
+import { ListRow } from "@/shared/components/ListRow";
 import {
   Dialog,
   DialogContent,
@@ -197,82 +197,74 @@ const Corporations = () => {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {filtered.map((corp) => (
-              <div key={corp.id} className="space-y-2">
-                <Link to={`/corporations/${corp.id}`}>
-                  <Card className="hover:border-accent/40 transition-colors cursor-pointer h-full">
-                    <CardContent className="p-5 space-y-3">
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-2">
-                          <Building2 className="h-5 w-5 text-accent" />
-                          <h3 className="font-semibold text-foreground">{corp.name}</h3>
-                        </div>
-                        <Badge variant="outline" className="text-[10px]">
-                          {TYPE_LABELS[corp.corporation_type] || corp.corporation_type}
-                        </Badge>
-                      </div>
-                      {corp.jurisdiction && (
-                        <p className="text-xs text-muted-foreground">{corp.jurisdiction}</p>
-                      )}
-                      <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                          <Users className="h-3.5 w-3.5" />
-                          {corp.shareholder_count} shareholder{corp.shareholder_count !== 1 ? "s" : ""}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <DollarSign className="h-3.5 w-3.5" />
-                          ${corp.total_assets.toLocaleString()}
-                        </span>
-                      </div>
-                      {/* Subsidiaries toggle */}
-                      {corp.children && corp.children.length > 0 && (
+          <Card className="overflow-hidden">
+            <CardContent className="p-0">
+              {filtered.map((corp) => {
+                const hasChildren = !!corp.children?.length;
+                const isExpanded = expanded[corp.id];
+                return (
+                  <div key={corp.id}>
+                    <ListRow to={`/corporations/${corp.id}`}>
+                      {hasChildren ? (
                         <button
                           onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
                             setExpanded((prev) => ({ ...prev, [corp.id]: !prev[corp.id] }));
                           }}
-                          className="flex items-center gap-1 text-[11px] font-medium text-accent hover:underline pt-1"
+                          className="shrink-0 -ml-1 p-0.5 text-muted-foreground hover:text-foreground"
                         >
-                          {expanded[corp.id] ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-                          <GitBranch className="h-3 w-3" />
-                          {corp.children.length} subsidiar{corp.children.length === 1 ? "y" : "ies"}
+                          {isExpanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
                         </button>
+                      ) : (
+                        <span className="w-4 shrink-0" />
                       )}
-                    </CardContent>
-                  </Card>
-                </Link>
-                {/* Nested subsidiaries */}
-                {expanded[corp.id] && corp.children?.map((child) => (
-                  <Link key={child.id} to={`/corporations/${child.id}`}>
-                    <Card className="ml-6 border-l-2 border-accent/30 hover:border-accent/50 transition-colors cursor-pointer">
-                      <CardContent className="p-4 space-y-2">
-                        <div className="flex items-start justify-between">
-                          <div className="flex items-center gap-2">
-                            <Building2 className="h-4 w-4 text-accent/70" />
-                            <h4 className="font-medium text-sm text-foreground">{child.name}</h4>
-                          </div>
-                          <Badge variant="outline" className="text-[10px]">
-                            {TYPE_LABELS[child.corporation_type] || child.corporation_type}
-                          </Badge>
-                        </div>
-                        <div className="flex items-center gap-4 text-[11px] text-muted-foreground">
-                          {child.ownership_percentage != null && (
-                            <span className="font-medium text-accent/80">{child.ownership_percentage}% owned</span>
-                          )}
-                          <span className="flex items-center gap-1">
-                            <DollarSign className="h-3 w-3" />
-                            ${child.total_assets.toLocaleString()}
+                      <Building2 className="h-4 w-4 shrink-0 text-accent" />
+                      <span className="min-w-0 flex-1 truncate font-medium text-foreground">{corp.name}</span>
+                      <Badge variant="outline" className="shrink-0 text-[10px]">
+                        {TYPE_LABELS[corp.corporation_type] || corp.corporation_type}
+                      </Badge>
+                      {corp.jurisdiction && (
+                        <span className="hidden w-28 shrink-0 truncate text-xs text-muted-foreground sm:inline">
+                          {corp.jurisdiction}
+                        </span>
+                      )}
+                      <span className="hidden w-24 shrink-0 items-center gap-1 text-xs text-muted-foreground md:flex">
+                        <Users className="h-3.5 w-3.5" />
+                        {corp.shareholder_count}
+                      </span>
+                      <span className="w-24 shrink-0 text-right text-xs font-medium text-foreground">
+                        ${corp.total_assets.toLocaleString()}
+                      </span>
+                      {hasChildren && (
+                        <span className="hidden shrink-0 items-center gap-1 text-[10px] text-muted-foreground lg:flex">
+                          <GitBranch className="h-3 w-3" />
+                          {corp.children!.length}
+                        </span>
+                      )}
+                    </ListRow>
+                    {isExpanded && corp.children?.map((child) => (
+                      <ListRow key={child.id} to={`/corporations/${child.id}`} className="pl-9 bg-muted/20">
+                        <Building2 className="h-3.5 w-3.5 shrink-0 text-accent/70" />
+                        <span className="min-w-0 flex-1 truncate text-sm text-foreground">{child.name}</span>
+                        <Badge variant="outline" className="shrink-0 text-[10px]">
+                          {TYPE_LABELS[child.corporation_type] || child.corporation_type}
+                        </Badge>
+                        {child.ownership_percentage != null && (
+                          <span className="hidden w-20 shrink-0 text-xs font-medium text-accent/80 sm:inline">
+                            {child.ownership_percentage}% owned
                           </span>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </Link>
-                ))}
-              </div>
-            ))}
-          </div>
+                        )}
+                        <span className="w-24 shrink-0 text-right text-xs font-medium text-foreground">
+                          ${child.total_assets.toLocaleString()}
+                        </span>
+                      </ListRow>
+                    ))}
+                  </div>
+                );
+              })}
+            </CardContent>
+          </Card>
         )}
 
         {/* New Corporation Dialog */}
