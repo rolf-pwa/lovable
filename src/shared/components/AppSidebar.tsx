@@ -67,26 +67,19 @@ const GROUPS = [
       { to: "/requests", label: "Client Requests", icon: ClipboardList, badgeKey: "requests" },
       { to: "/inbox", label: "Inbox", icon: InboxIcon, badgeKey: "inbox" },
       { to: "/projects", label: "Projects", icon: ListTodo },
+      { to: "/invoices", label: "Invoices", icon: Receipt },
+      { to: "/services", label: "Services", icon: ConciergeBell },
     ],
   },
   {
-    key: "clients",
-    label: "Clients",
+    key: "people",
+    label: "People",
     icon: Users,
     items: [
       { to: "/contacts", label: "CRM", icon: Users },
       { to: "/pipeline", label: "Pipeline", icon: TrendingUp },
       { to: "/holding-tank", label: "Holding Tank", icon: Anchor },
       { to: "/professionals", label: "Professionals", icon: Briefcase },
-    ],
-  },
-  {
-    key: "billing",
-    label: "Billing",
-    icon: Receipt,
-    items: [
-      { to: "/invoices", label: "Invoices", icon: Receipt },
-      { to: "/services", label: "Services", icon: ConciergeBell },
     ],
   },
   {
