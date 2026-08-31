@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { AppLayout } from "@/shared/components/AppLayout";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
+import { ListRowStatic } from "@/shared/components/ListRow";
 import { Switch } from "@/shared/components/ui/switch";
 import { Input } from "@/shared/components/ui/input";
 import { Badge } from "@/shared/components/ui/badge";
@@ -105,9 +106,9 @@ const AdminVfo = () => {
             ) : filtered.length === 0 ? (
               <p className="text-sm text-muted-foreground py-8 text-center">No families found.</p>
             ) : (
-              <div className="divide-y divide-border">
+              <div>
                 {filtered.map((row) => (
-                  <div key={row.id} className="flex items-center justify-between py-3 gap-4">
+                  <ListRowStatic key={row.id} className="justify-between">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <Link to={`/families/${row.id}`} className="text-sm font-medium text-foreground hover:underline truncate">
@@ -134,7 +135,7 @@ const AdminVfo = () => {
                         disabled={savingId === row.id}
                       />
                     </div>
-                  </div>
+                  </ListRowStatic>
                 ))}
               </div>
             )}

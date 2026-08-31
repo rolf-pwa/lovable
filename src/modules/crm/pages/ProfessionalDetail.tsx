@@ -148,7 +148,7 @@ export default function ProfessionalDetail() {
 
   return (
     <AppLayout>
-      <div className="max-w-6xl mx-auto p-8 space-y-6">
+      <div className="space-y-6">
         <PageBreadcrumbs
           items={[
             { label: "Dashboard", href: "/dashboard" },
@@ -159,9 +159,9 @@ export default function ProfessionalDetail() {
 
         {/* Header */}
         <Card>
-          <CardContent className="p-6">
+          <CardContent className="p-4">
             <div className="flex items-start justify-between gap-4">
-              <div className="flex items-start gap-4 min-w-0 flex-1">
+              <div className="flex items-start gap-3 min-w-0 flex-1">
                 <Button
                   variant="ghost"
                   size="icon"
@@ -170,11 +170,11 @@ export default function ProfessionalDetail() {
                 >
                   <ArrowLeft className="h-4 w-4" />
                 </Button>
-                <div className="h-16 w-16 shrink-0 rounded-full bg-sanctuary-green text-sanctuary-bronze flex items-center justify-center">
-                  <Briefcase className="h-7 w-7" />
+                <div className="h-12 w-12 shrink-0 rounded-full bg-sanctuary-green text-sanctuary-bronze flex items-center justify-center">
+                  <Briefcase className="h-5 w-5" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <h1 className="text-2xl font-bold truncate">{pro.full_name}</h1>
+                  <h1 className="text-xl font-bold truncate">{pro.full_name}</h1>
                   <div className="mt-1 flex flex-wrap items-center gap-2">
                     <Badge variant="outline" className="text-[10px] uppercase">
                       {pro.professional_type.replace("_", " ")}
@@ -205,7 +205,7 @@ export default function ProfessionalDetail() {
               </Button>
             </div>
 
-            <div className="mt-6 grid grid-cols-2 gap-4">
+            <div className="mt-4 grid grid-cols-2 gap-4">
               <div className="rounded-md border border-border bg-muted/30 p-3">
                 <p className="text-[10px] uppercase text-muted-foreground tracking-wider">Access Granted</p>
                 <p className="text-2xl font-bold">{householdCount}</p>
@@ -218,7 +218,7 @@ export default function ProfessionalDetail() {
           </CardContent>
         </Card>
 
-        <div className="flex gap-6 items-start">
+        <div className="flex gap-4 items-start">
           {/* Sidebar */}
           <div className="w-80 shrink-0 space-y-4">
             <Card>

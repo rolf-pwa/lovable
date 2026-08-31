@@ -395,9 +395,9 @@ const HouseholdDetail = () => {
 
         {/* Header Card */}
         <Card>
-          <CardContent className="p-6">
+          <CardContent className="p-4">
             <div className="flex items-start justify-between gap-4">
-              <div className="flex items-start gap-4 min-w-0 flex-1">
+              <div className="flex items-start gap-3 min-w-0 flex-1">
                 <Button
                   variant="ghost"
                   size="icon"
@@ -406,11 +406,11 @@ const HouseholdDetail = () => {
                 >
                   <ArrowLeft className="h-4 w-4" />
                 </Button>
-                <div className="h-16 w-16 shrink-0 rounded-full bg-sanctuary-green text-sanctuary-bronze flex items-center justify-center">
-                  <Home className="h-7 w-7" />
+                <div className="h-12 w-12 shrink-0 rounded-full bg-sanctuary-green text-sanctuary-bronze flex items-center justify-center">
+                  <Home className="h-5 w-5" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <h1 className="text-2xl font-bold truncate">{household.label}</h1>
+                  <h1 className="text-xl font-bold truncate">{household.label}</h1>
                   <div className="mt-1 flex flex-wrap items-center gap-2">
                     <Link
                       to={household.family_id ? `/families/${household.family_id}` : "/families"}
@@ -593,7 +593,7 @@ const HouseholdDetail = () => {
             </AlertDialog>
 
             {/* Info grid */}
-            <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <div>
                 <p className="text-xs text-muted-foreground mb-1">Address</p>
                 {household.address ? (
@@ -699,7 +699,7 @@ const HouseholdDetail = () => {
 
           {/* Overview */}
           <TabsContent value="overview" className="mt-4">
-            <div className="grid gap-6 lg:grid-cols-3">
+            <div className="grid gap-4 lg:grid-cols-3">
               <div className="space-y-6 lg:col-span-2">
                 {/* Household Registered Members Directory */}
                 <Card>

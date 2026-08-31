@@ -254,9 +254,9 @@ const FamilyDetail = () => {
 
         {/* Header */}
         <Card>
-          <CardContent className="p-6">
+          <CardContent className="p-4">
             <div className="flex items-start justify-between gap-4">
-              <div className="flex items-start gap-4 min-w-0 flex-1">
+              <div className="flex items-start gap-3 min-w-0 flex-1">
                 <Button
                   variant="ghost"
                   size="icon"
@@ -265,11 +265,11 @@ const FamilyDetail = () => {
                 >
                   <ArrowLeft className="h-4 w-4" />
                 </Button>
-                <div className="h-16 w-16 shrink-0 rounded-full bg-sanctuary-green text-sanctuary-bronze flex items-center justify-center">
-                  <TreesIcon className="h-7 w-7" />
+                <div className="h-12 w-12 shrink-0 rounded-full bg-sanctuary-green text-sanctuary-bronze flex items-center justify-center">
+                  <TreesIcon className="h-5 w-5" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <h1 className="text-2xl font-bold truncate">{family.name} Family</h1>
+                  <h1 className="text-xl font-bold truncate">{family.name} Family</h1>
                   <div className="mt-1 flex flex-wrap items-center gap-2">
                     <Badge variant="outline" className="text-[10px] uppercase">
                       {households.length} {households.length === 1 ? "Household" : "Households"}
@@ -288,7 +288,7 @@ const FamilyDetail = () => {
             </div>
 
             {/* Total AUM */}
-            <div className="mt-6 flex items-center gap-3">
+            <div className="mt-4 flex items-center gap-3">
               <Wallet className="h-4 w-4 text-sanctuary-bronze" />
               <span className="text-sm text-muted-foreground">Total Family AUM</span>
               <span className="text-lg font-bold text-sanctuary-bronze">{formatCurrency(totalAUM)}</span>
@@ -307,7 +307,7 @@ const FamilyDetail = () => {
           onRecalculated={fetchData}
         />
 
-        <div className="flex gap-6 items-start">
+        <div className="flex gap-4 items-start">
           {/* Sidebar */}
           <div className="w-80 shrink-0 space-y-4">
             {/* Holding Tank */}

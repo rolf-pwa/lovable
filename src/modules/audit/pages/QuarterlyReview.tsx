@@ -417,8 +417,8 @@ export default function QuarterlyReview() {
 
         {step === "upload" && (
           <Card>
-            <CardContent className="py-16 flex flex-col items-center gap-4">
-              <Upload className="h-10 w-10 text-muted-foreground" />
+            <CardContent className="py-8 flex flex-col items-center gap-3">
+              <Upload className="h-8 w-8 text-muted-foreground" />
               <p className="text-sm text-muted-foreground text-center max-w-md">
                 CSV must include Account Number (or Contract #), BOY Balance, Current Balance, and As-of Date. Client Name, Custodian, Account Type, and RoR columns are recognized automatically.
               </p>

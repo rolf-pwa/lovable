@@ -126,7 +126,7 @@ export default function Onboarding() {
 
   return (
     <AppLayout>
-      <div className="mx-auto max-w-4xl space-y-6 p-6">
+      <div className="mx-auto max-w-4xl space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -246,10 +246,10 @@ export default function Onboarding() {
             </Card>
 
             {/* Created Hierarchy */}
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-3 md:grid-cols-3">
               <Card>
-                <CardContent className="py-4 flex items-center gap-3">
-                  <TreesIcon className="h-8 w-8 text-primary" />
+                <CardContent className="py-3 flex items-center gap-2.5">
+                  <TreesIcon className="h-5 w-5 text-primary" />
                   <div>
                     <p className="text-xs text-muted-foreground">Family</p>
                     <p className="font-semibold">{result.family.name}</p>
@@ -257,8 +257,8 @@ export default function Onboarding() {
                 </CardContent>
               </Card>
               <Card>
-                <CardContent className="py-4 flex items-center gap-3">
-                  <Home className="h-8 w-8 text-primary" />
+                <CardContent className="py-3 flex items-center gap-2.5">
+                  <Home className="h-5 w-5 text-primary" />
                   <div>
                     <p className="text-xs text-muted-foreground">Household</p>
                     <p className="font-semibold">Primary</p>
@@ -266,8 +266,8 @@ export default function Onboarding() {
                 </CardContent>
               </Card>
               <Card>
-                <CardContent className="py-4 flex items-center gap-3">
-                  <Users className="h-8 w-8 text-primary" />
+                <CardContent className="py-3 flex items-center gap-2.5">
+                  <Users className="h-5 w-5 text-primary" />
                   <div>
                     <p className="text-xs text-muted-foreground">Contacts</p>
                     <p className="font-semibold">{result.contacts.length} created</p>

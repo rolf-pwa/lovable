@@ -206,7 +206,7 @@ export default function GovernanceReview() {
 
   return (
     <AppLayout>
-      <div className="container max-w-7xl mx-auto py-8 space-y-6">
+      <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-serif">Monthly Governance Review</h1>
           <p className="text-muted-foreground">Verify the month, compare against the Charter, then approve the briefing.</p>
@@ -369,7 +369,7 @@ export default function GovernanceReview() {
                     {alignments.map((a) => {
                       const effective = a.advisor_override || a.alignment_status;
                       return (
-                        <div key={a.id} className="border rounded-lg p-4 space-y-2">
+                        <div key={a.id} className="border rounded-lg p-3 space-y-2">
                           <div className="flex items-start justify-between gap-4">
                             <div className="flex-1">
                               <div className="font-medium">{a.performance_fact?.description ?? a.fact_key}</div>
@@ -440,7 +440,7 @@ export default function GovernanceReview() {
 
                 {review.briefing_markdown && (
                   <div className="grid md:grid-cols-2 gap-4">
-                    <div className="border rounded-lg p-4 space-y-2">
+                    <div className="border rounded-lg p-3 space-y-2">
                       <div className="flex items-center justify-between">
                         <h3 className="font-semibold">Advisor briefing</h3>
                         <Button size="sm" variant="ghost" onClick={() => copyMd(review.briefing_markdown)}>
@@ -449,7 +449,7 @@ export default function GovernanceReview() {
                       </div>
                       <pre className="text-xs whitespace-pre-wrap font-sans">{review.briefing_markdown}</pre>
                     </div>
-                    <div className="border rounded-lg p-4 space-y-2">
+                    <div className="border rounded-lg p-3 space-y-2">
                       <div className="flex items-center justify-between">
                         <h3 className="font-semibold">Principal note</h3>
                         <Button size="sm" variant="ghost" onClick={() => copyMd(review.briefing_principal_markdown)}>
