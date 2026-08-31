@@ -1,157 +1,83 @@
 import { useState, useEffect } from "react";
 import { parseLocalDate } from "@/shared/lib/date-utils";
-import { supabase } from "@/shared/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Badge } from "@/shared/components/ui/badge";
-import { CheckSquare, Clock, Loader2, AlertCircle, ChevronRight, ChevronDown, Users } from "lucide-react";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/shared/components/ui/sheet";
+import { CheckSquare, Clock, Loader2, AlertCircle, ChevronRight, ChevronDown } from "lucide-react";
 import { Link } from "react-router-dom";
-
-interface AsanaTask {
-  gid: string;
-  name: string;
-  completed: boolean;
-  due_on: string | null;
-  notes: string;
-  memberships?: { section?: { name?: string } }[];
-  custom_fields?: any[];
-  assignee?: { gid: string; name: string } | null;
-}
+import { getTaskAgent } from "@/shared/lib/agents";
+import type { PmTask } from "@/shared/lib/agents";
+import { TaskDetailPanel } from "@/modules/pm/components/TaskDetailPanel";
+import { cn } from "@/shared/lib/utils";
 
 interface Member {
   id: string;
   first_name: string;
   last_name: string | null;
-  family_role: string;
-  asana_url: string | null;
 }
 
 interface Props {
+  householdId: string;
   members: Member[];
 }
 
-function getTaskStatus(task: AsanaTask): { label: string; variant: "default" | "secondary" | "outline" | "destructive" } {
-  if (task.completed) return { label: "Done", variant: "secondary" };
-  const section = task.memberships?.[0]?.section?.name?.toLowerCase() || "";
-  if (section.includes("review") || section.includes("awaiting")) return { label: "Awaiting Review", variant: "outline" };
-  if (section.includes("progress") || section.includes("doing")) return { label: "In Progress", variant: "default" };
-  if (task.due_on && parseLocalDate(task.due_on) < new Date()) return { label: "Overdue", variant: "destructive" };
-  return { label: "Open", variant: "outline" };
+const STATUS_BADGE: Record<string, "default" | "secondary" | "outline" | "destructive"> = {
+  open: "outline",
+  in_progress: "default",
+  done: "secondary",
+};
+
+function isOverdue(task: PmTask) {
+  return task.status !== "done" && !!task.due_date && parseLocalDate(task.due_date) < new Date();
 }
 
-// URL helpers duplicated here to avoid importing from ContactTaskList's internal helpers
-function extractProjectGid(url: string | null): string | null {
-  if (!url) return null;
-  const newMatch = url.match(/\/project\/(\d+)/);
-  if (newMatch) return newMatch[1];
-  const oldMatch = url.match(/app\.asana\.com\/0\/(\d+)/);
-  return oldMatch ? oldMatch[1] : null;
+function statusLabel(task: PmTask) {
+  if (isOverdue(task)) return "Overdue";
+  if (task.status === "in_progress") return "In Progress";
+  if (task.status === "done") return "Done";
+  return "Open";
 }
 
-function extractTaskGid(url: string | null): string | null {
-  if (!url) return null;
-  const newTaskMatch = url.match(/\/task\/(\d+)/);
-  if (newTaskMatch) return newTaskMatch[1];
-  const listTaskMatch = url.match(/\/project\/\d+\/list\/(\d+)/);
-  if (listTaskMatch) return listTaskMatch[1];
-  const twoSegment = url.match(/app\.asana\.com\/0\/\d+\/(\d+)/);
-  if (twoSegment) return twoSegment[1];
-  const singleSegment = url.match(/app\.asana\.com\/0\/(\d+)\/f/);
-  if (singleSegment) return singleSegment[1];
-  return null;
-}
-
-function isTaskUrl(url: string | null): boolean {
-  if (!url) return false;
-  if (/\/task\/\d+/.test(url)) return true;
-  if (/\/project\/\d+\/list\/\d+/.test(url)) return true;
-  if (/app\.asana\.com\/0\/\d+\/f/.test(url)) return true;
-  if (/app\.asana\.com\/0\/\d+\/\d+/.test(url) && !/\/(list|board|timeline|calendar)/.test(url)) return true;
-  return false;
-}
-
-interface TaskWithOwner extends AsanaTask {
-  ownerContactId: string;
-  ownerName: string;
-}
-
-export function HouseholdTaskRollup({ members }: Props) {
-  const [tasks, setTasks] = useState<TaskWithOwner[]>([]);
+export function HouseholdTaskRollup({ householdId, members }: Props) {
+  const [tasks, setTasks] = useState<PmTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showCompleted, setShowCompleted] = useState(false);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const data = await getTaskAgent().listTasks({ household_id: householdId });
+      const roots = data.filter((t) => !t.parent_task_id);
+      roots.sort((a, b) => {
+        if ((a.status === "done") !== (b.status === "done")) return a.status === "done" ? 1 : -1;
+        const da = a.due_date ? parseLocalDate(a.due_date).getTime() : Infinity;
+        const db = b.due_date ? parseLocalDate(b.due_date).getTime() : Infinity;
+        return da - db;
+      });
+      setTasks(roots);
+      setError(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to load tasks");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchAll = async () => {
-      const membersWithAsana = members.filter((m) => m.asana_url);
-      if (membersWithAsana.length === 0) {
-        setLoading(false);
-        return;
-      }
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [householdId]);
 
-      try {
-        const results = await Promise.all(
-          membersWithAsana.map(async (member) => {
-            const taskBased = isTaskUrl(member.asana_url);
-            const body: any = {};
+  const handleTaskChanged = (updated: PmTask) => {
+    setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+  };
 
-            if (taskBased) {
-              const taskGid = extractTaskGid(member.asana_url);
-              if (!taskGid) return [];
-              body.action = "getSubtasks";
-              body.task_gid = taskGid;
-            } else {
-              const projectGid = extractProjectGid(member.asana_url);
-              if (!projectGid) return [];
-              body.action = "getTasksForProject";
-              body.project_gid = projectGid;
-            }
-
-            const res = await supabase.functions.invoke("asana-service", { body });
-            if (res.error || res.data?.error) return [];
-            const memberTasks: AsanaTask[] = res.data?.data || [];
-            return memberTasks.map((t) => ({
-              ...t,
-              ownerContactId: member.id,
-              ownerName: `${member.first_name} ${member.last_name || ""}`.trim(),
-            }));
-          }),
-        );
-
-        // Flatten, deduplicate by GID, sort by due date
-        const seen = new Set<string>();
-        const merged: TaskWithOwner[] = [];
-        for (const batch of results) {
-          for (const task of batch) {
-            if (!seen.has(task.gid)) {
-              seen.add(task.gid);
-              merged.push(task);
-            }
-          }
-        }
-
-        merged.sort((a, b) => {
-          if (a.completed !== b.completed) return a.completed ? 1 : -1;
-          const da = a.due_on ? parseLocalDate(a.due_on).getTime() : Infinity;
-          const db = b.due_on ? parseLocalDate(b.due_on).getTime() : Infinity;
-          return da - db;
-        });
-
-        setTasks(merged);
-      } catch (e: any) {
-        setError(e.message || "Failed to load tasks");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchAll();
-  }, [members]);
+  const ownerName = (task: PmTask) => {
+    if (!task.contact_id) return null;
+    const m = members.find((mm) => mm.id === task.contact_id);
+    return m ? `${m.first_name} ${m.last_name || ""}`.trim() : null;
+  };
 
   if (loading) {
     return (
@@ -188,8 +114,60 @@ export function HouseholdTaskRollup({ members }: Props) {
     );
   }
 
-  const activeTasks = tasks.filter((t) => !t.completed);
-  const completedTasks = tasks.filter((t) => t.completed);
+  const activeTasks = tasks.filter((t) => t.status !== "done");
+  const completedTasks = tasks.filter((t) => t.status === "done");
+
+  const renderRow = (task: PmTask) => {
+    const owner = ownerName(task);
+    const isExpanded = expandedId === task.id;
+    const completed = task.status === "done";
+    return (
+      <div key={task.id}>
+        <div
+          onClick={() => setExpandedId(isExpanded ? null : task.id)}
+          className={cn(
+            "flex cursor-pointer items-center gap-3 rounded-lg border border-border px-4 py-3 transition-colors",
+            isExpanded ? "bg-muted/50" : completed ? "opacity-50 hover:bg-muted/30" : "bg-muted/30 hover:bg-muted/50",
+          )}
+        >
+          {completed ? (
+            <CheckSquare className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+          ) : (
+            <Clock className="h-4 w-4 shrink-0 text-accent" />
+          )}
+          <div className="min-w-0 flex-1">
+            <p className={cn("text-sm font-medium text-foreground truncate", completed && "line-through text-muted-foreground")}>
+              {task.title}
+            </p>
+            <div className="flex items-center gap-2 mt-0.5">
+              {owner && (
+                <Link
+                  to={`/contacts/${task.contact_id}`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="text-[10px] text-accent hover:underline"
+                >
+                  {owner}
+                </Link>
+              )}
+              {task.due_date && !completed && (
+                <span className="text-[10px] text-muted-foreground">
+                  Due {parseLocalDate(task.due_date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                </span>
+              )}
+            </div>
+          </div>
+          <Badge variant={isOverdue(task) ? "destructive" : STATUS_BADGE[task.status]} className="text-[9px] shrink-0">
+            {statusLabel(task)}
+          </Badge>
+        </div>
+        {isExpanded && (
+          <div className="mt-1 rounded-md border border-border bg-background p-3">
+            <TaskDetailPanel task={task} onChanged={handleTaskChanged} />
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <Card>
@@ -213,36 +191,7 @@ export function HouseholdTaskRollup({ members }: Props) {
           </p>
         ) : (
           <>
-            {activeTasks.map((task) => {
-              const status = getTaskStatus(task);
-              return (
-                <div
-                  key={task.gid}
-                  className="flex items-center gap-3 rounded-lg border border-border bg-muted/30 px-4 py-3"
-                >
-                  <Clock className="h-4 w-4 text-accent shrink-0" />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-foreground truncate">{task.name}</p>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <Link
-                        to={`/contacts/${task.ownerContactId}`}
-                        className="text-[10px] text-accent hover:underline"
-                      >
-                        {task.ownerName}
-                      </Link>
-                      {task.due_on && (
-                        <span className="text-[10px] text-muted-foreground">
-                          Due {parseLocalDate(task.due_on).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <Badge variant={status.variant} className="text-[9px] shrink-0">
-                    {status.label}
-                  </Badge>
-                </div>
-              );
-            })}
+            {activeTasks.map(renderRow)}
 
             {completedTasks.length > 0 && (
               <div className="pt-2">
@@ -253,21 +202,9 @@ export function HouseholdTaskRollup({ members }: Props) {
                   {showCompleted ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
                   Completed ({completedTasks.length})
                 </button>
-                {showCompleted && completedTasks.slice(0, 5).map((task) => (
-                  <div
-                    key={task.gid}
-                    className="flex items-center gap-3 rounded-lg px-4 py-2 opacity-50"
-                  >
-                    <CheckSquare className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                    <p className="text-sm text-muted-foreground truncate line-through flex-1">{task.name}</p>
-                    <Link
-                      to={`/contacts/${task.ownerContactId}`}
-                      className="text-[10px] text-muted-foreground hover:underline shrink-0"
-                    >
-                      {task.ownerName}
-                    </Link>
-                  </div>
-                ))}
+                {showCompleted && (
+                  <div className="space-y-1.5">{completedTasks.slice(0, 5).map(renderRow)}</div>
+                )}
               </div>
             )}
           </>

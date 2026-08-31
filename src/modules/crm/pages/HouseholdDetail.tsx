@@ -1316,7 +1316,7 @@ const HouseholdDetail = () => {
           {/* Action Items */}
           <TabsContent value="actions" className="space-y-6 mt-4">
             <HouseholdStatementIngestion householdId={id!} members={members} onIngested={fetchData} />
-            <HouseholdTaskRollup members={members} />
+            <HouseholdTaskRollup householdId={id!} members={members} />
             <HouseholdRequestsRollup members={members} />
             <HouseholdAuditTrailRollup members={members} />
             <HoldingTank householdId={id!} onAccountMoved={() => fetchData()} />

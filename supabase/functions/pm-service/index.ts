@@ -130,6 +130,13 @@ Deno.serve(async (req) => {
     if (action === "createTask") {
       const { title, description, project_id, parent_task_id, due_date, assignee_id, household_id, contact_id, corporation_id } = body;
       if (!String(title || "").trim()) return json({ ok: false, error: "Task title is required" }, 400);
+
+      let resolvedHouseholdId = household_id || null;
+      if (!resolvedHouseholdId && contact_id) {
+        const { data: contact } = await db.from("contacts").select("household_id").eq("id", contact_id).maybeSingle();
+        resolvedHouseholdId = contact?.household_id || null;
+      }
+
       const { data, error } = await db
         .from("pm_tasks")
         .insert({
@@ -139,7 +146,7 @@ Deno.serve(async (req) => {
           parent_task_id: parent_task_id || null,
           due_date: due_date || null,
           assignee_id: assignee_id || null,
-          household_id: household_id || null,
+          household_id: resolvedHouseholdId,
           contact_id: contact_id || null,
           corporation_id: corporation_id || null,
           created_by: userId,
