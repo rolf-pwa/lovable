@@ -859,6 +859,124 @@ const HouseholdDetail = () => {
 
               {/* Right rail: AUM Stats */}
               <div className="space-y-4">
+                <CollapsibleCard
+                  icon={Wallet}
+                  iconBgClassName="bg-sanctuary-bronze/10"
+                  iconColorClassName="text-sanctuary-bronze"
+                  title="Assets Under Management"
+                  headerRight={
+                    <p className="text-xl font-bold text-sanctuary-bronze">
+                      {formatCurrency(totalVineyard + totalStorehouses + totalCorpAssets + totalHoldingTank)}
+                    </p>
+                  }
+                >
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="flex items-center gap-2 text-muted-foreground">
+                        <Grape className="h-3.5 w-3.5" /> Portfolio
+                      </span>
+                      <span className="font-semibold text-primary">{formatCurrency(totalVineyard)}</span>
+                    </div>
+                    {[
+                      { num: 1, label: "Liquidity Reserve" },
+                      { num: 2, label: "Strategic Reserve" },
+                      { num: 3, label: "Philanthropic Trust" },
+                      { num: 4, label: "Legacy Trust" },
+                    ].map(({ num, label }) => {
+                      const shForNum = storehouses.filter((s: any) => s.storehouse_number === num);
+                      const shIds = new Set(shForNum.map((s: any) => s.id));
+                      const isLegacy = num === 4;
+                      const shTotal = shForNum
+                        .filter((s: any) => isLegacy || s.asset_type !== 'Primary Residence & Protected Legacy Accounts')
+                        .reduce((sum: number, s: any) => sum + (Number(s.current_value) || 0), 0);
+                      const cashTotal = num === 2
+                        ? insurancePolicies.reduce((sum: number, p: any) => sum + (Number(p.cash_value) || 0), 0)
+                        : 0;
+                      const coverageTotal = isLegacy
+                        ? insurancePolicies
+                            .filter((p: any) => p.coverage_storehouse_id && shIds.has(p.coverage_storehouse_id))
+                            .reduce((sum: number, p: any) => sum + (Number(p.coverage_amount) || 0), 0)
+                        : 0;
+                      const rowTotal = shTotal + cashTotal + coverageTotal;
+                      if (rowTotal === 0 && shForNum.length === 0) return null;
+                      return (
+                        <div key={num} className="flex items-center justify-between text-sm">
+                          <span className="flex items-center gap-2 text-muted-foreground">
+                            <Landmark className="h-3.5 w-3.5" /> {label}
+                          </span>
+                          <span className="font-semibold text-accent">{formatCurrency(rowTotal)}</span>
+                        </div>
+                      );
+                    })}
+                    {totalHoldingTank > 0 && (
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="flex items-center gap-2 text-muted-foreground">
+                          <Anchor className="h-3.5 w-3.5" /> Holding Tank
+                        </span>
+                        <span className="font-semibold text-amber-600">{formatCurrency(totalHoldingTank)}</span>
+                      </div>
+                    )}
+                    {corporations.length > 0 && (
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="flex items-center gap-2 text-muted-foreground">
+                          <Building2 className="h-3.5 w-3.5" /> Corp Assets
+                        </span>
+                        <span className="font-semibold text-foreground">{formatCurrency(totalCorpAssets)}</span>
+                      </div>
+                    )}
+                    {totalLiabilities > 0 && (
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="flex items-center gap-2 text-muted-foreground">
+                          <TrendingDown className="h-3.5 w-3.5" /> Liabilities
+                        </span>
+                        <span className="font-semibold text-destructive">-{formatCurrency(totalLiabilities)}</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="pt-3 border-t border-border">
+                    <p className="text-xs text-muted-foreground">Net Worth</p>
+                    <p className="text-2xl font-bold text-foreground mb-2">{formatCurrency(netWorth)}</p>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="flex items-center gap-2 text-muted-foreground">
+                        <User className="h-3.5 w-3.5" /> Members
+                      </span>
+                      <span className="font-semibold text-foreground">{members.length}</span>
+                    </div>
+                  </div>
+                </CollapsibleCard>
+
+                {insurancePolicies.length > 0 && (() => {
+                  const totalCoverage = insurancePolicies.reduce((s: number, p: any) => s + (Number(p.coverage_amount) || 0), 0);
+                  const memberById = new Map(members.map((m: any) => [m.id, m]));
+                  const corpById = new Map(corporations.map((c: any) => [c.id, c]));
+                  const ownerName = (p: any) => {
+                    if (p.corporation_id) return corpById.get(p.corporation_id)?.name ?? "Corporation";
+                    const m = memberById.get(p.contact_id);
+                    return m ? `${m.first_name} ${m.last_name}` : "Household";
+                  };
+                  return (
+                    <CollapsibleCard
+                      icon={Shield}
+                      iconBgClassName="bg-sanctuary-bronze/10"
+                      iconColorClassName="text-sanctuary-bronze"
+                      title="Insurance"
+                      headerRight={
+                        <p className="text-xl font-bold text-sanctuary-bronze">{formatCurrency(totalCoverage)}</p>
+                      }
+                      contentClassName="space-y-2"
+                    >
+                      {insurancePolicies.map((p: any) => (
+                        <div key={p.id} className="flex items-center justify-between text-sm">
+                          <span className="flex items-center gap-2 text-muted-foreground">
+                            <Shield className="h-3.5 w-3.5" /> {policyTypeLabel(p.policy_type)} — {ownerName(p)}
+                          </span>
+                          <span className="font-semibold text-foreground">{formatCurrency(p.coverage_amount)}</span>
+                        </div>
+                      ))}
+                    </CollapsibleCard>
+                  );
+                })()}
+
                 <Card>
                   <CardHeader className="pb-3">
                     <CardTitle className="text-base">AI Workbench</CardTitle>
@@ -1051,130 +1169,6 @@ const HouseholdDetail = () => {
                   </Card>
                 )}
                 <CharterRatificationTile householdId={id} />
-                <Card className="border-sanctuary-bronze/30">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm uppercase tracking-widest text-sanctuary-bronze">
-                      Assets Under Management
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div>
-                      <p className="text-xs text-muted-foreground">Total Household AUM</p>
-                      <p className="text-3xl font-bold text-foreground">
-                        {formatCurrency(totalVineyard + totalStorehouses + totalCorpAssets + totalHoldingTank)}
-                      </p>
-                    </div>
-                    <div className="space-y-2 pt-2 border-t border-border">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="flex items-center gap-2 text-muted-foreground">
-                          <Grape className="h-3.5 w-3.5" /> Portfolio
-                        </span>
-                        <span className="font-semibold text-primary">{formatCurrency(totalVineyard)}</span>
-                      </div>
-                      {[
-                        { num: 1, label: "Liquidity Reserve" },
-                        { num: 2, label: "Strategic Reserve" },
-                        { num: 3, label: "Philanthropic Trust" },
-                        { num: 4, label: "Legacy Trust" },
-                      ].map(({ num, label }) => {
-                        const shForNum = storehouses.filter((s: any) => s.storehouse_number === num);
-                        const shIds = new Set(shForNum.map((s: any) => s.id));
-                        const isLegacy = num === 4;
-                        const shTotal = shForNum
-                          .filter((s: any) => isLegacy || s.asset_type !== 'Primary Residence & Protected Legacy Accounts')
-                          .reduce((sum: number, s: any) => sum + (Number(s.current_value) || 0), 0);
-                        const cashTotal = num === 2
-                          ? insurancePolicies.reduce((sum: number, p: any) => sum + (Number(p.cash_value) || 0), 0)
-                          : 0;
-                        const coverageTotal = isLegacy
-                          ? insurancePolicies
-                              .filter((p: any) => p.coverage_storehouse_id && shIds.has(p.coverage_storehouse_id))
-                              .reduce((sum: number, p: any) => sum + (Number(p.coverage_amount) || 0), 0)
-                          : 0;
-                        const rowTotal = shTotal + cashTotal + coverageTotal;
-                        if (rowTotal === 0 && shForNum.length === 0) return null;
-                        return (
-                          <div key={num} className="flex items-center justify-between text-sm">
-                            <span className="flex items-center gap-2 text-muted-foreground">
-                              <Landmark className="h-3.5 w-3.5" /> {label}
-                            </span>
-                            <span className="font-semibold text-accent">{formatCurrency(rowTotal)}</span>
-                          </div>
-                        );
-                      })}
-                      {totalHoldingTank > 0 && (
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="flex items-center gap-2 text-muted-foreground">
-                            <Anchor className="h-3.5 w-3.5" /> Holding Tank
-                          </span>
-                          <span className="font-semibold text-amber-600">{formatCurrency(totalHoldingTank)}</span>
-                        </div>
-                      )}
-                      {corporations.length > 0 && (
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="flex items-center gap-2 text-muted-foreground">
-                            <Building2 className="h-3.5 w-3.5" /> Corp Assets
-                          </span>
-                          <span className="font-semibold text-foreground">{formatCurrency(totalCorpAssets)}</span>
-                        </div>
-                      )}
-                      {totalLiabilities > 0 && (
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="flex items-center gap-2 text-muted-foreground">
-                            <TrendingDown className="h-3.5 w-3.5" /> Liabilities
-                          </span>
-                          <span className="font-semibold text-destructive">-{formatCurrency(totalLiabilities)}</span>
-                        </div>
-                      )}
-                    </div>
-                    <div className="pt-3 border-t border-border">
-                      <p className="text-xs text-muted-foreground">Net Worth</p>
-                      <p className="text-2xl font-bold text-foreground mb-2">{formatCurrency(netWorth)}</p>
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="flex items-center gap-2 text-muted-foreground">
-                          <User className="h-3.5 w-3.5" /> Members
-                        </span>
-                        <span className="font-semibold text-foreground">{members.length}</span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {insurancePolicies.length > 0 && (() => {
-                  const totalCoverage = insurancePolicies.reduce((s: number, p: any) => s + (Number(p.coverage_amount) || 0), 0);
-                  const memberById = new Map(members.map((m: any) => [m.id, m]));
-                  const corpById = new Map(corporations.map((c: any) => [c.id, c]));
-                  const ownerName = (p: any) => {
-                    if (p.corporation_id) return corpById.get(p.corporation_id)?.name ?? "Corporation";
-                    const m = memberById.get(p.contact_id);
-                    return m ? `${m.first_name} ${m.last_name}` : "Household";
-                  };
-                  return (
-                    <Card className="border-sanctuary-bronze/30">
-                      <CardHeader className="pb-3">
-                        <CardTitle className="text-sm uppercase tracking-widest text-sanctuary-bronze">
-                          Insurance
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div>
-                          <p className="text-xs text-muted-foreground">Total Coverage</p>
-                          <p className="text-3xl font-bold text-foreground">{formatCurrency(totalCoverage)}</p>
-                        </div>
-                        <div className="space-y-2 pt-2 border-t border-border">
-                          {insurancePolicies.map((p: any) => (
-                            <div key={p.id} className="flex items-center justify-between text-sm">
-                              <span className="flex items-center gap-2 text-muted-foreground">
-                                <Shield className="h-3.5 w-3.5" /> {policyTypeLabel(p.policy_type)} — {ownerName(p)}
-                              </span>
-                              <span className="font-semibold text-foreground">{formatCurrency(p.coverage_amount)}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })()}
 
                 <Card>
                   <CardContent className="py-4">

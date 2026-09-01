@@ -30,6 +30,8 @@ import {
 } from "lucide-react";
 import { FamilyRollup } from "@/modules/crm/components/FamilyRollup";
 import { AddCompanyDialog } from "@/modules/crm/components/AddCompanyDialog";
+import { CollapsibleCard } from "@/shared/components/CollapsibleCard";
+import { policyTypeLabel } from "@/shared/lib/insurance";
 
 const ROLE_ICONS: Record<string, typeof Crown> = {
   head_of_family: Crown,
@@ -116,7 +118,7 @@ const FamilyDetail = () => {
         supabase.from("vineyard_accounts").select("id, contact_id, account_name, account_type, current_value, book_value").in("contact_id", memberIds),
         supabase.from("storehouses").select("id, contact_id, storehouse_number, label, current_value, book_value, asset_type").in("contact_id", memberIds),
         supabase.from("holding_tank").select("id, contact_id, account_name, account_type, current_value, book_value, custodian, expected_deposit_date").in("contact_id", memberIds).neq("status", "moved"),
-        supabase.from("insurance_policies").select("id, contact_id, cash_value, coverage_amount, cash_value_storehouse_id, coverage_storehouse_id").in("contact_id", memberIds),
+        supabase.from("insurance_policies").select("id, contact_id, policy_type, carrier, cash_value, coverage_amount, cash_value_storehouse_id, coverage_storehouse_id").in("contact_id", memberIds),
       ]);
       setVineyard(v || []);
       setStorehouses(s || []);
@@ -310,6 +312,74 @@ const FamilyDetail = () => {
         <div className="flex gap-4 items-start">
           {/* Sidebar */}
           <div className="w-80 shrink-0 space-y-4">
+            <CollapsibleCard
+              icon={Wallet}
+              iconBgClassName="bg-sanctuary-bronze/10"
+              iconColorClassName="text-sanctuary-bronze"
+              title="Assets Under Management"
+              headerRight={
+                <p className="text-xl font-bold text-sanctuary-bronze">{formatCurrency(totalAUM)}</p>
+              }
+            >
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="flex items-center gap-2 text-muted-foreground">
+                    <Grape className="h-3.5 w-3.5" /> Portfolio
+                  </span>
+                  <span className="font-semibold text-primary">{formatCurrency(totalVineyard)}</span>
+                </div>
+                {storehouseBreakdown.map(({ num, total }) => {
+                  if (total === 0) return null;
+                  return (
+                    <div key={num} className="flex items-center justify-between text-sm">
+                      <span className="flex items-center gap-2 text-muted-foreground">
+                        <Landmark className="h-3.5 w-3.5" /> {storehouseName(num)}
+                      </span>
+                      <span className="font-semibold text-accent">{formatCurrency(total)}</span>
+                    </div>
+                  );
+                })}
+                {totalHolding > 0 && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="flex items-center gap-2 text-muted-foreground">
+                      <Anchor className="h-3.5 w-3.5" /> Holding Tank
+                    </span>
+                    <span className="font-semibold text-amber-600">{formatCurrency(totalHolding)}</span>
+                  </div>
+                )}
+              </div>
+            </CollapsibleCard>
+
+            {insurancePolicies.length > 0 && (() => {
+              const totalCoverage = insurancePolicies.reduce((s: number, p: any) => s + (Number(p.coverage_amount) || 0), 0);
+              const contactById = new Map(contacts.map((c: any) => [c.id, c]));
+              const ownerName = (p: any) => {
+                const c = contactById.get(p.contact_id);
+                return c ? `${c.first_name} ${c.last_name}` : "Family";
+              };
+              return (
+                <CollapsibleCard
+                  icon={Shield}
+                  iconBgClassName="bg-sanctuary-bronze/10"
+                  iconColorClassName="text-sanctuary-bronze"
+                  title="Insurance"
+                  headerRight={
+                    <p className="text-xl font-bold text-sanctuary-bronze">{formatCurrency(totalCoverage)}</p>
+                  }
+                  contentClassName="space-y-2"
+                >
+                  {insurancePolicies.map((p: any) => (
+                    <div key={p.id} className="flex items-center justify-between text-sm">
+                      <span className="flex items-center gap-2 text-muted-foreground">
+                        <Shield className="h-3.5 w-3.5" /> {policyTypeLabel(p.policy_type)} — {ownerName(p)}
+                      </span>
+                      <span className="font-semibold text-foreground">{formatCurrency(p.coverage_amount)}</span>
+                    </div>
+                  ))}
+                </CollapsibleCard>
+              );
+            })()}
+
             {/* Holding Tank */}
             <Card className="border-amber-500/20">
               <CardHeader
