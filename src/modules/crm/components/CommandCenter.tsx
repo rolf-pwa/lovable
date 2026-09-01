@@ -6,7 +6,7 @@ import { Badge } from "@/shared/components/ui/badge";
 import { Input } from "@/shared/components/ui/input";
 import {
   Calendar, Plus, Loader2, Link2Off, Inbox, ChevronRight,
-  Grape, Landmark, Anchor, Building2, Pin, Pencil, Check, X,
+  Grape, Landmark, Anchor, Building2, Pin, Pencil, Check, X, Sparkles,
 } from "lucide-react";
 import { format, parseISO, isToday, differenceInCalendarDays } from "date-fns";
 import { parseLocalDate } from "@/shared/lib/date-utils";
@@ -84,6 +84,8 @@ export function CommandCenter() {
         )}
       </div>
 
+      <DailyBriefingPlaceholder />
+
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <MyTasksWidget />
@@ -95,6 +97,26 @@ export function CommandCenter() {
         </div>
       </div>
     </div>
+  );
+}
+
+// Placeholder for a future feature: an AI-generated summary of the day
+// (today's priority tasks, meetings, and anything needing attention across
+// the firm). Not built yet — this just reserves its spot on the dashboard.
+function DailyBriefingPlaceholder() {
+  return (
+    <Card className="border-dashed border-border">
+      <CardContent className="flex items-center gap-3 p-4">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-sanctuary-bronze/10 text-sanctuary-bronze">
+          <Sparkles className="h-4 w-4" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold text-foreground">The Daily Briefing</p>
+          <p className="text-xs text-muted-foreground">An AI-generated summary of your day — coming soon.</p>
+        </div>
+        <Badge variant="outline" className="shrink-0 text-[10px]">Coming soon</Badge>
+      </CardContent>
+    </Card>
   );
 }
 
