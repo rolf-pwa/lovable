@@ -315,7 +315,7 @@ function MyTasksWidget() {
   };
 
   return (
-    <Card className="h-full">
+    <Card>
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className="flex items-center gap-2 text-base">
           <Inbox className="h-4 w-4 text-sanctuary-bronze" />
@@ -335,7 +335,10 @@ function MyTasksWidget() {
         ) : error ? (
           <p className="text-sm text-destructive">Failed to load tasks</p>
         ) : tasks.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No tasks assigned to you.</p>
+          <div className="flex flex-col items-center gap-2 py-8 text-center">
+            <Inbox className="h-6 w-6 text-muted-foreground/30" />
+            <p className="text-sm text-muted-foreground">No tasks assigned to you.</p>
+          </div>
         ) : (
           <div className="space-y-1.5">
             {tasks.slice(0, 20).map((task) => {
