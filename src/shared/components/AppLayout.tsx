@@ -50,7 +50,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         <div className="flex flex-1 overflow-hidden">
           <AppSidebar />
           <main className="flex-1 overflow-y-auto">
-            <div className="max-w-6xl px-6 py-8">{children}</div>
+            <div className="max-w-screen-2xl px-6 py-8">{children}</div>
           </main>
         </div>
         <AssistantSidebar />
