@@ -162,3 +162,13 @@
     font-size: 0.75rem;
   }
 }
+
+/* Advisor app card headings use the sans body font instead of the display
+   serif — Rolf's preference after seeing "The Daily Briefing" placeholder.
+   Scoped to .advisor-app (AppLayout's root) so the client Portal, which
+   also renders <CardTitle>, keeps its Playfair Display card headings.
+   Deliberately outside @layer so it beats both the base h1-h4 rule and the
+   font-display utility class without needing !important. */
+.advisor-app .card-title {
+  font-family: theme('fontFamily.sans');
+}

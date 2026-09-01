@@ -15,7 +15,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <SidebarCollapseProvider>
-      <div className="flex h-screen flex-col overflow-hidden bg-background">
+      <div className="advisor-app flex h-screen flex-col overflow-hidden bg-background">
         {/* Header — full width, above the sidebar and the content */}
         <header className="flex shrink-0 items-center justify-between gap-4 border-b border-border bg-card px-4 py-2.5">
           <img src={prosperwiseWordmark} alt="ProsperWise" className="h-6 shrink-0" />
