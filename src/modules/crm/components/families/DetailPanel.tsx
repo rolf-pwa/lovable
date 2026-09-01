@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { supabase } from "@/shared/integrations/supabase/client";
 import { Button } from "@/shared/components/ui/button";
 import { Badge } from "@/shared/components/ui/badge";
 import { InlineEdit } from "@/shared/components/InlineEdit";
@@ -38,11 +39,21 @@ import {
   User,
   Home,
   TreesIcon,
+  Wallet,
+  Loader2,
 } from "lucide-react";
 import { ROLE_ICONS, ROLE_LABELS } from "./FamilyTreeList";
 import type { ResolvedSelection } from "./types";
 
 type ConfirmKind = "deleteFamily" | "deleteHousehold" | "markDeceased" | "removeIndividual" | null;
+
+const formatCurrency = (value: number) =>
+  new Intl.NumberFormat("en-CA", {
+    style: "currency",
+    currency: "CAD",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(value);
 
 interface Props {
   selection: ResolvedSelection;
@@ -82,10 +93,55 @@ export function DetailPanel({
   unlinkIndividual,
 }: Props) {
   const [confirm, setConfirm] = useState<ConfirmKind>(null);
+  const [aumTotal, setAumTotal] = useState<number | null>(null);
+  const [aumLoading, setAumLoading] = useState(true);
 
   const { family } = selection;
   const household = selection.type !== "family" ? selection.household : undefined;
   const individual = selection.type === "contact" ? selection.individual : undefined;
+
+  useEffect(() => {
+    const contactIds =
+      selection.type === "family"
+        ? selection.family.households.flatMap((h) => h.individuals.map((i) => i.id))
+        : selection.type === "household"
+          ? selection.household.individuals.map((i) => i.id)
+          : [selection.individual.id];
+
+    if (contactIds.length === 0) {
+      setAumTotal(0);
+      setAumLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setAumLoading(true);
+    (async () => {
+      const [{ data: vineyard }, { data: storehouses }, { data: holdingTank }, { data: insurance }] = await Promise.all([
+        supabase.from("vineyard_accounts").select("current_value").in("contact_id", contactIds),
+        supabase.from("storehouses").select("current_value, asset_type").in("contact_id", contactIds),
+        supabase.from("holding_tank").select("current_value").in("contact_id", contactIds).neq("status", "moved"),
+        supabase.from("insurance_policies").select("cash_value").in("contact_id", contactIds),
+      ]);
+      if (cancelled) return;
+
+      const sum = (rows: any[] | null, key: string) =>
+        (rows || []).reduce((s, r) => s + (Number(r[key]) || 0), 0);
+
+      const totalVineyard = sum(vineyard, "current_value");
+      const nonRealEstate = (storehouses || []).filter((s: any) => s.asset_type !== "Primary Residence & Protected Legacy Accounts");
+      const totalStorehouses = sum(nonRealEstate, "current_value") + sum(insurance, "cash_value");
+      const totalHoldingTank = sum(holdingTank, "current_value");
+
+      setAumTotal(totalVineyard + totalStorehouses + totalHoldingTank);
+      setAumLoading(false);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selection.type, selection.type === "family" ? selection.family.id : selection.type === "household" ? selection.household.id : selection.individual.id]);
 
   const name =
     selection.type === "family"
@@ -95,7 +151,7 @@ export function DetailPanel({
         : `${individual!.first_name} ${individual!.last_name || ""}`.trim();
 
   return (
-    <div className="flex h-full w-[400px] shrink-0 flex-col border-l border-border bg-card">
+    <div className="sticky top-6 flex max-h-[calc(100vh-6rem)] w-[400px] shrink-0 flex-col overflow-hidden rounded-lg border border-border bg-card shadow-[0_1px_2px_hsl(var(--pw-navy)/0.05)]">
       <div className="flex items-center justify-between border-b border-border px-4 py-3">
         <div className="min-w-0">
           <p className="truncate text-xs text-muted-foreground">
@@ -183,6 +239,18 @@ export function DetailPanel({
             />
           )}
           {selection.type === "contact" && <p className="font-serif text-lg font-semibold">{name}</p>}
+        </div>
+
+        <div className="flex items-center gap-2 rounded-md bg-muted/50 px-3 py-2">
+          <Wallet className="h-4 w-4 shrink-0 text-sanctuary-bronze" />
+          <span className="text-xs text-muted-foreground">Total AUM</span>
+          <span className="ml-auto">
+            {aumLoading ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+            ) : (
+              <span className="text-sm font-bold text-sanctuary-bronze">{formatCurrency(aumTotal || 0)}</span>
+            )}
+          </span>
         </div>
 
         {/* Family body */}
