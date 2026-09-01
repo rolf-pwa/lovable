@@ -1,13 +1,14 @@
-import { useMemo, useState, useEffect, useRef } from "react";
+import { useMemo, useState, useEffect } from "react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Button } from "@/shared/components/ui/button";
 import { Badge } from "@/shared/components/ui/badge";
+import { Input } from "@/shared/components/ui/input";
 import {
-  Calendar, Mail, Plus, Loader2, Link2Off, Inbox, ChevronRight,
-  Grape, Landmark, Anchor, Building2,
+  Calendar, Plus, Loader2, Link2Off, Inbox, ChevronRight,
+  Grape, Landmark, Anchor, Building2, Pin, Pencil, Check, X,
 } from "lucide-react";
-import { format, parseISO } from "date-fns";
+import { format, parseISO, isToday, differenceInCalendarDays } from "date-fns";
 import { parseLocalDate } from "@/shared/lib/date-utils";
 import { toast } from "sonner";
 import { supabase } from "@/shared/integrations/supabase/client";
@@ -22,174 +23,86 @@ import {
   useCalendarEvents,
 } from "@/shared/hooks/useGoogle";
 
+const DEFAULT_PINNED_PROJECT_GID = "1214066166978534";
+const PINNED_PROJECT_LABEL = "Pinned Project";
+const PINNED_PROJECT_STORAGE_KEY = "dashboard.pinnedProjectGid";
+
+function extractProjectGid(input: string): string | null {
+  const trimmed = input.trim();
+  if (!trimmed) return null;
+  if (/^\d+$/.test(trimmed)) return trimmed;
+  const m = trimmed.match(/(?:project\/|\/0\/)(\d+)/);
+  return m ? m[1] : null;
+}
 
 export function CommandCenter() {
   const { data: status, isLoading: statusLoading } = useGoogleStatus();
   const connectGoogle = useConnectGoogle();
   const disconnectGoogle = useDisconnectGoogle();
-  const isConnected = status?.connected;
-
-  if (statusLoading) {
-    return (
-      <Card>
-        <CardContent className="flex items-center justify-center p-8">
-          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (!isConnected) {
-    return (
-      <Card className="border-dashed border-border">
-        <CardContent className="flex flex-col items-center gap-4 p-10 text-center">
-          <div className="flex gap-3 text-muted-foreground/30">
-            <Calendar className="h-8 w-8" />
-            <Mail className="h-8 w-8" />
-          </div>
-          <div>
-            <h3 className="text-base font-semibold text-foreground">Connect Google Workspace</h3>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Link your Google account to view Calendar events and enable task automation.
-            </p>
-          </div>
-          <Button
-            onClick={() => connectGoogle.mutate()}
-            disabled={connectGoogle.isPending}
-            className="bg-primary text-primary-foreground hover:bg-primary/90"
-          >
-            {connectGoogle.isPending ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
-                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4" />
-                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
-                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
-                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
-              </svg>
-            )}
-            Connect Google Account
-          </Button>
-        </CardContent>
-      </Card>
-    );
-  }
+  const isConnected = !!status?.connected;
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <h2 className="text-lg font-semibold">Command Center</h2>
-          <Badge className="bg-sanctuary-green/20 text-sanctuary-green border-sanctuary-green/30">
-            Connected
-          </Badge>
-        </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => {
-            disconnectGoogle.mutate(undefined, {
-              onSuccess: () => toast.success("Google disconnected"),
-            });
-          }}
-          className="text-muted-foreground text-xs"
-        >
-          <Link2Off className="mr-1 h-3 w-3" />
-          Disconnect
-        </Button>
+        <h1 className="text-2xl font-bold">Dashboard</h1>
+        {statusLoading ? (
+          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+        ) : isConnected ? (
+          <div className="flex items-center gap-2">
+            <Badge className="bg-sanctuary-green/20 text-sanctuary-green border-sanctuary-green/30">
+              Google Connected
+            </Badge>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                disconnectGoogle.mutate(undefined, {
+                  onSuccess: () => toast.success("Google disconnected"),
+                });
+              }}
+              className="text-muted-foreground text-xs"
+            >
+              <Link2Off className="mr-1 h-3 w-3" />
+              Disconnect
+            </Button>
+          </div>
+        ) : (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => connectGoogle.mutate()}
+            disabled={connectGoogle.isPending}
+            className="gap-1.5"
+          >
+            {connectGoogle.isPending ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Calendar className="h-3.5 w-3.5" />
+            )}
+            Connect Google
+          </Button>
+        )}
       </div>
-      <div className="grid gap-4 grid-cols-1 lg:grid-cols-3">
+
+      <FirmAumWidget />
+
+      <div className="grid gap-4 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <MyTasksWidget />
         </div>
         <div className="space-y-4">
-          <CalendarWidget />
-          <FirmAumWidget />
+          <CalendarWidget isConnected={isConnected} statusLoading={statusLoading} />
+          <PinnedProjectTasks />
         </div>
       </div>
     </div>
   );
 }
 
-function CalendarWidget() {
-  const { timeMin, timeMax } = useMemo(() => {
-    const now = new Date();
-    return {
-      timeMin: now.toISOString(),
-      timeMax: new Date(now.getTime() + 7 * 86400000).toISOString(),
-    };
-  }, []);
-  const { data, isLoading, error } = useCalendarEvents(timeMin, timeMax);
-
-  return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="flex items-center gap-2 text-base">
-          <Calendar className="h-4 w-4 text-sanctuary-bronze" />
-          Upcoming Events
-        </CardTitle>
-        <a href="https://calendar.google.com/calendar/u/0/appointments/AcZssZ3Edv0-dF_AX1v9OIgnxfXSVIqy1GCcpWscL6U=" target="_blank" rel="noopener noreferrer">
-          <Button variant="ghost" size="sm">
-            <Plus className="mr-1 h-3 w-3" />
-            New
-          </Button>
-        </a>
-      </CardHeader>
-      <CardContent>
-        {isLoading ? (
-          <div className="flex justify-center py-4">
-            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-          </div>
-        ) : error ? (
-          <p className="text-sm text-destructive">Failed to load events</p>
-        ) : !data?.items?.length ? (
-          <p className="text-sm text-muted-foreground">No upcoming events this week.</p>
-        ) : (
-          <div className="space-y-2">
-            {data.items.slice(0, 8).map((event: any) => {
-              const start = event.start?.dateTime || event.start?.date;
-              const startDate = start ? parseISO(start) : null;
-              return (
-                 <a
-                    key={event.id}
-                    href={event.htmlLink || "#"}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-start gap-3 rounded-md border border-border p-3 transition-colors hover:bg-muted/50"
-                  >
-                   <div className="min-w-[3rem] text-center">
-                     {startDate && (
-                       <>
-                         <p className="text-xs text-muted-foreground">
-                           {format(startDate, "EEE")}
-                         </p>
-                         <p className="text-sm font-semibold">
-                           {format(startDate, "d")}
-                         </p>
-                       </>
-                     )}
-                   </div>
-                   <div className="flex-1 min-w-0">
-                     <p className="text-sm font-medium truncate">{event.summary}</p>
-                     {startDate && event.start?.dateTime && (
-                       <p className="text-xs text-muted-foreground">
-                         {format(startDate, "h:mm a")}
-                       </p>
-                     )}
-                   </div>
-                 </a>
-              );
-            })}
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
 // Firm-wide AUM — same card style/breakdown as the Contact/Household AUM
 // cards, but unfiltered across every household so it aggregates the whole
-// firm rather than one family.
+// firm rather than one family. Rendered as a horizontal stat strip since
+// it's the single most important number on this page.
 function FirmAumWidget() {
   const [loading, setLoading] = useState(true);
   const [totals, setTotals] = useState({
@@ -264,59 +177,54 @@ function FirmAumWidget() {
 
   const total = totals.vineyard + totals.storehouses + totals.corp + totals.holdingTank;
 
+  const storehouseLabels: { num: number; label: string }[] = [
+    { num: 1, label: "Liquidity Reserve" },
+    { num: 2, label: "Strategic Reserve" },
+    { num: 3, label: "Philanthropic Trust" },
+    { num: 4, label: "Legacy Trust" },
+  ];
+
   return (
     <Card className="border-sanctuary-bronze/30">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm uppercase tracking-widest text-sanctuary-bronze">
-          Assets Under Management
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
         {loading ? (
-          <div className="flex justify-center py-4">
+          <div className="flex w-full justify-center py-2">
             <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
           </div>
         ) : (
           <>
-            <div>
-              <p className="text-xs text-muted-foreground">Total Firm AUM</p>
+            <div className="shrink-0">
+              <p className="text-xs font-medium uppercase tracking-widest text-sanctuary-bronze">
+                Total Firm AUM
+              </p>
               <p className="text-3xl font-bold text-foreground">{formatCurrency(total)}</p>
             </div>
-            <div className="space-y-2 pt-2 border-t border-border">
-              <div className="flex items-center justify-between text-sm">
-                <span className="flex items-center gap-2 text-muted-foreground">
-                  <Grape className="h-3.5 w-3.5" /> Portfolio
-                </span>
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 sm:justify-end">
+              <span className="flex items-center gap-1.5 text-sm">
+                <Grape className="h-3.5 w-3.5 text-primary" />
+                <span className="text-muted-foreground">Portfolio</span>
                 <span className="font-semibold text-primary">{formatCurrency(totals.vineyard)}</span>
-              </div>
-              {[
-                { num: 1, label: "Liquidity Reserve" },
-                { num: 2, label: "Strategic Reserve" },
-                { num: 3, label: "Philanthropic Trust" },
-                { num: 4, label: "Legacy Trust" },
-              ].map(({ num, label }) => (
-                <div key={num} className="flex items-center justify-between text-sm">
-                  <span className="flex items-center gap-2 text-muted-foreground">
-                    <Landmark className="h-3.5 w-3.5" /> {label}
-                  </span>
+              </span>
+              {storehouseLabels.map(({ num, label }) => (
+                <span key={num} className="flex items-center gap-1.5 text-sm">
+                  <Landmark className="h-3.5 w-3.5 text-accent" />
+                  <span className="text-muted-foreground">{label}</span>
                   <span className="font-semibold text-accent">{formatCurrency(byStorehouse[num] || 0)}</span>
-                </div>
+                </span>
               ))}
               {totals.corp > 0 && (
-                <div className="flex items-center justify-between text-sm">
-                  <span className="flex items-center gap-2 text-muted-foreground">
-                    <Building2 className="h-3.5 w-3.5" /> Corporate
-                  </span>
+                <span className="flex items-center gap-1.5 text-sm">
+                  <Building2 className="h-3.5 w-3.5 text-foreground" />
+                  <span className="text-muted-foreground">Corporate</span>
                   <span className="font-semibold text-foreground">{formatCurrency(totals.corp)}</span>
-                </div>
+                </span>
               )}
               {totals.holdingTank > 0 && (
-                <div className="flex items-center justify-between text-sm">
-                  <span className="flex items-center gap-2 text-muted-foreground">
-                    <Anchor className="h-3.5 w-3.5" /> Holding Tank
-                  </span>
+                <span className="flex items-center gap-1.5 text-sm">
+                  <Anchor className="h-3.5 w-3.5 text-amber-600" />
+                  <span className="text-muted-foreground">Holding Tank</span>
                   <span className="font-semibold text-amber-600">{formatCurrency(totals.holdingTank)}</span>
-                </div>
+                </span>
               )}
             </div>
           </>
@@ -332,13 +240,15 @@ const STATUS_DOT: Record<string, string> = {
   done: "bg-emerald-500",
 };
 
+// Absorbs what was previously a separate "Today's Tasks" widget: tasks due
+// today are flagged inline with a "Today" badge instead of living in their
+// own card with their own duplicate fetch.
 function MyTasksWidget() {
   const [tasks, setTasks] = useState<PmTask[]>([]);
   const [projectNames, setProjectNames] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const taskRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const load = async () => {
     setLoading(true);
@@ -369,19 +279,6 @@ function MyTasksWidget() {
 
   useEffect(() => {
     load();
-  }, []);
-
-  useEffect(() => {
-    const handler = (e: Event) => {
-      const id = (e as CustomEvent).detail?.id;
-      if (!id) return;
-      setExpandedId(id);
-      setTimeout(() => {
-        taskRefs.current[id]?.scrollIntoView({ behavior: "smooth", block: "center" });
-      }, 50);
-    };
-    window.addEventListener("open-my-task", handler);
-    return () => window.removeEventListener("open-my-task", handler);
   }, []);
 
   const handleTaskChanged = (updated: PmTask) => {
@@ -419,13 +316,15 @@ function MyTasksWidget() {
             {tasks.slice(0, 20).map((task) => {
               const projectName = task.project_id ? projectNames[task.project_id] : null;
               const isExpanded = expandedId === task.id;
+              const dueToday = !!task.due_date && isToday(parseLocalDate(task.due_date));
               return (
-                <div key={task.id} ref={(el) => (taskRefs.current[task.id] = el)}>
+                <div key={task.id}>
                   <button
                     onClick={() => setExpandedId(isExpanded ? null : task.id)}
                     className={cn(
                       "flex w-full items-center justify-between gap-3 rounded-md border border-border px-3 py-2 transition-colors hover:bg-muted/50 text-left",
-                      isExpanded && "bg-muted/50 border-accent/30"
+                      isExpanded && "bg-muted/50 border-accent/30",
+                      dueToday && !isExpanded && "border-l-2 border-l-amber-500",
                     )}
                   >
                     <div className="min-w-0 flex-1 flex items-center gap-2">
@@ -437,9 +336,13 @@ function MyTasksWidget() {
                             <span className="text-xs text-accent font-medium truncate">{projectName}</span>
                           )}
                           {task.due_date && (
-                            <span className="text-xs text-muted-foreground">
-                              Due: {format(parseLocalDate(task.due_date), "MMM d")}
-                            </span>
+                            dueToday ? (
+                              <span className="text-xs font-semibold text-amber-600">Today</span>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">
+                                Due: {format(parseLocalDate(task.due_date), "MMM d")}
+                              </span>
+                            )
                           )}
                         </div>
                       </div>
@@ -458,6 +361,238 @@ function MyTasksWidget() {
               );
             })}
           </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// Absorbs what was previously a separate "Today's Events" widget: today's
+// events render in their own labeled section above the rest of the week,
+// from one fetch instead of two overlapping ones. Self-gated on Google
+// connection so the rest of the dashboard never has to wait on it.
+function CalendarWidget({ isConnected, statusLoading }: { isConnected: boolean; statusLoading: boolean }) {
+  const { timeMin, timeMax } = useMemo(() => {
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    return {
+      timeMin: start.toISOString(),
+      timeMax: new Date(start.getTime() + 7 * 86400000).toISOString(),
+    };
+  }, []);
+  const { data, isLoading, error } = useCalendarEvents(timeMin, timeMax, isConnected);
+
+  const events = (data?.items || []).filter((e: any) => e.start?.dateTime || e.start?.date);
+  const todayEvents = events.filter((e: any) => {
+    const start = e.start?.dateTime || e.start?.date;
+    return start && isToday(parseISO(start));
+  });
+  const laterEvents = events.filter((e: any) => !todayEvents.includes(e));
+
+  const renderEvent = (event: any) => {
+    const start = event.start?.dateTime || event.start?.date;
+    const startDate = start ? parseISO(start) : null;
+    return (
+      <a
+        key={event.id}
+        href={event.htmlLink || "#"}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-start gap-2 text-sm rounded-md px-1 py-0.5 -mx-1 hover:bg-muted/50 transition-colors"
+      >
+        <span className="text-xs text-muted-foreground w-14 shrink-0 mt-0.5">
+          {startDate && event.start?.dateTime ? format(startDate, "h:mm a") : "All day"}
+        </span>
+        <span className="truncate text-foreground">{event.summary}</span>
+      </a>
+    );
+  };
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <Calendar className="h-4 w-4 text-sanctuary-bronze" />
+          Calendar
+        </CardTitle>
+        {isConnected && (
+          <a href="https://calendar.google.com/calendar/u/0/appointments/AcZssZ3Edv0-dF_AX1v9OIgnxfXSVIqy1GCcpWscL6U=" target="_blank" rel="noopener noreferrer">
+            <Button variant="ghost" size="sm">
+              <Plus className="mr-1 h-3 w-3" />
+              New
+            </Button>
+          </a>
+        )}
+      </CardHeader>
+      <CardContent>
+        {statusLoading ? (
+          <div className="flex justify-center py-4">
+            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+          </div>
+        ) : !isConnected ? (
+          <p className="text-sm text-muted-foreground">Connect Google to view your calendar.</p>
+        ) : isLoading ? (
+          <div className="flex justify-center py-4">
+            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+          </div>
+        ) : error ? (
+          <p className="text-sm text-destructive">Failed to load events</p>
+        ) : events.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No events in the next 7 days.</p>
+        ) : (
+          <div className="space-y-3">
+            <div>
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5">Today</p>
+              {todayEvents.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Nothing today.</p>
+              ) : (
+                <ul className="space-y-1.5">{todayEvents.slice(0, 6).map((e: any) => <li key={e.id}>{renderEvent(e)}</li>)}</ul>
+              )}
+            </div>
+            {laterEvents.length > 0 && (
+              <div className="pt-2 border-t border-border">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5">This Week</p>
+                <ul className="space-y-1.5">{laterEvents.slice(0, 6).map((e: any) => <li key={e.id}>{renderEvent(e)}</li>)}</ul>
+              </div>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// Staff pin an arbitrary Asana project (URL or GID) and see its next-7-days
+// tasks. Deliberately still Asana-backed — out of scope for the PM
+// migration, since a staff member may want to pin any project firm-wide.
+function PinnedProjectTasks() {
+  const [projectGid, setProjectGid] = useState<string>(() => {
+    if (typeof window === "undefined") return DEFAULT_PINNED_PROJECT_GID;
+    return localStorage.getItem(PINNED_PROJECT_STORAGE_KEY) || DEFAULT_PINNED_PROJECT_GID;
+  });
+  const [tasks, setTasks] = useState<any[]>([]);
+  const [projectName, setProjectName] = useState<string>(PINNED_PROJECT_LABEL);
+  const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState("");
+
+  useEffect(() => {
+    if (!projectGid) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    (async () => {
+      try {
+        const [tasksRes, projRes] = await Promise.all([
+          supabase.functions.invoke("asana-service", {
+            body: { action: "getTasksForProject", project_gid: projectGid },
+          }),
+          supabase.functions.invoke("asana-service", {
+            body: { action: "getProject", project_gid: projectGid },
+          }),
+        ]);
+        const all = tasksRes.data?.data || tasksRes.data || [];
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const upcoming = (Array.isArray(all) ? all : [])
+          .filter((t: any) => !t.completed && t.due_on)
+          .map((t: any) => ({ ...t, _due: parseLocalDate(t.due_on) }))
+          .filter((t: any) => {
+            const diff = differenceInCalendarDays(t._due, today);
+            return diff >= 0 && diff <= 7;
+          })
+          .sort((a: any, b: any) => a._due.getTime() - b._due.getTime());
+        setTasks(upcoming);
+        const name = projRes.data?.data?.name || projRes.data?.name;
+        setProjectName(name || PINNED_PROJECT_LABEL);
+      } catch {
+        // silent
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [projectGid]);
+
+  const saveDraft = () => {
+    const gid = extractProjectGid(draft);
+    if (!gid) return;
+    localStorage.setItem(PINNED_PROJECT_STORAGE_KEY, gid);
+    setProjectGid(gid);
+    setEditing(false);
+  };
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+          <Pin className="h-4 w-4 shrink-0" />
+          {editing ? (
+            <div className="flex items-center gap-1 flex-1">
+              <Input
+                autoFocus
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") saveDraft();
+                  if (e.key === "Escape") setEditing(false);
+                }}
+                placeholder="Asana project URL or GID"
+                className="h-7 text-xs"
+              />
+              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={saveDraft}>
+                <Check className="h-3.5 w-3.5" />
+              </Button>
+              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setEditing(false)}>
+                <X className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          ) : (
+            <>
+              <span className="truncate flex-1">{projectName} — Next 7 Days</span>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-6 w-6 shrink-0"
+                onClick={() => {
+                  setDraft(projectGid);
+                  setEditing(true);
+                }}
+                title="Change pinned project"
+              >
+                <Pencil className="h-3 w-3" />
+              </Button>
+            </>
+          )}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {!projectGid ? (
+          <p className="text-sm text-muted-foreground">No project pinned.</p>
+        ) : loading ? (
+          <div className="flex justify-center py-4">
+            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+          </div>
+        ) : tasks.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Nothing due in the next 7 days.</p>
+        ) : (
+          <ul className="space-y-2">
+            {tasks.slice(0, 6).map((t) => (
+              <li key={t.gid}>
+                <a
+                  href={t.permalink_url || `https://app.asana.com/0/${projectGid}/${t.gid}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex w-full items-start gap-2 text-sm rounded-md px-1 py-0.5 -mx-1 hover:bg-muted/50 transition-colors text-left"
+                >
+                  <span className="text-xs text-muted-foreground w-14 shrink-0 mt-0.5">
+                    {format(t._due, "MMM d")}
+                  </span>
+                  <span className="truncate text-foreground">{t.name}</span>
+                </a>
+              </li>
+            ))}
+          </ul>
         )}
       </CardContent>
     </Card>
