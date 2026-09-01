@@ -131,6 +131,9 @@ verify_jwt = false
 [functions.portal-track]
 verify_jwt = false
 
+[functions.portal-pm-tasks]
+verify_jwt = false
+
 [functions.portal-update-scope]
 verify_jwt = false
 

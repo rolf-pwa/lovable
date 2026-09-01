@@ -7,29 +7,30 @@ import { toast } from "@/shared/hooks/use-toast";
 import { parseLocalDate } from "@/shared/lib/date-utils";
 import { cn } from "@/shared/lib/utils";
 
-interface Story {
-  gid: string;
-  text: string;
-  created_by: { name: string };
+interface Comment {
+  id: string;
+  body: string;
+  author_type: "staff" | "client";
+  author_name: string;
   created_at: string;
 }
 
 interface Subtask {
-  gid: string;
-  name: string;
-  completed: boolean;
-  due_on: string | null;
+  id: string;
+  title: string;
+  status: "open" | "in_progress" | "done";
+  due_date: string | null;
 }
 
 interface Props {
-  taskGid: string;
+  taskId: string;
   portalToken: string;
   clientName?: string;
   readOnly?: boolean;
 }
 
-export function PortalTaskConversation({ taskGid, portalToken, clientName, readOnly }: Props) {
-  const [stories, setStories] = useState<Story[]>([]);
+export function PortalTaskConversation({ taskId, portalToken, clientName, readOnly }: Props) {
+  const [comments, setComments] = useState<Comment[]>([]);
   const [subtasks, setSubtasks] = useState<Subtask[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
@@ -39,19 +40,19 @@ export function PortalTaskConversation({ taskGid, portalToken, clientName, readO
 
   const fetchData = async () => {
     try {
-      const [storiesRes, subtasksRes] = await Promise.all([
-        supabase.functions.invoke("asana-service", {
-          body: { action: "getTaskStories", task_gid: taskGid, portal_token: portalToken },
+      const [commentsRes, subtasksRes] = await Promise.all([
+        supabase.functions.invoke("portal-pm-tasks", {
+          body: { action: "comments", task_id: taskId, portal_token: portalToken },
         }),
-        supabase.functions.invoke("asana-service", {
-          body: { action: "getSubtasks", task_gid: taskGid, portal_token: portalToken },
+        supabase.functions.invoke("portal-pm-tasks", {
+          body: { action: "subtasks", task_id: taskId, portal_token: portalToken },
         }),
       ]);
-      if (storiesRes.data?.data) {
-        setStories(storiesRes.data.data);
+      if (commentsRes.data?.comments) {
+        setComments(commentsRes.data.comments);
       }
-      if (subtasksRes.data?.data) {
-        setSubtasks(subtasksRes.data.data);
+      if (subtasksRes.data?.tasks) {
+        setSubtasks(subtasksRes.data.tasks);
       }
     } catch (e) {
       console.error("Failed to load task data:", e);
@@ -62,16 +63,16 @@ export function PortalTaskConversation({ taskGid, portalToken, clientName, readO
 
   useEffect(() => {
     setLoading(true);
-    setStories([]);
+    setComments([]);
     setSubtasks([]);
     fetchData();
-  }, [taskGid]);
+  }, [taskId]);
 
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [stories]);
+  }, [comments]);
 
   const handleSend = async () => {
     const text = message.trim();
@@ -83,8 +84,8 @@ export function PortalTaskConversation({ taskGid, portalToken, clientName, readO
 
     setSending(true);
     try {
-      const res = await supabase.functions.invoke("asana-service", {
-        body: { action: "postTaskComment", task_gid: taskGid, text, portal_token: portalToken },
+      const res = await supabase.functions.invoke("portal-pm-tasks", {
+        body: { action: "postComment", task_id: taskId, body: text, portal_token: portalToken },
       });
       if (res.data?.error) {
         toast({ title: "Error", description: res.data.error, variant: "destructive" });
@@ -115,29 +116,30 @@ export function PortalTaskConversation({ taskGid, portalToken, clientName, readO
           <div className="flex items-center gap-1.5 mb-2">
             <ListChecks className="h-3.5 w-3.5 text-muted-foreground" />
             <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-              Subtasks ({subtasks.filter(s => s.completed).length}/{subtasks.length})
+              Subtasks ({subtasks.filter(s => s.status === "done").length}/{subtasks.length})
             </span>
           </div>
           <ul className="space-y-1">
             {subtasks.map((st) => {
-              const isExpanded = expandedSubtask === st.gid;
+              const isExpanded = expandedSubtask === st.id;
+              const isDone = st.status === "done";
               return (
-                <li key={st.gid}>
+                <li key={st.id}>
                   <button
-                    onClick={() => setExpandedSubtask(isExpanded ? null : st.gid)}
+                    onClick={() => setExpandedSubtask(isExpanded ? null : st.id)}
                     className="w-full flex items-center gap-2 text-sm py-1 px-1 rounded hover:bg-muted/50 transition-colors text-left group"
                   >
-                    {st.completed ? (
+                    {isDone ? (
                       <CheckCircle2 className="h-4 w-4 text-accent shrink-0" />
                     ) : (
                       <Circle className="h-4 w-4 text-muted-foreground/40 shrink-0" />
                     )}
-                    <span className={cn("truncate", st.completed && "line-through text-muted-foreground")}>
-                      {st.name}
+                    <span className={cn("truncate", isDone && "line-through text-muted-foreground")}>
+                      {st.title}
                     </span>
-                    {st.due_on && !st.completed && (
+                    {st.due_date && !isDone && (
                       <span className="text-[10px] text-muted-foreground ml-auto shrink-0">
-                        {parseLocalDate(st.due_on).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                        {parseLocalDate(st.due_date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                       </span>
                     )}
                     <ChevronRight className={cn(
@@ -148,16 +150,16 @@ export function PortalTaskConversation({ taskGid, portalToken, clientName, readO
                   {isExpanded && (
                     <div className="ml-6 mt-1 mb-2 rounded-lg border border-border bg-background p-3">
                       <div className="flex items-center justify-between mb-2">
-                        <h5 className="text-xs font-semibold text-foreground">{st.name}</h5>
+                        <h5 className="text-xs font-semibold text-foreground">{st.title}</h5>
                         <button onClick={() => setExpandedSubtask(null)} className="p-0.5 rounded hover:bg-muted">
                           <X className="h-3.5 w-3.5 text-muted-foreground" />
                         </button>
                       </div>
                       <PortalTaskConversation
-                        taskGid={st.gid}
+                        taskId={st.id}
                         portalToken={portalToken}
                         clientName={clientName}
-                        readOnly={readOnly || st.completed}
+                        readOnly={readOnly || isDone}
                       />
                     </div>
                   )}
@@ -170,7 +172,7 @@ export function PortalTaskConversation({ taskGid, portalToken, clientName, readO
 
       {/* Chat Messages */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
-        {stories.length === 0 ? (
+        {comments.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <MessageCircle className="h-10 w-10 text-muted-foreground/30 mb-3" />
             <p className="text-sm text-muted-foreground">
@@ -178,19 +180,16 @@ export function PortalTaskConversation({ taskGid, portalToken, clientName, readO
             </p>
           </div>
         ) : (
-        stories.map((story) => {
-            const prefixMatch = story.text.match(/^\[(.+?)\]:\s/);
-            const isClient = !!prefixMatch;
-            const displayName = isClient ? prefixMatch![1] : (story.created_by?.name || "Unknown");
-            const displayText = isClient ? story.text.replace(/^\[.+?\]:\s/, "") : story.text;
+        comments.map((comment) => {
+            const isClient = comment.author_type === "client";
             return (
-              <div key={story.gid} className="flex flex-col gap-1">
+              <div key={comment.id} className="flex flex-col gap-1">
                 <div className={`flex items-center gap-2 ${isClient ? 'justify-end' : ''}`}>
                   <span className="text-xs font-semibold text-foreground">
-                    {displayName}
+                    {comment.author_name}
                   </span>
                   <span className="text-[10px] text-muted-foreground">
-                    {new Date(story.created_at).toLocaleDateString("en-US", {
+                    {new Date(comment.created_at).toLocaleDateString("en-US", {
                       month: "short",
                       day: "numeric",
                       hour: "numeric",
@@ -203,7 +202,7 @@ export function PortalTaskConversation({ taskGid, portalToken, clientName, readO
                     ? 'bg-accent/10 border border-accent/30 text-foreground ml-auto'
                     : 'bg-muted border border-border text-foreground'
                 }`}>
-                  {displayText.split(/(https?:\/\/[^\s]+)/g).map((part, i) =>
+                  {comment.body.split(/(https?:\/\/[^\s]+)/g).map((part, i) =>
                     /^https?:\/\//.test(part) ? (
                       <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-accent hover:text-accent/80 underline break-all">
                         {part}

@@ -6,14 +6,11 @@ import { Badge } from "@/shared/components/ui/badge";
 import { PortalTaskConversation } from "./PortalTaskConversation";
 import { cn } from "@/shared/lib/utils";
 
-interface AsanaTask {
-  gid: string;
-  name: string;
-  completed: boolean;
-  due_on: string | null;
-  notes: string;
-  memberships?: { section?: { name?: string } }[];
-  created_at?: string;
+interface PmTask {
+  id: string;
+  title: string;
+  status: "open" | "in_progress" | "done";
+  due_date: string | null;
 }
 
 interface Props {
@@ -24,33 +21,18 @@ interface Props {
 
 type TaskCategory = "new" | "ongoing";
 
-function getTaskStatus(task: AsanaTask): { label: string; variant: "default" | "secondary" | "outline" | "destructive" } {
-  if (task.completed) return { label: "Completed", variant: "secondary" };
-  const sectionName = task.memberships?.[0]?.section?.name?.toLowerCase() || "";
-  if (sectionName.includes("review") || sectionName.includes("awaiting"))
-    return { label: "Awaiting Review", variant: "outline" };
-  if (sectionName.includes("progress") || sectionName.includes("doing"))
-    return { label: "In Progress", variant: "default" };
-  if (task.due_on && parseLocalDate(task.due_on) < new Date())
-    return { label: "Overdue", variant: "destructive" };
+function getTaskStatus(task: PmTask): { label: string; variant: "default" | "secondary" | "outline" | "destructive" } {
+  if (task.status === "done") return { label: "Completed", variant: "secondary" };
+  if (task.status === "in_progress") return { label: "In Progress", variant: "default" };
+  if (task.due_date && parseLocalDate(task.due_date) < new Date()) return { label: "Overdue", variant: "destructive" };
   return { label: "Open", variant: "outline" };
 }
 
-function categoriseTask(task: AsanaTask): TaskCategory {
-  const sectionName = task.memberships?.[0]?.section?.name?.toLowerCase() || "";
-  if (
-    sectionName.includes("progress") ||
-    sectionName.includes("doing") ||
-    sectionName.includes("review") ||
-    sectionName.includes("awaiting") ||
-    sectionName.includes("ongoing")
-  ) {
-    return "ongoing";
-  }
-  return "new";
+function categoriseTask(task: PmTask): TaskCategory {
+  return task.status === "in_progress" ? "ongoing" : "new";
 }
 
-function isNewTask(task: AsanaTask) {
+function isNewTask(task: PmTask) {
   return categoriseTask(task) === "new";
 }
 
@@ -58,7 +40,7 @@ function isNewTask(task: AsanaTask) {
  * badge/dashboard use without rendering the full task list. Mirrors the
  * same fetch + categorisation + interaction-override logic as the main
  * component (a task the client has already opened moves to "ongoing"
- * regardless of its Asana section). */
+ * regardless of its status). */
 export function useTaskCounts(portalToken: string, contactId?: string) {
   const [counts, setCounts] = useState({ newCount: 0, ongoingCount: 0 });
 
@@ -66,19 +48,19 @@ export function useTaskCounts(portalToken: string, contactId?: string) {
     if (!contactId) return;
     (async () => {
       const [tasksRes, interactionsRes] = await Promise.all([
-        supabase.functions.invoke("asana-service", {
-          body: { action: "getTasksForProject", portal_token: portalToken },
-        }).then(r => ({ data: r.data?.data || [] })),
+        supabase.functions.invoke("portal-pm-tasks", {
+          body: { action: "list", portal_token: portalToken },
+        }).then(r => ({ data: r.data?.tasks || [] })),
         supabase.functions.invoke("portal-track", {
           body: { action: "get_interactions", contact_id: contactId, portal_token: portalToken },
         }).then(r => ({ data: r.data?.data || [] })),
       ]);
 
-      const activeTasks = ((tasksRes.data as AsanaTask[]) || []).filter((t) => !t.completed);
-      const interactedGids = new Set(((interactionsRes.data as any[]) || []).map((r: any) => r.task_gid));
+      const activeTasks = ((tasksRes.data as PmTask[]) || []).filter((t) => t.status !== "done");
+      const interactedIds = new Set(((interactionsRes.data as any[]) || []).map((r: any) => r.task_gid));
       setCounts({
-        newCount: activeTasks.filter((t) => categoriseTask(t) === "new" && !interactedGids.has(t.gid)).length,
-        ongoingCount: activeTasks.filter((t) => categoriseTask(t) === "ongoing" || interactedGids.has(t.gid)).length,
+        newCount: activeTasks.filter((t) => categoriseTask(t) === "new" && !interactedIds.has(t.id)).length,
+        ongoingCount: activeTasks.filter((t) => categoriseTask(t) === "ongoing" || interactedIds.has(t.id)).length,
       });
     })();
   }, [portalToken, contactId]);
@@ -86,7 +68,7 @@ export function useTaskCounts(portalToken: string, contactId?: string) {
   return counts;
 }
 
-function TaskCard({ task, onClick, isExpanded }: { task: AsanaTask; onClick: () => void; isExpanded?: boolean }) {
+function TaskCard({ task, onClick, isExpanded }: { task: PmTask; onClick: () => void; isExpanded?: boolean }) {
   const status = getTaskStatus(task);
   const isNew = isNewTask(task);
   return (
@@ -103,10 +85,10 @@ function TaskCard({ task, onClick, isExpanded }: { task: AsanaTask; onClick: () 
           <Clock className="h-4 w-4 text-accent" />
         </div>
         <div className="min-w-0">
-          <p className="text-sm font-medium text-foreground truncate">{task.name}</p>
-          {task.due_on && (
+          <p className="text-sm font-medium text-foreground truncate">{task.title}</p>
+          {task.due_date && (
             <p className="text-xs text-muted-foreground mt-0.5">
-              Due: {parseLocalDate(task.due_on).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+              Due: {parseLocalDate(task.due_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
             </p>
           )}
         </div>
@@ -125,18 +107,18 @@ function TaskCard({ task, onClick, isExpanded }: { task: AsanaTask; onClick: () 
 }
 
 export function PortalTasks({ portalToken, clientName, contactId }: Props) {
-  const [tasks, setTasks] = useState<AsanaTask[]>([]);
+  const [tasks, setTasks] = useState<PmTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedTask, setSelectedTask] = useState<AsanaTask | null>(null);
-  const [interactedGids, setInteractedGids] = useState<Set<string>>(new Set());
+  const [selectedTask, setSelectedTask] = useState<PmTask | null>(null);
+  const [interactedIds, setInteractedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     (async () => {
       try {
         const [tasksRes, interactionsRes] = await Promise.all([
-          supabase.functions.invoke("asana-service", {
-            body: { action: "getTasksForProject", portal_token: portalToken },
+          supabase.functions.invoke("portal-pm-tasks", {
+            body: { action: "list", portal_token: portalToken },
           }),
           contactId
             ? supabase.functions.invoke("portal-track", {
@@ -146,18 +128,13 @@ export function PortalTasks({ portalToken, clientName, contactId }: Props) {
         ]);
         if (tasksRes.error) throw tasksRes.error;
         if (tasksRes.data?.error) {
-          const errMsg: string = tasksRes.data.error;
-          if (errMsg.toLowerCase().includes("no asana project")) {
-            setTasks([]);
-          } else {
-            setError(errMsg);
-          }
+          setError(tasksRes.data.error);
         } else {
-          setTasks(tasksRes.data?.data || []);
+          setTasks(tasksRes.data?.tasks || []);
         }
-        // Load previously interacted task gids
+        // Load previously interacted task ids
         if (interactionsRes && "data" in interactionsRes && interactionsRes.data) {
-          setInteractedGids(new Set((interactionsRes.data as any[]).map((r: any) => r.task_gid)));
+          setInteractedIds(new Set((interactionsRes.data as any[]).map((r: any) => r.task_gid)));
         }
       } catch (e: any) {
         setError(e.message || "Failed to load tasks");
@@ -186,11 +163,11 @@ export function PortalTasks({ portalToken, clientName, contactId }: Props) {
     );
   }
 
-  const activeTasks = tasks.filter((t) => !t.completed);
-  const completedTasks = tasks.filter((t) => t.completed);
-  // Tasks the client has interacted with move to "ongoing" regardless of Asana section
-  const newTasks = activeTasks.filter((t) => categoriseTask(t) === "new" && !interactedGids.has(t.gid));
-  const ongoingTasks = activeTasks.filter((t) => categoriseTask(t) === "ongoing" || interactedGids.has(t.gid));
+  const activeTasks = tasks.filter((t) => t.status !== "done");
+  const completedTasks = tasks.filter((t) => t.status === "done");
+  // Tasks the client has interacted with move to "ongoing" regardless of status
+  const newTasks = activeTasks.filter((t) => categoriseTask(t) === "new" && !interactedIds.has(t.id));
+  const ongoingTasks = activeTasks.filter((t) => categoriseTask(t) === "ongoing" || interactedIds.has(t.id));
   const hasNoTasks = activeTasks.length === 0 && completedTasks.length === 0;
 
   if (hasNoTasks) {
@@ -205,23 +182,23 @@ export function PortalTasks({ portalToken, clientName, contactId }: Props) {
     );
   }
 
-  const handleTaskClick = async (task: AsanaTask) => {
-    const isExpanded = selectedTask?.gid === task.gid;
+  const handleTaskClick = async (task: PmTask) => {
+    const isExpanded = selectedTask?.id === task.id;
     if (isExpanded) {
       setSelectedTask(null);
       return;
     }
     setSelectedTask(task);
     // Record interaction if this is a "new" task the client hasn't seen yet
-    if (contactId && !interactedGids.has(task.gid)) {
-      setInteractedGids((prev) => new Set(prev).add(task.gid));
+    if (contactId && !interactedIds.has(task.id)) {
+      setInteractedIds((prev) => new Set(prev).add(task.id));
       // Record interaction and notify staff in parallel
       const displayName = clientName || "A client";
       await supabase.functions.invoke("portal-track", {
         body: {
           action: "record_task_interaction",
           contact_id: contactId,
-          task_gid: task.gid,
+          task_gid: task.id,
           client_name: displayName,
           portal_token: portalToken,
         },
@@ -229,20 +206,20 @@ export function PortalTasks({ portalToken, clientName, contactId }: Props) {
     }
   };
 
-  const renderTaskWithExpansion = (task: AsanaTask) => {
-    const isExpanded = selectedTask?.gid === task.gid;
+  const renderTaskWithExpansion = (task: PmTask) => {
+    const isExpanded = selectedTask?.id === task.id;
     return (
-      <div key={task.gid}>
+      <div key={task.id}>
         <TaskCard task={task} onClick={() => handleTaskClick(task)} isExpanded={isExpanded} />
         {isExpanded && (
           <div className="mt-1 mb-2 rounded-lg border border-border bg-background p-4">
             <div className="flex items-center justify-between mb-3">
-              <h4 className="text-sm font-semibold text-foreground font-serif">{task.name}</h4>
+              <h4 className="text-sm font-semibold text-foreground font-serif">{task.title}</h4>
               <button onClick={() => setSelectedTask(null)} className="p-1 rounded hover:bg-muted">
                 <X className="h-4 w-4 text-muted-foreground" />
               </button>
             </div>
-            <PortalTaskConversation taskGid={task.gid} portalToken={portalToken} clientName={clientName} readOnly={task.completed} />
+            <PortalTaskConversation taskId={task.id} portalToken={portalToken} clientName={clientName} readOnly={task.status === "done"} />
           </div>
         )}
       </div>
@@ -302,24 +279,24 @@ export function PortalTasks({ portalToken, clientName, contactId }: Props) {
           </div>
           <ul className="space-y-1 pl-1">
             {completedTasks.slice(0, 10).map((task) => (
-              <li key={task.gid}>
+              <li key={task.id}>
                 <button
                   onClick={() => handleTaskClick(task)}
                   className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors text-left w-full group"
                 >
                   <CheckSquare className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0" />
-                  <span className="line-through truncate group-hover:no-underline">{task.name}</span>
-                  <ChevronRight className={cn("h-3 w-3 ml-auto shrink-0 text-muted-foreground/40 transition-transform", selectedTask?.gid === task.gid && "rotate-90")} />
+                  <span className="line-through truncate group-hover:no-underline">{task.title}</span>
+                  <ChevronRight className={cn("h-3 w-3 ml-auto shrink-0 text-muted-foreground/40 transition-transform", selectedTask?.id === task.id && "rotate-90")} />
                 </button>
-                {selectedTask?.gid === task.gid && (
+                {selectedTask?.id === task.id && (
                   <div className="mt-1 mb-2 rounded-lg border border-border bg-background p-4">
                     <div className="flex items-center justify-between mb-3">
-                      <h4 className="text-sm font-semibold text-foreground font-serif">{task.name}</h4>
+                      <h4 className="text-sm font-semibold text-foreground font-serif">{task.title}</h4>
                       <button onClick={() => setSelectedTask(null)} className="p-1 rounded hover:bg-muted">
                         <X className="h-4 w-4 text-muted-foreground" />
                       </button>
                     </div>
-                    <PortalTaskConversation taskGid={task.gid} portalToken={portalToken} clientName={clientName} readOnly />
+                    <PortalTaskConversation taskId={task.id} portalToken={portalToken} clientName={clientName} readOnly />
                   </div>
                 )}
               </li>
