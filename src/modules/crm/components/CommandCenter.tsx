@@ -84,14 +84,13 @@ export function CommandCenter() {
         )}
       </div>
 
-      <FirmAumWidget />
-
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <MyTasksWidget />
         </div>
         <div className="space-y-4">
           <CalendarWidget isConnected={isConnected} statusLoading={statusLoading} />
+          <FirmAumWidget />
           <PinnedProjectTasks />
         </div>
       </div>
@@ -101,8 +100,7 @@ export function CommandCenter() {
 
 // Firm-wide AUM — same card style/breakdown as the Contact/Household AUM
 // cards, but unfiltered across every household so it aggregates the whole
-// firm rather than one family. Rendered as a horizontal stat strip since
-// it's the single most important number on this page.
+// firm rather than one family.
 function FirmAumWidget() {
   const [loading, setLoading] = useState(true);
   const [totals, setTotals] = useState({
@@ -177,54 +175,59 @@ function FirmAumWidget() {
 
   const total = totals.vineyard + totals.storehouses + totals.corp + totals.holdingTank;
 
-  const storehouseLabels: { num: number; label: string }[] = [
-    { num: 1, label: "Liquidity Reserve" },
-    { num: 2, label: "Strategic Reserve" },
-    { num: 3, label: "Philanthropic Trust" },
-    { num: 4, label: "Legacy Trust" },
-  ];
-
   return (
     <Card className="border-sanctuary-bronze/30">
-      <CardContent className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm uppercase tracking-widest text-sanctuary-bronze">
+          Assets Under Management
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
         {loading ? (
-          <div className="flex w-full justify-center py-2">
+          <div className="flex justify-center py-4">
             <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
           </div>
         ) : (
           <>
-            <div className="shrink-0">
-              <p className="text-xs font-medium uppercase tracking-widest text-sanctuary-bronze">
-                Total Firm AUM
-              </p>
+            <div>
+              <p className="text-xs text-muted-foreground">Total Firm AUM</p>
               <p className="text-3xl font-bold text-foreground">{formatCurrency(total)}</p>
             </div>
-            <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 sm:justify-end">
-              <span className="flex items-center gap-1.5 text-sm">
-                <Grape className="h-3.5 w-3.5 text-primary" />
-                <span className="text-muted-foreground">Portfolio</span>
-                <span className="font-semibold text-primary">{formatCurrency(totals.vineyard)}</span>
-              </span>
-              {storehouseLabels.map(({ num, label }) => (
-                <span key={num} className="flex items-center gap-1.5 text-sm">
-                  <Landmark className="h-3.5 w-3.5 text-accent" />
-                  <span className="text-muted-foreground">{label}</span>
-                  <span className="font-semibold text-accent">{formatCurrency(byStorehouse[num] || 0)}</span>
+            <div className="space-y-2 pt-2 border-t border-border">
+              <div className="flex items-center justify-between text-sm">
+                <span className="flex items-center gap-2 text-muted-foreground">
+                  <Grape className="h-3.5 w-3.5" /> Portfolio
                 </span>
+                <span className="font-semibold text-primary">{formatCurrency(totals.vineyard)}</span>
+              </div>
+              {[
+                { num: 1, label: "Liquidity Reserve" },
+                { num: 2, label: "Strategic Reserve" },
+                { num: 3, label: "Philanthropic Trust" },
+                { num: 4, label: "Legacy Trust" },
+              ].map(({ num, label }) => (
+                <div key={num} className="flex items-center justify-between text-sm">
+                  <span className="flex items-center gap-2 text-muted-foreground">
+                    <Landmark className="h-3.5 w-3.5" /> {label}
+                  </span>
+                  <span className="font-semibold text-accent">{formatCurrency(byStorehouse[num] || 0)}</span>
+                </div>
               ))}
               {totals.corp > 0 && (
-                <span className="flex items-center gap-1.5 text-sm">
-                  <Building2 className="h-3.5 w-3.5 text-foreground" />
-                  <span className="text-muted-foreground">Corporate</span>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="flex items-center gap-2 text-muted-foreground">
+                    <Building2 className="h-3.5 w-3.5" /> Corporate
+                  </span>
                   <span className="font-semibold text-foreground">{formatCurrency(totals.corp)}</span>
-                </span>
+                </div>
               )}
               {totals.holdingTank > 0 && (
-                <span className="flex items-center gap-1.5 text-sm">
-                  <Anchor className="h-3.5 w-3.5 text-amber-600" />
-                  <span className="text-muted-foreground">Holding Tank</span>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="flex items-center gap-2 text-muted-foreground">
+                    <Anchor className="h-3.5 w-3.5" /> Holding Tank
+                  </span>
                   <span className="font-semibold text-amber-600">{formatCurrency(totals.holdingTank)}</span>
-                </span>
+                </div>
               )}
             </div>
           </>
