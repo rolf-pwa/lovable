@@ -160,7 +160,16 @@ Deno.serve(async (req) => {
       householdId: string | null,
       parentTaskId: string | null,
     ) => {
-      const { data: existing } = await admin.from("pm_tasks").select("id").eq("asana_gid", task.gid).maybeSingle();
+      // Scoped to (asana_gid, contact_id): several contacts share the exact
+      // same Asana project across different households, so dedup must be
+      // per-contact, not just per Asana task -- otherwise whichever contact
+      // gets processed first "wins" and the other sees nothing.
+      const { data: existing } = await admin
+        .from("pm_tasks")
+        .select("id")
+        .eq("asana_gid", task.gid)
+        .eq("contact_id", contactId)
+        .maybeSingle();
       if (existing) {
         summary.skippedExisting++;
         return existing.id;
