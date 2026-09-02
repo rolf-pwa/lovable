@@ -50,12 +50,59 @@ async function asanaGet(path: string) {
   return json.data;
 }
 
+// Asana paginates list endpoints at up to 100 items per page (our own
+// `limit=100`) -- a project/task/comment-thread with more than that would
+// silently truncate without this. Follows next_page.offset until exhausted.
+async function asanaGetAllPages(path: string): Promise<any[]> {
+  let results: any[] = [];
+  let offset: string | undefined;
+  while (true) {
+    const url = offset ? `${path}${path.includes("?") ? "&" : "?"}offset=${offset}` : path;
+    const res = await fetch(`${ASANA_BASE_URL}${url}`, {
+      headers: { Authorization: `Bearer ${ASANA_TOKEN}` },
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json?.errors?.[0]?.message || `Asana API error (${res.status})`);
+    results = results.concat(json.data || []);
+    if (!json.next_page?.offset) break;
+    offset = json.next_page.offset;
+  }
+  return results;
+}
+
 function extractProjectGid(asanaUrl: string | null): string | null {
   if (!asanaUrl) return null;
   const newMatch = asanaUrl.match(/\/project\/(\d+)/);
   if (newMatch) return newMatch[1];
   const oldMatch = asanaUrl.match(/app\.asana\.com\/0\/(\d+)/);
   return oldMatch ? oldMatch[1] : null;
+}
+
+// Verbatim from asana-service/index.ts -- a contact's asana_url is either
+// task-based (linked to one specific task -- the common case, since every
+// modern Asana URL contains /task/{id}) or project-based (linked to a whole
+// project). Getting this branch wrong is exactly what caused the first
+// version of this script to import entire large shared projects instead of
+// just each contact's own linked task.
+function isTaskUrl(asanaUrl: string | null): boolean {
+  if (!asanaUrl) return false;
+  if (/\/task\/\d+/.test(asanaUrl)) return true;
+  if (/\/project\/\d+\/list\/\d+/.test(asanaUrl)) return true;
+  if (/app\.asana\.com\/0\/\d+\/f/.test(asanaUrl)) return true;
+  if (/app\.asana\.com\/0\/\d+\/\d+/.test(asanaUrl) && !/\/(list|board|timeline|calendar)/.test(asanaUrl)) return true;
+  return false;
+}
+
+function extractTaskGid(asanaUrl: string | null): string | null {
+  if (!asanaUrl) return null;
+  const newTaskMatch = asanaUrl.match(/\/task\/(\d+)/);
+  if (newTaskMatch) return newTaskMatch[1];
+  const listTaskMatch = asanaUrl.match(/\/project\/\d+\/list\/(\d+)/);
+  if (listTaskMatch) return listTaskMatch[1];
+  const twoSegment = asanaUrl.match(/app\.asana\.com\/0\/\d+\/(\d+)/);
+  if (twoSegment) return twoSegment[1];
+  const singleSegment = asanaUrl.match(/app\.asana\.com\/0\/(\d+)\/f/);
+  return singleSegment ? singleSegment[1] : null;
 }
 
 function inferStatus(task: any): "open" | "in_progress" | "done" {
@@ -178,7 +225,7 @@ Deno.serve(async (req) => {
 
     const importComments = async (taskGid: string, pmTaskId: string) => {
       const stories = await withFailSafe(`getTaskStories(${taskGid})`, () =>
-        asanaGet(`/tasks/${taskGid}/stories?opt_fields=text,created_by.name,created_at,resource_subtype`),
+        asanaGetAllPages(`/tasks/${taskGid}/stories?opt_fields=text,created_by.name,created_at,resource_subtype`),
       );
       const comments = (stories || []).filter(
         (s: any) => (!s.resource_subtype || s.resource_subtype === "comment_added") && s.text?.trim(),
@@ -248,20 +295,51 @@ Deno.serve(async (req) => {
       return inserted.id;
     };
 
-    for (const contact of contacts || []) {
-      const projectGid = extractProjectGid(contact.asana_url);
-      if (!projectGid) continue;
-      try {
-        const tasks = await withFailSafe(`getTasksForProject(${projectGid})`, () =>
-          asanaGet(
-            `/projects/${projectGid}/tasks?opt_fields=name,completed,due_on,notes,memberships.section.name,custom_fields&limit=100`,
-          ),
+    // A root task's Asana gid to import, per contact -- either the one task
+    // their URL is directly linked to (the common case), or every task in
+    // their linked project (rare; only when the URL has no /task/ segment
+    // at all). Never both, and never "every task that happens to share a
+    // project with this one" -- that was the bug in the first version.
+    const rootTasksFor = async (asanaUrl: string): Promise<any[]> => {
+      if (isTaskUrl(asanaUrl)) {
+        const taskGid = extractTaskGid(asanaUrl);
+        if (!taskGid) return [];
+        const task = await withFailSafe(`getTask(${taskGid})`, () =>
+          asanaGet(`/tasks/${taskGid}?opt_fields=name,completed,due_on,notes,memberships.section.name,custom_fields`),
         );
+        return task ? [task] : [];
+      }
+      const projectGid = extractProjectGid(asanaUrl);
+      if (!projectGid) return [];
+      return withFailSafe(`getTasksForProject(${projectGid})`, () =>
+        asanaGetAllPages(
+          `/projects/${projectGid}/tasks?opt_fields=name,completed,due_on,notes,memberships.section.name,custom_fields&limit=100`,
+        ),
+      );
+    };
+
+    for (const contact of contacts || []) {
+      try {
+        const tasks = await rootTasksFor(contact.asana_url);
         for (const task of tasks || []) {
+          // Skip entirely (no further Asana calls) if this root task was
+          // already fully imported in a prior run -- its subtasks/comments
+          // were already fetched in that same pass.
+          const { data: existingRoot } = await admin
+            .from("pm_tasks")
+            .select("id")
+            .eq("asana_gid", task.gid)
+            .eq("contact_id", contact.id)
+            .maybeSingle();
+          if (existingRoot) {
+            summary.skippedExisting++;
+            continue;
+          }
+
           const pmTaskId = await importTask(task, contact.id, contact.household_id, null);
 
           const subtasks = await withFailSafe(`getSubtasks(${task.gid})`, () =>
-            asanaGet(
+            asanaGetAllPages(
               `/tasks/${task.gid}/subtasks?opt_fields=name,completed,due_on,notes,memberships.section.name,custom_fields&limit=100`,
             ),
           );
