@@ -65,6 +65,20 @@ function inferStatus(task: any): "open" | "in_progress" | "done" {
   return "open";
 }
 
+// Same rule asana-service's own client-portal gate used (filterVisible in
+// getTasksForProject): a task is client-visible only if explicitly tagged
+// with the PW_Visibility custom field set to "Client Visible" -- absence of
+// the tag means internal/staff-only, matching Asana's own conservative
+// default. Requires opt_fields=custom_fields on the task fetch.
+function isClientVisible(task: any): boolean {
+  const customFields = task.custom_fields || [];
+  return customFields.some(
+    (cf: any) =>
+      (cf.name === "PW_Visibility" || cf.name?.toLowerCase().includes("visibility")) &&
+      cf.enum_value?.name === "Client Visible",
+  );
+}
+
 // Timing-safe comparison for shared secrets (fixed-time regardless of match position).
 function timingSafeEqual(a: string, b: string): boolean {
   if (a.length !== b.length) return false;
@@ -108,7 +122,41 @@ Deno.serve(async (req) => {
 
     const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
     const body = await req.json().catch(() => ({}));
-    const { contact_id } = body;
+    const { contact_id, action } = body;
+
+    // Re-scan already-imported tasks against their real Asana PW_Visibility
+    // tag and correct client_visible -- a security fix for the initial
+    // backfill, which defaulted every task to client_visible = true instead
+    // of checking Asana's own visibility gate.
+    if (action === "reclassifyVisibility") {
+      let tasksQuery = admin.from("pm_tasks").select("id, asana_gid, contact_id").not("asana_gid", "is", null);
+      if (contact_id) tasksQuery = tasksQuery.eq("contact_id", contact_id);
+      const { data: tasksToScan, error: scanErr } = await tasksQuery;
+      if (scanErr) return json({ error: scanErr.message }, 500);
+
+      const scanSummary = {
+        scanned: 0,
+        markedVisible: 0,
+        keptInternal: 0,
+        errors: [] as { taskId: string; message: string }[],
+      };
+      for (const t of tasksToScan || []) {
+        try {
+          const asanaTask = await withFailSafe(`getTask(${t.asana_gid})`, () =>
+            asanaGet(`/tasks/${t.asana_gid}?opt_fields=custom_fields`),
+          );
+          const visible = isClientVisible(asanaTask);
+          const { error: updateErr } = await admin.from("pm_tasks").update({ client_visible: visible }).eq("id", t.id);
+          if (updateErr) throw new Error(updateErr.message);
+          scanSummary.scanned++;
+          if (visible) scanSummary.markedVisible++;
+          else scanSummary.keptInternal++;
+        } catch (e) {
+          scanSummary.errors.push({ taskId: t.id, message: e instanceof Error ? e.message : String(e) });
+        }
+      }
+      return json({ ok: true, scanSummary });
+    }
 
     let contactsQuery = admin
       .from("contacts")
@@ -185,7 +233,7 @@ Deno.serve(async (req) => {
           contact_id: contactId,
           household_id: householdId,
           parent_task_id: parentTaskId,
-          client_visible: true,
+          client_visible: isClientVisible(task),
           asana_gid: task.gid,
           created_by: "140aaffa-abce-4de8-9756-7013f32642d0",
         })
@@ -206,7 +254,7 @@ Deno.serve(async (req) => {
       try {
         const tasks = await withFailSafe(`getTasksForProject(${projectGid})`, () =>
           asanaGet(
-            `/projects/${projectGid}/tasks?opt_fields=name,completed,due_on,notes,memberships.section.name&limit=100`,
+            `/projects/${projectGid}/tasks?opt_fields=name,completed,due_on,notes,memberships.section.name,custom_fields&limit=100`,
           ),
         );
         for (const task of tasks || []) {
@@ -214,7 +262,7 @@ Deno.serve(async (req) => {
 
           const subtasks = await withFailSafe(`getSubtasks(${task.gid})`, () =>
             asanaGet(
-              `/tasks/${task.gid}/subtasks?opt_fields=name,completed,due_on,notes,memberships.section.name&limit=100`,
+              `/tasks/${task.gid}/subtasks?opt_fields=name,completed,due_on,notes,memberships.section.name,custom_fields&limit=100`,
             ),
           );
           for (const subtask of subtasks || []) {
