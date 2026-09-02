@@ -176,7 +176,7 @@ Deno.serve(async (req) => {
     // backfill, which defaulted every task to client_visible = true instead
     // of checking Asana's own visibility gate.
     if (action === "reclassifyVisibility") {
-      let tasksQuery = admin.from("pm_tasks").select("id, asana_gid, contact_id, parent_task_id").not("asana_gid", "is", null);
+      let tasksQuery = admin.from("pm_tasks").select("id, asana_gid, contact_id").not("asana_gid", "is", null);
       if (contact_id) tasksQuery = tasksQuery.eq("contact_id", contact_id);
       const { data: tasksToScan, error: scanErr } = await tasksQuery;
       if (scanErr) return json({ error: scanErr.message }, 500);
@@ -189,14 +189,13 @@ Deno.serve(async (req) => {
       };
       for (const t of tasksToScan || []) {
         try {
-          // The linked root task itself is never client-visible -- only its
-          // subtasks are eligible, per Asana's PW_Visibility tag on each.
-          // Skip the Asana lookup entirely for root tasks; force internal.
-          const visible = t.parent_task_id === null ? false : isClientVisible(
-            await withFailSafe(`getTask(${t.asana_gid})`, () =>
-              asanaGet(`/tasks/${t.asana_gid}?opt_fields=custom_fields`),
-            ),
+          // The task-based anchor is never imported as a row (see the main
+          // loop), so every row reaching here is real, eligible content --
+          // just check its own Asana tag uniformly.
+          const asanaTask = await withFailSafe(`getTask(${t.asana_gid})`, () =>
+            asanaGet(`/tasks/${t.asana_gid}?opt_fields=custom_fields`),
           );
+          const visible = isClientVisible(asanaTask);
           const { error: updateErr } = await admin.from("pm_tasks").update({ client_visible: visible }).eq("id", t.id);
           if (updateErr) throw new Error(updateErr.message);
           scanSummary.scanned++;
@@ -284,11 +283,12 @@ Deno.serve(async (req) => {
           contact_id: contactId,
           household_id: householdId,
           parent_task_id: parentTaskId,
-          // The linked task itself (parentTaskId === null, i.e. what a
-          // contact's asana_url points to) is a structural container/anchor,
-          // never a real client-facing item -- only its subtasks represent
-          // actual work items eligible for client visibility.
-          client_visible: parentTaskId === null ? false : isClientVisible(task),
+          // The task-based anchor itself is never passed to importTask (see
+          // the main loop below) -- only its promoted subtasks and, for the
+          // rarer project-based branch, genuine top-level project tasks are.
+          // So every row that reaches here is real, eligible content; just
+          // check its own Asana tag uniformly.
+          client_visible: isClientVisible(task),
           asana_gid: task.gid,
           created_by: "140aaffa-abce-4de8-9756-7013f32642d0",
         })
@@ -303,56 +303,67 @@ Deno.serve(async (req) => {
       return inserted.id;
     };
 
-    // A root task's Asana gid to import, per contact -- either the one task
-    // their URL is directly linked to (the common case), or every task in
-    // their linked project (rare; only when the URL has no /task/ segment
-    // at all). Never both, and never "every task that happens to share a
-    // project with this one" -- that was the bug in the first version.
-    const rootTasksFor = async (asanaUrl: string): Promise<any[]> => {
-      if (isTaskUrl(asanaUrl)) {
-        const taskGid = extractTaskGid(asanaUrl);
-        if (!taskGid) return [];
-        const task = await withFailSafe(`getTask(${taskGid})`, () =>
-          asanaGet(`/tasks/${taskGid}?opt_fields=name,completed,due_on,notes,memberships.section.name,custom_fields`),
-        );
-        return task ? [task] : [];
+    const SUBTASK_FIELDS = "name,completed,due_on,notes,memberships.section.name,custom_fields";
+
+    const importIfNew = async (task: any, contactId: string, householdId: string | null, parentTaskId: string | null) => {
+      const { data: existing } = await admin
+        .from("pm_tasks")
+        .select("id")
+        .eq("asana_gid", task.gid)
+        .eq("contact_id", contactId)
+        .maybeSingle();
+      if (existing) {
+        summary.skippedExisting++;
+        return existing.id;
       }
-      const projectGid = extractProjectGid(asanaUrl);
-      if (!projectGid) return [];
-      return withFailSafe(`getTasksForProject(${projectGid})`, () =>
-        asanaGetAllPages(
-          `/projects/${projectGid}/tasks?opt_fields=name,completed,due_on,notes,memberships.section.name,custom_fields&limit=100`,
-        ),
-      );
+      return importTask(task, contactId, householdId, parentTaskId);
     };
 
     for (const contact of contacts || []) {
       try {
-        const tasks = await rootTasksFor(contact.asana_url);
-        for (const task of tasks || []) {
-          // Skip entirely (no further Asana calls) if this root task was
-          // already fully imported in a prior run -- its subtasks/comments
-          // were already fetched in that same pass.
-          const { data: existingRoot } = await admin
-            .from("pm_tasks")
-            .select("id")
-            .eq("asana_gid", task.gid)
-            .eq("contact_id", contact.id)
-            .maybeSingle();
-          if (existingRoot) {
-            summary.skippedExisting++;
-            continue;
-          }
-
-          const pmTaskId = await importTask(task, contact.id, contact.household_id, null);
-
-          const subtasks = await withFailSafe(`getSubtasks(${task.gid})`, () =>
-            asanaGetAllPages(
-              `/tasks/${task.gid}/subtasks?opt_fields=name,completed,due_on,notes,memberships.section.name,custom_fields&limit=100`,
-            ),
+        if (isTaskUrl(contact.asana_url)) {
+          // The linked task is a structural anchor for the contact's whole
+          // history in Asana, not a real work item -- it's never imported as
+          // its own row. Only its direct subtasks are real, individually
+          // meaningful items, and they're promoted straight to top-level
+          // (parent_task_id null) rather than nested under a hidden parent,
+          // so every consumer's ordinary "top-level tasks" query already
+          // shows exactly the right thing with no special-casing needed.
+          const anchorGid = extractTaskGid(contact.asana_url);
+          if (!anchorGid) continue;
+          const subtasks = await withFailSafe(`getSubtasks(${anchorGid})`, () =>
+            asanaGetAllPages(`/tasks/${anchorGid}/subtasks?opt_fields=${SUBTASK_FIELDS}&limit=100`),
           );
           for (const subtask of subtasks || []) {
-            await importTask(subtask, contact.id, contact.household_id, pmTaskId);
+            await importIfNew(subtask, contact.id, contact.household_id, null);
+          }
+        } else {
+          // Project-based (rare): every task in the project is a genuine
+          // standalone item, imported at top-level with its own real
+          // subtasks nested underneath as usual.
+          const projectGid = extractProjectGid(contact.asana_url);
+          if (!projectGid) continue;
+          const tasks = await withFailSafe(`getTasksForProject(${projectGid})`, () =>
+            asanaGetAllPages(`/projects/${projectGid}/tasks?opt_fields=${SUBTASK_FIELDS}&limit=100`),
+          );
+          for (const task of tasks || []) {
+            const { data: existingRoot } = await admin
+              .from("pm_tasks")
+              .select("id")
+              .eq("asana_gid", task.gid)
+              .eq("contact_id", contact.id)
+              .maybeSingle();
+            if (existingRoot) {
+              summary.skippedExisting++;
+              continue;
+            }
+            const pmTaskId = await importTask(task, contact.id, contact.household_id, null);
+            const subtasks = await withFailSafe(`getSubtasks(${task.gid})`, () =>
+              asanaGetAllPages(`/tasks/${task.gid}/subtasks?opt_fields=${SUBTASK_FIELDS}&limit=100`),
+            );
+            for (const subtask of subtasks || []) {
+              await importIfNew(subtask, contact.id, contact.household_id, pmTaskId);
+            }
           }
         }
         summary.contactsProcessed++;
