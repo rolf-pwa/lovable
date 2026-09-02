@@ -223,7 +223,12 @@ export function TaskDetailPanel({ task, onChanged }: Props) {
           value={task.due_date || ""}
           onChange={(e) => setDueDate(e.target.value)}
         />
-        <StaffAssigneePicker value={task.assignee_id} onChange={setAssignee} />
+        <StaffAssigneePicker
+          value={task.assignee_id}
+          onChange={setAssignee}
+          householdId={task.household_id}
+          familyId={task.family_id}
+        />
         <label className="ml-auto flex items-center gap-1.5 text-xs text-muted-foreground">
           {task.client_visible ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
           Client Visible

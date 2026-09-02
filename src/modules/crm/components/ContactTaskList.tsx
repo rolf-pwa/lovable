@@ -145,6 +145,8 @@ export function ContactTaskList({ contactId }: Props) {
           <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
             <StaffAssigneePicker
               value={task.assignee_id}
+              householdId={task.household_id}
+              familyId={task.family_id}
               onChange={async (assignee_id) => {
                 try {
                   const updated = await getTaskAgent().updateTask(task.id, { assignee_id });
