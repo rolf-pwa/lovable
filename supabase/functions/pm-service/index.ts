@@ -144,9 +144,15 @@ Deno.serve(async (req) => {
       if (!String(title || "").trim()) return json({ ok: false, error: "Task title is required" }, 400);
 
       let resolvedHouseholdId = household_id || null;
-      if (!resolvedHouseholdId && contact_id) {
-        const { data: contact } = await db.from("contacts").select("household_id").eq("id", contact_id).maybeSingle();
-        resolvedHouseholdId = contact?.household_id || null;
+      let resolvedFamilyId = family_id || null;
+      if (contact_id && (!resolvedHouseholdId || !resolvedFamilyId)) {
+        const { data: contact } = await db.from("contacts").select("household_id, family_id").eq("id", contact_id).maybeSingle();
+        if (!resolvedHouseholdId) resolvedHouseholdId = contact?.household_id || null;
+        if (!resolvedFamilyId) resolvedFamilyId = contact?.family_id || null;
+      }
+      if (!resolvedFamilyId && resolvedHouseholdId) {
+        const { data: household } = await db.from("households").select("family_id").eq("id", resolvedHouseholdId).maybeSingle();
+        resolvedFamilyId = household?.family_id || null;
       }
 
       const { data, error } = await db
@@ -161,7 +167,7 @@ Deno.serve(async (req) => {
           household_id: resolvedHouseholdId,
           contact_id: contact_id || null,
           corporation_id: corporation_id || null,
-          family_id: family_id || null,
+          family_id: resolvedFamilyId,
           ...(typeof client_visible === "boolean" ? { client_visible } : {}),
           created_by: userId,
         })

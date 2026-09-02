@@ -270,10 +270,13 @@ Deno.serve(async (req) => {
 
       if (scopeType === "contact") {
         contact_id = scopeId;
-        const { data: c } = await supabase.from("contacts").select("household_id").eq("id", scopeId).maybeSingle();
+        const { data: c } = await supabase.from("contacts").select("household_id, family_id").eq("id", scopeId).maybeSingle();
         household_id = c?.household_id || null;
+        family_id = c?.family_id || null;
       } else if (scopeType === "household") {
         household_id = scopeId;
+        const { data: hh } = await supabase.from("households").select("family_id").eq("id", scopeId).maybeSingle();
+        family_id = hh?.family_id || null;
       } else if (scopeType === "family") {
         family_id = scopeId;
       }
@@ -306,7 +309,13 @@ Deno.serve(async (req) => {
           title: `New pro request: ${title}`,
           body: `${session.professional.full_name} opened a task via the Pro Portal.`,
           contact_id: contact_id || null,
-          link: contact_id ? `/contacts/${contact_id}` : household_id ? `/households/${household_id}` : null,
+          link: contact_id
+            ? `/contacts/${contact_id}`
+            : household_id
+              ? `/households/${household_id}`
+              : family_id
+                ? `/families/${family_id}`
+                : null,
         });
       } catch {
         /* noop — notification failure should never block task creation */

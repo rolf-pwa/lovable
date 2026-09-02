@@ -29,6 +29,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { FamilyRollup } from "@/modules/crm/components/FamilyRollup";
+import { FamilyTaskRollup } from "@/modules/crm/components/FamilyTaskRollup";
 import { AddCompanyDialog } from "@/modules/crm/components/AddCompanyDialog";
 import { CollapsibleCard } from "@/shared/components/CollapsibleCard";
 import { policyTypeLabel } from "@/shared/lib/insurance";
@@ -661,6 +662,10 @@ const FamilyDetail = () => {
                 )}
               </CardContent>
             </Card>
+
+            <div className="mt-4">
+              <FamilyTaskRollup familyId={family.id} members={contacts} />
+            </div>
           </div>
         </div>
       </div>
