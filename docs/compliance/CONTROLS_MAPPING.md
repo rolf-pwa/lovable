@@ -72,7 +72,7 @@ Edge functions that call each other internally (rather than being invoked by an 
 
 ## 10. Automated security monitoring
 
-`supabase/functions/security-audit/index.ts` runs on a schedule and performs 8 automated self-tests:
+`supabase/functions/security-audit/index.ts` runs on a schedule and performs 7 automated self-tests:
 
 1. RLS anonymous-isolation check
 2. PII/SIN injection resistance on the AI assistant
@@ -81,7 +81,8 @@ Edge functions that call each other internally (rather than being invoked by an 
 5. CORS wildcard/reflection check
 6. OTP brute-force timing/lockout check
 7. AI "safety override" prompt-injection resistance
-8. Third-party credential validity (e.g. Asana PAT)
+
+(An 8th test, third-party credential validity for the Asana PAT, was removed once the firm's task workflows moved off Asana onto the in-house `pm_tasks` system and the Asana subscription was downgraded — the check would otherwise generate a false-alarm failure email on every run once the old paid-tier token stopped validating.)
 
 Results are logged to `security_audit_logs`; any failure creates a `staff_notifications` entry and triggers an email alert to `alerts@prosperwise.ca` via `send-admin-email`. Additional audit trails exist for governance actions (`sovereignty_audit_trail`) and Vault access (`vault_audit_log`).
 
@@ -119,7 +120,7 @@ Category-level summary (not exhaustive column list) — see `supabase/migrations
 |---|---|---|---|
 | Google (Workspace) | Gmail (send transactional system email; read-only message metadata for the per-contact email history panel), Calendar (read-only), Drive access | Vault document storage, system notifications (OTP delivery, digests, alerts) sent from the firm's shared inbox, and a read-only "Email History" view on each contact's Communications tab | Access via OAuth (`google-auth`), tokens stored in `google_tokens`. There is no staff inbox client — email history is read-only and there is no in-app compose/reply |
 | Square | Client name, email, invoice line items | Payment processing / invoicing | `square-service`, `square-webhook`. No card data touches ProsperWise's own systems — Square hosts the payment page |
-| Asana | Client names (in task titles/notes where staff include them) | Internal task/workflow tracking | `asana-service` — restricted to `@prosperwise.ca` users |
+| Asana | Client names (in task titles/notes where staff include them) | Legacy internal task/workflow tracking — being wound down; task workflows now live in the in-house `pm_tasks` system | `asana-service`, restricted to `@prosperwise.ca` users, now called only by one optional staff Dashboard widget (a firm-wide "pinned project" view). Subscription downgraded to Asana's free tier |
 | Quo (OpenPhone) | Contact name, phone number, call recordings, transcripts, SMS content | Dialer / client communication | `quo-service`, `quo-webhook`. US-hosted infrastructure — this is the integration the PII Shield (§11) was originally built to protect |
 
 **Known limitation:** there is currently no single documented sub-processor registry or confirmed Data Processing Agreement (DPA) list maintained within this repository. This mapping is derived from code, not from a legal/vendor-management source of truth — do not assume formal DPAs exist without confirming separately with each vendor.

@@ -267,31 +267,6 @@ async function testModelDrift(): Promise<TestResult> {
   }
 }
 
-// ── Test 8: Credential Health (Asana PAT) ──────────────
-
-async function testCredentialHealth(): Promise<TestResult> {
-  const name = "CREDENTIAL_HEALTH_ASANA_PAT";
-  try {
-    const pat = Deno.env.get("ASANA_ACCESS_TOKEN");
-    if (!pat) {
-      return { test_name: name, status: "FAIL", logic_trace: "ASANA_ACCESS_TOKEN not set in secrets." };
-    }
-
-    // Verify the PAT is still valid by calling /users/me
-    const res = await fetch("https://app.asana.com/api/1.0/users/me", {
-      headers: { "Authorization": `Bearer ${pat}` },
-    });
-    const body = await res.json();
-
-    if (res.ok && body.data) {
-      return { test_name: name, status: "PASS", logic_trace: `Asana PAT valid. User: ${body.data.name || body.data.gid}. Note: Asana PATs do not have expiry dates — manual rotation recommended quarterly.` };
-    }
-    return { test_name: name, status: "FAIL", logic_trace: `Asana PAT invalid or expired. Status: ${res.status}. Error: ${JSON.stringify(body.errors || body).substring(0, 200)}` };
-  } catch (err: any) {
-    return { test_name: name, status: "ERROR", logic_trace: `Exception: ${err.message}` };
-  }
-}
-
 // ── Alert on Failure ───────────────────────────────────
 
 async function sendFailureAlert(admin: any, failures: TestResult[]) {
@@ -352,7 +327,6 @@ Deno.serve(async (req) => {
       testCorsIntegrity(),
       testOtpBruteForce(),
       testModelDrift(),
-      testCredentialHealth(),
     ]);
 
     // Log all results to the immutable audit table
