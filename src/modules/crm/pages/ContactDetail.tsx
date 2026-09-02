@@ -843,7 +843,11 @@ const ContactDetail = () => {
                   contactId={contact.id}
                   contactName={`${contact.first_name} ${contact.last_name || ""}`.trim()}
                 />
-                <ContactEmails contactEmail={contact.email} />
+                <ContactEmails
+                  contactId={contact.id}
+                  contactEmail={contact.email}
+                  contactName={`${contact.first_name} ${contact.last_name || ""}`.trim()}
+                />
               </TabsContent>
 
               {/* Vault Tab */}

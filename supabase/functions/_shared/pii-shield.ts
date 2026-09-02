@@ -19,7 +19,10 @@ export interface PiiCheckResult {
   matched?: string;
 }
 
-export function checkOutboundPii(text: string): PiiCheckResult {
+export function checkOutboundPii(
+  text: string,
+  options?: { skipDollarAmountRule?: boolean },
+): PiiCheckResult {
   if (!text || typeof text !== "string") return { blocked: false };
 
   const checks: Array<[RegExp, string]> = [
@@ -27,7 +30,7 @@ export function checkOutboundPii(text: string): PiiCheckResult {
     [ACCOUNT_NUMBER_PATTERN, "Account number reference"],
     [CREDIT_CARD, "Credit card number"],
     [BALANCE_PATTERN, "Portfolio balance / AUM figure"],
-    [DOLLAR_AMOUNT, "Dollar amount ($1,000+)"],
+    ...(options?.skipDollarAmountRule ? [] : [[DOLLAR_AMOUNT, "Dollar amount ($1,000+)"] as [RegExp, string]]),
     [LONG_DIGIT_RUN, "Long digit sequence (possible account #)"],
     [HEALTH_TERMS, "Health / medical term"],
   ];

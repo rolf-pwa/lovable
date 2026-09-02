@@ -157,3 +157,6 @@ verify_jwt = false
 
 [functions.book-checkout]
 verify_jwt = false
+
+[functions.email-track]
+verify_jwt = false

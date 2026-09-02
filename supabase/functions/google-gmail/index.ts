@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getValidGoogleAccessToken } from "../_shared/google-token.ts";
 
 const ALLOWED_ORIGINS = [
   "https://prosperwise-portal.web.app",
@@ -20,39 +21,6 @@ function getCorsHeaders(req: Request) {
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const GOOGLE_CLIENT_ID = Deno.env.get("GOOGLE_CLIENT_ID")!;
-const GOOGLE_CLIENT_SECRET = Deno.env.get("GOOGLE_CLIENT_SECRET")!;
-
-async function getValidToken(supabaseAdmin: any, userId: string): Promise<string> {
-  const { data, error } = await supabaseAdmin
-    .from("google_tokens")
-    .select("*")
-    .eq("user_id", userId)
-    .maybeSingle();
-  if (error || !data) throw new Error("Google not connected");
-
-  if (new Date(data.token_expiry) <= new Date()) {
-    const res = await fetch("https://oauth2.googleapis.com/token", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        client_id: GOOGLE_CLIENT_ID,
-        client_secret: GOOGLE_CLIENT_SECRET,
-        refresh_token: data.refresh_token,
-        grant_type: "refresh_token",
-      }),
-    });
-    const tokens = await res.json();
-    if (tokens.error) throw new Error(`Token refresh failed: ${tokens.error}`);
-    const newExpiry = new Date(Date.now() + tokens.expires_in * 1000).toISOString();
-    await supabaseAdmin
-      .from("google_tokens")
-      .update({ access_token: tokens.access_token, token_expiry: newExpiry })
-      .eq("user_id", userId);
-    return tokens.access_token;
-  }
-  return data.access_token;
-}
 
 function getHeader(headers: any[], name: string): string {
   return headers?.find((h: any) => h.name?.toLowerCase() === name.toLowerCase())?.value || "";
@@ -84,7 +52,7 @@ serve(async (req) => {
     }
 
     const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-    const accessToken = await getValidToken(supabaseAdmin, user.id);
+    const accessToken = await getValidGoogleAccessToken(supabaseAdmin, user.id);
     const authH = { Authorization: `Bearer ${accessToken}` };
 
     const url = new URL(req.url);

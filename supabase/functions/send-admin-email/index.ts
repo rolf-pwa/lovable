@@ -11,6 +11,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { checkOutboundPii } from "../_shared/pii-shield.ts";
 import { getServiceGoogleAccessToken } from "../_shared/google-token.ts";
+import { buildRawEmail, base64UrlEncode } from "../_shared/gmail-mime.ts";
 
 const GATEWAY_URL = "https://gmail.googleapis.com/gmail/v1";
 const SENDER_DISPLAY = "ProsperWise <rolf@prosperwise.ca>";
@@ -54,70 +55,9 @@ function timingSafeEqual(a: string, b: string): boolean {
   return diff === 0;
 }
 
-function base64UrlEncode(input: string): string {
-  // Use TextEncoder + manual base64 to support unicode bodies
-  const bytes = new TextEncoder().encode(input);
-  let binary = "";
-  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
-  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-}
-
 function asList(v: string | string[] | undefined): string[] {
   if (!v) return [];
   return (Array.isArray(v) ? v : [v]).map((s) => s.trim()).filter(Boolean);
-}
-
-function buildRawEmail(opts: {
-  to: string[];
-  cc?: string[];
-  bcc?: string[];
-  subject: string;
-  text?: string;
-  html?: string;
-  replyTo?: string;
-}): string {
-  const headers: string[] = [
-    `From: ${SENDER_DISPLAY}`,
-    `To: ${opts.to.join(", ")}`,
-  ];
-  if (opts.cc && opts.cc.length) headers.push(`Cc: ${opts.cc.join(", ")}`);
-  if (opts.bcc && opts.bcc.length) headers.push(`Bcc: ${opts.bcc.join(", ")}`);
-  if (opts.replyTo) headers.push(`Reply-To: ${opts.replyTo}`);
-  // RFC 2047 encode subject if needed
-  const subjectEncoded = /[^\x00-\x7F]/.test(opts.subject)
-    ? `=?UTF-8?B?${btoa(unescape(encodeURIComponent(opts.subject)))}?=`
-    : opts.subject;
-  headers.push(`Subject: ${subjectEncoded}`);
-  headers.push("MIME-Version: 1.0");
-
-  let body: string;
-  if (opts.html && opts.text) {
-    const boundary = `pw_boundary_${crypto.randomUUID()}`;
-    headers.push(`Content-Type: multipart/alternative; boundary="${boundary}"`);
-    body = [
-      "",
-      `--${boundary}`,
-      'Content-Type: text/plain; charset="UTF-8"',
-      "Content-Transfer-Encoding: 7bit",
-      "",
-      opts.text,
-      `--${boundary}`,
-      'Content-Type: text/html; charset="UTF-8"',
-      "Content-Transfer-Encoding: 7bit",
-      "",
-      opts.html,
-      `--${boundary}--`,
-      "",
-    ].join("\r\n");
-  } else if (opts.html) {
-    headers.push('Content-Type: text/html; charset="UTF-8"');
-    body = `\r\n${opts.html}`;
-  } else {
-    headers.push('Content-Type: text/plain; charset="UTF-8"');
-    body = `\r\n${opts.text ?? ""}`;
-  }
-
-  return headers.join("\r\n") + "\r\n" + body;
 }
 
 serve(async (req) => {
@@ -207,7 +147,7 @@ serve(async (req) => {
     );
   }
 
-  const raw = buildRawEmail({ to, cc, bcc, subject, text: textWithLink, html: htmlWithLink, replyTo });
+  const raw = buildRawEmail({ from: SENDER_DISPLAY, to, cc, bcc, subject, text: textWithLink, html: htmlWithLink, replyTo });
   const rawEncoded = base64UrlEncode(raw);
 
   try {
