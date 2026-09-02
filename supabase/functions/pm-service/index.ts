@@ -46,7 +46,7 @@ async function requireStaff(req: Request): Promise<{ userId: string; error?: und
 
 const PROJECT_FIELDS = "id, name, description, status, household_id, contact_id, corporation_id, created_by, created_at, updated_at";
 const TASK_FIELDS =
-  "id, project_id, parent_task_id, title, description, status, due_date, assignee_id, household_id, contact_id, corporation_id, completed_at, created_by, created_at, updated_at";
+  "id, project_id, parent_task_id, title, description, status, due_date, assignee_id, household_id, contact_id, corporation_id, completed_at, client_visible, created_by, created_at, updated_at";
 
 Deno.serve(async (req) => {
   const cors = getCorsHeaders(req);
@@ -128,7 +128,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "createTask") {
-      const { title, description, project_id, parent_task_id, due_date, assignee_id, household_id, contact_id, corporation_id } = body;
+      const { title, description, project_id, parent_task_id, due_date, assignee_id, household_id, contact_id, corporation_id, client_visible } = body;
       if (!String(title || "").trim()) return json({ ok: false, error: "Task title is required" }, 400);
 
       let resolvedHouseholdId = household_id || null;
@@ -149,6 +149,7 @@ Deno.serve(async (req) => {
           household_id: resolvedHouseholdId,
           contact_id: contact_id || null,
           corporation_id: corporation_id || null,
+          ...(typeof client_visible === "boolean" ? { client_visible } : {}),
           created_by: userId,
         })
         .select(TASK_FIELDS)
@@ -161,7 +162,7 @@ Deno.serve(async (req) => {
       const { id, ...updates } = body;
       if (!id) return json({ ok: false, error: "id is required" }, 400);
       const patch: Record<string, unknown> = {};
-      for (const key of ["title", "description", "status", "due_date", "assignee_id"]) {
+      for (const key of ["title", "description", "status", "due_date", "assignee_id", "client_visible"]) {
         if (key in updates) patch[key] = updates[key];
       }
       if (patch.status === "done") patch.completed_at = new Date().toISOString();

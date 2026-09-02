@@ -3,7 +3,8 @@ import { Textarea } from "@/shared/components/ui/textarea";
 import { Input } from "@/shared/components/ui/input";
 import { Button } from "@/shared/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
-import { Loader2, Send, Plus } from "lucide-react";
+import { Switch } from "@/shared/components/ui/switch";
+import { Loader2, Send, Plus, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { getTaskAgent } from "@/shared/lib/agents";
 import type { PmTask, PmTaskComment } from "@/shared/lib/agents";
@@ -113,6 +114,15 @@ export function TaskDetailPanel({ task, onChanged }: Props) {
     }
   };
 
+  const setClientVisible = async (client_visible: boolean) => {
+    try {
+      const updated = await getTaskAgent().updateTask(task.id, { client_visible });
+      onChanged(updated);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not update visibility.");
+    }
+  };
+
   const toggleSubtask = async (sub: PmTask) => {
     try {
       const updated = await getTaskAgent().updateTask(sub.id, { status: sub.status === "done" ? "open" : "done" });
@@ -179,6 +189,11 @@ export function TaskDetailPanel({ task, onChanged }: Props) {
           onChange={(e) => setDueDate(e.target.value)}
         />
         <StaffAssigneePicker value={task.assignee_id} onChange={setAssignee} />
+        <label className="ml-auto flex items-center gap-1.5 text-xs text-muted-foreground">
+          {task.client_visible ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+          Client Visible
+          <Switch checked={task.client_visible} onCheckedChange={setClientVisible} />
+        </label>
       </div>
 
       <div className="space-y-1.5">

@@ -184,6 +184,7 @@ export interface PmTask {
   contact_id: string | null;
   corporation_id: string | null;
   completed_at: string | null;
+  client_visible: boolean;
   created_by: string;
   created_at: string;
   updated_at: string;
@@ -231,10 +232,11 @@ export interface ITaskAgentProvider {
     household_id?: string;
     contact_id?: string;
     corporation_id?: string;
+    client_visible?: boolean;
   }): Promise<PmTask>;
   updateTask(
     id: string,
-    updates: Partial<Pick<PmTask, "title" | "description" | "status" | "due_date" | "assignee_id">>,
+    updates: Partial<Pick<PmTask, "title" | "description" | "status" | "due_date" | "assignee_id" | "client_visible">>,
   ): Promise<PmTask>;
   getTaskComments(taskId: string): Promise<PmTaskComment[]>;
   postTaskComment(taskId: string, body: string): Promise<PmTaskComment>;

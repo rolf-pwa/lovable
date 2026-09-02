@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui
 import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
+import { Switch } from "@/shared/components/ui/switch";
 import {
   Collapsible,
   CollapsibleContent,
@@ -17,6 +18,7 @@ import {
   ChevronRight,
   Sparkles,
   RotateCw,
+  EyeOff,
 } from "lucide-react";
 import { toast } from "sonner";
 import { getTaskAgent } from "@/shared/lib/agents";
@@ -132,6 +134,9 @@ export function ContactTaskList({ contactId }: Props) {
           <span className={cn("min-w-0 flex-1 truncate font-medium", task.status === "done" && "text-muted-foreground line-through")}>
             {task.title}
           </span>
+          {!task.client_visible && (
+            <EyeOff className="h-3 w-3 shrink-0 text-muted-foreground" aria-label="Advisor visible only" />
+          )}
           {task.due_date && (
             <span className={cn("shrink-0 text-xs", overdue ? "font-medium text-destructive" : "text-muted-foreground")}>
               {parseLocalDate(task.due_date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
@@ -248,15 +253,22 @@ function AddTaskForm({
 }) {
   const [title, setTitle] = useState("");
   const [dueDate, setDueDate] = useState("");
+  const [clientVisible, setClientVisible] = useState(true);
   const [creating, setCreating] = useState(false);
 
   const handleSubmit = async () => {
     if (!title.trim()) return;
     setCreating(true);
     try {
-      await getTaskAgent().createTask({ title: title.trim(), due_date: dueDate || undefined, contact_id: contactId });
+      await getTaskAgent().createTask({
+        title: title.trim(),
+        due_date: dueDate || undefined,
+        contact_id: contactId,
+        client_visible: clientVisible,
+      });
       setTitle("");
       setDueDate("");
+      setClientVisible(true);
       onCreated();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not create this task.");
@@ -279,6 +291,10 @@ function AddTaskForm({
       />
       <div className="flex flex-wrap items-center gap-2">
         <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="h-7 w-36 text-xs" />
+        <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          Client Visible
+          <Switch checked={clientVisible} onCheckedChange={setClientVisible} className="scale-90" />
+        </label>
         <div className="flex-1" />
         <Button size="sm" className="h-7 text-xs" disabled={!title.trim() || creating} onClick={handleSubmit}>
           {creating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Add"}
