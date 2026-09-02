@@ -4,11 +4,12 @@ import { Input } from "@/shared/components/ui/input";
 import { Button } from "@/shared/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
 import { Switch } from "@/shared/components/ui/switch";
-import { Loader2, Send, Plus, Eye, EyeOff } from "lucide-react";
+import { Loader2, Send, Plus, Eye, EyeOff, X } from "lucide-react";
 import { toast } from "sonner";
 import { getTaskAgent } from "@/shared/lib/agents";
-import type { PmTask, PmTaskComment } from "@/shared/lib/agents";
+import type { PmTask, PmTaskCollaborator, PmTaskComment } from "@/shared/lib/agents";
 import { StaffAssigneePicker } from "./StaffAssigneePicker";
+import { ProfessionalPicker } from "./ProfessionalPicker";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { cn } from "@/shared/lib/utils";
 
@@ -34,6 +35,8 @@ export function TaskDetailPanel({ task, onChanged }: Props) {
   const [loadingSubtasks, setLoadingSubtasks] = useState(true);
   const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
   const [addingSubtask, setAddingSubtask] = useState(false);
+  const [taggedPros, setTaggedPros] = useState<PmTaskCollaborator[]>([]);
+  const [loadingTaggedPros, setLoadingTaggedPros] = useState(true);
 
   useEffect(() => {
     setDescription(task.description || "");
@@ -48,6 +51,20 @@ export function TaskDetailPanel({ task, onChanged }: Props) {
         if (!cancelled) setSubtasks(data);
       })
       .finally(() => !cancelled && setLoadingSubtasks(false));
+    return () => {
+      cancelled = true;
+    };
+  }, [task.id]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoadingTaggedPros(true);
+    getTaskAgent()
+      .listTaskCollaborators(task.id)
+      .then((data) => {
+        if (!cancelled) setTaggedPros(data);
+      })
+      .finally(() => !cancelled && setLoadingTaggedPros(false));
     return () => {
       cancelled = true;
     };
@@ -153,6 +170,24 @@ export function TaskDetailPanel({ task, onChanged }: Props) {
     }
   };
 
+  const tagProfessional = async (professionalId: string) => {
+    try {
+      const created = await getTaskAgent().tagProfessional(task.id, professionalId);
+      setTaggedPros((prev) => [...prev, created]);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not tag this professional.");
+    }
+  };
+
+  const untagProfessional = async (professionalId: string) => {
+    try {
+      await getTaskAgent().untagProfessional(task.id, professionalId);
+      setTaggedPros((prev) => prev.filter((c) => c.professional_id !== professionalId));
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not remove this professional.");
+    }
+  };
+
   const postComment = async () => {
     if (!commentBody.trim()) return;
     setSending(true);
@@ -240,6 +275,36 @@ export function TaskDetailPanel({ task, onChanged }: Props) {
             {addingSubtask ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
           </Button>
         </div>
+      </div>
+
+      <div className="space-y-2">
+        <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Tagged Professionals</h4>
+        {loadingTaggedPros ? (
+          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+        ) : taggedPros.length > 0 ? (
+          <div className="space-y-1">
+            {taggedPros.map((c) => (
+              <div
+                key={c.id}
+                className="flex items-center justify-between rounded-md px-1.5 py-1 text-sm hover:bg-muted/50"
+              >
+                <span>
+                  {c.professionals?.full_name}
+                  {c.professionals?.firm ? ` · ${c.professionals.firm}` : ""}
+                </span>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-6 w-6"
+                  onClick={() => untagProfessional(c.professional_id)}
+                >
+                  <X className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        ) : null}
+        <ProfessionalPicker excludeIds={taggedPros.map((c) => c.professional_id)} onSelect={tagProfessional} />
       </div>
 
       <div className="space-y-2">

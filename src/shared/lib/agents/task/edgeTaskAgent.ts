@@ -4,7 +4,7 @@
  * touching components.
  */
 import { supabase } from "@/shared/integrations/supabase/client";
-import type { ITaskAgentProvider, PmProject, PmTask, PmTaskComment, PmTaskFilter } from "../types";
+import type { ITaskAgentProvider, PmProject, PmTask, PmTaskCollaborator, PmTaskComment, PmTaskFilter } from "../types";
 
 async function invoke<T>(body: Record<string, unknown>): Promise<T> {
   const { data, error } = await supabase.functions.invoke("pm-service", { body });
@@ -68,5 +68,23 @@ export const edgeTaskAgent: ITaskAgentProvider = {
   async postTaskComment(taskId, body): Promise<PmTaskComment> {
     const data = await invoke<{ comment: PmTaskComment }>({ action: "postTaskComment", task_id: taskId, body });
     return data.comment;
+  },
+
+  async listTaskCollaborators(taskId): Promise<PmTaskCollaborator[]> {
+    const data = await invoke<{ collaborators: PmTaskCollaborator[] }>({ action: "listTaskCollaborators", task_id: taskId });
+    return data.collaborators;
+  },
+
+  async tagProfessional(taskId, professionalId): Promise<PmTaskCollaborator> {
+    const data = await invoke<{ collaborator: PmTaskCollaborator }>({
+      action: "tagProfessional",
+      task_id: taskId,
+      professional_id: professionalId,
+    });
+    return data.collaborator;
+  },
+
+  async untagProfessional(taskId, professionalId): Promise<void> {
+    await invoke<{ ok: boolean }>({ action: "untagProfessional", task_id: taskId, professional_id: professionalId });
   },
 };

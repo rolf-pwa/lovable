@@ -183,6 +183,7 @@ export interface PmTask {
   household_id: string | null;
   contact_id: string | null;
   corporation_id: string | null;
+  family_id: string | null;
   completed_at: string | null;
   client_visible: boolean;
   created_by: string;
@@ -194,8 +195,18 @@ export interface PmTaskComment {
   id: string;
   task_id: string;
   author_id: string;
+  author_professional_id?: string | null;
   body: string;
   created_at: string;
+}
+
+export interface PmTaskCollaborator {
+  id: string;
+  task_id: string;
+  professional_id: string;
+  tagged_by: string | null;
+  created_at: string;
+  professionals?: { id: string; full_name: string; firm: string | null; professional_type: string } | null;
 }
 
 export interface PmTaskFilter {
@@ -205,8 +216,10 @@ export interface PmTaskFilter {
   household_id?: string;
   contact_id?: string;
   corporation_id?: string;
+  family_id?: string;
   status?: string;
   parent_task_id?: string;
+  professional_id?: string;
 }
 
 export interface ITaskAgentProvider {
@@ -232,12 +245,16 @@ export interface ITaskAgentProvider {
     household_id?: string;
     contact_id?: string;
     corporation_id?: string;
+    family_id?: string;
     client_visible?: boolean;
   }): Promise<PmTask>;
   updateTask(
     id: string,
-    updates: Partial<Pick<PmTask, "title" | "description" | "status" | "due_date" | "assignee_id" | "client_visible">>,
+    updates: Partial<Pick<PmTask, "title" | "description" | "status" | "due_date" | "assignee_id" | "client_visible" | "family_id">>,
   ): Promise<PmTask>;
   getTaskComments(taskId: string): Promise<PmTaskComment[]>;
   postTaskComment(taskId: string, body: string): Promise<PmTaskComment>;
+  listTaskCollaborators(taskId: string): Promise<PmTaskCollaborator[]>;
+  tagProfessional(taskId: string, professionalId: string): Promise<PmTaskCollaborator>;
+  untagProfessional(taskId: string, professionalId: string): Promise<void>;
 }

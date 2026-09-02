@@ -46,7 +46,7 @@ async function requireStaff(req: Request): Promise<{ userId: string; error?: und
 
 const PROJECT_FIELDS = "id, name, description, status, household_id, contact_id, corporation_id, created_by, created_at, updated_at";
 const TASK_FIELDS =
-  "id, project_id, parent_task_id, title, description, status, due_date, assignee_id, household_id, contact_id, corporation_id, completed_at, client_visible, created_by, created_at, updated_at";
+  "id, project_id, parent_task_id, title, description, status, due_date, assignee_id, household_id, contact_id, corporation_id, family_id, completed_at, client_visible, created_by, created_at, updated_at";
 
 Deno.serve(async (req) => {
   const cors = getCorsHeaders(req);
@@ -113,13 +113,25 @@ Deno.serve(async (req) => {
     }
 
     if (action === "listTasks") {
-      const { project_id, assignee_id, household_id, contact_id, corporation_id, status, parent_task_id } = body;
+      const { project_id, assignee_id, household_id, contact_id, corporation_id, family_id, status, parent_task_id, professional_id } = body;
+      let taggedTaskIds: string[] | null = null;
+      if (professional_id) {
+        const { data: tagged, error: tagErr } = await db
+          .from("pm_task_collaborators")
+          .select("task_id")
+          .eq("professional_id", professional_id);
+        if (tagErr) return json({ ok: false, error: tagErr.message }, 500);
+        taggedTaskIds = (tagged || []).map((r: { task_id: string }) => r.task_id);
+        if (taggedTaskIds.length === 0) return json({ ok: true, tasks: [] });
+      }
       let q = db.from("pm_tasks").select(TASK_FIELDS).order("due_date", { ascending: true, nullsFirst: false });
+      if (taggedTaskIds) q = q.in("id", taggedTaskIds);
       if (project_id) q = q.eq("project_id", project_id);
       if (assignee_id) q = q.eq("assignee_id", assignee_id === "me" ? userId : assignee_id);
       if (household_id) q = q.eq("household_id", household_id);
       if (contact_id) q = q.eq("contact_id", contact_id);
       if (corporation_id) q = q.eq("corporation_id", corporation_id);
+      if (family_id) q = q.eq("family_id", family_id);
       if (status) q = q.eq("status", status);
       if (parent_task_id) q = q.eq("parent_task_id", parent_task_id);
       const { data, error } = await q;
@@ -128,7 +140,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "createTask") {
-      const { title, description, project_id, parent_task_id, due_date, assignee_id, household_id, contact_id, corporation_id, client_visible } = body;
+      const { title, description, project_id, parent_task_id, due_date, assignee_id, household_id, contact_id, corporation_id, family_id, client_visible } = body;
       if (!String(title || "").trim()) return json({ ok: false, error: "Task title is required" }, 400);
 
       let resolvedHouseholdId = household_id || null;
@@ -149,6 +161,7 @@ Deno.serve(async (req) => {
           household_id: resolvedHouseholdId,
           contact_id: contact_id || null,
           corporation_id: corporation_id || null,
+          family_id: family_id || null,
           ...(typeof client_visible === "boolean" ? { client_visible } : {}),
           created_by: userId,
         })
@@ -162,7 +175,7 @@ Deno.serve(async (req) => {
       const { id, ...updates } = body;
       if (!id) return json({ ok: false, error: "id is required" }, 400);
       const patch: Record<string, unknown> = {};
-      for (const key of ["title", "description", "status", "due_date", "assignee_id", "client_visible"]) {
+      for (const key of ["title", "description", "status", "due_date", "assignee_id", "client_visible", "family_id"]) {
         if (key in updates) patch[key] = updates[key];
       }
       if (patch.status === "done") patch.completed_at = new Date().toISOString();
@@ -194,6 +207,51 @@ Deno.serve(async (req) => {
         .maybeSingle();
       if (error) return json({ ok: false, error: error.message }, 500);
       return json({ ok: true, comment: data });
+    }
+
+    const COLLABORATOR_FIELDS =
+      "id, task_id, professional_id, tagged_by, created_at, professionals(id, full_name, firm, professional_type)";
+
+    if (action === "listTaskCollaborators") {
+      const { task_id } = body;
+      if (!task_id) return json({ ok: false, error: "task_id is required" }, 400);
+      const { data, error } = await db
+        .from("pm_task_collaborators")
+        .select(COLLABORATOR_FIELDS)
+        .eq("task_id", task_id)
+        .order("created_at", { ascending: true });
+      if (error) return json({ ok: false, error: error.message }, 500);
+      return json({ ok: true, collaborators: data });
+    }
+
+    if (action === "tagProfessional") {
+      const { task_id, professional_id } = body;
+      if (!task_id || !professional_id) return json({ ok: false, error: "task_id and professional_id are required" }, 400);
+      const { error: insertErr } = await db
+        .from("pm_task_collaborators")
+        .insert({ task_id, professional_id, tagged_by: userId });
+      // Idempotent: a double-click / already-tagged row is not an error.
+      if (insertErr && insertErr.code !== "23505") return json({ ok: false, error: insertErr.message }, 500);
+      const { data, error } = await db
+        .from("pm_task_collaborators")
+        .select(COLLABORATOR_FIELDS)
+        .eq("task_id", task_id)
+        .eq("professional_id", professional_id)
+        .maybeSingle();
+      if (error) return json({ ok: false, error: error.message }, 500);
+      return json({ ok: true, collaborator: data });
+    }
+
+    if (action === "untagProfessional") {
+      const { task_id, professional_id } = body;
+      if (!task_id || !professional_id) return json({ ok: false, error: "task_id and professional_id are required" }, 400);
+      const { error } = await db
+        .from("pm_task_collaborators")
+        .delete()
+        .eq("task_id", task_id)
+        .eq("professional_id", professional_id);
+      if (error) return json({ ok: false, error: error.message }, 500);
+      return json({ ok: true });
     }
 
     return json({ ok: false, error: `Unknown action: ${action}` }, 400);

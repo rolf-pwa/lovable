@@ -4,7 +4,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui
 import { Button } from "@/shared/components/ui/button";
 import { Textarea } from "@/shared/components/ui/textarea";
 import { Input } from "@/shared/components/ui/input";
-import { Badge } from "@/shared/components/ui/badge";
 import { toast } from "sonner";
 import { CheckCircle2, Circle, MessageSquare, Plus, ChevronDown, ChevronRight, Loader2, Home } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
@@ -12,17 +11,15 @@ import { FN, proFetch } from "./ProPortalShell";
 
 interface TaskContext { label: string; path: string }
 interface Task {
-  gid: string;
-  name: string;
-  notes: string;
-  completed: boolean;
-  due_on: string | null;
-  section: string | null;
-  num_subtasks: number;
-  modified_at: string;
+  id: string;
+  title: string;
+  description: string | null;
+  status: string;
+  due_date: string | null;
+  updated_at: string;
   context?: TaskContext | null;
 }
-interface Story { gid: string; text: string; created_at: string; author: string }
+interface Comment { id: string; body: string; author_type: "staff" | "client" | "pro"; author_name: string; created_at: string }
 
 interface Props {
   scopeType: "family" | "household" | "contact" | "portfolio";
@@ -36,7 +33,7 @@ export default function ProTasksPanel({ scopeType, scopeId, title }: Props) {
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<"open" | "done">("open");
   const [expanded, setExpanded] = useState<string | null>(null);
-  const [stories, setStories] = useState<Record<string, Story[]>>({});
+  const [comments, setComments] = useState<Record<string, Comment[]>>({});
   const [composer, setComposer] = useState<Record<string, string>>({});
   const [sending, setSending] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
@@ -61,29 +58,27 @@ export default function ProTasksPanel({ scopeType, scopeId, title }: Props) {
   useEffect(() => { load(); }, [load]);
 
   async function toggleExpand(t: Task) {
-    if (expanded === t.gid) { setExpanded(null); return; }
-    setExpanded(t.gid);
-    if (!stories[t.gid]) {
+    if (expanded === t.id) { setExpanded(null); return; }
+    setExpanded(t.id);
+    if (!comments[t.id]) {
       try {
-        const res = await fetch(FN.tasks, proFetch({ action: "stories", task_gid: t.gid }));
+        const res = await fetch(FN.tasks, proFetch({ action: "comments", task_id: t.id }));
         const data = await res.json();
-        if (res.ok) setStories((s) => ({ ...s, [t.gid]: data.stories || [] }));
+        if (res.ok) setComments((s) => ({ ...s, [t.id]: data.comments || [] }));
       } catch {/* noop */}
     }
   }
 
   async function comment(t: Task) {
-    const text = (composer[t.gid] || "").trim();
+    const text = (composer[t.id] || "").trim();
     if (!text) return;
-    setSending(t.gid);
+    setSending(t.id);
     try {
-      const res = await fetch(FN.tasks, proFetch({ action: "comment", task_gid: t.gid, text }));
+      const res = await fetch(FN.tasks, proFetch({ action: "postComment", task_id: t.id, body: text }));
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed");
-      setComposer((c) => ({ ...c, [t.gid]: "" }));
-      const s = await fetch(FN.tasks, proFetch({ action: "stories", task_gid: t.gid }));
-      const sd = await s.json();
-      if (s.ok) setStories((prev) => ({ ...prev, [t.gid]: sd.stories || [] }));
+      setComposer((c) => ({ ...c, [t.id]: "" }));
+      setComments((prev) => ({ ...prev, [t.id]: [...(prev[t.id] || []), data.comment] }));
     } catch (e: any) {
       toast.error(e.message || "Comment failed");
     } finally {
@@ -92,11 +87,12 @@ export default function ProTasksPanel({ scopeType, scopeId, title }: Props) {
   }
 
   async function complete(t: Task) {
+    const nowDone = t.status !== "done";
     try {
-      const res = await fetch(FN.tasks, proFetch({ action: "complete", task_gid: t.gid, completed: !t.completed }));
+      const res = await fetch(FN.tasks, proFetch({ action: "complete", task_id: t.id, completed: nowDone }));
       if (!res.ok) throw new Error();
-      setTasks((prev) => prev.map((x) => x.gid === t.gid ? { ...x, completed: !t.completed } : x));
-      toast.success(t.completed ? "Reopened" : "Marked complete");
+      setTasks((prev) => prev.map((x) => x.id === t.id ? { ...x, status: nowDone ? "done" : "open" } : x));
+      toast.success(nowDone ? "Marked complete" : "Reopened");
     } catch {
       toast.error("Could not update task");
     }
@@ -121,7 +117,7 @@ export default function ProTasksPanel({ scopeType, scopeId, title }: Props) {
     }
   }
 
-  const filtered = tasks.filter((t) => tab === "open" ? !t.completed : t.completed);
+  const filtered = tasks.filter((t) => tab === "open" ? t.status !== "done" : t.status === "done");
 
   return (
     <Card className="border-accent/20">
@@ -181,36 +177,34 @@ export default function ProTasksPanel({ scopeType, scopeId, title }: Props) {
         ) : (
           <ul className="space-y-2">
             {filtered.map((t) => {
-              const isExpanded = expanded === t.gid;
+              const isExpanded = expanded === t.id;
+              const isDone = t.status === "done";
               return (
-                <li key={t.gid} className="border border-border/60 rounded-md overflow-hidden bg-card">
+                <li key={t.id} className="border border-border/60 rounded-md overflow-hidden bg-card">
                   <div className="flex items-start gap-3 px-3 py-2.5">
                     <button
                       onClick={() => complete(t)}
                       className="mt-0.5 text-muted-foreground hover:text-accent transition-colors"
-                      title={t.completed ? "Reopen" : "Mark complete"}
+                      title={isDone ? "Reopen" : "Mark complete"}
                     >
-                      {t.completed ? <CheckCircle2 className="h-4 w-4 text-accent" /> : <Circle className="h-4 w-4" />}
+                      {isDone ? <CheckCircle2 className="h-4 w-4 text-accent" /> : <Circle className="h-4 w-4" />}
                     </button>
                     <div className="flex-1 min-w-0">
                       <button onClick={() => toggleExpand(t)} className="w-full text-left">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className={`text-sm font-medium ${t.completed ? "line-through text-muted-foreground" : "text-foreground"}`}>
-                            {t.name}
+                          <span className={`text-sm font-medium ${isDone ? "line-through text-muted-foreground" : "text-foreground"}`}>
+                            {t.title}
                           </span>
-                          {t.section && (
-                            <Badge variant="outline" className="text-[10px]">{t.section}</Badge>
-                          )}
-                          {t.due_on && (
+                          {t.due_date && (
                             <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                              due {format(new Date(t.due_on), "MMM d")}
+                              due {format(new Date(t.due_date), "MMM d")}
                             </span>
                           )}
                         </div>
                       </button>
                       <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                         <span className="text-[11px] text-muted-foreground">
-                          Updated {formatDistanceToNow(new Date(t.modified_at), { addSuffix: true })}
+                          Updated {formatDistanceToNow(new Date(t.updated_at), { addSuffix: true })}
                         </span>
                         {t.context && (
                           <>
@@ -232,44 +226,58 @@ export default function ProTasksPanel({ scopeType, scopeId, title }: Props) {
                   </div>
                   {isExpanded && (
                     <div className="border-t border-border/60 bg-muted/20 px-3 py-3 space-y-3">
-                      {t.notes && (
-                        <div className="text-xs text-muted-foreground whitespace-pre-wrap">{t.notes}</div>
+                      {t.description && (
+                        <div className="text-xs text-muted-foreground whitespace-pre-wrap">{t.description}</div>
                       )}
                       <div className="space-y-2">
                         <div className="text-[10px] uppercase tracking-wider text-muted-foreground flex items-center gap-1">
                           <MessageSquare className="h-3 w-3" /> Comments
                         </div>
-                        {(stories[t.gid] || []).length === 0 ? (
+                        {(comments[t.id] || []).length === 0 ? (
                           <div className="text-xs text-muted-foreground italic">No comments yet.</div>
                         ) : (
-                          <ul className="space-y-1.5">
-                            {(stories[t.gid] || []).map((s) => (
-                              <li key={s.gid} className="text-xs bg-card border border-border/60 rounded px-2 py-1.5">
-                                <div className="whitespace-pre-wrap text-foreground">{s.text}</div>
-                                <div className="text-[10px] text-muted-foreground mt-0.5">
-                                  {s.author} · {format(new Date(s.created_at), "PP p")}
+                          <div className="space-y-1.5">
+                            {(comments[t.id] || []).map((c) => {
+                              const isMine = c.author_type === "pro";
+                              return (
+                                <div key={c.id} className="flex flex-col gap-0.5">
+                                  <div className={`flex items-center gap-2 ${isMine ? "justify-end" : ""}`}>
+                                    <span className="text-[10px] font-semibold text-foreground">{c.author_name}</span>
+                                    <span className="text-[10px] text-muted-foreground">
+                                      {format(new Date(c.created_at), "PP p")}
+                                    </span>
+                                  </div>
+                                  <div
+                                    className={`rounded px-2 py-1.5 text-xs whitespace-pre-wrap break-words max-w-[90%] ${
+                                      isMine
+                                        ? "bg-accent/10 border border-accent/30 text-foreground ml-auto"
+                                        : "bg-card border border-border/60 text-foreground"
+                                    }`}
+                                  >
+                                    {c.body}
+                                  </div>
                                 </div>
-                              </li>
-                            ))}
-                          </ul>
+                              );
+                            })}
+                          </div>
                         )}
                       </div>
                       <div className="space-y-1.5">
                         <Textarea
                           rows={2}
                           placeholder="Add a comment…"
-                          value={composer[t.gid] || ""}
-                          onChange={(e) => setComposer((c) => ({ ...c, [t.gid]: e.target.value }))}
+                          value={composer[t.id] || ""}
+                          onChange={(e) => setComposer((c) => ({ ...c, [t.id]: e.target.value }))}
                           className="text-xs"
                         />
                         <div className="flex justify-end">
                           <Button
                             size="sm"
                             onClick={() => comment(t)}
-                            disabled={sending === t.gid || !(composer[t.gid] || "").trim()}
+                            disabled={sending === t.id || !(composer[t.id] || "").trim()}
                             className="bg-accent hover:bg-accent/90 text-accent-foreground"
                           >
-                            {sending === t.gid ? <Loader2 className="h-3 w-3 animate-spin" /> : "Post"}
+                            {sending === t.id ? <Loader2 className="h-3 w-3 animate-spin" /> : "Post"}
                           </Button>
                         </div>
                       </div>

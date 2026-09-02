@@ -90,6 +90,9 @@ verify_jwt = false
 [functions.pro-portal-tasks]
 verify_jwt = false
 
+[functions.pm-pro-tasks]
+verify_jwt = false
+
 [functions.engagement-message-send]
 verify_jwt = false
 
