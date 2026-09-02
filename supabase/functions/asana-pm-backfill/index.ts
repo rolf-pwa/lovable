@@ -176,7 +176,7 @@ Deno.serve(async (req) => {
     // backfill, which defaulted every task to client_visible = true instead
     // of checking Asana's own visibility gate.
     if (action === "reclassifyVisibility") {
-      let tasksQuery = admin.from("pm_tasks").select("id, asana_gid, contact_id").not("asana_gid", "is", null);
+      let tasksQuery = admin.from("pm_tasks").select("id, asana_gid, contact_id, parent_task_id").not("asana_gid", "is", null);
       if (contact_id) tasksQuery = tasksQuery.eq("contact_id", contact_id);
       const { data: tasksToScan, error: scanErr } = await tasksQuery;
       if (scanErr) return json({ error: scanErr.message }, 500);
@@ -189,10 +189,14 @@ Deno.serve(async (req) => {
       };
       for (const t of tasksToScan || []) {
         try {
-          const asanaTask = await withFailSafe(`getTask(${t.asana_gid})`, () =>
-            asanaGet(`/tasks/${t.asana_gid}?opt_fields=custom_fields`),
+          // The linked root task itself is never client-visible -- only its
+          // subtasks are eligible, per Asana's PW_Visibility tag on each.
+          // Skip the Asana lookup entirely for root tasks; force internal.
+          const visible = t.parent_task_id === null ? false : isClientVisible(
+            await withFailSafe(`getTask(${t.asana_gid})`, () =>
+              asanaGet(`/tasks/${t.asana_gid}?opt_fields=custom_fields`),
+            ),
           );
-          const visible = isClientVisible(asanaTask);
           const { error: updateErr } = await admin.from("pm_tasks").update({ client_visible: visible }).eq("id", t.id);
           if (updateErr) throw new Error(updateErr.message);
           scanSummary.scanned++;
@@ -280,7 +284,11 @@ Deno.serve(async (req) => {
           contact_id: contactId,
           household_id: householdId,
           parent_task_id: parentTaskId,
-          client_visible: isClientVisible(task),
+          // The linked task itself (parentTaskId === null, i.e. what a
+          // contact's asana_url points to) is a structural container/anchor,
+          // never a real client-facing item -- only its subtasks represent
+          // actual work items eligible for client visibility.
+          client_visible: parentTaskId === null ? false : isClientVisible(task),
           asana_gid: task.gid,
           created_by: "140aaffa-abce-4de8-9756-7013f32642d0",
         })
