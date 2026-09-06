@@ -1,10 +1,36 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/shared/components/ui/button";
 import { Bot, X } from "lucide-react";
 import { SovereigntyAssistant } from "./SovereigntyAssistant";
+import { useCurrentEntityFromRoute } from "@/shared/hooks/useCurrentEntityFromRoute";
+import { supabase } from "@/shared/integrations/supabase/client";
+
+const ENTITY_TABLE: Record<string, { table: string; nameColumn: string }> = {
+  contact: { table: "contacts", nameColumn: "full_name" },
+  household: { table: "households", nameColumn: "label" },
+  family: { table: "families", nameColumn: "name" },
+};
 
 export function AssistantSidebar() {
   const [isOpen, setIsOpen] = useState(false);
+  const entity = useCurrentEntityFromRoute();
+
+  const nameQuery = useQuery({
+    queryKey: ["assistant-current-entity-name", entity?.type, entity?.id],
+    queryFn: async () => {
+      if (!entity) return null;
+      const { table, nameColumn } = ENTITY_TABLE[entity.type];
+      const { data } = await supabase.from(table as any).select(nameColumn).eq("id", entity.id).maybeSingle();
+      return (data as any)?.[nameColumn] ?? null;
+    },
+    enabled: isOpen && !!entity,
+    staleTime: 60_000,
+  });
+
+  const contactContext = entity
+    ? { type: entity.type, id: entity.id, name: nameQuery.data ?? undefined }
+    : undefined;
 
   return (
     <>
@@ -29,7 +55,11 @@ export function AssistantSidebar() {
             </Button>
           </div>
           <div className="flex-1 overflow-hidden">
-            <SovereigntyAssistant variant="embedded" />
+            <SovereigntyAssistant
+              variant="embedded"
+              contactContext={contactContext}
+              contactId={entity?.type === "contact" ? entity.id : undefined}
+            />
           </div>
         </div>
       )}

@@ -166,6 +166,12 @@ export function SovereigntyAssistant({
         <p className="text-xs text-muted-foreground">
           AI-powered support · All outputs are drafts for your review
         </p>
+        {contactContext?.name && (
+          <p className="text-xs text-muted-foreground">
+            Currently viewing: <span className="font-medium text-foreground">{contactContext.name}</span>
+            {contactContext.type ? ` (${contactContext.type})` : ""}
+          </p>
+        )}
         <label className="flex items-center gap-2 pt-1 text-xs text-muted-foreground">
           <Switch checked={useBrain} onCheckedChange={setUseBrain} className="scale-75" />
           <Brain className="h-3 w-3" />

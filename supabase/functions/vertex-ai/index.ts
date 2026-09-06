@@ -105,7 +105,7 @@ When appropriate, use these tools to propose structured actions:
 
 1. **propose_vineyard_update** — Extract and propose updates to a contact's Vineyard financial metrics (EBITDA, Operating Income, Balance Sheet Summary).
 2. **propose_storehouse_update** — Propose updates to a contact's Storehouse (liquidity vessel) configuration.
-3. **draft_asana_task** — Draft a follow-up task description for Asana. This stays in DRAFT status.
+3. **draft_pm_task** — Create a draft task in the in-house PM system (pm_tasks). Drafts are created with status "open" and client_visible: false (internal-only) until the Personal CFO reviews and adjusts visibility.
 4. **create_contact** — Create a new contact record in the system with the provided details.
 5. **update_contact** — Update an existing contact's information (name, email, phone, address, professional links, etc.).
 
@@ -117,6 +117,7 @@ When appropriate, use these tools to propose structured actions:
 - Be concise, professional, and action-oriented.
 - When you don't have enough context, ask clarifying questions before proposing actions.
 - When creating or updating contacts, confirm the details with the CFO before proposing.
+- When a "Current Contact Context" section is present below, treat its `id` as the default subject for tool calls that take a `contact_id` (e.g. draft_pm_task, propose_vineyard_update, propose_storehouse_update, update_contact) — don't ask the CFO to specify a contact they're already viewing. If that context's type is "household" or "family" rather than a single contact, say so and ask which member the action applies to before proposing a contact-scoped update.
 
 ## Charter Ingestion Capabilities
 When the Personal CFO uploads a Sovereignty Charter PDF:
@@ -185,18 +186,20 @@ const TOOLS = [
         },
       },
       {
-        name: "draft_asana_task",
-        description: "Draft a follow-up task for Asana. The task description stays in DRAFT status until the Personal CFO reviews it.",
+        name: "draft_pm_task",
+        description: "Create a draft task in the in-house PM system (pm_tasks). Stays status=open and internal-only (client_visible=false) until the Personal CFO reviews it.",
         parameters: {
           type: "OBJECT",
           properties: {
-            task_title: { type: "STRING", description: "Task title" },
-            task_description: { type: "STRING", description: "Detailed task description" },
-            contact_name: { type: "STRING", description: "Related contact name" },
-            priority: { type: "STRING", description: "Priority level: low, medium, high" },
-            context: { type: "STRING", description: "Why this task is needed" },
+            title: { type: "STRING", description: "Task title" },
+            description: { type: "STRING", description: "Detailed task description" },
+            contact_id: { type: "STRING", description: "UUID of the related contact, if known (falls back to the current contact context)" },
+            contact_name: { type: "STRING", description: "Related contact name, for display" },
+            due_date: { type: "STRING", description: "Due date in YYYY-MM-DD format, if applicable" },
+            priority: { type: "STRING", description: "Priority level: low, medium, high (folded into the task description — pm_tasks has no dedicated priority column)" },
+            rationale: { type: "STRING", description: "Why this task is needed" },
           },
-          required: ["task_title", "task_description", "contact_name", "context"],
+          required: ["title", "rationale"],
         },
       },
       {
@@ -233,8 +236,6 @@ const TOOLS = [
             fiduciary_entity: { type: "STRING", description: "Updated fiduciary entity: pws or pwa" },
             governance_status: { type: "STRING", description: "Updated governance status: stabilization or sovereign" },
             google_drive_url: { type: "STRING", description: "Updated Google Drive URL" },
-            asana_url: { type: "STRING", description: "Updated Asana URL" },
-            
             ia_financial_url: { type: "STRING", description: "Updated IA Financial URL" },
             lawyer_name: { type: "STRING", description: "Updated lawyer name" },
             lawyer_firm: { type: "STRING", description: "Updated lawyer firm" },
@@ -444,7 +445,8 @@ serve(async (req) => {
     const selectedModel = model || MODEL;
     const projectId = saKey.project_id;
 
-    // Build system instruction with optional contact context
+    // Build system instruction with optional current-entity context (contact,
+    // household, or family — see src/shared/hooks/useCurrentEntityFromRoute.ts)
     let systemText = SYSTEM_PROMPT;
     if (contactContext) {
       systemText += `\n\n## Current Contact Context\n${JSON.stringify(contactContext, null, 2)}`;
@@ -464,8 +466,9 @@ serve(async (req) => {
             { auth: { persistSession: false } },
           );
           const entityId = contactContext?.id ? String(contactContext.id) : undefined;
+          const entityType = entityId ? (contactContext?.type ?? "contact") : undefined;
           const brain = await retrieveBrainContext(admin, saKey, lastUserMessage.content, {
-            entityType: entityId ? "contact" : undefined,
+            entityType,
             entityId,
           });
           if (brain.block) {

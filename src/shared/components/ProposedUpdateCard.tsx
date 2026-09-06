@@ -30,7 +30,7 @@ interface ProposedUpdateCardProps {
 const CARD_CONFIG: Record<string, { icon: typeof Database; label: string; color: string }> = {
   propose_vineyard_update: { icon: Database, label: "Vineyard Update", color: "text-sanctuary-green" },
   propose_storehouse_update: { icon: Database, label: "Storehouse Update", color: "text-sanctuary-bronze" },
-  draft_asana_task: { icon: ListTodo, label: "Draft Task", color: "text-purple-500" },
+  draft_pm_task: { icon: ListTodo, label: "Draft PM Task", color: "text-purple-500" },
   create_contact: { icon: UserPlus, label: "New Contact", color: "text-emerald-500" },
   update_contact: { icon: UserCog, label: "Update Contact", color: "text-amber-500" },
   ingest_vineyard_accounts: { icon: Grape, label: "Charter → Vineyard Accounts", color: "text-sanctuary-green" },
@@ -115,19 +115,38 @@ export function ProposedUpdateCard({ functionCall, contactId, isApproved, onAppr
           break;
         }
 
-        case "draft_asana_task": {
-          const taskText = `${args.task_title}\n\n${args.task_description}\n\nContact: ${args.contact_name}\nPriority: ${args.priority || "medium"}`;
-          await navigator.clipboard.writeText(taskText);
+        case "draft_pm_task": {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (!user) throw new Error("Not authenticated");
+
+          let description: string = args.description || "";
+          if (args.priority) description = `[Priority: ${args.priority}] ${description}`.trim();
+
+          // Cast as `any`: the generated pm_tasks type in
+          // src/integrations/supabase/types.ts is stale and missing
+          // client_visible/family_id, which are confirmed live columns.
+          const taskData: Record<string, any> = {
+            title: args.title,
+            description: description || null,
+            status: "open",
+            client_visible: false,
+            created_by: user.id,
+          };
+          if (cid) taskData.contact_id = cid;
+          if (args.due_date) taskData.due_date = args.due_date;
+
+          const { error } = await supabase.from("pm_tasks").insert(taskData as any);
+          if (error) throw error;
 
           if (cid) {
             await logAuditAction(
               cid,
-              "draft_task",
-              `AI Assistant drafted Asana task "${args.task_title}" for ${args.contact_name}`,
+              "draft_pm_task",
+              `AI Assistant drafted PM task "${args.title}" for ${args.contact_name || "—"}`,
               args
             );
           }
-          toast.success("Task copied to clipboard. Paste into Asana to create.");
+          toast.success(`Task "${args.title}" created as a draft in PM (internal-only).`);
           break;
         }
 
@@ -171,7 +190,7 @@ export function ProposedUpdateCard({ functionCall, contactId, isApproved, onAppr
           const fieldsToCopy = [
             "first_name", "last_name", "email", "phone", "address",
             "fiduciary_entity", "governance_status", "google_drive_url",
-            "asana_url", "ia_financial_url",
+            "ia_financial_url",
             "lawyer_name", "lawyer_firm", "accountant_name", "accountant_firm",
           ];
           for (const field of fieldsToCopy) {
@@ -379,7 +398,7 @@ export function ProposedUpdateCard({ functionCall, contactId, isApproved, onAppr
         await (supabase.from("review_queue" as any) as any).insert({
           contact_id: cid || null,
           action_type: functionCall.name,
-          action_description: args.rationale || args.task_title || args.subject || args.summary || config.label,
+          action_description: args.rationale || args.title || args.subject || args.summary || config.label,
           proposed_data: args,
           logic_trace: `Auto-approved by CFO via Sovereignty Assistant. Action: ${functionCall.name}`,
           status: "approved",
@@ -544,7 +563,7 @@ export function ProposedUpdateCard({ functionCall, contactId, isApproved, onAppr
                   await (supabase.from("review_queue" as any) as any).insert({
                     contact_id: cid || null,
                     action_type: functionCall.name,
-                    action_description: args.rationale || args.task_title || args.subject || config.label,
+                    action_description: args.rationale || args.title || args.subject || config.label,
                     proposed_data: args,
                     logic_trace: `AI proposed: ${functionCall.name}. Queued for human review.`,
                     status: "pending",

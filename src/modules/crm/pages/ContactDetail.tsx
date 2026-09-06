@@ -51,7 +51,6 @@ import { ContactCalendar } from "@/modules/crm/components/ContactCalendar";
 import QuoCommunications from "@/modules/crm/components/QuoCommunications";
 import ManualActivityLog from "@/modules/crm/components/ManualActivityLog";
 import { ContactEmails } from "@/modules/crm/components/ContactEmails";
-import { SovereigntyAssistant } from "@/shared/components/SovereigntyAssistant";
 import { AuditTrail } from "@/modules/audit";
 import { StatementUpload } from "@/modules/crm";
 import { HoldingTank } from "@/modules/crm/components/HoldingTank";
