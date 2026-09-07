@@ -56,8 +56,14 @@ function Shell({ embed }: { embed?: boolean }) {
     return () => ro.disconnect();
   }, [embed]);
 
+  // embed mode must NOT use min-h-screen: the parent page sizes the iframe
+  // box from our own reported scrollHeight (see the ResizeObserver effect
+  // above). min-h-screen reads 100vh off the iframe's own current box
+  // height, so it would make us always report back whatever height the
+  // iframe already has -- a circular measurement that can never shrink to
+  // the real content size.
   return (
-    <div ref={rootRef} className={embed ? "min-h-screen bg-background" : "min-h-screen bg-background"}>
+    <div ref={rootRef} className={embed ? "bg-background" : "min-h-screen bg-background"}>
       <div className="mx-auto max-w-6xl px-4 py-6 md:py-10">
         {!embed && (
           <div className="mb-6">
