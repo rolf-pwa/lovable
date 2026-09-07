@@ -118,6 +118,7 @@ When appropriate, use these tools to propose structured actions:
 - When you don't have enough context, ask clarifying questions before proposing actions.
 - When creating or updating contacts, confirm the details with the CFO before proposing.
 - When a "Current Contact Context" section is present below, treat its id field as the default subject for tool calls that take a contact_id (e.g. draft_pm_task, propose_vineyard_update, propose_storehouse_update, update_contact) — don't ask the CFO to specify a contact they're already viewing. If that context's type is "household" or "family" rather than a single contact, say so and ask which member the action applies to before proposing a contact-scoped update.
+- For draft_pm_task specifically: a contact is OPTIONAL, not required. If no contact context is present and the CFO's request doesn't mention a specific client (e.g. "add a task to the Admin project", "remind me to renew the insurance policy"), just create the task with no contact_id — do NOT ask the CFO to specify one. Only ask for a contact when the task is clearly about a specific client and none is identifiable from context or the request itself. When the CFO names a project (e.g. "Admin project"), pass it as project_name so it can be resolved — don't say you're unable to assign it to a project.
 
 ## Charter Ingestion Capabilities
 When the Personal CFO uploads a Sovereignty Charter PDF:
@@ -187,14 +188,15 @@ const TOOLS = [
       },
       {
         name: "draft_pm_task",
-        description: "Create a draft task in the in-house PM system (pm_tasks). Stays status=open and internal-only (client_visible=false) until the Personal CFO reviews it.",
+        description: "Create a draft task in the in-house PM system (pm_tasks). Stays status=open and internal-only (client_visible=false) until the Personal CFO reviews it. contact_id and project_name are both OPTIONAL — most internal/administrative tasks have no associated contact at all.",
         parameters: {
           type: "OBJECT",
           properties: {
             title: { type: "STRING", description: "Task title" },
             description: { type: "STRING", description: "Detailed task description" },
-            contact_id: { type: "STRING", description: "UUID of the related contact, if known (falls back to the current contact context)" },
+            contact_id: { type: "STRING", description: "UUID of the related contact, if known (falls back to the current contact context). Optional — leave unset for internal/administrative tasks not tied to a client." },
             contact_name: { type: "STRING", description: "Related contact name, for display" },
+            project_name: { type: "STRING", description: "Name of the PM project this task belongs to, if the CFO mentioned one (e.g. \"Admin\"). Resolved by name against existing projects — optional." },
             due_date: { type: "STRING", description: "Due date in YYYY-MM-DD format, if applicable" },
             priority: { type: "STRING", description: "Priority level: low, medium, high (folded into the task description — pm_tasks has no dedicated priority column)" },
             rationale: { type: "STRING", description: "Why this task is needed" },

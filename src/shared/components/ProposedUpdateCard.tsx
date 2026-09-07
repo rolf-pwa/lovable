@@ -135,6 +135,21 @@ export function ProposedUpdateCard({ functionCall, contactId, isApproved, onAppr
           if (cid) taskData.contact_id = cid;
           if (args.due_date) taskData.due_date = args.due_date;
 
+          let projectMatchWarning = "";
+          if (args.project_name) {
+            const { data: projects } = await supabase
+              .from("pm_projects")
+              .select("id, name")
+              .ilike("name", `%${args.project_name}%`)
+              .limit(1);
+            const project = projects?.[0];
+            if (project) {
+              taskData.project_id = project.id;
+            } else {
+              projectMatchWarning = ` (no project named "${args.project_name}" found — created without a project)`;
+            }
+          }
+
           const { error } = await supabase.from("pm_tasks").insert(taskData as any);
           if (error) throw error;
 
@@ -146,7 +161,7 @@ export function ProposedUpdateCard({ functionCall, contactId, isApproved, onAppr
               args
             );
           }
-          toast.success(`Task "${args.title}" created as a draft in PM (internal-only).`);
+          toast.success(`Task "${args.title}" created as a draft in PM (internal-only)${projectMatchWarning}.`);
           break;
         }
 
