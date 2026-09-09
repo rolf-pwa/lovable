@@ -7,6 +7,7 @@ import { Label } from "@/shared/components/ui/label";
 import { toast } from "sonner";
 import { Briefcase, Mail, KeyRound } from "lucide-react";
 import { supabase } from "@/shared/integrations/supabase/client";
+import { resolveDefaultLandingPath } from "@/modules/pro/components/ProPortalShell";
 
 const FN_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/pro-portal-otp`;
 
@@ -32,7 +33,7 @@ export default function ProPortalLogin() {
   useEffect(() => {
     const t = localStorage.getItem("pro_portal_session");
     if (t) {
-      navigate("/pro-portal", { replace: true });
+      resolveDefaultLandingPath().then((path) => navigate(path, { replace: true }));
       return;
     }
 
@@ -66,7 +67,7 @@ export default function ProPortalLogin() {
       localStorage.setItem("pro_portal_session", data.session_token);
       localStorage.setItem("pro_portal_expires", data.session_expires_at);
       localStorage.setItem("pro_portal_profile", JSON.stringify(data.professional));
-      navigate("/pro-portal", { replace: true });
+      navigate(await resolveDefaultLandingPath(), { replace: true });
     } catch (e: any) {
       await supabase.auth.signOut().catch(() => {});
       toast.error(e.message || "Google sign-in failed");
@@ -134,7 +135,7 @@ export default function ProPortalLogin() {
       localStorage.setItem("pro_portal_session", data.session_token);
       localStorage.setItem("pro_portal_expires", data.session_expires_at);
       localStorage.setItem("pro_portal_profile", JSON.stringify(data.professional));
-      navigate("/pro-portal", { replace: true });
+      navigate(await resolveDefaultLandingPath(), { replace: true });
     } catch (e: any) {
       toast.error(e.message || "Invalid or expired code");
     } finally {

@@ -123,6 +123,23 @@ export const proFetch = (bodyObj: any) => ({
   body: JSON.stringify(bodyObj),
 });
 
+// Where login should land: the assigned household directly when everything
+// this pro can see funnels into exactly one (see pro-portal-workspace's
+// "defaultLanding" action), the portfolio overview otherwise. Falls back to
+// the portfolio on any error -- a wrong landing page is recoverable, a
+// login that silently fails to complete is not.
+export async function resolveDefaultLandingPath(): Promise<string> {
+  try {
+    const res = await fetch(
+      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/pro-portal-workspace`,
+      proFetch({ action: "defaultLanding" }),
+    );
+    const data = await res.json();
+    if (res.ok && data.type === "household" && data.id) return `/pro-portal/household/${data.id}`;
+  } catch { /* fall through to portfolio */ }
+  return "/pro-portal";
+}
+
 export const FN = {
   workspace: `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/pro-portal-workspace`,
   tasks: `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/pm-pro-tasks`,

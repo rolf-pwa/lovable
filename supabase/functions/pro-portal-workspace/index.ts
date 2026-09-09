@@ -231,6 +231,23 @@ serve(async (req) => {
       });
     }
 
+    // ─── Where should login land this pro? ───
+    // Prefer the assigned household directly when everything they can see
+    // funnels into exactly one -- family is a container concept only useful
+    // once a pro genuinely has broader (family-scope or multi-household)
+    // access. familyIds here means a *direct* family-scope engagement, not
+    // just the container family a household/contact engagement belongs to.
+    if (action === "defaultLanding") {
+      if (scope.familyIds.length === 0 && scope.treeHouseholdIds.length === 1) {
+        return new Response(JSON.stringify({ type: "household", id: scope.treeHouseholdIds[0] }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      return new Response(JSON.stringify({ type: "portfolio" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     if (action === "family") {
       const familyId = body.family_id as string;
       // Accessible as a family page if any engagement touches this family
