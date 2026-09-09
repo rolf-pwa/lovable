@@ -125,7 +125,7 @@ export default function ProPortalHousehold() {
               </CardContent>
             </Card>
 
-            <SharedFolderCard scopeType="household" scopeId={id!} />
+            <SharedFolderCard householdId={id!} />
           </aside>
         </div>
       )}

@@ -106,7 +106,7 @@ export default function ProPortalContact() {
               </CardContent>
             </Card>
 
-            <SharedFolderCard scopeType="contact" scopeId={id!} />
+            <SharedFolderCard householdId={data?.household?.id ?? null} />
           </aside>
         </div>
       )}

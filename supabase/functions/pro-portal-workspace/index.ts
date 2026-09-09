@@ -143,21 +143,26 @@ async function buildTree(supabase: any, scope: Awaited<ReturnType<typeof resolve
   return { families: Array.from(familyMap.values()) };
 }
 
-// Resolve vault grants for a given scope (household or contact).
-// Only surface grants for the collaborator record matching this pro's email.
-async function resolveVault(supabase: any, professionalEmail: string, scopeType: "household" | "contact", scopeId: string) {
+// Resolve this pro's Vault grants for one specific household -- takes the
+// household id directly rather than re-deriving it, since every call site
+// already has it in scope. Only surfaces grants for this pro's own linked
+// vault_collaborators row for THAT household (a pro can hold one such row
+// per household they're engaged with; without this filter, grants from a
+// different household they're also linked to would leak in here).
+async function resolveVault(supabase: any, professionalId: string, householdId: string | null) {
+  if (!householdId) return [];
   const { data: collab } = await supabase
     .from("vault_collaborators")
     .select("id")
-    .eq("email", professionalEmail.toLowerCase())
-    .is("revoked_at", null);
-  if (!collab || collab.length === 0) return [];
-  const collabIds = collab.map((c: any) => c.id);
+    .eq("professional_id", professionalId)
+    .eq("household_id", householdId)
+    .is("revoked_at", null)
+    .maybeSingle();
+  if (!collab) return [];
   const { data: grants } = await supabase
     .from("vault_collaborator_grants")
-    .select("id, scope_type, drive_id, permission, granted_at, expires_at, revoked_at")
-    .in("collaborator_id", collabIds)
-    .eq("scope_type", scopeType)
+    .select("id, scope_type, drive_id, permission, created_at, expires_at, revoked_at")
+    .eq("collaborator_id", collab.id)
     .is("revoked_at", null);
   // Filter out expired
   const now = Date.now();
@@ -301,7 +306,7 @@ serve(async (req) => {
         .select("id, first_name, last_name, full_name, email, phone, family_role, is_minor")
         .eq("household_id", householdId)
         .in("id", scope.contactIds);
-      const vault = await resolveVault(supabase, session.professional.email, "household", householdId);
+      const vault = await resolveVault(supabase, session.professional_id, householdId);
       const governance = await loadCharter(supabase, householdId, "household");
       return new Response(
         JSON.stringify({ household: hh, family, members: members || [], vault, governance }),
@@ -334,7 +339,7 @@ serve(async (req) => {
           ? supabase.from("households").select("id, label").eq("id", contact.household_id).maybeSingle()
           : Promise.resolve({ data: null }),
       ]);
-      const vault = await resolveVault(supabase, session.professional.email, "contact", contactId);
+      const vault = await resolveVault(supabase, session.professional_id, contact.household_id ?? null);
       const governance = await loadCharter(supabase, contactId, "contact");
       return new Response(
         JSON.stringify({ contact, family, household, vault, governance }),

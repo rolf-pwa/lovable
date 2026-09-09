@@ -128,4 +128,5 @@ export const FN = {
   tasks: `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/pm-pro-tasks`,
   engagements: `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/pro-portal-engagements`,
   messageSend: `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/engagement-message-send`,
+  vault: `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/vault-service`,
 };

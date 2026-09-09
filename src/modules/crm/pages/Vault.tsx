@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useParams, Navigate } from "react-router-dom";
+import { useParams, useSearchParams, Navigate, Link } from "react-router-dom";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Button } from "@/shared/components/ui/button";
@@ -7,7 +7,7 @@ import { Input } from "@/shared/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/shared/components/ui/dialog";
 import { Label } from "@/shared/components/ui/label";
 import { Switch } from "@/shared/components/ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "@/shared/components/ui/select";
 import { Badge } from "@/shared/components/ui/badge";
 import {
   Folder,
@@ -25,6 +25,7 @@ import {
   Plus,
   KeyRound,
   Brain,
+  ExternalLink,
 } from "lucide-react";
 import { indexVaultFile } from "@/shared/lib/brain";
 import { toast } from "sonner";
@@ -359,7 +360,10 @@ type Collaborator = {
   role: string;
   invited_at: string;
   revoked_at: string | null;
+  professional_id: string | null;
 };
+
+type LinkedProfessional = { id: string; full_name: string; professional_type: string };
 
 type Grant = {
   id: string;
@@ -432,34 +436,67 @@ function CollaboratorsPanel({
   rootId,
   shareTarget,
   onShareHandled,
+  deepLinkProfessionalId,
 }: {
   householdId: string;
   rootId: string;
   shareTarget: ShareTarget | null;
   onShareHandled: () => void;
+  deepLinkProfessionalId?: string | null;
 }) {
   const [list, setList] = useState<Collaborator[]>([]);
+  const [linkedPros, setLinkedPros] = useState<LinkedProfessional[]>([]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [form, setForm] = useState({ email: "", fullName: "", role: "lawyer" });
-  const [grantForm, setGrantForm] = useState({ collaboratorId: "", permission: "view", expiresInDays: "30" });
+  // pickerValue is prefixed to disambiguate the two id spaces in one Select:
+  // "guest:<vault_collaborators.id>" or "pro:<professionals.id>".
+  const [grantForm, setGrantForm] = useState({ pickerValue: "", permission: "view", expiresInDays: "30" });
   const [issued, setIssued] = useState<{ token: string; code: string; name: string } | null>(null);
 
   const refresh = async () => {
-    const { data } = await supabase
+    const { data } = await (supabase as any)
       .from("vault_collaborators")
-      .select("id, email, full_name, role, invited_at, revoked_at")
+      .select("id, email, full_name, role, invited_at, revoked_at, professional_id")
       .eq("household_id", householdId)
       .order("invited_at", { ascending: false });
     setList((data ?? []) as Collaborator[]);
   };
-  useEffect(() => { if (householdId) refresh(); }, [householdId]);
+  // Professionals with an active engagement resolving to this household —
+  // offered directly, no invite step needed, regardless of whether they
+  // already have a vault_collaborators row (selecting one again just adds
+  // another grant to their existing row).
+  const refreshLinkedPros = async () => {
+    const { data: members } = await supabase.from("contacts").select("id").eq("household_id", householdId);
+    const memberIds = (members ?? []).map((m: any) => m.id);
+    const orParts = [`and(scope_type.eq.household,scope_id.eq.${householdId})`];
+    if (memberIds.length) orParts.push(`and(scope_type.eq.contact,scope_id.in.(${memberIds.join(",")}))`);
+    const { data: engs } = await (supabase as any)
+      .from("professional_engagements")
+      .select("professional_id")
+      .or(orParts.join(","))
+      .in("status", ["invited", "active", "completed"]);
+    const proIds = Array.from(new Set((engs ?? []).map((e: any) => e.professional_id)));
+    if (!proIds.length) { setLinkedPros([]); return; }
+    const { data: pros } = await (supabase as any)
+      .from("professionals")
+      .select("id, full_name, professional_type")
+      .in("id", proIds);
+    setLinkedPros((pros ?? []) as LinkedProfessional[]);
+  };
+  useEffect(() => { if (householdId) { refresh(); refreshLinkedPros(); } }, [householdId]);
 
-  // When a share request comes in from the file tree, open share dialog
+  // When a share request comes in from the file tree, open share dialog —
+  // pre-select a deep-linked professional (from ProVaultAccessSummary's
+  // "Grant Vault Access" button) if one was passed in.
   useEffect(() => {
     if (shareTarget) {
-      setGrantForm({ collaboratorId: list[0]?.id ?? "", permission: "view", expiresInDays: "30" });
+      setGrantForm({
+        pickerValue: deepLinkProfessionalId ? `pro:${deepLinkProfessionalId}` : "",
+        permission: "view",
+        expiresInDays: "30",
+      });
       setShareOpen(true);
     }
   }, [shareTarget]);
@@ -502,16 +539,32 @@ function CollaboratorsPanel({
   };
 
   const submitShare = async () => {
-    if (!shareTarget || !grantForm.collaboratorId) return;
+    if (!shareTarget || !grantForm.pickerValue) return;
+    const [kind, id] = grantForm.pickerValue.split(":");
+    const scope_type = shareTarget.isFolder ? "folder" : "file";
+    const expires_at = computeExpiry(grantForm.expiresInDays);
     try {
-      await callVault("addGrant", {
-        collaboratorId: grantForm.collaboratorId,
-        scope_type: shareTarget.isFolder ? "folder" : "file",
-        drive_id: shareTarget.driveId,
-        permission: grantForm.permission,
-        expires_at: computeExpiry(grantForm.expiresInDays),
-      });
-      toast.success(`Shared with ${list.find((c) => c.id === grantForm.collaboratorId)?.full_name}`);
+      if (kind === "pro") {
+        await callVault("shareWithProfessional", {
+          householdId,
+          professionalId: id,
+          scope_type,
+          drive_id: shareTarget.driveId,
+          permission: grantForm.permission,
+          expires_at,
+        });
+        toast.success(`Shared with ${linkedPros.find((p) => p.id === id)?.full_name}`);
+        await refresh();
+      } else {
+        await callVault("addGrant", {
+          collaboratorId: id,
+          scope_type,
+          drive_id: shareTarget.driveId,
+          permission: grantForm.permission,
+          expires_at,
+        });
+        toast.success(`Shared with ${list.find((c) => c.id === id)?.full_name}`);
+      }
       setShareOpen(false);
       onShareHandled();
     } catch (e: any) { toast.error(e.message); }
@@ -544,9 +597,17 @@ function CollaboratorsPanel({
                     <Badge variant="secondary">Revoked</Badge>
                   ) : (
                     <>
-                      <Button size="sm" variant="ghost" title="Reissue magic link" onClick={() => reissue(c)}>
-                        <KeyRound className="h-3.5 w-3.5" />
-                      </Button>
+                      {c.professional_id ? (
+                        <Button size="sm" variant="ghost" title="Open professional profile" asChild>
+                          <Link to={`/professionals/${c.professional_id}`}>
+                            <ExternalLink className="h-3.5 w-3.5" />
+                          </Link>
+                        </Button>
+                      ) : (
+                        <Button size="sm" variant="ghost" title="Reissue magic link" onClick={() => reissue(c)}>
+                          <KeyRound className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
                       <Button size="sm" variant="ghost" title="Revoke all access" onClick={() => revoke(c.id)}>
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
@@ -632,18 +693,31 @@ function CollaboratorsPanel({
           </DialogHeader>
           <div className="space-y-3">
             <div className="text-sm bg-muted/40 rounded p-2 truncate">{shareTarget?.name}</div>
-            {list.filter((c) => !c.revoked_at).length === 0 ? (
-              <p className="text-sm text-muted-foreground italic">Invite a collaborator first.</p>
+            {linkedPros.length === 0 && list.filter((c) => !c.revoked_at).length === 0 ? (
+              <p className="text-sm text-muted-foreground italic">No one to share with yet — link a professional to this household, or invite a guest collaborator below.</p>
             ) : (
               <>
                 <div>
-                  <Label>Collaborator</Label>
-                  <Select value={grantForm.collaboratorId} onValueChange={(v) => setGrantForm({ ...grantForm, collaboratorId: v })}>
+                  <Label>Share with</Label>
+                  <Select value={grantForm.pickerValue} onValueChange={(v) => setGrantForm({ ...grantForm, pickerValue: v })}>
                     <SelectTrigger><SelectValue placeholder="Choose…" /></SelectTrigger>
                     <SelectContent>
-                      {list.filter((c) => !c.revoked_at).map((c) => (
-                        <SelectItem key={c.id} value={c.id}>{c.full_name} ({c.role})</SelectItem>
-                      ))}
+                      {linkedPros.length > 0 && (
+                        <SelectGroup>
+                          <SelectLabel>Linked Professionals</SelectLabel>
+                          {linkedPros.map((p) => (
+                            <SelectItem key={`pro:${p.id}`} value={`pro:${p.id}`}>{p.full_name} ({p.professional_type.replace(/_/g, " ")})</SelectItem>
+                          ))}
+                        </SelectGroup>
+                      )}
+                      {list.filter((c) => !c.revoked_at && !c.professional_id).length > 0 && (
+                        <SelectGroup>
+                          <SelectLabel>Guest Collaborators</SelectLabel>
+                          {list.filter((c) => !c.revoked_at && !c.professional_id).map((c) => (
+                            <SelectItem key={`guest:${c.id}`} value={`guest:${c.id}`}>{c.full_name} ({c.role})</SelectItem>
+                          ))}
+                        </SelectGroup>
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
@@ -664,7 +738,7 @@ function CollaboratorsPanel({
                     <p className="text-[10px] text-muted-foreground mt-1">0 or empty = no expiry</p>
                   </div>
                 </div>
-                <Button onClick={submitShare} className="w-full" disabled={!grantForm.collaboratorId}>Grant access</Button>
+                <Button onClick={submitShare} className="w-full" disabled={!grantForm.pickerValue}>Grant access</Button>
               </>
             )}
           </div>
@@ -838,6 +912,8 @@ function VaultLinksPanel({ householdId }: { householdId: string }) {
 
 export function VaultView({ forcedHouseholdId, embedded = false }: { forcedHouseholdId?: string; embedded?: boolean }) {
   const params = useParams<{ householdId?: string; contactId?: string }>();
+  const [searchParams] = useSearchParams();
+  const deepLinkProfessionalId = searchParams.get("shareProfessionalId");
   const [householdId, setHouseholdId] = useState<string | null>(null);
   const [householdLabel, setHouseholdLabel] = useState<string>("");
   const [familyName, setFamilyName] = useState<string>("");
@@ -1089,6 +1165,7 @@ export function VaultView({ forcedHouseholdId, embedded = false }: { forcedHouse
           rootId={rootId}
           shareTarget={shareTarget}
           onShareHandled={() => setShareTarget(null)}
+          deepLinkProfessionalId={deepLinkProfessionalId}
         />
       )}
 

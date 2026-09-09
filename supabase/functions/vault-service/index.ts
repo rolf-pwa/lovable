@@ -6,6 +6,10 @@
 //   - 'staff'        — authenticated Supabase user (CRM)
 //   - 'client'       — portal session (Bearer = portal token from portal_tokens)
 //   - 'collaborator' — guest session (Bearer = vault_guest_tokens.token + verified unlock_code)
+//   - 'professional' — Pro Portal session (x-pro-session = pro_portal_tokens, see
+//                      _shared/pro-portal-auth.ts). Grants come from this professional's
+//                      own vault_collaborators rows (one per household they're linked to),
+//                      never from a magic link — access follows directly from the grant.
 //
 // Every byte that leaves this function passes the firewall check:
 //   ensureAccess(actor, fileOrFolderId)
@@ -14,6 +18,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { checkOutboundPii } from "../_shared/pii-shield.ts";
+import { validateProSession } from "../_shared/pro-portal-auth.ts";
 
 const APP_BASE_URL = "https://app.prosperwise.ca";
 
@@ -85,7 +90,7 @@ function getCorsHeaders(req: Request) {
   return {
     "Access-Control-Allow-Origin": allowed,
     "Access-Control-Allow-Headers":
-      "authorization, x-client-info, apikey, content-type, x-vault-guest-token, x-vault-unlock-code, x-vault-share-token, x-portal-token, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+      "authorization, x-client-info, apikey, content-type, x-vault-guest-token, x-vault-unlock-code, x-vault-share-token, x-portal-token, x-pro-session, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   };
 }
@@ -154,6 +159,12 @@ type Actor =
       householdId: string;
       scopeDriveId: string;
       permission: "view" | "view_upload" | "view_upload_download";
+    }
+  | {
+      kind: "professional";
+      professionalId: string;
+      collaboratorIds: string[];
+      grants: Array<{ scope_type: string; drive_id: string; permission: string; household_id: string }>;
     };
 
 // Returns true if the request carries either a valid staff JWT or a valid
@@ -275,7 +286,35 @@ async function resolveActor(req: Request): Promise<Actor | null> {
     return { kind: "client", contactId: tok.contact_id, householdId: contact?.household_id ?? null, vaultRootId, shoeboxOnly: !!(contact as any)?.vault_shoebox_only };
   }
 
-  // 4. Staff JWT
+  // 4. Pro Portal session (x-pro-session = pro_portal_tokens, validated the
+  // same way pro-portal-workspace/pro-portal-engagements already do). A
+  // professional can hold one vault_collaborators row per household they're
+  // linked to — aggregate active grants across all of them.
+  const proSessionToken = req.headers.get("x-pro-session");
+  if (proSessionToken) {
+    const session = await validateProSession(supabaseAdmin, proSessionToken);
+    if (!session) return null;
+    const { data: collabRows } = await supabaseAdmin
+      .from("vault_collaborators")
+      .select("id, household_id")
+      .eq("professional_id", session.professional_id)
+      .is("revoked_at", null);
+    const collaboratorIds = (collabRows ?? []).map((c: any) => c.id);
+    if (!collaboratorIds.length) {
+      return { kind: "professional", professionalId: session.professional_id, collaboratorIds: [], grants: [] };
+    }
+    const { data: grants } = await supabaseAdmin
+      .from("vault_collaborator_grants")
+      .select("scope_type, drive_id, permission, expires_at, revoked_at, collaborator_id")
+      .in("collaborator_id", collaboratorIds);
+    const hhByCollab = new Map((collabRows ?? []).map((c: any) => [c.id, c.household_id]));
+    const active = (grants ?? [])
+      .filter((g: any) => !g.revoked_at && new Date(g.expires_at) > new Date())
+      .map((g: any) => ({ ...g, household_id: hhByCollab.get(g.collaborator_id) }));
+    return { kind: "professional", professionalId: session.professional_id, collaboratorIds, grants: active };
+  }
+
+  // 5. Staff JWT
   const authHeader = req.headers.get("Authorization") ?? "";
   if (authHeader.startsWith("Bearer ")) {
     const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
@@ -496,6 +535,15 @@ async function ensureAccess(
     return { ok: false, reason: "no_matching_grant" };
   }
 
+  if (actor.kind === "professional") {
+    for (const g of actor.grants) {
+      if (need && need !== "upload") continue; // same as collaborator: view + upload only
+      if (need === "upload" && g.permission !== "upload") continue;
+      if (chain.includes(g.drive_id)) return { ok: true };
+    }
+    return { ok: false, reason: "no_matching_grant" };
+  }
+
   if (actor.kind === "share_link") {
     if (!chain.includes(actor.scopeDriveId)) return { ok: false, reason: "outside_share_scope" };
     if (!need) return { ok: true };
@@ -528,19 +576,54 @@ async function audit(
           ? actor.collaboratorId
           : actor?.kind === "share_link"
             ? actor.linkId
-            : null,
+            : actor?.kind === "professional"
+              ? actor.professionalId
+              : null,
     actor_label:
       actor?.kind === "client"
         ? `client:${actor.contactId}`
         : actor?.kind === "share_link"
           ? `share_link:${actor.linkId}`
-          : actor?.kind ?? "anonymous",
+          : actor?.kind === "professional"
+            ? `professional:${actor.professionalId}`
+            : actor?.kind ?? "anonymous",
     action,
     drive_id: driveId,
     drive_name: driveName,
     ip: req.headers.get("x-forwarded-for"),
     user_agent: req.headers.get("user-agent"),
     metadata,
+  });
+}
+
+// Defense in depth for shareWithProfessional: never trust a client-supplied
+// (professionalId, householdId) pairing -- confirm an active engagement
+// actually resolves to this household, whether scoped directly to the
+// household, to a contact within it, or to its family.
+async function professionalIsEngagedWithHousehold(professionalId: string, householdId: string): Promise<boolean> {
+  const ACTIVE_STATUSES = ["invited", "active", "completed"];
+  const { data: household } = await supabaseAdmin
+    .from("households")
+    .select("family_id")
+    .eq("id", householdId)
+    .maybeSingle();
+  const { data: contacts } = await supabaseAdmin
+    .from("contacts")
+    .select("id")
+    .eq("household_id", householdId);
+  const contactIds = (contacts ?? []).map((c: any) => c.id);
+
+  const { data: engagements } = await supabaseAdmin
+    .from("professional_engagements")
+    .select("scope_type, scope_id, status")
+    .eq("professional_id", professionalId)
+    .in("status", ACTIVE_STATUSES);
+
+  return (engagements ?? []).some((e: any) => {
+    if (e.scope_type === "household") return e.scope_id === householdId;
+    if (e.scope_type === "contact") return contactIds.includes(e.scope_id);
+    if (e.scope_type === "family") return household?.family_id != null && e.scope_id === household.family_id;
+    return false;
   });
 }
 
@@ -883,6 +966,23 @@ serve(async (req) => {
       }), { headers: { ...cors, "Content-Type": "application/json" } });
     }
 
+    // ─── PROFESSIONAL: list own grants across every household they're linked to ───
+    if (action === "listMyProfessionalGrants") {
+      if (actor.kind !== "professional")
+        return new Response(JSON.stringify({ error: "professional_only" }), { status: 403, headers: { ...cors, "Content-Type": "application/json" } });
+      const grants = body.householdId
+        ? actor.grants.filter((g) => g.household_id === body.householdId)
+        : actor.grants;
+      const enriched = await Promise.all(grants.map(async (g) => {
+        try {
+          const r = await fetch(`https://www.googleapis.com/drive/v3/files/${g.drive_id}?fields=id,name,mimeType`, { headers: { Authorization: `Bearer ${accessToken}` } });
+          const j = r.ok ? await r.json() : null;
+          return { ...g, drive_name: j?.name ?? g.drive_id, mime_type: j?.mimeType ?? null };
+        } catch { return { ...g, drive_name: g.drive_id, mime_type: null }; }
+      }));
+      return new Response(JSON.stringify({ grants: enriched }), { headers: { ...cors, "Content-Type": "application/json" } });
+    }
+
     // ─── LIST FOLDER ───
     if (action === "listFolder") {
       const folderId = body.folderId ?? url.searchParams.get("folderId");
@@ -925,8 +1025,8 @@ serve(async (req) => {
         }
       }
 
-      // Collaborator view: only files/folders inside one of their grants
-      if (actor.kind === "collaborator") {
+      // Collaborator / professional view: only files/folders inside one of their grants
+      if (actor.kind === "collaborator" || actor.kind === "professional") {
         const grantIds = new Set(actor.grants.map((g) => g.drive_id));
         const filterByGrant = async (item: any) => {
           if (grantIds.has(item.id)) return true;
@@ -1261,6 +1361,55 @@ serve(async (req) => {
       return new Response(JSON.stringify({ ok: true, magicToken: tok?.token, unlockCode: code }), { headers: { ...cors, "Content-Type": "application/json" } });
     }
 
+    // ─── SHARE a folder/file with a linked professional (staff only) ───
+    // No magic link is ever issued here -- the professional already has a
+    // Pro Portal session; access follows directly from the grant. Finds or
+    // creates this professional's vault_collaborators row for the household
+    // (at most one, keyed on household_id+professional_id) and adds a grant
+    // to it, in one round trip.
+    if (action === "shareWithProfessional") {
+      if (actor.kind !== "staff")
+        return new Response(JSON.stringify({ error: "staff_only" }), { status: 403, headers: { ...cors, "Content-Type": "application/json" } });
+      const { householdId, professionalId, scope_type, drive_id, permission, expires_at } = body;
+      if (!householdId || !professionalId || !scope_type || !drive_id)
+        return new Response(JSON.stringify({ error: "missing_fields" }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
+
+      const engaged = await professionalIsEngagedWithHousehold(professionalId, householdId);
+      if (!engaged)
+        return new Response(JSON.stringify({ error: "not_engaged", reason: "professional has no active engagement with this household" }), { status: 403, headers: { ...cors, "Content-Type": "application/json" } });
+
+      const { data: pro } = await supabaseAdmin
+        .from("professionals")
+        .select("email, full_name, professional_type")
+        .eq("id", professionalId)
+        .maybeSingle();
+      if (!pro)
+        return new Response(JSON.stringify({ error: "professional_not_found" }), { status: 404, headers: { ...cors, "Content-Type": "application/json" } });
+
+      const { data: collab, error: cErr } = await supabaseAdmin
+        .from("vault_collaborators")
+        .upsert(
+          { household_id: householdId, professional_id: professionalId, email: pro.email, full_name: pro.full_name, role: pro.professional_type, invited_by: actor.userId, revoked_at: null },
+          { onConflict: "household_id,professional_id" },
+        )
+        .select()
+        .single();
+      if (cErr) throw cErr;
+
+      const { data: g, error: gErr } = await supabaseAdmin.from("vault_collaborator_grants").insert({
+        collaborator_id: collab.id,
+        scope_type,
+        drive_id,
+        permission: permission ?? "view",
+        expires_at: expires_at ?? new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString(),
+        granted_by: actor.userId,
+      }).select().single();
+      if (gErr) throw gErr;
+
+      await audit(actor, "share_with_professional", null, drive_id, null, req, { professional_id: professionalId, household_id: householdId, scope_type, permission });
+      return new Response(JSON.stringify({ ok: true, collaborator: collab, grant: g }), { headers: { ...cors, "Content-Type": "application/json" } });
+    }
+
     // ═════════════════════════════════════════════════════════
     //  CLIENT PERMISSIONS  (staff manages, client/share consume)
     // ═════════════════════════════════════════════════════════
@@ -1484,39 +1633,6 @@ serve(async (req) => {
       await supabaseAdmin.from("vault_share_links").update({ revoked_at: new Date().toISOString() }).eq("id", linkId);
       await audit(actor, "share_link_revoked", null, null, null, req, { linkId });
       return new Response(JSON.stringify({ ok: true }), { headers: { ...cors, "Content-Type": "application/json" } });
-    }
-
-    // Anonymous resolver — given just a token, returns scope info so the
-    // guest/portal page can render. Validates unlock code for guest links.
-    if (action === "resolveShareLink") {
-      const { token, unlock_code } = body;
-      if (!token)
-        return new Response(JSON.stringify({ error: "token required" }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
-      const { data: link } = await supabaseAdmin.from("vault_share_links").select("*").eq("token", token).maybeSingle();
-      if (!link || link.revoked_at)
-        return new Response(JSON.stringify({ error: "invalid_or_revoked" }), { status: 404, headers: { ...cors, "Content-Type": "application/json" } });
-      if (link.expires_at && new Date(link.expires_at) <= new Date())
-        return new Response(JSON.stringify({ error: "expired" }), { status: 410, headers: { ...cors, "Content-Type": "application/json" } });
-      if (typeof link.max_uses === "number" && link.use_count >= link.max_uses)
-        return new Response(JSON.stringify({ error: "use_limit_reached" }), { status: 410, headers: { ...cors, "Content-Type": "application/json" } });
-      const bypass2 = await isAuthenticatedPrincipal(req);
-      const needsCode = link.link_type === "guest" && !!link.unlock_code && !bypass2;
-      if (needsCode && unlock_code !== link.unlock_code)
-        return new Response(JSON.stringify({ needs_unlock_code: true }), { status: 200, headers: { ...cors, "Content-Type": "application/json" } });
-      const r = await fetch(`https://www.googleapis.com/drive/v3/files/${link.drive_id}?fields=id,name,mimeType`, { headers: { Authorization: `Bearer ${accessToken}` } });
-      const meta = r.ok ? await r.json() : {};
-      await audit(null, "share_link_redeemed", null, link.drive_id, meta.name ?? null, req, { link_id: link.id });
-      return new Response(JSON.stringify({
-        ok: true,
-        scope: {
-          drive_id: link.drive_id,
-          name: meta.name ?? null,
-          mime_type: meta.mimeType ?? null,
-          scope_type: link.scope_type,
-        },
-        permission: link.permission,
-        link_type: link.link_type,
-      }), { headers: { ...cors, "Content-Type": "application/json" } });
     }
 
     return new Response(JSON.stringify({ error: "unknown_action", action }), {

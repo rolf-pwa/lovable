@@ -3,9 +3,9 @@ import { Link } from "react-router-dom";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Badge } from "@/shared/components/ui/badge";
-import { Briefcase, ExternalLink, Home, User, TreesIcon, FolderOpen } from "lucide-react";
+import { Briefcase, ExternalLink, Home, User, TreesIcon } from "lucide-react";
 import LinkProDialog from "@/modules/crm/components/LinkProDialog";
-import { ShareVaultFilesControl } from "@/modules/crm/components/ShareVaultFilesControl";
+import { ProVaultAccessSummary } from "@/modules/crm/components/ProVaultAccessSummary";
 import { ProTasksButton } from "@/modules/crm/components/ProTasksButton";
 import { format } from "date-fns";
 
@@ -19,13 +19,10 @@ interface Props {
 
 const SCOPE_ICON = { family: TreesIcon, household: Home, contact: User } as const;
 
-interface LinkInfo { name: string | null; drive_id: string | null }
-
 export function ProsPanel({ scope, scopeId, memberContactIds = [], householdIds = [], title = "Pros" }: Props) {
   const [loading, setLoading] = useState(true);
   const [engagements, setEngagements] = useState<any[]>([]);
   const [pros, setPros] = useState<Record<string, any>>({});
-  const [links, setLinks] = useState<Record<string, LinkInfo>>({});
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -57,20 +54,6 @@ export function ProsPanel({ scope, scopeId, memberContactIds = [], householdIds 
       setPros(map);
     } else {
       setPros({});
-    }
-
-    // What's actually shared, at a glance — no clicking through to find out.
-    const linkIds = Array.from(new Set(list.map((e: any) => e.vault_share_link_id).filter(Boolean)));
-    if (linkIds.length) {
-      const { data: ls } = await (supabase as any)
-        .from("vault_share_links")
-        .select("id, name, drive_id")
-        .in("id", linkIds);
-      const map: Record<string, LinkInfo> = {};
-      (ls || []).forEach((l: any) => { map[l.id] = { name: l.name, drive_id: l.drive_id }; });
-      setLinks(map);
-    } else {
-      setLinks({});
     }
     setLoading(false);
   }, [scope, scopeId, memberContactIds.join(","), householdIds.join(",")]);
@@ -128,7 +111,6 @@ export function ProsPanel({ scope, scopeId, memberContactIds = [], householdIds 
                 <ul className="divide-y divide-border">
                   {engs.map((e) => {
                     const Icon = SCOPE_ICON[e.scope_type as keyof typeof SCOPE_ICON] || User;
-                    const link = e.vault_share_link_id ? links[e.vault_share_link_id] : null;
                     return (
                       <li key={e.id} className="px-3 py-2 space-y-1.5">
                         <div className="flex items-center gap-3">
@@ -141,32 +123,14 @@ export function ProsPanel({ scope, scopeId, memberContactIds = [], householdIds 
                             </div>
                           </div>
                         </div>
-                        <div className="flex items-center gap-1 text-[11px] text-muted-foreground min-w-0">
-                          <FolderOpen className="h-3 w-3 shrink-0" />
-                          {link?.drive_id ? (
-                            <a
-                              href={`https://drive.google.com/drive/folders/${link.drive_id}`}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="truncate text-accent hover:underline"
-                            >
-                              {link.name || "Untitled"}
-                            </a>
-                          ) : (
-                            "Nothing shared"
-                          )}
-                        </div>
                         <div className="flex items-center gap-2">
                           <ProTasksButton professionalId={proId} professionalName={p.full_name} />
-                          {e.scope_type !== "family" && (
-                            <ShareVaultFilesControl
-                              engagement={e}
-                              scopeType={e.scope_type}
-                              scopeId={e.scope_id}
-                              onChanged={load}
-                              label={p.full_name}
-                            />
-                          )}
+                          <ProVaultAccessSummary
+                            scopeType={e.scope_type}
+                            scopeId={e.scope_id}
+                            professionalId={proId}
+                            label={p.full_name}
+                          />
                         </div>
                       </li>
                     );

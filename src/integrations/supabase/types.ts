@@ -5107,7 +5107,7 @@ export type Database = {
           id: string
           invited_at: string
           invited_by: string | null
-          professional_contact_id: string | null
+          professional_id: string | null
           revoked_at: string | null
           role: string
           updated_at: string
@@ -5121,7 +5121,7 @@ export type Database = {
           id?: string
           invited_at?: string
           invited_by?: string | null
-          professional_contact_id?: string | null
+          professional_id?: string | null
           revoked_at?: string | null
           role?: string
           updated_at?: string
@@ -5135,12 +5135,20 @@ export type Database = {
           id?: string
           invited_at?: string
           invited_by?: string | null
-          professional_contact_id?: string | null
+          professional_id?: string | null
           revoked_at?: string | null
           role?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "vault_collaborators_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       vault_contact_grants: {
         Row: {
