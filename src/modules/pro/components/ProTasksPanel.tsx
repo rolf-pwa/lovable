@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Button } from "@/shared/components/ui/button";
 import { Textarea } from "@/shared/components/ui/textarea";
 import { Input } from "@/shared/components/ui/input";
 import { toast } from "sonner";
-import { CheckCircle2, Circle, MessageSquare, Plus, ChevronDown, ChevronRight, Loader2, Home } from "lucide-react";
+import { CheckCircle2, Circle, MessageSquare, Plus, ChevronDown, ChevronRight, Loader2, Home, Download } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { FN, proFetch } from "./ProPortalShell";
 
@@ -40,6 +41,18 @@ export default function ProTasksPanel({ scopeType, scopeId, title }: Props) {
   const [newOpen, setNewOpen] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [newNotes, setNewNotes] = useState("");
+  const [printingTask, setPrintingTask] = useState<Task | null>(null);
+
+  useEffect(() => {
+    if (!printingTask) return;
+    const afterPrint = () => setPrintingTask(null);
+    window.addEventListener("afterprint", afterPrint);
+    const timer = setTimeout(() => window.print(), 50);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("afterprint", afterPrint);
+    };
+  }, [printingTask]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -226,6 +239,16 @@ export default function ProTasksPanel({ scopeType, scopeId, title }: Props) {
                   </div>
                   {isExpanded && (
                     <div className="border-t border-border/60 bg-muted/20 px-3 py-3 space-y-3">
+                      <div className="flex justify-end">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-xs"
+                          onClick={() => setPrintingTask(t)}
+                        >
+                          <Download className="h-3 w-3 mr-1" /> Download PDF
+                        </Button>
+                      </div>
                       {t.description && (
                         <div className="text-xs text-muted-foreground whitespace-pre-wrap">{t.description}</div>
                       )}
@@ -289,6 +312,48 @@ export default function ProTasksPanel({ scopeType, scopeId, title }: Props) {
           </ul>
         )}
       </CardContent>
+
+      {printingTask && createPortal(
+        <div id="pw-task-print-root">
+          <style>{`
+            @media print {
+              body * { visibility: hidden; }
+              #pw-task-print-root, #pw-task-print-root * { visibility: visible; }
+              #pw-task-print-root { position: absolute; top: 0; left: 0; width: 100%; padding: 24px; }
+              @page { size: A4 portrait; margin: 16mm; }
+            }
+            @media screen {
+              #pw-task-print-root { display: none; }
+            }
+          `}</style>
+          <h1 style={{ fontSize: "18px", fontWeight: 700, marginBottom: "4px" }}>{printingTask.title}</h1>
+          <p style={{ fontSize: "11px", color: "#666", marginBottom: "16px" }}>
+            {printingTask.context ? `${printingTask.context.label} · ` : ""}
+            Status: {printingTask.status === "done" ? "Done" : "Open"}
+            {printingTask.due_date ? ` · Due ${format(new Date(printingTask.due_date), "MMM d, yyyy")}` : ""}
+            {" · Exported "}{format(new Date(), "MMM d, yyyy 'at' p")}
+          </p>
+          {printingTask.description && (
+            <p style={{ fontSize: "12px", whiteSpace: "pre-wrap", marginBottom: "16px" }}>{printingTask.description}</p>
+          )}
+          <h2 style={{ fontSize: "13px", fontWeight: 700, marginBottom: "8px" }}>Conversation</h2>
+          {(comments[printingTask.id] || []).length === 0 ? (
+            <p style={{ fontSize: "12px", color: "#666" }}>No comments.</p>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+              {(comments[printingTask.id] || []).map((c) => (
+                <div key={c.id} style={{ borderBottom: "1px solid #ddd", paddingBottom: "8px" }}>
+                  <p style={{ fontSize: "11px", fontWeight: 700, marginBottom: "2px" }}>
+                    {c.author_name} <span style={{ fontWeight: 400, color: "#666" }}>{format(new Date(c.created_at), "PP p")}</span>
+                  </p>
+                  <p style={{ fontSize: "12px", whiteSpace: "pre-wrap" }}>{c.body}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>,
+        document.body
+      )}
     </Card>
   );
 }
