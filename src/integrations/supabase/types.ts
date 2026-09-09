@@ -546,6 +546,100 @@ export type Database = {
           },
         ]
       }
+      contact_email_links: {
+        Row: {
+          click_count: number
+          clicked_at: string | null
+          created_at: string
+          email_id: string
+          id: string
+          last_clicked_at: string | null
+          target_url: string
+        }
+        Insert: {
+          click_count?: number
+          clicked_at?: string | null
+          created_at?: string
+          email_id: string
+          id?: string
+          last_clicked_at?: string | null
+          target_url: string
+        }
+        Update: {
+          click_count?: number
+          clicked_at?: string | null
+          created_at?: string
+          email_id?: string
+          id?: string
+          last_clicked_at?: string | null
+          target_url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contact_email_links_email_id_fkey"
+            columns: ["email_id"]
+            isOneToOne: false
+            referencedRelation: "contact_emails"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contact_emails: {
+        Row: {
+          contact_id: string
+          created_at: string
+          gmail_message_id: string | null
+          gmail_thread_id: string | null
+          id: string
+          last_opened_at: string | null
+          open_count: number
+          opened_at: string | null
+          sender_user_id: string
+          sent_at: string
+          subject: string
+          to_email: string
+          tracking_token: string
+        }
+        Insert: {
+          contact_id: string
+          created_at?: string
+          gmail_message_id?: string | null
+          gmail_thread_id?: string | null
+          id?: string
+          last_opened_at?: string | null
+          open_count?: number
+          opened_at?: string | null
+          sender_user_id: string
+          sent_at?: string
+          subject: string
+          to_email: string
+          tracking_token?: string
+        }
+        Update: {
+          contact_id?: string
+          created_at?: string
+          gmail_message_id?: string | null
+          gmail_thread_id?: string | null
+          id?: string
+          last_opened_at?: string | null
+          open_count?: number
+          opened_at?: string | null
+          sender_user_id?: string
+          sent_at?: string
+          subject?: string
+          to_email?: string
+          tracking_token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contact_emails_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contacts: {
         Row: {
           accountant_firm: string | null
@@ -2690,29 +2784,88 @@ export type Database = {
           },
         ]
       }
+      pm_task_collaborators: {
+        Row: {
+          created_at: string
+          id: string
+          professional_id: string
+          tagged_by: string | null
+          task_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          professional_id: string
+          tagged_by?: string | null
+          task_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          professional_id?: string
+          tagged_by?: string | null
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pm_task_collaborators_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pm_task_collaborators_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "pm_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pm_task_comments: {
         Row: {
-          author_id: string
+          author_contact_id: string | null
+          author_id: string | null
+          author_professional_id: string | null
           body: string
           created_at: string
           id: string
           task_id: string
         }
         Insert: {
-          author_id: string
+          author_contact_id?: string | null
+          author_id?: string | null
+          author_professional_id?: string | null
           body: string
           created_at?: string
           id?: string
           task_id: string
         }
         Update: {
-          author_id?: string
+          author_contact_id?: string | null
+          author_id?: string | null
+          author_professional_id?: string | null
           body?: string
           created_at?: string
           id?: string
           task_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "pm_task_comments_author_contact_id_fkey"
+            columns: ["author_contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pm_task_comments_author_professional_id_fkey"
+            columns: ["author_professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "pm_task_comments_task_id_fkey"
             columns: ["task_id"]
@@ -2724,7 +2877,9 @@ export type Database = {
       }
       pm_tasks: {
         Row: {
+          asana_gid: string | null
           assignee_id: string | null
+          client_visible: boolean
           completed_at: string | null
           contact_id: string | null
           corporation_id: string | null
@@ -2732,6 +2887,7 @@ export type Database = {
           created_by: string
           description: string | null
           due_date: string | null
+          family_id: string | null
           household_id: string | null
           id: string
           parent_task_id: string | null
@@ -2741,7 +2897,9 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          asana_gid?: string | null
           assignee_id?: string | null
+          client_visible?: boolean
           completed_at?: string | null
           contact_id?: string | null
           corporation_id?: string | null
@@ -2749,6 +2907,7 @@ export type Database = {
           created_by: string
           description?: string | null
           due_date?: string | null
+          family_id?: string | null
           household_id?: string | null
           id?: string
           parent_task_id?: string | null
@@ -2758,7 +2917,9 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          asana_gid?: string | null
           assignee_id?: string | null
+          client_visible?: boolean
           completed_at?: string | null
           contact_id?: string | null
           corporation_id?: string | null
@@ -2766,6 +2927,7 @@ export type Database = {
           created_by?: string
           description?: string | null
           due_date?: string | null
+          family_id?: string | null
           household_id?: string | null
           id?: string
           parent_task_id?: string | null
@@ -2787,6 +2949,13 @@ export type Database = {
             columns: ["corporation_id"]
             isOneToOne: false
             referencedRelation: "corporations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pm_tasks_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
             referencedColumns: ["id"]
           },
           {
@@ -5417,12 +5586,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -5446,11 +5615,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -5471,11 +5640,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -5496,11 +5665,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -5513,11 +5682,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }

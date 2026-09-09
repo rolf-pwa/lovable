@@ -53,7 +53,7 @@ export function BrainAsk({ initialQuestion }: { initialQuestion?: string }) {
             if (e.key === "Enter") submit();
           }}
         />
-        <Button onClick={submit} disabled={!question.trim() || askMutation.isPending}>
+        <Button onClick={() => submit()} disabled={!question.trim() || askMutation.isPending}>
           {askMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
           Ask
         </Button>
