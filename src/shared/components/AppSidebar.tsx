@@ -34,6 +34,7 @@ import {
 import { cn } from "@/shared/lib/utils";
 import { useEffect, useState, createContext, useContext } from "react";
 import { supabase } from "@/shared/integrations/supabase/client";
+import { withAuthRaceRetry } from "@/shared/lib/authRaceRetry";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/shared/components/ui/tooltip";
 
 // Context for which nav group's panel is showing, and whether it's open at all.
@@ -168,7 +169,7 @@ export function SidebarCollapseProvider({ children }: { children: React.ReactNod
 }
 
 export function AppSidebar() {
-  useAuth();
+  const { user } = useAuth();
   const location = useLocation();
   const { selectedGroup, panelOpen, select } = useSidebarNav();
   const [pendingReviewCount, setPendingReviewCount] = useState<number | null>(null);
@@ -176,30 +177,41 @@ export function AppSidebar() {
   const [inboxUnreadCount, setInboxUnreadCount] = useState<number | null>(null);
 
   useEffect(() => {
+    // ProtectedRoute already waits for auth to resolve before this ever
+    // mounts, but there's still a brief window right after an OAuth
+    // redirect where the Supabase client's session isn't fully settled for
+    // outgoing requests yet — see authRaceRetry.ts. Bail out entirely if
+    // there's somehow no user yet, and retry once on a transient failure.
+    if (!user) return;
+
     (async () => {
       try {
-        const { count } = await (supabase.from("review_queue" as any) as any)
-          .select("id", { count: "exact", head: true })
-          .eq("status", "pending");
+        const { count } = await withAuthRaceRetry<any>(() =>
+          (supabase.from("review_queue" as any) as any)
+            .select("id", { count: "exact", head: true })
+            .eq("status", "pending")
+        );
         setPendingReviewCount(count ?? 0);
       } catch {}
     })();
 
     (async () => {
       try {
-        const { count } = await supabase
-          .from("portal_requests")
-          .select("id", { count: "exact", head: true })
-          .in("status", ["submitted", "in_progress"]);
+        const { count } = await withAuthRaceRetry<any>(() =>
+          (supabase
+            .from("portal_requests")
+            .select("id", { count: "exact", head: true })
+            .in("status", ["submitted", "in_progress"]) as any)
+        );
         setOpenRequestsCount(count ?? 0);
       } catch {}
     })();
 
     const loadInboxUnread = async () => {
       try {
-        const { data } = await supabase.functions.invoke("quo-service", {
-          body: { action: "unreadCount" },
-        });
+        const { data } = await withAuthRaceRetry(() =>
+          supabase.functions.invoke("quo-service", { body: { action: "unreadCount" } })
+        );
         setInboxUnreadCount(data?.unread ?? 0);
       } catch {}
     };
@@ -213,7 +225,7 @@ export function AppSidebar() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [user]);
 
   const badgeFor = (badgeKey: string | undefined): number | null => {
     if (badgeKey === "requests" && openRequestsCount) return openRequestsCount;

@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { AppLayout } from "@/shared/components/AppLayout";
 import { supabase } from "@/shared/integrations/supabase/client";
+import { useAuth } from "@/shared/hooks/useAuth";
+import { withAuthRaceRetry } from "@/shared/lib/authRaceRetry";
 import { Card } from "@/shared/components/ui/card";
 import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
@@ -66,6 +68,7 @@ type TimelineEntry =
   | { kind: "call"; at: string; item: QuoCall };
 
 export default function Inbox() {
+  const { user } = useAuth();
   const [messages, setMessages] = useState<QuoMessage[]>([]);
   const [calls, setCalls] = useState<QuoCall[]>([]);
   const [contacts, setContacts] = useState<Record<string, ContactLite>>({});
@@ -84,9 +87,9 @@ export default function Inbox() {
   const load = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("quo-service", {
-        body: { action: "inbox", limit: 200 },
-      });
+      const { data, error } = await withAuthRaceRetry(() =>
+        supabase.functions.invoke("quo-service", { body: { action: "inbox", limit: 200 } })
+      );
       if (error) throw error;
       setMessages(data?.messages || []);
       setCalls(data?.calls || []);
@@ -108,6 +111,12 @@ export default function Inbox() {
   };
 
   useEffect(() => {
+    // See authRaceRetry.ts -- there's a brief window right after an OAuth
+    // redirect where a query can fire before the Supabase client's session
+    // is fully settled for outgoing requests, even though the user is
+    // genuinely signed in. Bail out until a real user exists.
+    if (!user) return;
+
     load().then(() => markAllRead());
     const channel = supabase
       .channel("quo-inbox")
@@ -115,7 +124,7 @@ export default function Inbox() {
       .on("postgres_changes", { event: "*", schema: "public", table: "quo_calls" }, () => load())
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, []);
+  }, [user]);
 
   const togglePortal = async (recordType: "message" | "call", recordId: string, current: boolean) => {
     try {
