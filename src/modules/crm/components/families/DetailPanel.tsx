@@ -64,6 +64,7 @@ interface Props {
   updateFamilyName: (id: string, name: string) => void | Promise<void>;
   deleteFamily: (id: string) => void | Promise<void>;
   updateHouseholdField: (id: string, field: "label" | "address", value: string) => void | Promise<void>;
+  updateContactName: (id: string, field: "first_name" | "last_name", value: string) => void | Promise<void>;
   deleteHousehold: (id: string) => void | Promise<void>;
   onAddHousehold: (familyId: string) => void;
   onAddIndividual: (familyId: string, householdId: string) => void;
@@ -83,6 +84,7 @@ export function DetailPanel({
   updateFamilyName,
   deleteFamily,
   updateHouseholdField,
+  updateContactName,
   deleteHousehold,
   onAddHousehold,
   onAddIndividual,
@@ -142,13 +144,6 @@ export function DetailPanel({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selection.type, selection.type === "family" ? selection.family.id : selection.type === "household" ? selection.household.id : selection.individual.id]);
-
-  const name =
-    selection.type === "family"
-      ? family.name
-      : selection.type === "household"
-        ? household!.label
-        : `${individual!.first_name} ${individual!.last_name || ""}`.trim();
 
   return (
     <div className="sticky top-6 flex max-h-[calc(100vh-6rem)] w-[400px] shrink-0 flex-col overflow-hidden rounded-lg border border-border bg-card shadow-[0_1px_2px_hsl(var(--pw-navy)/0.05)]">
@@ -238,7 +233,21 @@ export function DetailPanel({
               className="font-serif text-lg font-semibold"
             />
           )}
-          {selection.type === "contact" && <p className="font-serif text-lg font-semibold">{name}</p>}
+          {selection.type === "contact" && (
+            <div className="flex min-w-0 flex-1 items-center gap-1.5">
+              <InlineEdit
+                value={individual!.first_name}
+                onSave={(v) => updateContactName(individual!.id, "first_name", v)}
+                className="font-serif text-lg font-semibold"
+              />
+              <InlineEdit
+                value={individual!.last_name || ""}
+                onSave={(v) => updateContactName(individual!.id, "last_name", v)}
+                placeholder="Last name"
+                className="min-w-0 flex-1 truncate font-serif text-lg font-semibold"
+              />
+            </div>
+          )}
         </div>
 
         <div className="flex items-center gap-2 rounded-md bg-muted/50 px-3 py-2">

@@ -1,5 +1,6 @@
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/shared/components/ui/collapsible";
 import { Badge } from "@/shared/components/ui/badge";
+import { InlineEdit } from "@/shared/components/InlineEdit";
 import { ChevronRight, ChevronDown, TreesIcon, Home, User, Crown, Shield, Baby } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 import type { Family, Selected, SelectedType } from "./types";
@@ -47,6 +48,9 @@ interface Props {
   toggleHousehold: (id: string) => void;
   selected: Selected;
   onSelect: (type: SelectedType, id: string) => void;
+  updateFamilyName: (id: string, name: string) => void | Promise<void>;
+  updateHouseholdField: (id: string, field: "label" | "address", value: string) => void | Promise<void>;
+  updateContactName: (id: string, field: "first_name" | "last_name", value: string) => void | Promise<void>;
 }
 
 export function FamilyTreeList({
@@ -57,6 +61,9 @@ export function FamilyTreeList({
   toggleHousehold,
   selected,
   onSelect,
+  updateFamilyName,
+  updateHouseholdField,
+  updateContactName,
 }: Props) {
   return (
     <div className="space-y-2">
@@ -83,7 +90,11 @@ export function FamilyTreeList({
                 </CollapsibleTrigger>
                 <TreesIcon className="h-4 w-4 shrink-0 text-primary" />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold">{family.name}</p>
+                  <InlineEdit
+                    value={family.name}
+                    onSave={(v) => updateFamilyName(family.id, v)}
+                    className="truncate text-sm font-semibold"
+                  />
                   <p className="text-xs text-muted-foreground">
                     {family.households.length} household{family.households.length !== 1 ? "s" : ""} ·{" "}
                     {family.households.reduce((sum, h) => sum + h.individuals.length, 0)} individuals
@@ -117,7 +128,11 @@ export function FamilyTreeList({
                             </button>
                           </CollapsibleTrigger>
                           <Home className="h-3.5 w-3.5 shrink-0 text-accent" />
-                          <span className="min-w-0 flex-1 truncate text-sm">{household.label}</span>
+                          <InlineEdit
+                            value={household.label}
+                            onSave={(v) => updateHouseholdField(household.id, "label", v)}
+                            className="min-w-0 flex-1 truncate text-sm"
+                          />
                           <span className="shrink-0 text-xs text-muted-foreground">
                             {household.individuals.length} member{household.individuals.length !== 1 ? "s" : ""}
                           </span>
@@ -139,9 +154,19 @@ export function FamilyTreeList({
                                   onClick={() => onSelect("contact", individual.id)}
                                 >
                                   <RoleIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                                  <span className="min-w-0 flex-1 truncate text-sm">
-                                    {individual.first_name} {individual.last_name}
-                                  </span>
+                                  <div className="flex min-w-0 flex-1 items-center gap-1 text-sm">
+                                    <InlineEdit
+                                      value={individual.first_name}
+                                      onSave={(v) => updateContactName(individual.id, "first_name", v)}
+                                      className="shrink-0"
+                                    />
+                                    <InlineEdit
+                                      value={individual.last_name || ""}
+                                      onSave={(v) => updateContactName(individual.id, "last_name", v)}
+                                      placeholder="Last name"
+                                      className="min-w-0 flex-1 truncate"
+                                    />
+                                  </div>
                                   <Badge variant="outline" className="shrink-0 text-[10px]">
                                     {ROLE_LABELS[individual.family_role] || individual.family_role}
                                   </Badge>

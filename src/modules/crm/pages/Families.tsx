@@ -404,6 +404,19 @@ const Families = () => {
     else { toast.success(`Household ${field} updated.`); fetchFamilies(); }
   };
 
+  // full_name is a denormalized column other pages read directly (not
+  // DB-generated) -- keep it in sync on every first/last name edit, same
+  // pattern already used in ProposedUpdateCard.tsx's update_contact case.
+  const updateContactName = async (contactId: string, field: "first_name" | "last_name", value: string) => {
+    const { data: current } = await supabase.from("contacts").select("first_name, last_name").eq("id", contactId).maybeSingle();
+    const fn = field === "first_name" ? value : (current?.first_name || "");
+    const ln = field === "last_name" ? value : (current?.last_name || "");
+    const full_name = [fn, ln].filter(Boolean).join(" ");
+    const { error } = await supabase.from("contacts" as any).update({ [field]: value, full_name } as any).eq("id", contactId);
+    if (error) { toast.error("Failed to update contact name."); }
+    else { toast.success("Contact name updated."); fetchFamilies(); }
+  };
+
   const filtered = families.filter((f) =>
     f.name.toLowerCase().includes(search.toLowerCase())
   );
@@ -487,6 +500,9 @@ const Families = () => {
                 toggleHousehold={toggleHousehold}
                 selected={selected}
                 onSelect={(type, id) => setSelected({ type, id })}
+                updateFamilyName={updateFamilyName}
+                updateHouseholdField={updateHouseholdField}
+                updateContactName={updateContactName}
               />
             </div>
             {resolvedSelection && (
@@ -499,6 +515,7 @@ const Families = () => {
                 updateFamilyName={updateFamilyName}
                 deleteFamily={deleteFamily}
                 updateHouseholdField={updateHouseholdField}
+                updateContactName={updateContactName}
                 deleteHousehold={deleteHousehold}
                 onAddHousehold={(familyId) => setShowNewHousehold(familyId)}
                 onAddIndividual={openAddIndividual}
