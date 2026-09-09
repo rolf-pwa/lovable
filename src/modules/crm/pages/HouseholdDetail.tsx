@@ -77,6 +77,7 @@ import {
   ScanSearch,
   TrendingDown,
   HeartHandshake,
+  Wallet,
 } from "lucide-react";
 import { ContactAnalytics } from "@/modules/crm/components/ContactAnalytics";
 
