@@ -152,15 +152,42 @@ function isClientVisible(task: any): boolean {
 
 const TASK_FIELDS = "name,completed,due_on,notes,memberships.section.name,custom_fields";
 
-function resolveUrl(url: string): { kind: "task" | "project"; gid: string } {
+function resolveUrl(url: string): { kind: "task" | "project"; gid: string; projectGidFallback: string | null } {
   if (isTaskUrl(url)) {
     const gid = extractTaskGid(url);
     if (!gid) throw new Error("Could not parse a task id from this Asana URL");
-    return { kind: "task", gid };
+    return { kind: "task", gid, projectGidFallback: extractProjectGid(url) };
   }
   const gid = extractProjectGid(url);
   if (!gid) throw new Error("Could not parse a project id from this Asana URL");
-  return { kind: "project", gid };
+  return { kind: "project", gid, projectGidFallback: null };
+}
+
+// Asana's URL shapes aren't fully regular -- the /list/{id} segment isn't
+// always a real task id (it can repeat the project's own gid, or be some
+// other view-scoped id, depending on exactly how the link was copied). Never
+// trust the regex parse alone for a "task" classification: try fetching it
+// as a task, and if Asana rejects that id, fall back to treating the URL as
+// a plain project link instead of hard-failing the whole import.
+async function resolveTaskOrProject(
+  url: string,
+  taskFields: string,
+): Promise<{ kind: "task"; gid: string; task: any } | { kind: "project"; gid: string; project: any }> {
+  const parsed = resolveUrl(url);
+  if (parsed.kind === "task") {
+    try {
+      const task = await withFailSafe(`getTask(${parsed.gid})`, () => asanaGet(`/tasks/${parsed.gid}?opt_fields=${taskFields}`));
+      return { kind: "task", gid: parsed.gid, task };
+    } catch (taskErr) {
+      if (!parsed.projectGidFallback) throw taskErr;
+      const project = await withFailSafe(`getProject(${parsed.projectGidFallback})`, () =>
+        asanaGet(`/projects/${parsed.projectGidFallback}?opt_fields=name`),
+      );
+      return { kind: "project", gid: parsed.projectGidFallback, project };
+    }
+  }
+  const project = await withFailSafe(`getProject(${parsed.gid})`, () => asanaGet(`/projects/${parsed.gid}?opt_fields=name`));
+  return { kind: "project", gid: parsed.gid, project };
 }
 
 async function getComments(taskGid: string) {
@@ -205,40 +232,35 @@ Deno.serve(async (req) => {
     if (action === "preview") {
       const { url } = body;
       if (!String(url || "").trim()) return json({ ok: false, error: "url is required" }, 400);
-      const { kind, gid } = resolveUrl(url);
+      const resolved = await resolveTaskOrProject(url, "name");
 
-      if (kind === "task") {
-        const task = await withFailSafe(`getTask(${gid})`, () => asanaGet(`/tasks/${gid}?opt_fields=name`));
-        return json({ ok: true, kind, name: task.name, topLevelCount: 1 });
+      if (resolved.kind === "task") {
+        return json({ ok: true, kind: "task", name: resolved.task.name, topLevelCount: 1 });
       }
 
-      const [project, tasks] = await Promise.all([
-        withFailSafe(`getProject(${gid})`, () => asanaGet(`/projects/${gid}?opt_fields=name`)),
-        withFailSafe(`getTasksForProject(${gid})`, () =>
-          asanaGetAllPages(`/projects/${gid}/tasks?opt_fields=name,parent&limit=100`),
-        ),
-      ]);
+      const tasks = await withFailSafe(`getTasksForProject(${resolved.gid})`, () =>
+        asanaGetAllPages(`/projects/${resolved.gid}/tasks?opt_fields=name,parent&limit=100`),
+      );
       const topLevel = (tasks || []).filter((t: any) => !t.parent);
-      return json({ ok: true, kind, name: project.name, topLevelCount: topLevel.length });
+      return json({ ok: true, kind: "project", name: resolved.project.name, topLevelCount: topLevel.length });
     }
 
     if (action === "fetch") {
       const { url } = body;
       if (!String(url || "").trim()) return json({ ok: false, error: "url is required" }, 400);
-      const { kind, gid } = resolveUrl(url);
+      const resolved = await resolveTaskOrProject(url, TASK_FIELDS);
 
-      if (kind === "task") {
-        const payloadTask = await fetchTaskWithChildren(gid);
-        return json({ ok: true, payload: { kind, sourceName: payloadTask.name, tasks: [payloadTask] } });
+      if (resolved.kind === "task") {
+        const payloadTask = await fetchTaskWithChildren(resolved.gid, resolved.task);
+        return json({ ok: true, payload: { kind: "task", sourceName: payloadTask.name, tasks: [payloadTask] } });
       }
 
-      const project = await withFailSafe(`getProject(${gid})`, () => asanaGet(`/projects/${gid}?opt_fields=name`));
-      const allTasks = await withFailSafe(`getTasksForProject(${gid})`, () =>
-        asanaGetAllPages(`/projects/${gid}/tasks?opt_fields=${TASK_FIELDS},parent&limit=100`),
+      const allTasks = await withFailSafe(`getTasksForProject(${resolved.gid})`, () =>
+        asanaGetAllPages(`/projects/${resolved.gid}/tasks?opt_fields=${TASK_FIELDS},parent&limit=100`),
       );
       const rootTasks = (allTasks || []).filter((t: any) => !t.parent);
       const tasks = await Promise.all(rootTasks.map((t: any) => fetchTaskWithChildren(t.gid, t)));
-      return json({ ok: true, payload: { kind, sourceName: project.name, tasks } });
+      return json({ ok: true, payload: { kind: "project", sourceName: resolved.project.name, tasks } });
     }
 
     if (action === "commit") {
