@@ -52,7 +52,24 @@ interface CommitSummary {
 
 async function invokeImport<T>(action: string, body: Record<string, unknown>): Promise<T> {
   const { data, error } = await supabase.functions.invoke("asana-project-import", { body: { action, ...body } });
-  if (error) throw new Error(error.message || "Request failed");
+  if (error) {
+    // supabase-js's own error.message is just "Edge Function returned a
+    // non-2xx status code" -- the real {ok:false, error} body our function
+    // sent lives on error.context (the raw Response), matching the same
+    // parsing pmService's own edgeTaskAgent.ts already does.
+    let details = error.message;
+    try {
+      const ctx = (error as unknown as { context?: Response }).context;
+      if (ctx && typeof ctx.text === "function") {
+        const text = await ctx.text();
+        const parsed = JSON.parse(text);
+        details = parsed?.error || text || details;
+      }
+    } catch {
+      /* keep original message */
+    }
+    throw new Error(details);
+  }
   if (!data?.ok) throw new Error(data?.error || "Request failed");
   return data as T;
 }

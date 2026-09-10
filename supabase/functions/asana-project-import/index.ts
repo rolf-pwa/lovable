@@ -110,7 +110,13 @@ function extractProjectGid(asanaUrl: string | null): string | null {
 function isTaskUrl(asanaUrl: string | null): boolean {
   if (!asanaUrl) return false;
   if (/\/task\/\d+/.test(asanaUrl)) return true;
-  if (/\/project\/\d+\/list\/\d+/.test(asanaUrl)) return true;
+  // /project/{P}/list/{T} only means "a task is pinned open" when the two
+  // ids differ -- Asana's plain "view this project's List tab" URL repeats
+  // the SAME project gid in both positions (/project/{P}/list/{P}), which
+  // this check used to misclassify as a task URL, then fail trying to fetch
+  // the project's own id as a task ("Not a recognized ID").
+  const listMatch = asanaUrl.match(/\/project\/(\d+)\/list\/(\d+)/);
+  if (listMatch && listMatch[1] !== listMatch[2]) return true;
   if (/app\.asana\.com\/0\/\d+\/f/.test(asanaUrl)) return true;
   if (/app\.asana\.com\/0\/\d+\/\d+/.test(asanaUrl) && !/\/(list|board|timeline|calendar)/.test(asanaUrl)) return true;
   return false;
