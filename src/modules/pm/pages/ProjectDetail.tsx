@@ -6,6 +6,7 @@ import { getTaskAgent } from "@/shared/lib/agents";
 import type { PmProject, PmTask } from "@/shared/lib/agents";
 import { Card, CardContent } from "@/shared/components/ui/card";
 import { Badge } from "@/shared/components/ui/badge";
+import { Button } from "@/shared/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table";
 import { Loader2, ChevronLeft, ChevronDown, ChevronRight, CheckCircle2, Circle } from "lucide-react";
 import { AddTaskForm } from "../components/AddTaskForm";
@@ -69,12 +70,17 @@ export default function ProjectDetail() {
   return (
     <AppLayout>
       <div className="space-y-6 p-6">
-        <div>
-          <Link to="/projects" className="mb-2 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
-            <ChevronLeft className="h-3.5 w-3.5" /> Projects
-          </Link>
-          <h1 className="font-serif text-2xl">{project.name}</h1>
-          {project.description && <p className="mt-1 text-sm text-muted-foreground">{project.description}</p>}
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <Link to="/projects" className="mb-2 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+              <ChevronLeft className="h-3.5 w-3.5" /> Projects
+            </Link>
+            <h1 className="font-serif text-2xl">{project.name}</h1>
+            {project.description && <p className="mt-1 text-sm text-muted-foreground">{project.description}</p>}
+          </div>
+          <Button variant="outline" asChild>
+            <Link to={`/projects/import?projectId=${project.id}`}>Import from Asana</Link>
+          </Button>
         </div>
 
         <Card>

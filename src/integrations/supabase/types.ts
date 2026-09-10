@@ -2730,6 +2730,7 @@ export type Database = {
           created_at: string
           created_by: string
           description: string | null
+          family_id: string | null
           household_id: string | null
           id: string
           name: string
@@ -2742,6 +2743,7 @@ export type Database = {
           created_at?: string
           created_by: string
           description?: string | null
+          family_id?: string | null
           household_id?: string | null
           id?: string
           name: string
@@ -2754,6 +2756,7 @@ export type Database = {
           created_at?: string
           created_by?: string
           description?: string | null
+          family_id?: string | null
           household_id?: string | null
           id?: string
           name?: string
@@ -2773,6 +2776,13 @@ export type Database = {
             columns: ["corporation_id"]
             isOneToOne: false
             referencedRelation: "corporations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pm_projects_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
             referencedColumns: ["id"]
           },
           {

@@ -43,9 +43,14 @@ export default function Projects() {
             <h1 className="font-serif text-2xl">Projects</h1>
             <p className="text-sm text-muted-foreground">Tasks and initiatives, tracked in-house.</p>
           </div>
-          <Button onClick={() => setDialogOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" /> New project
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => navigate("/projects/import")}>
+              Import from Asana
+            </Button>
+            <Button onClick={() => setDialogOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" /> New project
+            </Button>
+          </div>
         </div>
 
         <Card>

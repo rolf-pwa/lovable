@@ -166,6 +166,7 @@ export interface PmProject {
   household_id: string | null;
   contact_id: string | null;
   corporation_id: string | null;
+  family_id: string | null;
   created_by: string;
   created_at: string;
   updated_at: string;
@@ -232,6 +233,7 @@ export interface ITaskAgentProvider {
     household_id?: string;
     contact_id?: string;
     corporation_id?: string;
+    family_id?: string;
   }): Promise<PmProject>;
   updateProject(id: string, updates: Partial<PmProject>): Promise<PmProject>;
   listTasks(filter?: PmTaskFilter): Promise<PmTask[]>;

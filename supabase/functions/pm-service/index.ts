@@ -44,7 +44,8 @@ async function requireStaff(req: Request): Promise<{ userId: string; error?: und
   return { userId: data.user.id };
 }
 
-const PROJECT_FIELDS = "id, name, description, status, household_id, contact_id, corporation_id, created_by, created_at, updated_at";
+const PROJECT_FIELDS =
+  "id, name, description, status, household_id, contact_id, corporation_id, family_id, created_by, created_at, updated_at";
 const TASK_FIELDS =
   "id, project_id, parent_task_id, title, description, status, due_date, assignee_id, household_id, contact_id, corporation_id, family_id, completed_at, client_visible, created_by, created_at, updated_at";
 
@@ -77,11 +78,11 @@ Deno.serve(async (req) => {
     }
 
     if (action === "createProject") {
-      const { name, description, status, household_id, contact_id, corporation_id } = body;
+      const { name, description, status, household_id, contact_id, corporation_id, family_id } = body;
       if (!String(name || "").trim()) return json({ ok: false, error: "Project name is required" }, 400);
-      const linkCount = [household_id, contact_id, corporation_id].filter(Boolean).length;
+      const linkCount = [household_id, contact_id, corporation_id, family_id].filter(Boolean).length;
       if (linkCount > 1) {
-        return json({ ok: false, error: "A project can link to at most one household, contact, or corporation" }, 400);
+        return json({ ok: false, error: "A project can link to at most one household, contact, corporation, or family" }, 400);
       }
       const { data, error } = await db
         .from("pm_projects")
@@ -92,6 +93,7 @@ Deno.serve(async (req) => {
           household_id: household_id || null,
           contact_id: contact_id || null,
           corporation_id: corporation_id || null,
+          family_id: family_id || null,
           created_by: userId,
         })
         .select(PROJECT_FIELDS)
@@ -104,7 +106,7 @@ Deno.serve(async (req) => {
       const { id, ...updates } = body;
       if (!id) return json({ ok: false, error: "id is required" }, 400);
       const patch: Record<string, unknown> = {};
-      for (const key of ["name", "description", "status", "household_id", "contact_id", "corporation_id"]) {
+      for (const key of ["name", "description", "status", "household_id", "contact_id", "corporation_id", "family_id"]) {
         if (key in updates) patch[key] = updates[key];
       }
       const { data, error } = await db.from("pm_projects").update(patch).eq("id", id).select(PROJECT_FIELDS).maybeSingle();
