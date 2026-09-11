@@ -240,6 +240,28 @@ Deno.serve(async (req) => {
         .select("id, task_id, body, created_at")
         .maybeSingle();
       if (error) return json({ error: error.message }, 500);
+
+      try {
+        const trimmedBody = String(commentBody).trim();
+        await supabase.from("staff_notifications").insert({
+          source_type: "task_comment",
+          title: `${session.professional.full_name} commented on "${task.title}"`,
+          body: trimmedBody.length > 100 ? trimmedBody.slice(0, 100) + "…" : trimmedBody,
+          contact_id: task.contact_id || null,
+          link: task.contact_id
+            ? `/contacts/${task.contact_id}`
+            : task.household_id
+              ? `/households/${task.household_id}`
+              : task.family_id
+                ? `/families/${task.family_id}`
+                : task.project_id
+                  ? `/projects/${task.project_id}`
+                  : null,
+        });
+      } catch {
+        /* noop — notification failure should never block the comment itself */
+      }
+
       return json({ comment: { ...data, author_type: "pro", author_name: session.professional.full_name } });
     }
 
