@@ -1064,6 +1064,51 @@ export type Database = {
           },
         ]
       }
+      daily_briefings: {
+        Row: {
+          briefing_date: string
+          created_at: string
+          facts: Json
+          generated_at: string | null
+          generation_error: string | null
+          generation_status: string
+          greeting: string | null
+          id: string
+          priority_items: Json
+          staff_user_id: string
+          summary_line: string | null
+          updated_at: string
+        }
+        Insert: {
+          briefing_date: string
+          created_at?: string
+          facts?: Json
+          generated_at?: string | null
+          generation_error?: string | null
+          generation_status?: string
+          greeting?: string | null
+          id?: string
+          priority_items?: Json
+          staff_user_id: string
+          summary_line?: string | null
+          updated_at?: string
+        }
+        Update: {
+          briefing_date?: string
+          created_at?: string
+          facts?: Json
+          generated_at?: string | null
+          generation_error?: string | null
+          generation_status?: string
+          greeting?: string | null
+          id?: string
+          priority_items?: Json
+          staff_user_id?: string
+          summary_line?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       daily_recaps: {
         Row: {
           ai_draft: string | null

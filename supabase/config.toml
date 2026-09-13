@@ -160,3 +160,6 @@ verify_jwt = false
 
 [functions.email-track]
 verify_jwt = false
+
+[functions.daily-briefing-generate]
+verify_jwt = false

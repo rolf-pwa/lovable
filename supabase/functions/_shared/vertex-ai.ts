@@ -162,6 +162,7 @@ export async function generateVertexContent(
   model: string,
   contents: VertexContent[],
   generationConfig?: Record<string, unknown>,
+  toolsConfig?: { tools: Record<string, unknown>[]; toolConfig: Record<string, unknown> },
 ): Promise<any> {
   const accessToken = await getGcpAccessToken(sa);
   const url = vertexModelUrl(sa.project_id, model);
@@ -173,6 +174,7 @@ export async function generateVertexContent(
     },
     body: JSON.stringify({
       contents,
+      ...(toolsConfig ? { tools: toolsConfig.tools, toolConfig: toolsConfig.toolConfig } : {}),
       generationConfig: {
         temperature: 0.3,
         maxOutputTokens: 1024,

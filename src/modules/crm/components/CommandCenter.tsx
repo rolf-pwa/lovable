@@ -22,6 +22,7 @@ import {
   useDisconnectGoogle,
   useCalendarEvents,
 } from "@/shared/hooks/useGoogle";
+import { useAuth } from "@/shared/hooks/useAuth";
 
 const DEFAULT_PINNED_PROJECT_GID = "1214066166978534";
 const PINNED_PROJECT_LABEL = "Pinned Project";
@@ -84,7 +85,7 @@ export function CommandCenter() {
         )}
       </div>
 
-      <DailyBriefingPlaceholder />
+      <DailyBriefingCard />
 
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="lg:col-span-2">
@@ -100,10 +101,61 @@ export function CommandCenter() {
   );
 }
 
-// Placeholder for a future feature: an AI-generated summary of the day
-// (today's priority tasks, meetings, and anything needing attention across
-// the firm). Not built yet — this just reserves its spot on the dashboard.
-function DailyBriefingPlaceholder() {
+interface DailyBriefing {
+  generation_status: "generating" | "complete" | "error";
+  generation_error: string | null;
+  greeting: string | null;
+  summary_line: string | null;
+  priority_items: { label: string; reason: string }[];
+}
+
+// AI-generated summary of the day: the staff member's own tasks/calendar/
+// unread email, plus firm-wide open client requests and Quo inbox activity.
+// Pre-generated every morning by a cron job; "Generate now"/"Regenerate"
+// call the same generator on demand (e.g. before the first cron run of a
+// given day, or a brand-new staff member's first day).
+function DailyBriefingCard() {
+  const { user } = useAuth();
+  const [briefing, setBriefing] = useState<DailyBriefing | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [regenerating, setRegenerating] = useState(false);
+
+  const todayStr = useMemo(
+    () => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Vancouver" }).format(new Date()),
+    [],
+  );
+
+  const load = async () => {
+    if (!user) return;
+    setLoading(true);
+    const { data } = await supabase
+      .from("daily_briefings")
+      .select("generation_status, generation_error, greeting, summary_line, priority_items")
+      .eq("staff_user_id", user.id)
+      .eq("briefing_date", todayStr)
+      .maybeSingle();
+    setBriefing(data as DailyBriefing | null);
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
+
+  const generate = async () => {
+    setRegenerating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("daily-briefing-generate", { body: {} });
+      if (error) throw error;
+      setBriefing(data.briefing as DailyBriefing);
+    } catch {
+      toast.error("Failed to generate today's briefing");
+    } finally {
+      setRegenerating(false);
+    }
+  };
+
   return (
     <Card className="border-dashed border-border">
       <CardContent className="flex items-center gap-3 p-4">
@@ -112,9 +164,35 @@ function DailyBriefingPlaceholder() {
         </div>
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold text-foreground">The Daily Briefing</p>
-          <p className="text-xs text-muted-foreground">An AI-generated summary of your day — coming soon.</p>
+          {loading ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+          ) : !briefing ? (
+            <p className="text-xs text-muted-foreground">No briefing yet for today.</p>
+          ) : briefing.generation_status === "generating" ? (
+            <p className="text-xs text-muted-foreground">Generating today's briefing…</p>
+          ) : briefing.generation_status === "error" ? (
+            <p className="text-xs text-destructive">Couldn't generate today's briefing: {briefing.generation_error}</p>
+          ) : (
+            <>
+              <p className="text-xs text-muted-foreground">
+                {briefing.greeting} — {briefing.summary_line}
+              </p>
+              {briefing.priority_items.length > 0 && (
+                <ul className="mt-1 space-y-0.5">
+                  {briefing.priority_items.map((it, i) => (
+                    <li key={i} className="text-xs text-foreground">
+                      • {it.label}
+                      {it.reason ? ` — ${it.reason}` : ""}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </>
+          )}
         </div>
-        <Badge variant="outline" className="shrink-0 text-[10px]">Coming soon</Badge>
+        <Button variant="ghost" size="sm" onClick={generate} disabled={regenerating} className="shrink-0 text-xs">
+          {regenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : briefing ? "Regenerate" : "Generate now"}
+        </Button>
       </CardContent>
     </Card>
   );
