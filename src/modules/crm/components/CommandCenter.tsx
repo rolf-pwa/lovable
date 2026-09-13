@@ -7,7 +7,7 @@ import { Badge } from "@/shared/components/ui/badge";
 import { Input } from "@/shared/components/ui/input";
 import {
   Calendar, Plus, Loader2, Link2Off, Inbox, ChevronRight,
-  Grape, Landmark, Anchor, Building2, Pin, Pencil, Check, X, Sparkles,
+  Grape, Landmark, Anchor, Building2, Pin, Pencil, Check, X, Sparkles, Mail,
 } from "lucide-react";
 import { format, parseISO, isToday, differenceInCalendarDays } from "date-fns";
 import { parseLocalDate } from "@/shared/lib/date-utils";
@@ -22,6 +22,7 @@ import {
   useConnectGoogle,
   useDisconnectGoogle,
   useCalendarEvents,
+  useGmailMessages,
 } from "@/shared/hooks/useGoogle";
 import { useAuth } from "@/shared/hooks/useAuth";
 
@@ -94,6 +95,7 @@ export function CommandCenter() {
         </div>
         <div className="space-y-4">
           <CalendarWidget isConnected={isConnected} statusLoading={statusLoading} />
+          <EmailWidget isConnected={isConnected} statusLoading={statusLoading} />
           <FirmAumWidget />
           <PinnedProjectTasks />
         </div>
@@ -588,6 +590,72 @@ function CalendarWidget({ isConnected, statusLoading }: { isConnected: boolean; 
               </div>
             )}
           </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// Strips a Gmail "From" header ("Name" <email@domain.com>) down to just the
+// display name for a tighter list — falls back to the raw header when there
+// isn't one (e.g. a bare email address).
+function formatSender(from: string): string {
+  const match = from.match(/^"?([^"<]+?)"?\s*<[^>]+>$/);
+  return match ? match[1].trim() : from;
+}
+
+function EmailWidget({ isConnected, statusLoading }: { isConnected: boolean; statusLoading: boolean }) {
+  const { data, isLoading, error } = useGmailMessages("in:inbox is:unread", isConnected);
+  const messages = data?.messages || [];
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <Mail className="h-4 w-4 text-sanctuary-bronze" />
+          Email
+        </CardTitle>
+        {isConnected && (
+          <a href="https://mail.google.com/mail/u/0/#inbox" target="_blank" rel="noopener noreferrer">
+            <Button variant="ghost" size="sm">
+              Open Gmail
+            </Button>
+          </a>
+        )}
+      </CardHeader>
+      <CardContent>
+        {statusLoading ? (
+          <div className="flex justify-center py-4">
+            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+          </div>
+        ) : !isConnected ? (
+          <p className="text-sm text-muted-foreground">Connect Google to view your email.</p>
+        ) : isLoading ? (
+          <div className="flex justify-center py-4">
+            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+          </div>
+        ) : error ? (
+          <p className="text-sm text-destructive">Failed to load email</p>
+        ) : messages.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Inbox zero — nothing unread.</p>
+        ) : (
+          <ul className="space-y-1.5">
+            {messages.slice(0, 6).map((m: any) => (
+              <li key={m.id}>
+                <a
+                  href={`https://mail.google.com/mail/u/0/#all/${m.id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-start gap-2 text-sm rounded-md px-1 py-0.5 -mx-1 hover:bg-muted/50 transition-colors"
+                >
+                  <span className="text-xs text-muted-foreground w-20 shrink-0 mt-0.5 truncate">
+                    {formatSender(m.from || "")}
+                  </span>
+                  <span className="truncate text-foreground">{m.subject || "(no subject)"}</span>
+                </a>
+              </li>
+            ))}
+          </ul>
         )}
       </CardContent>
     </Card>
