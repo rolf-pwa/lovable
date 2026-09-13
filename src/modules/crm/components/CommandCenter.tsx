@@ -90,15 +90,14 @@ export function CommandCenter() {
       <DailyBriefingCard />
 
       <div className="grid gap-4 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          <MyTasksWidget />
-        </div>
-        <div className="space-y-4">
-          <CalendarWidget isConnected={isConnected} statusLoading={statusLoading} />
-          <EmailWidget isConnected={isConnected} statusLoading={statusLoading} />
-          <FirmAumWidget />
-          <PinnedProjectTasks />
-        </div>
+        <MyTasksWidget />
+        <CalendarWidget isConnected={isConnected} statusLoading={statusLoading} />
+        <EmailWidget isConnected={isConnected} statusLoading={statusLoading} />
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <FirmAumWidget />
+        <PinnedProjectTasks />
       </div>
     </div>
   );
@@ -440,7 +439,7 @@ function MyTasksWidget() {
             <p className="text-sm text-muted-foreground">No tasks assigned to you.</p>
           </div>
         ) : (
-          <div className="space-y-1.5">
+          <div className="space-y-1.5 max-h-[420px] overflow-y-auto pr-1 -mr-1">
             {tasks.slice(0, 20).map((task) => {
               const projectName = task.project_id ? projectNames[task.project_id] : null;
               const isExpanded = expandedId === task.id;
