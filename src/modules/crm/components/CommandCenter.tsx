@@ -515,9 +515,17 @@ function CalendarWidget({ isConnected, statusLoading }: { isConnected: boolean; 
   });
   const laterEvents = events.filter((e: any) => !todayEvents.includes(e));
 
-  const renderEvent = (event: any) => {
+  // Today's events show a time (or "All day"); this week's events show just
+  // the day name — the date itself isn't useful at a glance, and the time
+  // is more detail than a week-ahead skim needs.
+  const renderEvent = (event: any, showTime: boolean) => {
     const start = event.start?.dateTime || event.start?.date;
     const startDate = start ? parseISO(start) : null;
+    const label = !startDate
+      ? ""
+      : showTime
+        ? (event.start?.dateTime ? format(startDate, "h:mm a") : "All day")
+        : format(startDate, "EEE");
     return (
       <a
         key={event.id}
@@ -526,9 +534,7 @@ function CalendarWidget({ isConnected, statusLoading }: { isConnected: boolean; 
         rel="noopener noreferrer"
         className="flex items-start gap-2 text-sm rounded-md px-1 py-0.5 -mx-1 hover:bg-muted/50 transition-colors"
       >
-        <span className="text-xs text-muted-foreground w-14 shrink-0 mt-0.5">
-          {startDate && event.start?.dateTime ? format(startDate, "h:mm a") : "All day"}
-        </span>
+        <span className="text-xs text-muted-foreground w-14 shrink-0 mt-0.5">{label}</span>
         <span className="truncate text-foreground">{event.summary}</span>
       </a>
     );
@@ -572,13 +578,13 @@ function CalendarWidget({ isConnected, statusLoading }: { isConnected: boolean; 
               {todayEvents.length === 0 ? (
                 <p className="text-sm text-muted-foreground">Nothing today.</p>
               ) : (
-                <ul className="space-y-1.5">{todayEvents.slice(0, 6).map((e: any) => <li key={e.id}>{renderEvent(e)}</li>)}</ul>
+                <ul className="space-y-1.5">{todayEvents.slice(0, 6).map((e: any) => <li key={e.id}>{renderEvent(e, true)}</li>)}</ul>
               )}
             </div>
             {laterEvents.length > 0 && (
               <div className="pt-2 border-t border-border">
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5">This Week</p>
-                <ul className="space-y-1.5">{laterEvents.slice(0, 6).map((e: any) => <li key={e.id}>{renderEvent(e)}</li>)}</ul>
+                <ul className="space-y-1.5">{laterEvents.slice(0, 6).map((e: any) => <li key={e.id}>{renderEvent(e, false)}</li>)}</ul>
               </div>
             )}
           </div>
