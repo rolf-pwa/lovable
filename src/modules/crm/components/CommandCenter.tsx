@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Button } from "@/shared/components/ui/button";
@@ -106,7 +107,26 @@ interface DailyBriefing {
   generation_error: string | null;
   greeting: string | null;
   summary_line: string | null;
-  priority_items: { label: string; reason: string }[];
+  priority_items: { label: string; reason: string; link: string | null }[];
+}
+
+// Internal routes get a react-router Link (no full reload); external links
+// (Gmail, a Google Calendar event) get a plain new-tab anchor. No link at
+// all (e.g. a fact resolved with nothing to point to) just renders as text.
+function PriorityItemLabel({ item }: { item: DailyBriefing["priority_items"][number] }) {
+  if (!item.link) return <span className="font-medium text-foreground">{item.label}</span>;
+  if (item.link.startsWith("http")) {
+    return (
+      <a href={item.link} target="_blank" rel="noopener noreferrer" className="font-medium text-accent hover:underline">
+        {item.label}
+      </a>
+    );
+  }
+  return (
+    <Link to={item.link} className="font-medium text-accent hover:underline">
+      {item.label}
+    </Link>
+  );
 }
 
 // AI-generated summary of the day: the staff member's own tasks/calendar/
@@ -181,7 +201,7 @@ function DailyBriefingCard() {
                 <ul className="mt-1 space-y-0.5">
                   {briefing.priority_items.map((it, i) => (
                     <li key={i} className="text-xs text-foreground">
-                      • {it.label}
+                      • <PriorityItemLabel item={it} />
                       {it.reason ? ` — ${it.reason}` : ""}
                     </li>
                   ))}

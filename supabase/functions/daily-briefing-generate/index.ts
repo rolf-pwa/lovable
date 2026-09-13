@@ -92,13 +92,26 @@ function pacificMidnightUtcIso(dateStr: string): string {
 // deno-lint-ignore no-explicit-any
 type Db = any;
 
-interface TaskFact { title: string; project: string | null; due_date?: string }
+interface TaskFact { title: string; project: string | null; due_date?: string; link: string | null }
 interface TaskFacts { overdue: TaskFact[]; due_today: TaskFact[]; upcoming: TaskFact[] }
+
+// A task can carry contact_id/household_id/family_id/project_id
+// simultaneously (pm-service auto-derives household/family from contact) --
+// link to whichever surface actually shows this task's own list, most
+// specific first: ContactTaskList > HouseholdTaskRollup > FamilyTaskRollup >
+// the task's project.
+function taskLink(t: { contact_id: string | null; household_id: string | null; family_id: string | null; project_id: string | null }): string | null {
+  if (t.contact_id) return `/contacts/${t.contact_id}`;
+  if (t.household_id) return `/households/${t.household_id}`;
+  if (t.family_id) return `/families/${t.family_id}`;
+  if (t.project_id) return `/projects/${t.project_id}`;
+  return null;
+}
 
 async function gatherTaskFacts(db: Db, userId: string, todayStr: string): Promise<TaskFacts> {
   const { data: tasks } = await db
     .from("pm_tasks")
-    .select("id, project_id, title, due_date")
+    .select("id, project_id, contact_id, household_id, family_id, title, due_date")
     .eq("assignee_id", userId)
     .neq("status", "done")
     .order("due_date", { ascending: true });
@@ -117,16 +130,17 @@ async function gatherTaskFacts(db: Db, userId: string, todayStr: string): Promis
   for (const t of tasks || []) {
     if (!t.due_date) continue; // undated tasks carry no urgency signal, same as MyTasksWidget's own sort
     const project = t.project_id ? projectNames[t.project_id] ?? null : null;
-    if (t.due_date < todayStr) facts.overdue.push({ title: t.title, project, due_date: t.due_date });
-    else if (t.due_date === todayStr) facts.due_today.push({ title: t.title, project });
-    else facts.upcoming.push({ title: t.title, project, due_date: t.due_date });
+    const link = taskLink(t);
+    if (t.due_date < todayStr) facts.overdue.push({ title: t.title, project, due_date: t.due_date, link });
+    else if (t.due_date === todayStr) facts.due_today.push({ title: t.title, project, link });
+    else facts.upcoming.push({ title: t.title, project, due_date: t.due_date, link });
   }
   return facts;
 }
 
-interface CalendarFacts { connected: boolean; events: { summary: string; start: string }[] }
+interface CalendarFacts { connected: boolean; events: { summary: string; start: string; link: string | null }[] }
 
-interface EmailFacts { connected: boolean; emails: { subject: string; from: string; snippet: string }[] }
+interface EmailFacts { connected: boolean; emails: { subject: string; from: string; snippet: string; link: string }[] }
 
 async function gatherGoogleFacts(
   db: Db,
@@ -155,6 +169,7 @@ async function gatherGoogleFacts(
       const events = (data.items || []).map((e: any) => ({
         summary: e.summary || "(no title)",
         start: e.start?.dateTime || e.start?.date,
+        link: e.htmlLink || null,
       }));
       return { connected: true, events };
     } catch {
@@ -196,6 +211,7 @@ async function gatherGoogleFacts(
           subject: getHeader(msg.payload?.headers || [], "Subject") || "(no subject)",
           from: getHeader(msg.payload?.headers || [], "From"),
           snippet: msg.snippet || "",
+          link: `https://mail.google.com/mail/u/0/#all/${msg.id}`,
         }));
       return { connected: true, emails };
     } catch {
@@ -206,7 +222,7 @@ async function gatherGoogleFacts(
   return { calendar, email };
 }
 
-interface RequestFact { contact: string; type: string; description: string; created_at: string; awaiting_staff_reply: boolean }
+interface RequestFact { contact: string; type: string; description: string; created_at: string; awaiting_staff_reply: boolean; link: string }
 
 async function gatherRequestFacts(db: Db): Promise<RequestFact[]> {
   const { data } = await db
@@ -234,12 +250,13 @@ async function gatherRequestFacts(db: Db): Promise<RequestFact[]> {
       description: r.request_description,
       created_at: r.created_at,
       awaiting_staff_reply,
+      link: "/requests",
     };
   });
 }
 
 interface QuoFacts {
-  unread: { label: string; contact: string | null }[];
+  unread: { label: string; contact: string | null; link: string }[];
   unmatchedCount: number;
   voicemailCount: number;
 }
@@ -272,6 +289,7 @@ async function gatherQuoFacts(db: Db): Promise<QuoFacts> {
   const unread = [...unreadMsgs.slice(0, 5), ...unreadCalls.slice(0, 5)].map((r) => ({
     label: r.body ? (r.body.length > 80 ? r.body.slice(0, 80) + "…" : r.body) : "Missed call",
     contact: r.contact_id ? contactNames[r.contact_id] ?? null : null,
+    link: "/inbox",
   }));
 
   const unmatchedCount = [...allMsgs, ...allCalls].filter((r) => !r.contact_id).length;
@@ -280,49 +298,76 @@ async function gatherQuoFacts(db: Db): Promise<QuoFacts> {
   return { unread, unmatchedCount, voicemailCount };
 }
 
-function factsBlock(
+interface FactRef { label: string; link: string | null }
+
+// Builds the plain-text block handed to the model, and a parallel, index-
+// matched list of {label, link}. The model is only ever asked to cite a
+// fact's number (see BRIEFING_TOOL_SCHEMA) -- the label/link a priority item
+// ends up with are always resolved server-side from this list, never from
+// AI-generated text, so a link can never be hallucinated or malformed.
+function buildFactsBlockAndRefs(
   tasks: TaskFacts,
   calendar: CalendarFacts,
   email: EmailFacts,
   requests: RequestFact[],
   quo: QuoFacts,
-): string {
+): { block: string; refs: FactRef[] } {
   const lines: string[] = [];
+  const refs: FactRef[] = [];
+  const add = (label: string, link: string | null, text: string) => {
+    refs.push({ label, link });
+    lines.push(`[${refs.length}] ${text}`);
+  };
 
   lines.push(`Overdue tasks (${tasks.overdue.length}):`);
-  tasks.overdue.forEach((t) => lines.push(`- ${t.title}${t.project ? ` [${t.project}]` : ""} (was due ${t.due_date})`));
+  tasks.overdue.forEach((t) => {
+    const label = `${t.title}${t.project ? ` [${t.project}]` : ""}`;
+    add(label, t.link, `${label} (was due ${t.due_date})`);
+  });
   lines.push(`Due today (${tasks.due_today.length}):`);
-  tasks.due_today.forEach((t) => lines.push(`- ${t.title}${t.project ? ` [${t.project}]` : ""}`));
+  tasks.due_today.forEach((t) => {
+    const label = `${t.title}${t.project ? ` [${t.project}]` : ""}`;
+    add(label, t.link, label);
+  });
   lines.push(`Upcoming this week (${tasks.upcoming.length}):`);
-  tasks.upcoming.forEach((t) => lines.push(`- ${t.title}${t.project ? ` [${t.project}]` : ""} (due ${t.due_date})`));
+  tasks.upcoming.forEach((t) => {
+    const label = `${t.title}${t.project ? ` [${t.project}]` : ""}`;
+    add(label, t.link, `${label} (due ${t.due_date})`);
+  });
 
   if (calendar.connected) {
     lines.push(`Today's calendar events (${calendar.events.length}):`);
-    calendar.events.forEach((e) => lines.push(`- ${e.summary} at ${e.start}`));
+    calendar.events.forEach((e) => add(e.summary, e.link, `${e.summary} at ${e.start}`));
   } else {
     lines.push("Calendar: not connected.");
   }
 
   if (email.connected) {
     lines.push(`Unread inbox emails (${email.emails.length}):`);
-    email.emails.forEach((e) => lines.push(`- From ${e.from}: "${e.subject}" — ${e.snippet}`));
+    email.emails.forEach((e) => add(e.subject, e.link, `From ${e.from}: "${e.subject}" — ${e.snippet}`));
   } else {
     lines.push("Email: not connected.");
   }
 
   lines.push(`Open client requests, firm-wide (${requests.length}):`);
-  requests.forEach((r) =>
-    lines.push(
-      `- ${r.contact}: ${r.type} — "${r.description}"${r.awaiting_staff_reply ? " (awaiting our reply)" : ""} (opened ${r.created_at})`,
-    ),
-  );
+  requests.forEach((r) => {
+    const label = `${r.contact}: ${r.type}`;
+    add(
+      label,
+      r.link,
+      `${label} — "${r.description}"${r.awaiting_staff_reply ? " (awaiting our reply)" : ""} (opened ${r.created_at})`,
+    );
+  });
 
   lines.push(
     `Quo inbox, firm-wide: ${quo.unread.length} unread items shown, ${quo.unmatchedCount} unmatched to any contact, ${quo.voicemailCount} unheard voicemails.`,
   );
-  quo.unread.forEach((u) => lines.push(`- ${u.contact ? u.contact : "Unknown number"}: "${u.label}"`));
+  quo.unread.forEach((u) => {
+    const label = u.contact ? u.contact : "Unknown number";
+    add(label, u.link, `${label}: "${u.label}"`);
+  });
 
-  return lines.join("\n");
+  return { block: lines.join("\n"), refs };
 }
 
 const BRIEFING_TOOL_SCHEMA = {
@@ -337,10 +382,14 @@ const BRIEFING_TOOL_SCHEMA = {
           summary_line: { type: "STRING" },
           priority_items: {
             type: "ARRAY",
+            description: "At most 7 items, ranked by urgency. Each must cite the bracketed [N] number of the fact it refers to -- never describe a fact that isn't numbered below.",
             items: {
               type: "OBJECT",
-              properties: { label: { type: "STRING" }, reason: { type: "STRING" } },
-              required: ["label", "reason"],
+              properties: {
+                fact_index: { type: "INTEGER", description: "The bracketed [N] number of the fact this item is about." },
+                reason: { type: "STRING", description: "One short phrase on why this is a priority right now." },
+              },
+              required: ["fact_index", "reason"],
             },
           },
         },
@@ -372,18 +421,20 @@ async function generateBriefingForUser(db: Db, userId: string, todayStr: string)
 
   try {
     const sa = await parseServiceAccountKey(Deno.env.get("GCP_SERVICE_ACCOUNT_KEY"));
+    const { block, refs } = buildFactsBlockAndRefs(tasks, google.calendar, google.email, requests, quo);
     const prompt = `You are writing "The Daily Briefing" for a ProsperWise advisory-firm staff member's dashboard.
 Write a short greeting line, a one-sentence summary of their day, and a short prioritized list of items.
 Rules:
 - Never invent a task, meeting, email, client request, or inbox item not present in the facts below.
-- If a category is empty, say so plainly and briefly -- don't manufacture urgency.
+- Every priority item MUST cite the bracketed [N] number of the exact fact line it refers to.
+- If a category is empty, say so plainly and briefly in summary_line -- don't manufacture urgency, and don't cite it as a priority item.
 - Keep greeting to a few words (e.g. "Good morning"). Keep summary_line to one sentence.
 - priority_items should have at most 7 entries, ranked by genuine urgency across ALL categories (not grouped by category) -- overdue tasks and things awaiting our reply usually rank highest.
 - The client-requests and Quo inbox sections are firm-wide, shared by every staff member -- treat them as "things happening at the firm right now", not personal assignments.
 Call populate_daily_briefing with all fields filled.
 
 Facts:
-${factsBlock(tasks, google.calendar, google.email, requests, quo)}`;
+${block}`;
 
     const result = await generateVertexContent(
       sa,
@@ -402,12 +453,33 @@ ${factsBlock(tasks, google.calendar, google.email, requests, quo)}`;
     const fnCall = parts.find((p: any) => p.functionCall)?.functionCall;
     if (!fnCall?.args) throw new Error("AI did not return structured data");
 
+    // Resolve each cited fact_index back to its real, deterministically-built
+    // label/link -- never trust AI-generated text as a URL. Out-of-range or
+    // duplicate indices are silently dropped rather than surfaced as broken
+    // items.
+    const rawItems = Array.isArray(fnCall.args.priority_items) ? fnCall.args.priority_items : [];
+    const seen = new Set<number>();
+    const priorityItems = rawItems
+      // deno-lint-ignore no-explicit-any
+      .filter((it: any) => {
+        const idx = Number(it?.fact_index);
+        if (!Number.isInteger(idx) || idx < 1 || idx > refs.length || seen.has(idx)) return false;
+        seen.add(idx);
+        return true;
+      })
+      .slice(0, 7)
+      // deno-lint-ignore no-explicit-any
+      .map((it: any) => {
+        const ref = refs[Number(it.fact_index) - 1];
+        return { label: ref.label, link: ref.link, reason: String(it.reason || "") };
+      });
+
     await db
       .from("daily_briefings")
       .update({
         greeting: String(fnCall.args.greeting || ""),
         summary_line: String(fnCall.args.summary_line || ""),
-        priority_items: Array.isArray(fnCall.args.priority_items) ? fnCall.args.priority_items.slice(0, 7) : [],
+        priority_items: priorityItems,
         generation_status: "complete",
         generation_error: null,
         generated_at: new Date().toISOString(),
