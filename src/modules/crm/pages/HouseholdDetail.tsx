@@ -1062,32 +1062,36 @@ const HouseholdDetail = () => {
                       </div>
                     </div>
 
-                    {/* Step 3 — Enroll in Guided Intake */}
-                    <div className="flex items-start gap-3">
-                      <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-border text-xs font-semibold text-muted-foreground">
-                        3
+                    {/* Step 3 — Enroll in Guided Intake. Hidden once the
+                        household has actually finished onboarding — nothing
+                        left to enroll them into at that point. */}
+                    {!household.onboarding_completed_at && (
+                      <div className="flex items-start gap-3">
+                        <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-border text-xs font-semibold text-muted-foreground">
+                          3
+                        </div>
+                        <div className="flex-1 space-y-1.5">
+                          <p className="text-sm font-medium text-foreground">Enroll in guided intake</p>
+                          <p className="text-xs text-muted-foreground">
+                            Send an existing client through the same guided wizard as a new client — no
+                            payment required.
+                          </p>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={enrollExistingClientInIntake}
+                            disabled={enrollingIntake || members.length === 0}
+                          >
+                            {enrollingIntake ? (
+                              <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                            ) : (
+                              <UserCheck className="h-3.5 w-3.5 mr-1.5" />
+                            )}
+                            Enroll in Guided Intake
+                          </Button>
+                        </div>
                       </div>
-                      <div className="flex-1 space-y-1.5">
-                        <p className="text-sm font-medium text-foreground">Enroll in guided intake</p>
-                        <p className="text-xs text-muted-foreground">
-                          Send an existing client through the same guided wizard as a new client — no
-                          payment required.
-                        </p>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={enrollExistingClientInIntake}
-                          disabled={enrollingIntake || members.length === 0}
-                        >
-                          {enrollingIntake ? (
-                            <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                          ) : (
-                            <UserCheck className="h-3.5 w-3.5 mr-1.5" />
-                          )}
-                          Enroll in Guided Intake
-                        </Button>
-                      </div>
-                    </div>
+                    )}
                   </CardContent>
                 </Card>
                 {(household?.vision_notes || household?.values_notes || household?.purpose_notes ||
