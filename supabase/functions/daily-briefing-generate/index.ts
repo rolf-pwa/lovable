@@ -125,6 +125,11 @@ async function gatherTaskFacts(db: Db, userId: string, todayStr: string): Promis
     projectNames = Object.fromEntries((projects || []).map((p: any) => [p.id, p.name]));
   }
 
+  // "Upcoming" is capped to the next 3 days -- a task due next month isn't
+  // part of a *daily* briefing. Overdue tasks are never capped: however far
+  // past due, they're still relevant today.
+  const upcomingCutoff = addDaysToDateString(todayStr, 3);
+
   const facts: TaskFacts = { overdue: [], due_today: [], upcoming: [] };
   // deno-lint-ignore no-explicit-any
   for (const t of tasks || []) {
@@ -133,7 +138,7 @@ async function gatherTaskFacts(db: Db, userId: string, todayStr: string): Promis
     const link = taskLink(t);
     if (t.due_date < todayStr) facts.overdue.push({ title: t.title, project, due_date: t.due_date, link });
     else if (t.due_date === todayStr) facts.due_today.push({ title: t.title, project, link });
-    else facts.upcoming.push({ title: t.title, project, due_date: t.due_date, link });
+    else if (t.due_date <= upcomingCutoff) facts.upcoming.push({ title: t.title, project, due_date: t.due_date, link });
   }
   return facts;
 }
@@ -329,7 +334,7 @@ function buildFactsBlockAndRefs(
     const label = `${t.title}${t.project ? ` [${t.project}]` : ""}`;
     add(label, t.link, label);
   });
-  lines.push(`Upcoming this week (${tasks.upcoming.length}):`);
+  lines.push(`Upcoming in the next 3 days (${tasks.upcoming.length}):`);
   tasks.upcoming.forEach((t) => {
     const label = `${t.title}${t.project ? ` [${t.project}]` : ""}`;
     add(label, t.link, `${label} (due ${t.due_date})`);
