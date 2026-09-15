@@ -1260,6 +1260,7 @@ serve(async (req) => {
       const uploaderContactId =
         contactId ??
         (actor.kind === "client" ? actor.contactId : actor.kind === "collaborator" ? actor.contactId : null);
+      const ancestorChain = [folderId, ...(await getAncestors(folderId, accessToken))];
       await supabaseAdmin.from("vault_files").insert({
         drive_id: created.id,
         contact_id: uploaderContactId,
@@ -1267,7 +1268,7 @@ serve(async (req) => {
           actor.kind === "client" ? actor.householdId :
           actor.kind === "share_link" ? actor.householdId : null,
         parent_folder_id: folderId,
-        ancestor_folder_ids: [folderId, ...(await getAncestors(folderId, accessToken))],
+        ancestor_folder_ids: ancestorChain,
         name: fileName,
         mime_type: mimeType,
         is_folder: false,
@@ -1289,6 +1290,35 @@ serve(async (req) => {
           .eq("id", actor.linkId);
       }
       await audit(actor, "upload", uploaderContactId ?? null, created.id, fileName, req, { uploader: actor.kind });
+
+      // Notify staff whenever a client drops a file into their own Shoebox
+      // (not every vault upload -- staff already know when they upload
+      // something themselves; this is specifically "a client just left
+      // something for us to review").
+      if (actor.kind === "client") {
+        try {
+          const shoeboxId = await getShoeboxFolderId(actor.householdId, actor.vaultRootId, accessToken);
+          if (shoeboxId && ancestorChain.includes(shoeboxId)) {
+            const { data: contact } = await supabaseAdmin
+              .from("contacts")
+              .select("full_name, first_name, last_name")
+              .eq("id", actor.contactId)
+              .maybeSingle();
+            const name =
+              contact?.full_name || `${contact?.first_name || ""} ${contact?.last_name || ""}`.trim() || "A client";
+            await supabaseAdmin.from("staff_notifications").insert({
+              source_type: "vault_upload",
+              title: `${name} uploaded a file to their Shoebox`,
+              body: fileName,
+              contact_id: actor.contactId,
+              link: actor.householdId ? `/households/${actor.householdId}` : `/contacts/${actor.contactId}`,
+            });
+          }
+        } catch (e) {
+          console.error("vault-service: failed to send shoebox upload notification:", e);
+        }
+      }
+
       return new Response(JSON.stringify({ ok: true, fileId: created.id }), { headers: { ...cors, "Content-Type": "application/json" } });
     }
 
