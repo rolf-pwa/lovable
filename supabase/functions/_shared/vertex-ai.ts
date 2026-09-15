@@ -84,7 +84,17 @@ export async function getGcpAccessToken(sa: ServiceAccountKey): Promise<string> 
 
 export interface VertexContent {
   role: "user" | "model";
-  parts: Array<{ text?: string; fileData?: { mimeType: string; fileUri: string } }>;
+  parts: Array<{
+    text?: string;
+    fileData?: { mimeType: string; fileUri: string };
+    // Base64-encoded bytes handed to Gemini natively (e.g. a PDF fetched
+    // from Drive with an OAuth token Vertex has no way to re-authenticate
+    // with, so fileData/fileUri — which needs a URI Vertex itself can
+    // fetch — doesn't apply). Request-size limited (Vertex caps inline
+    // request payloads around 20MB); callers should check file size before
+    // base64-encoding a large document.
+    inlineData?: { mimeType: string; data: string };
+  }>;
 }
 
 /** Pulls a JSON object out of a model response, tolerating ```json fences and stray prose. */
