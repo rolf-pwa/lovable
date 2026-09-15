@@ -72,6 +72,7 @@ const QuarterlySystemReview = lazy(() => import("@/modules/audit/pages/Quarterly
 const QuarterlySystemReviewResolver = lazy(() => import("@/modules/audit/pages/QuarterlySystemReviewResolver"));
 const QuarterlyReview = lazy(() => import("@/modules/audit/pages/QuarterlyReview"));
 const GovernanceReview = lazy(() => import("@/modules/audit/pages/GovernanceReview"));
+const QuarterlyVfoAudit = lazy(() => import("@/modules/audit/pages/QuarterlyVfoAudit"));
 const SovereigntyCharter = lazy(() => import("@/modules/audit/pages/SovereigntyCharter"));
 const Inbox = lazy(() => import("@/modules/crm/pages/Inbox"));
 const Professionals = lazy(() => import("@/modules/crm/pages/Professionals"));
@@ -174,6 +175,7 @@ const App = () => (
               <Route path="/quarterly-system-review/:id" element={<ProtectedRoute><QuarterlySystemReview /></ProtectedRoute>} />
               <Route path="/workbench/quarterly-review" element={<ProtectedRoute><QuarterlyReview /></ProtectedRoute>} />
               <Route path="/workbench/governance-review" element={<ProtectedRoute><GovernanceReview /></ProtectedRoute>} />
+              <Route path="/workbench/vfo-audit" element={<ProtectedRoute><QuarterlyVfoAudit /></ProtectedRoute>} />
               <Route path="/quarterly-account-sync" element={<ProtectedRoute><QuarterlyReview /></ProtectedRoute>} />
               <Route path="/sovereignty-charter/contact/:contactId" element={<ProtectedRoute><SovereigntyCharter /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />

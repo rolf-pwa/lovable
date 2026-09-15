@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from "@/shared/components/ui/select";
 import { Label } from "@/shared/components/ui/label";
-import { BarChart3, Loader2, Cpu, FileSpreadsheet } from "lucide-react";
+import { BarChart3, Loader2, Cpu, FileSpreadsheet, Scale } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/shared/components/ui/button";
 
@@ -78,6 +78,12 @@ const Workbench = () => {
               <Link to="/workbench/governance-review">
                 <FileSpreadsheet className="h-4 w-4 mr-2" />
                 Governance Review
+              </Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link to="/workbench/vfo-audit">
+                <Scale className="h-4 w-4 mr-2" />
+                Loan Audit
               </Link>
             </Button>
           </div>

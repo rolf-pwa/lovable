@@ -163,3 +163,6 @@ verify_jwt = false
 
 [functions.daily-briefing-generate]
 verify_jwt = false
+
+[functions.quarterly-vfo-audit-generate]
+verify_jwt = false
