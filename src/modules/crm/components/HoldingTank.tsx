@@ -45,6 +45,7 @@ interface HoldingTankAccount {
   visibility_scope: string;
   created_at: string;
   expected_deposit_date: string | null;
+  beneficiary_designation: string | null;
 }
 
 const SCOPE_OPTIONS = [
@@ -81,7 +82,7 @@ export function HoldingTank({ contactId, householdId, onAccountMoved }: HoldingT
   const [moving, setMoving] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
   const [collapsed, setCollapsed] = useState(true);
-  const [addForm, setAddForm] = useState({ account_name: "", account_type: "Portfolio", current_value: "", expected_deposit_date: "", custodian: "" });
+  const [addForm, setAddForm] = useState({ account_name: "", account_type: "Portfolio", current_value: "", expected_deposit_date: "", custodian: "", beneficiary_designation: "" });
   // Custodian input is constrained to the canonical list to prevent the
   // "iA Financial Group" / "IA Financial" / "IAG Financial Group" casing
   // drift found in production — "Other" reveals free text for genuinely
@@ -148,6 +149,7 @@ export function HoldingTank({ contactId, householdId, onAccountMoved }: HoldingT
           notes: account.notes,
           visibility_scope: scope,
           custodian: account.custodian,
+          beneficiary_designation: account.beneficiary_designation,
         } as any).select("id").single();
         if (error) throw error;
         newRowId = (inserted as any).id;
@@ -164,6 +166,7 @@ export function HoldingTank({ contactId, householdId, onAccountMoved }: HoldingT
           visibility_scope: scope,
           account_number: account.account_number,
           custodian: account.custodian,
+          beneficiary_designation: account.beneficiary_designation,
         } as any).select("id").single();
         if (error) throw error;
         newRowId = (inserted as any).id;
@@ -271,6 +274,7 @@ export function HoldingTank({ contactId, householdId, onAccountMoved }: HoldingT
         current_value: addForm.current_value ? parseFloat(addForm.current_value) : null,
         expected_deposit_date: addForm.expected_deposit_date || null,
         custodian: addForm.custodian || null,
+        beneficiary_designation: addForm.beneficiary_designation || null,
         status: "holding",
         visibility_scope: "household_shared",
         source_file: "manual_entry",
@@ -291,7 +295,7 @@ export function HoldingTank({ contactId, householdId, onAccountMoved }: HoldingT
       }
 
       toast.success("Account added to Holding Tank");
-      setAddForm({ account_name: "", account_type: "Portfolio", current_value: "", expected_deposit_date: "", custodian: "" });
+      setAddForm({ account_name: "", account_type: "Portfolio", current_value: "", expected_deposit_date: "", custodian: "", beneficiary_designation: "" });
       setCustodianMode("");
       setShowAddForm(false);
       fetchAccounts();
@@ -411,6 +415,12 @@ export function HoldingTank({ contactId, householdId, onAccountMoved }: HoldingT
                   className="h-8 text-xs"
                   value={addForm.expected_deposit_date}
                   onChange={(e) => setAddForm(f => ({ ...f, expected_deposit_date: e.target.value }))}
+                />
+                <Input
+                  placeholder="Beneficiary designation (e.g. Estate, or a named person)"
+                  className="h-8 text-xs col-span-2"
+                  value={addForm.beneficiary_designation}
+                  onChange={(e) => setAddForm(f => ({ ...f, beneficiary_designation: e.target.value }))}
                 />
               </div>
               <div className="flex items-center gap-2">

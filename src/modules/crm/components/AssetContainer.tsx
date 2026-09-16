@@ -49,6 +49,7 @@ export interface AssetAccount {
   charterAlignment?: string;
   accountNumber?: string | null;
   custodian?: string | null;
+  beneficiaryDesignation?: string | null;
   /** Source table for move operations */
   sourceTable: "vineyard_accounts" | "storehouses";
 }
@@ -250,6 +251,9 @@ function AccountRow({ acc, contactId, webforms, moveTargets, onMoveAccount, upda
   const [editingValue, setEditingValue] = useState(false);
   const [valueDraft, setValueDraft] = useState<string>("");
   const [savingValue, setSavingValue] = useState(false);
+  const [editingBeneficiary, setEditingBeneficiary] = useState(false);
+  const [beneficiaryDraft, setBeneficiaryDraft] = useState<string>("");
+  const [savingBeneficiary, setSavingBeneficiary] = useState(false);
   const [openWebformId, setOpenWebformId] = useState<string | null>(null);
 
   const matchingWebforms = webforms.filter((f) => !f.custodian || f.custodian === acc.custodian);
@@ -274,6 +278,23 @@ function AccountRow({ acc, contactId, webforms, moveTargets, onMoveAccount, upda
     } else {
       toast.success("Balance updated.");
       setEditingValue(false);
+      onRefresh();
+    }
+  };
+
+  const saveBeneficiary = async () => {
+    const trimmed = beneficiaryDraft.trim();
+    setSavingBeneficiary(true);
+    const { error } = await supabase
+      .from(acc.sourceTable as any)
+      .update({ beneficiary_designation: trimmed === "" ? null : trimmed } as any)
+      .eq("id", acc.id);
+    setSavingBeneficiary(false);
+    if (error) {
+      toast.error("Failed to update beneficiary designation.");
+    } else {
+      toast.success("Beneficiary designation updated.");
+      setEditingBeneficiary(false);
       onRefresh();
     }
   };
@@ -412,6 +433,45 @@ function AccountRow({ acc, contactId, webforms, moveTargets, onMoveAccount, upda
               ))}
             </SelectContent>
           </Select>
+        </div>
+
+        <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+          <span className="text-[10px] text-muted-foreground">Beneficiary:</span>
+          {editingBeneficiary ? (
+            <span className="flex items-center gap-1">
+              <Input
+                autoFocus
+                value={beneficiaryDraft}
+                onChange={(e) => setBeneficiaryDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") { e.preventDefault(); saveBeneficiary(); }
+                  if (e.key === "Escape") { e.preventDefault(); setEditingBeneficiary(false); }
+                }}
+                placeholder="e.g. Estate, or a named person"
+                className="h-6 w-44 text-[10px]"
+                disabled={savingBeneficiary}
+              />
+              <button type="button" onClick={saveBeneficiary} disabled={savingBeneficiary} className="text-[10px] text-primary hover:underline">
+                Save
+              </button>
+              <button type="button" onClick={() => setEditingBeneficiary(false)} className="text-[10px] text-muted-foreground hover:underline">
+                Cancel
+              </button>
+            </span>
+          ) : (
+            <span
+              role="button"
+              tabIndex={0}
+              onClick={() => {
+                setBeneficiaryDraft(acc.beneficiaryDesignation || "");
+                setEditingBeneficiary(true);
+              }}
+              className="text-[10px] px-1 rounded hover:bg-muted cursor-text text-muted-foreground"
+              title="Click to edit beneficiary designation"
+            >
+              {acc.beneficiaryDesignation || "Not set"}
+            </span>
+          )}
         </div>
 
         {matchingWebforms.length > 0 && (

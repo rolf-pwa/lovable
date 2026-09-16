@@ -13,11 +13,18 @@
 //
 // Adapted from the prototype in one respect: `assets_from_statements`
 // (deriving EstateAsset rows from a freshly-extracted AccountStatement) is
-// not ported -- this CRM already has a real `liabilities` table (built for
-// the Intercompany/Shareholder Loan Audit) and real per-contact accounts,
-// so a future phase builds the EstateAsset list directly from those tables
-// instead of statement-derived rows. analyzeEstateLiquidity itself,
-// the actual deadlock math, is ported verbatim.
+// replaced, not ported as-is -- rather than re-extracting beneficiary
+// designations from a statement PDF on every quarterly review (a real
+// bottleneck as the VFO scales, since the existing monthly CSV valuation
+// sync never carries beneficiary data), Rolf confirmed beneficiary
+// designation is captured once as real structured data on each account
+// (vineyard_accounts/storehouses.beneficiary_designation,
+// insurance_policies.primary_beneficiary, already present) as part of the
+// account-setup SOP, or as a one-time backfill for pre-existing accounts.
+// estateAssetsFromAccounts()/estateAssetSourceRowsFromFinancials() below
+// build the EstateAsset list directly from that real, persisted data.
+// analyzeEstateLiquidity itself, the actual deadlock math, is ported
+// verbatim from the prototype either way.
 
 export interface EstateAsset {
   description: string;
@@ -86,4 +93,84 @@ export function analyzeEstateLiquidity(
     atRiskIlliquidAssets: atRisk,
     notes,
   };
+}
+
+export interface EstateAssetSourceRow {
+  description: string;
+  value: number;
+  beneficiaryDesignation: string | null;
+}
+
+/**
+ * Ported from the prototype's assets_from_statements(), adapted to read a
+ * real CRM account row's own beneficiary_designation/primary_beneficiary
+ * field instead of an AccountStatement's. Same classification rule: a
+ * named beneficiary other than "Estate" or an undisclosed "SEE FILE" is
+ * treated as bypassing probate; anything else (empty, "Estate", "SEE
+ * FILE") is treated conservatively as passing through the estate -- we
+ * can't assume bypass without a positive designation -- but is flagged for
+ * the advisor to confirm from the actual designation form.
+ */
+export function estateAssetsFromAccounts(rows: EstateAssetSourceRow[]): { assets: EstateAsset[]; warnings: string[] } {
+  const assets: EstateAsset[] = [];
+  const warnings: string[] = [];
+  for (const row of rows) {
+    const designation = (row.beneficiaryDesignation || "").trim();
+    const bypasses = designation !== "" && !["estate", "see file"].includes(designation.toLowerCase());
+    if (designation === "" || designation.toLowerCase() === "see file") {
+      warnings.push(
+        `"${row.description}": beneficiary designation not disclosed${designation ? ' (shows "SEE FILE")' : ""} -- ` +
+          `confirm the actual designation form before relying on this account's probate-bypass status in the estate analysis.`,
+      );
+    }
+    assets.push({ description: row.description, value: row.value, passesViaBeneficiaryDesignation: bypasses });
+  }
+  return { assets, warnings };
+}
+
+/**
+ * Builds the raw {description, value, beneficiaryDesignation} rows
+ * estateAssetsFromAccounts() needs, directly from
+ * sovereignty-diagnostics.ts's gatherHouseholdFinancials() output -- no
+ * second query, since that function already selects every column
+ * (`select("*")`) on vineyard_accounts/storehouses/insurance_policies.
+ * holding_tank is deliberately excluded: those rows aren't yet assigned to
+ * a pillar (see governance-audit-pillars.ts), so building estate-liquidity
+ * assumptions on them would be premature -- the account's own move-to-
+ * Vineyard/Storehouse flow already carries beneficiary_designation forward
+ * once an advisor assigns it.
+ */
+export function estateAssetSourceRowsFromFinancials(financials: {
+  // deno-lint-ignore no-explicit-any
+  vineyardAccounts: any[];
+  // deno-lint-ignore no-explicit-any
+  storehouses: any[];
+  // deno-lint-ignore no-explicit-any
+  insurancePolicies: any[];
+}): EstateAssetSourceRow[] {
+  const rows: EstateAssetSourceRow[] = [];
+
+  for (const a of financials.vineyardAccounts) {
+    const value = Number(a.current_value) || 0;
+    if (value <= 0) continue;
+    rows.push({ description: a.account_name || "Vineyard account", value, beneficiaryDesignation: a.beneficiary_designation ?? null });
+  }
+
+  for (const s of financials.storehouses) {
+    const value = Number(s.current_value) || 0;
+    if (value <= 0) continue;
+    rows.push({ description: s.asset_type || s.label || "Storehouse account", value, beneficiaryDesignation: s.beneficiary_designation ?? null });
+  }
+
+  for (const p of financials.insurancePolicies) {
+    const value = Number(p.cash_value) || 0;
+    if (value <= 0) continue;
+    rows.push({
+      description: `${p.policy_type || "Insurance"} (${p.carrier || "policy"})`,
+      value,
+      beneficiaryDesignation: p.primary_beneficiary ?? null,
+    });
+  }
+
+  return rows;
 }

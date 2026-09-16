@@ -87,6 +87,7 @@ interface Storehouse {
   book_value: number | null;
   account_number?: string | null;
   custodian?: string | null;
+  beneficiary_designation?: string | null;
 }
 
 interface HouseholdMember {
@@ -113,6 +114,7 @@ interface VineyardAccount {
   notes: string | null;
   visibility_scope: string;
   custodian?: string | null;
+  beneficiary_designation?: string | null;
 }
 
 interface HarvestSnapshot {
@@ -954,6 +956,7 @@ const ContactDetail = () => {
                     visibilityScope: acc.visibility_scope,
                     accountNumber: acc.account_number,
                     custodian: acc.custodian,
+                    beneficiaryDesignation: acc.beneficiary_designation,
                     sourceTable: "vineyard_accounts" as const,
                   }))}
                   moveTargets={[
@@ -973,6 +976,7 @@ const ContactDetail = () => {
                       visibility_scope: account.visibilityScope,
                       account_number: account.accountNumber,
                       custodian: account.custodian,
+                      beneficiary_designation: account.beneficiaryDesignation,
                     } as any);
                     if (insertErr) { toast.error("Failed to move account."); return; }
                     await supabase.from("vineyard_accounts" as any).delete().eq("id", account.id);
@@ -1144,6 +1148,7 @@ const ContactDetail = () => {
                         charterAlignment: sh.charter_alignment,
                         accountNumber: sh.account_number,
                         custodian: sh.custodian,
+                        beneficiaryDesignation: sh.beneficiary_designation,
                         sourceTable: "storehouses" as const,
                       }))}
                       extraTotal={
@@ -1162,6 +1167,7 @@ const ContactDetail = () => {
                             visibility_scope: account.visibilityScope,
                             account_number: account.accountNumber,
                             custodian: account.custodian,
+                            beneficiary_designation: account.beneficiaryDesignation,
                           } as any);
                           if (insertErr) { toast.error("Failed to move account."); return; }
                           await supabase.from("storehouses").delete().eq("id", account.id);

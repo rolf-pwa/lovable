@@ -11,7 +11,12 @@ import {
   estimateCapitalGainsTax,
   estimateTerminalTaxOnRegistered,
 } from "../../supabase/functions/_shared/governance-audit-tax";
-import { analyzeEstateLiquidity, type EstateAsset } from "../../supabase/functions/_shared/governance-audit-estate";
+import {
+  analyzeEstateLiquidity,
+  estateAssetSourceRowsFromFinancials,
+  estateAssetsFromAccounts,
+  type EstateAsset,
+} from "../../supabase/functions/_shared/governance-audit-estate";
 import { selectTarget } from "../../supabase/functions/_shared/governance-audit-targets";
 import {
   manualReviewRow,
@@ -68,6 +73,56 @@ describe("governance-audit-estate", () => {
     const result = analyzeEstateLiquidity(assets, 100000, 50000);
     expect(result.hasDeadlock).toBe(false);
     expect(result.surplusOrDeficit).toBe(350000);
+  });
+});
+
+// -- estateAssetsFromAccounts / estateAssetSourceRowsFromFinancials: not in
+// the prototype (this CRM sources beneficiary data from real, structured
+// account fields instead of a re-extracted statement) -- adapted from the
+// prototype's own assets_from_statements() classification rule.
+
+describe("governance-audit-estate: estateAssetsFromAccounts", () => {
+  it("treats a named beneficiary other than Estate/SEE FILE as bypassing probate", () => {
+    const { assets, warnings } = estateAssetsFromAccounts([
+      { description: "TFSA (1820399311)", value: 50000, beneficiaryDesignation: "Philip Lambert" },
+    ]);
+    expect(assets).toEqual([{ description: "TFSA (1820399311)", value: 50000, passesViaBeneficiaryDesignation: true }]);
+    expect(warnings).toEqual([]);
+  });
+
+  it("treats Estate, SEE FILE, and empty designations as passing through the estate, each with a warning except a clean 'Estate'", () => {
+    const { assets, warnings } = estateAssetsFromAccounts([
+      { description: "RESP", value: 10000, beneficiaryDesignation: "Estate" },
+      { description: "RRSP", value: 20000, beneficiaryDesignation: "SEE FILE" },
+      { description: "Non-Reg", value: 30000, beneficiaryDesignation: null },
+    ]);
+    expect(assets.every((a) => !a.passesViaBeneficiaryDesignation)).toBe(true);
+    // "Estate" is a positive, disclosed designation -- no warning needed.
+    expect(warnings.some((w) => w.includes("RESP"))).toBe(false);
+    expect(warnings.some((w) => w.includes("RRSP"))).toBe(true);
+    expect(warnings.some((w) => w.includes("Non-Reg"))).toBe(true);
+  });
+});
+
+describe("governance-audit-estate: estateAssetSourceRowsFromFinancials", () => {
+  it("maps real CRM rows into estate-asset source rows, skipping zero/empty balances", () => {
+    const rows = estateAssetSourceRowsFromFinancials({
+      vineyardAccounts: [
+        { account_name: "Growth Portfolio", current_value: 100000, beneficiary_designation: "Jane Doe" },
+        { account_name: "Empty Account", current_value: 0, beneficiary_designation: null },
+      ],
+      storehouses: [
+        { asset_type: "GIC Ladder", label: null, current_value: 48000, beneficiary_designation: "Estate" },
+      ],
+      insurancePolicies: [
+        { policy_type: "Segregated Fund", carrier: "iA Financial", cash_value: 607572.73, primary_beneficiary: "Philip Lambert" },
+      ],
+    });
+    expect(rows).toEqual([
+      { description: "Growth Portfolio", value: 100000, beneficiaryDesignation: "Jane Doe" },
+      { description: "GIC Ladder", value: 48000, beneficiaryDesignation: "Estate" },
+      { description: "Segregated Fund (iA Financial)", value: 607572.73, beneficiaryDesignation: "Philip Lambert" },
+    ]);
   });
 });
 
