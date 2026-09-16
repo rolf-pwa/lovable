@@ -1,40 +1,66 @@
-// Quarterly Governance Audit -- Phase 2: document extraction.
+// Quarterly Governance Audit -- full pipeline.
 //
-// Given a household, resolves its Vault's "01 Identity & Legal" and
-// "02 Estate (Wills, POA, Trusts)" category folders (via the same
-// matchVaultCategoryFolder helper computeVaultReadiness already uses, so
-// the two never drift on what "the Identity & Legal folder" means) and
-// extracts structured Investor Risk Profile / Will-legal facts from every
-// PDF found there, via Gemini's native PDF input. This is a genuine
-// simplification over the prototype being ported (a working standalone
-// Python CLI, /Users/admin/Downloads/Review Agent): it rasterizes every PDF
-// page to PNG specifically to work around Claude's lack of native PDF
-// input; Gemini accepts PDFs directly, so that whole step disappears.
+// Given a household, runs all four phases in sequence and persists one
+// complete, coherent audit document:
+//   1. Document extraction -- resolves the Vault's "01 Identity & Legal"
+//      and "02 Estate (Wills, POA, Trusts)" category folders (via the same
+//      matchVaultCategoryFolder helper computeVaultReadiness already uses)
+//      and extracts structured Investor Risk Profile / Will-legal facts
+//      from every PDF found there, via Gemini's native PDF input. A
+//      genuine simplification over the prototype being ported (a working
+//      standalone Python CLI, /Users/admin/Downloads/Review Agent): it
+//      rasterizes every PDF page to PNG to work around Claude's lack of
+//      native PDF input; Gemini accepts PDFs directly.
+//   2. Calc -- pillar totals, estate liquidity (real EstateAsset list built
+//      from this household's own accounts' beneficiary_designation field,
+//      liabilities, and a registered/non-registered account split for
+//      terminal-tax/capital-gains estimates), target Income/Equity split
+//      (when an Investor Profile was extracted), and the 1-5 scorecard.
+//   3. Narrative -- Vertex drafts the prose sections strictly grounded in
+//      the figures computed in step 2, per governance-audit-narrative.ts's
+//      house style guide.
+//   4. Persistence -- the assembled document lands in governance_audits.
 //
-// Schemas/prompts translated field-for-field from the prototype's
-// schemas/investor_profile.py, schemas/legal.py, and
-// agent/tools/extract.py's INVESTOR_PROFILE_PROMPT/LEGAL_PROMPT -- adapted
-// to drop the prototype's "use the read_pdf_pages tool" framing (Gemini
-// gets the whole PDF natively in one shot) and to have the model flag a
-// clearly-wrong document type rather than force a poor-fit answer, since
-// folder placement alone is a naive classifier (a later phase could add
-// real document classification; this phase doesn't attempt it).
+// Two calc inputs the CRM has no structured field for today (a household's
+// province, and its accounts' current Income/Equity split -- no fund-level
+// asset-class tracking exists here) are accepted as optional advisor-
+// supplied overrides in the request body, mirroring the household-track
+// Stabilization Map's own "Diagnostic Inputs" convention rather than
+// guessing at them. Province defaults to "BC"; without a current-equity
+// input, the Capital Infrastructure scorecard element is left as an honest
+// "PENDING ADVISOR REVIEW" row rather than a fabricated score.
 //
 // SourceRef.file_path/file_name/page_numbers are always built server-side
 // from the real Drive file, never trusted from the model -- same
 // never-trust-AI-generated-identifiers principle daily-briefing-generate's
-// link resolution already established for this codebase.
+// link resolution already established for this codebase. Every dollar
+// figure in the narrative is grounded the same way -- see
+// findUngroundedDollarFigures.
 //
-// Writes results into a new governance_audits row's `computed` JSONB
-// (investor_profiles, legal_facts, extraction_errors). Phase 3+ (calc,
-// narrative, staff UI) will read this. Staff-triggered only for now, no
-// cron -- this phase is deliberately scoped to extraction, not the full
-// pipeline.
+// Staff-triggered only for now, no cron.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getServiceGoogleAccessToken } from "../_shared/google-token.ts";
 import { driveDownloadFile, driveListChildren, matchVaultCategoryFolder } from "../_shared/vault-provisioning.ts";
 import { generateVertexContent, parseServiceAccountKey, type ServiceAccountKey, type VertexContent } from "../_shared/vertex-ai.ts";
+import { gatherHouseholdFinancials, inferTrackType } from "../_shared/sovereignty-diagnostics.ts";
+import { computePillarTotals, pillarWarnings } from "../_shared/governance-audit-pillars.ts";
+import {
+  analyzeEstateLiquidity,
+  estateAssetSourceRowsFromFinancials,
+  estateAssetsFromAccounts,
+} from "../_shared/governance-audit-estate.ts";
+import { combinedTopMarginalRate, estimateCapitalGainsTax, estimateTerminalTaxOnRegistered } from "../_shared/governance-audit-tax.ts";
+import { TAX_TABLES } from "../_shared/governance-audit-tax-config.ts";
+import { selectTarget } from "../_shared/governance-audit-targets.ts";
+import {
+  CAPITAL_INFRASTRUCTURE,
+  manualReviewRow,
+  scoreCapitalInfrastructure,
+  scoreEstateAlignment,
+  type ScorecardRow,
+} from "../_shared/governance-audit-drift.ts";
+import { applyNarrative, findUngroundedDollarFigures, generateAuditNarrative } from "../_shared/governance-audit-narrative.ts";
 
 const ALLOWED_ORIGINS = [
   "https://prosperwise-portal.web.app",
@@ -326,11 +352,107 @@ async function extractCategory<T>(
   return results;
 }
 
-async function runExtraction(
+/** Phase 2 alone -- resolves the Vault's two category folders and extracts whatever's found. No DB writes; the caller decides what to do with the result. */
+async function extractDocuments(
   db: Db,
-  householdId: string,
-  userId: string,
-): Promise<{ auditId: string; investorProfiles: InvestorProfile[]; legalFacts: LegalDocFacts[]; errors: string[] }> {
+  sa: ServiceAccountKey,
+  vaultRootFolderId: string,
+): Promise<{ investorProfiles: InvestorProfile[]; legalFacts: LegalDocFacts[]; errors: string[] }> {
+  const accessToken = await getServiceGoogleAccessToken(db);
+  const rootChildren = await driveListChildren(vaultRootFolderId, accessToken);
+
+  const { data: templates } = await db
+    .from("vault_folder_templates")
+    .select("display_name, slug")
+    .eq("is_active", true)
+    .in("slug", ["identity-legal", "estate"]);
+  const templateBySlug = new Map(
+    // deno-lint-ignore no-explicit-any
+    ((templates ?? []) as any[]).map((t) => [t.slug as string, t.display_name as string]),
+  );
+
+  const errors: string[] = [];
+  const investorProfiles: InvestorProfile[] = [];
+  const legalFacts: LegalDocFacts[] = [];
+
+  const identityLegalDisplayName = templateBySlug.get("identity-legal");
+  if (identityLegalDisplayName) {
+    investorProfiles.push(
+      ...(await extractCategory<InvestorProfile>(
+        db,
+        sa,
+        accessToken,
+        rootChildren,
+        identityLegalDisplayName,
+        INVESTOR_PROFILE_PROMPT,
+        INVESTOR_PROFILE_TOOL_SCHEMA,
+        "extract_investor_profile",
+        (args) => Boolean(args.profile_category) && args.profile_category !== "NOT_APPLICABLE",
+        (args, source) => ({
+          client_name: args.client_name ?? null,
+          account_number: args.account_number ?? null,
+          form_id: args.form_id ?? null,
+          date_signed: args.date_signed ?? null,
+          total_points: typeof args.total_points === "number" ? args.total_points : null,
+          profile_category: args.profile_category ?? null,
+          stated_choice_of_investments: args.stated_choice_of_investments ?? null,
+          choice_matches_profile: typeof args.choice_matches_profile === "boolean" ? args.choice_matches_profile : null,
+          reason_for_mismatch: args.reason_for_mismatch ?? null,
+          source,
+        }),
+        errors,
+      )),
+    );
+  }
+
+  const estateDisplayName = templateBySlug.get("estate");
+  if (estateDisplayName) {
+    legalFacts.push(
+      ...(await extractCategory<LegalDocFacts>(
+        db,
+        sa,
+        accessToken,
+        rootChildren,
+        estateDisplayName,
+        LEGAL_PROMPT,
+        LEGAL_FACTS_TOOL_SCHEMA,
+        "extract_legal_facts",
+        (args) => Boolean(args.document_type) && args.document_type !== "NOT_APPLICABLE",
+        (args, source) => ({
+          document_type: args.document_type,
+          testator_or_grantor_name: args.testator_or_grantor_name ?? null,
+          date_executed: args.date_executed ?? null,
+          jurisdiction: args.jurisdiction ?? null,
+          parties: Array.isArray(args.parties) ? args.parties : [],
+          beneficiary_designations: Array.isArray(args.beneficiary_designations) ? args.beneficiary_designations : [],
+          key_clauses: Array.isArray(args.key_clauses) ? args.key_clauses : [],
+          notes: args.notes ?? null,
+          source,
+        }),
+        errors,
+      )),
+    );
+  }
+
+  return { investorProfiles, legalFacts, errors };
+}
+
+// Account types this CRM's own account-type/asset-type free-text field
+// uses (see HoldingTank.tsx's Select options) that correspond to a full
+// deregistration-at-death tax event -- matches the prototype's own
+// "RRSP/RRIF/LIRA at death" convention. TFSA/RESP are registered but
+// aren't taxed the same way at death, so they're deliberately excluded.
+const REGISTERED_TERMINAL_TAX_TYPES = new Set(["rrsp", "rrif", "lira"]);
+
+interface RunAuditOptions {
+  provinceCode?: string;
+  currentEquityPct?: number;
+  advisorTargetEquityPct?: number;
+  keepFloor?: number;
+  illiquidProtectedAssets?: string[];
+}
+
+async function runFullAudit(db: Db, householdId: string, userId: string, options: RunAuditOptions) {
   const { data: audit, error: insertErr } = await db
     .from("governance_audits")
     .insert({ household_id: householdId, created_by: userId, generation_status: "generating" })
@@ -340,112 +462,206 @@ async function runExtraction(
   const auditId = audit.id as string;
 
   try {
-    const { data: household } = await db
-      .from("households")
-      .select("vault_root_folder_id")
-      .eq("id", householdId)
-      .maybeSingle();
-    const vaultRootFolderId = (household?.vault_root_folder_id as string | null) ?? null;
+    const financials = await gatherHouseholdFinancials(db, householdId);
+    const trackType = inferTrackType(financials.shareholders);
 
-    if (!vaultRootFolderId) {
-      await db
-        .from("governance_audits")
-        .update({ generation_status: "error", generation_error: "This household's Vault is not yet provisioned." })
-        .eq("id", auditId);
-      return { auditId, investorProfiles: [], legalFacts: [], errors: [] };
-    }
-
+    // -- Phase 2: document extraction --
+    let investorProfiles: InvestorProfile[] = [];
+    let legalFacts: LegalDocFacts[] = [];
+    let extractionErrors: string[] = [];
     const sa = await parseServiceAccountKey(Deno.env.get("GCP_SERVICE_ACCOUNT_KEY"));
-    const accessToken = await getServiceGoogleAccessToken(db);
-    const rootChildren = await driveListChildren(vaultRootFolderId, accessToken);
+    if (financials.vaultRootFolderId) {
+      const extracted = await extractDocuments(db, sa, financials.vaultRootFolderId);
+      investorProfiles = extracted.investorProfiles;
+      legalFacts = extracted.legalFacts;
+      extractionErrors = extracted.errors;
+    } else {
+      extractionErrors = ["This household's Vault is not yet provisioned -- no documents could be extracted."];
+    }
 
-    const { data: templates } = await db
-      .from("vault_folder_templates")
-      .select("display_name, slug")
-      .eq("is_active", true)
-      .in("slug", ["identity-legal", "estate"]);
-    const templateBySlug = new Map(
+    // -- Phase 3: calc --
+    const provinceCode = options.provinceCode || "BC";
+    const pillarTotals = computePillarTotals(financials);
+    const pillarTotalsForNarrative: Record<string, number> = {};
+    if (pillarTotals.vineyard > 0) pillarTotalsForNarrative["Vineyard"] = pillarTotals.vineyard;
+    if (pillarTotals.keep > 0) pillarTotalsForNarrative["Keep"] = pillarTotals.keep;
+    if (pillarTotals.armoury > 0) pillarTotalsForNarrative["Armoury"] = pillarTotals.armoury;
+    if (pillarTotals.granary > 0) pillarTotalsForNarrative["Granary"] = pillarTotals.granary;
+    if (pillarTotals.legacyVault > 0) pillarTotalsForNarrative["Legacy Vault"] = pillarTotals.legacyVault;
+
+    const assumptions: string[] = [...pillarWarnings(pillarTotals)];
+
+    // deno-lint-ignore no-explicit-any
+    const allAccounts: any[] = [...financials.vineyardAccounts, ...financials.storehouses];
+    const registeredTotal = allAccounts
+      .filter((a) => REGISTERED_TERMINAL_TAX_TYPES.has(String(a.account_type || a.asset_type || "").trim().toLowerCase()))
+      .reduce((sum, a) => sum + (Number(a.current_value) || 0), 0);
+    const nonRegisteredGain = allAccounts
+      .filter((a) => String(a.account_type || a.asset_type || "").trim().toLowerCase() === "non-registered")
+      .reduce((sum, a) => {
+        const current = Number(a.current_value) || 0;
+        const book = Number(a.book_value) || 0;
+        return sum + (book > 0 && current > book ? current - book : 0);
+      }, 0);
+
+    let registeredTerminalTax = 0;
+    let capitalGainsTax = 0;
+    try {
+      combinedTopMarginalRate(provinceCode); // validates provinceCode before either estimate below
+      if (registeredTotal > 0) registeredTerminalTax = estimateTerminalTaxOnRegistered(registeredTotal, provinceCode);
+      if (nonRegisteredGain > 0) capitalGainsTax = estimateCapitalGainsTax(nonRegisteredGain, provinceCode);
+      assumptions.push(
+        `Tax figures computed from governance-audit-tax-config.ts as_of_year=${TAX_TABLES.asOfYear} for province=${provinceCode} -- verify this is current before client delivery.`,
+      );
+    } catch (e) {
+      assumptions.push(
+        `Terminal tax / capital gains tax were NOT computed: ${e instanceof Error ? e.message : String(e)}`,
+      );
+    }
+
+    const liabilitiesTotal = financials.liabilities.reduce(
       // deno-lint-ignore no-explicit-any
-      ((templates ?? []) as any[]).map((t) => [t.slug as string, t.display_name as string]),
+      (sum: number, l: any) => sum + (Number(l.current_balance) || 0),
+      0,
     );
+    const sourceRows = estateAssetSourceRowsFromFinancials(financials);
+    const { assets: estateAssets, warnings: estateWarnings } = estateAssetsFromAccounts(sourceRows);
+    const estateResult = analyzeEstateLiquidity(
+      estateAssets,
+      liabilitiesTotal,
+      registeredTerminalTax + capitalGainsTax,
+      options.illiquidProtectedAssets ?? [],
+    );
+    assumptions.push(...estateWarnings, ...estateResult.notes);
 
-    const errors: string[] = [];
-    const investorProfiles: InvestorProfile[] = [];
-    const legalFacts: LegalDocFacts[] = [];
-
-    const identityLegalDisplayName = templateBySlug.get("identity-legal");
-    if (identityLegalDisplayName) {
-      investorProfiles.push(
-        ...(await extractCategory<InvestorProfile>(
-          db,
-          sa,
-          accessToken,
-          rootChildren,
-          identityLegalDisplayName,
-          INVESTOR_PROFILE_PROMPT,
-          INVESTOR_PROFILE_TOOL_SCHEMA,
-          "extract_investor_profile",
-          (args) => Boolean(args.profile_category) && args.profile_category !== "NOT_APPLICABLE",
-          (args, source) => ({
-            client_name: args.client_name ?? null,
-            account_number: args.account_number ?? null,
-            form_id: args.form_id ?? null,
-            date_signed: args.date_signed ?? null,
-            total_points: typeof args.total_points === "number" ? args.total_points : null,
-            profile_category: args.profile_category ?? null,
-            stated_choice_of_investments: args.stated_choice_of_investments ?? null,
-            choice_matches_profile: typeof args.choice_matches_profile === "boolean" ? args.choice_matches_profile : null,
-            reason_for_mismatch: args.reason_for_mismatch ?? null,
-            source,
-          }),
-          errors,
-        )),
+    const scoreableProfile = investorProfiles.find((p) => p.profile_category);
+    let targetIncomeEquitySplit: { income_pct: number; equity_pct: number } | null = null;
+    let capitalRow: ScorecardRow | undefined;
+    if (scoreableProfile && typeof scoreableProfile.total_points === "number") {
+      let charterTone: string | null = null;
+      try {
+        const { data: charters } = await db
+          .from("sovereignty_charters")
+          .select("mission_of_capital, vision_20_year")
+          .in("contact_id", financials.members.map((m) => m.id))
+          .limit(1);
+        const charter = charters?.[0];
+        charterTone = [charter?.mission_of_capital, charter?.vision_20_year].filter(Boolean).join(" ") || null;
+      } catch {
+        // no ratified Charter on file -- selectTarget works fine without a tone summary
+      }
+      try {
+        const target = selectTarget(
+          { totalPoints: scoreableProfile.total_points, profileCategory: scoreableProfile.profile_category! },
+          charterTone,
+          { advisorTargetEquityPct: options.advisorTargetEquityPct },
+        );
+        targetIncomeEquitySplit = { income_pct: target.targetIncomePct, equity_pct: target.targetEquityPct };
+        assumptions.push(...target.assumptions);
+        if (typeof options.currentEquityPct === "number") {
+          capitalRow = scoreCapitalInfrastructure({
+            currentEquityPct: options.currentEquityPct,
+            targetEquityPct: target.targetEquityPct,
+            keepTotal: pillarTotals.keep,
+            keepFloor: options.keepFloor ?? null,
+          });
+        } else {
+          assumptions.push(
+            "No current Income/Equity split was supplied for this run -- Capital Infrastructure & Asset Allocation could not be scored. " +
+              "This CRM doesn't track fund-level asset-class detail per account; supply current_equity_pct to score this element.",
+          );
+        }
+      } catch (e) {
+        assumptions.push(`Target Income/Equity split could not be determined: ${e instanceof Error ? e.message : String(e)}`);
+      }
+    } else {
+      assumptions.push(
+        "No Investor Risk Profile was extracted for this household -- Capital Infrastructure & Asset Allocation could not be scored. " +
+          "Upload an Investor Risk Profile to the Vault's Identity & Legal folder and re-run.",
       );
     }
+    if (!capitalRow) capitalRow = manualReviewRow(CAPITAL_INFRASTRUCTURE);
 
-    const estateDisplayName = templateBySlug.get("estate");
-    if (estateDisplayName) {
-      legalFacts.push(
-        ...(await extractCategory<LegalDocFacts>(
-          db,
-          sa,
-          accessToken,
-          rootChildren,
-          estateDisplayName,
-          LEGAL_PROMPT,
-          LEGAL_FACTS_TOOL_SCHEMA,
-          "extract_legal_facts",
-          (args) => Boolean(args.document_type) && args.document_type !== "NOT_APPLICABLE",
-          (args, source) => ({
-            document_type: args.document_type,
-            testator_or_grantor_name: args.testator_or_grantor_name ?? null,
-            date_executed: args.date_executed ?? null,
-            jurisdiction: args.jurisdiction ?? null,
-            parties: Array.isArray(args.parties) ? args.parties : [],
-            beneficiary_designations: Array.isArray(args.beneficiary_designations) ? args.beneficiary_designations : [],
-            key_clauses: Array.isArray(args.key_clauses) ? args.key_clauses : [],
-            notes: args.notes ?? null,
-            source,
-          }),
-          errors,
-        )),
-      );
+    const estateRow = scoreEstateAlignment(estateResult);
+    const matrimonialRow = manualReviewRow("Matrimonial Property Insulation");
+    const environmentalRow = manualReviewRow("Environmental Noise & Behavioral Boundaries");
+    const scorecard = [capitalRow, estateRow, matrimonialRow, environmentalRow];
+
+    const currentIncomeEquitySplit =
+      typeof options.currentEquityPct === "number"
+        ? { income_pct: 100 - options.currentEquityPct, equity_pct: options.currentEquityPct }
+        : null;
+
+    const computed = {
+      pillar_totals: pillarTotalsForNarrative,
+      target_income_equity_split: targetIncomeEquitySplit,
+      current_income_equity_split: currentIncomeEquitySplit,
+      terminal_tax_estimate: { registered_terminal_tax: registeredTerminalTax, capital_gains_tax: capitalGainsTax },
+      estate_liquidity_analysis: {
+        total_estate_liquid_assets: estateResult.totalEstateLiquidAssets,
+        total_beneficiary_bypass_assets: estateResult.totalBeneficiaryBypassAssets,
+        total_liabilities_and_taxes: estateResult.totalLiabilitiesAndTaxes,
+        surplus_or_deficit: estateResult.surplusOrDeficit,
+      },
+      assumptions,
+    };
+
+    // -- Phase 4: narrative --
+    const { data: cfoProfile } = await db.from("profiles").select("full_name").eq("user_id", userId).maybeSingle();
+    const doc = {
+      client_name: financials.householdLabel,
+      review_date: new Date().toISOString().slice(0, 10),
+      reviewing_family_cfo: cfoProfile?.full_name || "Staff",
+      track_type: trackType,
+      executive_summary_bullets: [] as string[],
+      pillar_analyses: Object.entries(pillarTotalsForNarrative).map(([pillar, current_total]) => ({
+        pillar,
+        current_total,
+        narrative: "",
+      })),
+      element_deep_dives: scorecard.map((row) => ({
+        element_name: row.elementName,
+        charter_baseline: "See Charter mission/tone summary and pillar definitions.",
+        current_score: row.currentScore,
+        max_score: row.maxScore,
+        audit_findings: [] as string[],
+        required_corrective_actions: [] as string[],
+      })),
+      discussion_points: [] as { title: string; body: string }[],
+    };
+
+    const scorecardElements = scorecard.map((r) => r.elementName);
+    let narrativeUngrounded: string[] = [];
+    let narrativeError: string | null = null;
+    try {
+      const narrative = await generateAuditNarrative(sa, computed, scorecardElements);
+      applyNarrative(doc, narrative);
+      narrativeUngrounded = findUngroundedDollarFigures(narrative, computed);
+    } catch (e) {
+      narrativeError = e instanceof Error ? e.message : String(e);
     }
 
-    const status: "complete" | "error" =
-      investorProfiles.length === 0 && legalFacts.length === 0 && errors.length > 0 ? "error" : "complete";
+    const finalComputed = {
+      ...doc,
+      scorecard,
+      computed,
+      investor_profiles: investorProfiles,
+      legal_facts: legalFacts,
+      extraction_errors: extractionErrors,
+      narrative_ungrounded_dollar_figures: narrativeUngrounded,
+    };
 
     await db
       .from("governance_audits")
       .update({
-        generation_status: status,
-        generation_error: errors.length > 0 ? errors.join("; ") : null,
-        computed: { investor_profiles: investorProfiles, legal_facts: legalFacts, extraction_errors: errors },
+        generation_status: "complete",
+        generation_error: narrativeError,
+        computed: finalComputed,
         generated_at: new Date().toISOString(),
       })
       .eq("id", auditId);
 
-    return { auditId, investorProfiles, legalFacts, errors };
+    return { auditId, ...finalComputed };
   } catch (e) {
     await db
       .from("governance_audits")
@@ -469,8 +685,16 @@ Deno.serve(async (req) => {
   const householdId = String(body?.household_id || "");
   if (!householdId) return json({ error: "household_id is required" }, 400);
 
+  const options: RunAuditOptions = {
+    provinceCode: typeof body?.province_code === "string" ? body.province_code : undefined,
+    currentEquityPct: typeof body?.current_equity_pct === "number" ? body.current_equity_pct : undefined,
+    advisorTargetEquityPct: typeof body?.advisor_target_equity_pct === "number" ? body.advisor_target_equity_pct : undefined,
+    keepFloor: typeof body?.keep_floor === "number" ? body.keep_floor : undefined,
+    illiquidProtectedAssets: Array.isArray(body?.illiquid_protected_assets) ? body.illiquid_protected_assets : undefined,
+  };
+
   try {
-    const result = await runExtraction(admin(), householdId, auth.userId);
+    const result = await runFullAudit(admin(), householdId, auth.userId, options);
     return json(result);
   } catch (e) {
     return json({ error: e instanceof Error ? e.message : String(e) }, 500);
