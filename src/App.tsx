@@ -68,6 +68,8 @@ const BrainDocument = lazy(() => import("@/modules/brain/pages/BrainDocument"));
 const Analytics = lazy(() => import("@/modules/crm/pages/Analytics"));
 const StabilizationMap = lazy(() => import("@/modules/audit/pages/StabilizationMap"));
 const StabilizationMapResolver = lazy(() => import("@/modules/audit/pages/StabilizationMapResolver"));
+const GovernanceAudit = lazy(() => import("@/modules/audit/pages/GovernanceAudit"));
+const GovernanceAuditResolver = lazy(() => import("@/modules/audit/pages/GovernanceAuditResolver"));
 const QuarterlySystemReview = lazy(() => import("@/modules/audit/pages/QuarterlySystemReview"));
 const QuarterlySystemReviewResolver = lazy(() => import("@/modules/audit/pages/QuarterlySystemReviewResolver"));
 const QuarterlyReview = lazy(() => import("@/modules/audit/pages/QuarterlyReview"));
@@ -171,6 +173,8 @@ const App = () => (
               <Route path="/stabilization-map/contact/:contactId" element={<ProtectedRoute><StabilizationMapResolver /></ProtectedRoute>} />
               <Route path="/stabilization-map/household/:householdId" element={<ProtectedRoute><StabilizationMapResolver /></ProtectedRoute>} />
               <Route path="/stabilization-map/:id" element={<ProtectedRoute><StabilizationMap /></ProtectedRoute>} />
+              <Route path="/governance-audit/household/:householdId" element={<ProtectedRoute><GovernanceAuditResolver /></ProtectedRoute>} />
+              <Route path="/governance-audit/:id" element={<ProtectedRoute><GovernanceAudit /></ProtectedRoute>} />
               <Route path="/quarterly-system-review/contact/:contactId" element={<ProtectedRoute><QuarterlySystemReviewResolver /></ProtectedRoute>} />
               <Route path="/quarterly-system-review/:id" element={<ProtectedRoute><QuarterlySystemReview /></ProtectedRoute>} />
               <Route path="/workbench/quarterly-review" element={<ProtectedRoute><QuarterlyReview /></ProtectedRoute>} />

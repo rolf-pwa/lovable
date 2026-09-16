@@ -7,6 +7,7 @@
 export { AuditTrail } from "./components/AuditTrail";
 export { HouseholdAuditTrailRollup } from "./components/HouseholdAuditTrailRollup";
 export { StabilizationMapButton } from "./components/StabilizationMapButton";
+export { GovernanceAuditButton } from "./components/GovernanceAuditButton";
 export { QuarterlySystemReviewButton } from "./components/QuarterlySystemReviewButton";
 export { SovereigntyCharterButton } from "./components/SovereigntyCharterButton";
 export { GenerateCharterDraftButton } from "./components/GenerateCharterDraftButton";

@@ -44,7 +44,7 @@ import { HouseholdRequestsRollup } from "@/modules/crm/components/HouseholdReque
 import { HouseholdStatementIngestion } from "@/modules/crm/components/HouseholdStatementIngestion";
 import { HoldingTank } from "@/modules/crm/components/HoldingTank";
 import { VaultView } from "@/modules/crm/pages/Vault";
-import { CharterRatificationTile, StabilizationMapButton, HouseholdAuditTrailRollup } from "@/modules/audit";
+import { CharterRatificationTile, StabilizationMapButton, GovernanceAuditButton, HouseholdAuditTrailRollup } from "@/modules/audit";
 import { ProsPanel } from "@/modules/crm/components/ProsPanel";
 import { AddCompanyDialog } from "@/modules/crm/components/AddCompanyDialog";
 import {
@@ -1062,13 +1062,27 @@ const HouseholdDetail = () => {
                       </div>
                     </div>
 
-                    {/* Step 3 — Enroll in Guided Intake. Hidden once the
+                    {/* Step 3 — Quarterly Governance Audit */}
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-border text-xs font-semibold text-muted-foreground">
+                        3
+                      </div>
+                      <div className="flex-1 space-y-1.5">
+                        <p className="text-sm font-medium text-foreground">Quarterly Governance Audit</p>
+                        <p className="text-xs text-muted-foreground">
+                          Generate or review the household's full Sovereignty Governance Audit.
+                        </p>
+                        <GovernanceAuditButton householdId={id} />
+                      </div>
+                    </div>
+
+                    {/* Step 4 — Enroll in Guided Intake. Hidden once the
                         household has actually finished onboarding — nothing
                         left to enroll them into at that point. */}
                     {!household.onboarding_completed_at && (
                       <div className="flex items-start gap-3">
                         <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-border text-xs font-semibold text-muted-foreground">
-                          3
+                          4
                         </div>
                         <div className="flex-1 space-y-1.5">
                           <p className="text-sm font-medium text-foreground">Enroll in guided intake</p>
